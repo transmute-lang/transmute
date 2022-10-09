@@ -9,38 +9,41 @@ pub struct Error {
 }
 
 impl Error {
-    fn expected_but_got(
-        expectations: Vec<&str>,
-        received: &char,
-        location: Location,
-    ) -> Result<Token> {
-        Error::err(
-            format!(
-                "expected `{}`, got `{}`",
-                expectations.join("` or `"),
-                received
-            ),
-            location,
-        )
+    fn expected_but_got(expectations: Vec<&str>, received: &char, location: Location) -> Error {
+        if received == &'\n' {
+            Error::err(
+                format!("expected `{}`, got `\\n`", expectations.join("` or `"),),
+                location,
+            )
+        } else {
+            Error::err(
+                format!(
+                    "expected `{}`, got `{}`",
+                    expectations.join("` or `"),
+                    received
+                ),
+                location,
+            )
+        }
     }
 
-    fn expected(expectations: Vec<&str>, location: Location) -> Result<Token> {
+    fn expected(expectations: Vec<&str>, location: Location) -> Error {
         Error::err(
             format!("expected `{}`, got nothing", expectations.join("` or `")),
             location,
         )
     }
 
-    fn expected_any_char(location: Location) -> Result<Token> {
+    fn expected_any_char(location: Location) -> Error {
         Error::err("expected any character, got nothing".to_string(), location)
     }
 
-    fn unexpected(received: &char, location: Location) -> Result<Token> {
+    fn unexpected(received: &char, location: Location) -> Error {
         Error::err(format!("unexpected `{}`", received), location)
     }
 
-    fn err(error: String, location: Location) -> Result<Token> {
-        Err(Error { error, location })
+    fn err(error: String, location: Location) -> Error {
+        Error { error, location }
     }
 }
 
@@ -210,10 +213,10 @@ impl<'t> Lexer<'t> {
 
         loop {
             match self.next_char() {
-                None => return Error::expected(vec!["\""], self.location.clone()),
+                None => return Err(Error::expected(vec!["\""], self.location.clone())),
                 Some('"') => return Ok(Token::String(location, string)),
                 Some('\\') => match self.next_char() {
-                    None => return Error::expected(vec!["\"", "\\"], self.location.clone()),
+                    None => return Err(Error::expected(vec!["\"", "\\"], self.location.clone())),
                     Some(c) => string.push(c),
                 },
                 Some(c) => string.push(c),
@@ -240,7 +243,7 @@ impl<'t> Lexer<'t> {
     fn make_block_string(&mut self, location: Location) -> Result<Token> {
         let delimiter = self.next_char();
         if delimiter.is_none() {
-            return Error::expected_any_char(location);
+            return Err(Error::expected_any_char(location));
         }
         let delimiter = delimiter.unwrap();
 
@@ -349,8 +352,8 @@ impl<'t> Iterator for Lexer<'t> {
             '!' => match self.next_char() {
                 Some('=') => Ok(Token::ExclamEqual(loc)),
                 Some('~') => Ok(Token::ExclamTilde(loc)),
-                Some(c) => Error::expected_but_got(vec!["=", "~"], &c, loc),
-                None => Error::expected(vec!["=", "~"], loc),
+                Some(c) => Err(Error::expected_but_got(vec!["=", "~"], &c, loc)),
+                None => Err(Error::expected(vec!["=", "~"], loc)),
             },
             '{' => Ok(Token::LeftBrace(loc)),
             '[' => Ok(Token::LeftBracket(loc)),
@@ -378,7 +381,7 @@ impl<'t> Iterator for Lexer<'t> {
             c => {
                 let mut loc = loc;
                 loc.column -= 1;
-                Error::unexpected(&c, loc)
+                Err(Error::unexpected(&c, loc))
             }
         };
 
