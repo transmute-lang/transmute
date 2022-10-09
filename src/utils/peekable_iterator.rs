@@ -1,6 +1,4 @@
 use std::collections::VecDeque;
-use std::ops::Index;
-use std::vec::IntoIter;
 
 pub struct PeekableIterator<I>
 where
@@ -29,7 +27,7 @@ where
     }
 
     pub fn peek_nth(&mut self, n: usize) -> Option<&I::Item> {
-        while self.buffer.len() < n.clone() + 1 {
+        while self.buffer.len() < n + 1 {
             match self.iter.next() {
                 Some(item) => self.buffer.push_back(item),
                 None => return None,
@@ -47,7 +45,7 @@ where
     type Item = I::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.buffer.len() > 0 {
+        if !self.buffer.is_empty() {
             self.buffer.pop_front()
         } else {
             self.iter.next()
