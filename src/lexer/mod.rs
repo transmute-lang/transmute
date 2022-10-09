@@ -61,6 +61,12 @@ pub struct Location {
     column: usize,
 }
 
+impl Location {
+    pub fn new(line: usize, column: usize) -> Location {
+        Self { line, column }
+    }
+}
+
 impl Display for Location {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{}", self.line, self.column)
@@ -148,8 +154,7 @@ impl<'t> Lexer<'t> {
             source,
             iter: source.chars().peekable(),
             curr_char: None,
-            location: Location { line: 1, column: 1 },
-            previous_location: Location { line: 1, column: 1 },
+            location: Location::new(1, 1),
         }
     }
 
@@ -451,7 +456,7 @@ mod tests {
         // });
 
         assert!(if let Err(err) = token {
-            assert_eq!(err.location, Location { line: 1, column: 1 });
+            assert_eq!(err.location, Location::new(1, 1));
             assert_eq!(err.error, "unexpected `§`");
             true
         } else {
@@ -569,7 +574,7 @@ mod tests {
         let token = token.unwrap();
         // todo (see unexpected)
         assert!(if let Err(err) = token {
-            assert_eq!(err.location, Location { line: 1, column: 2 });
+            assert_eq!(err.location, Location::new(1, 2));
             assert_eq!(err.error, "expected `=` or `~`, got nothing");
             true
         } else {
@@ -587,7 +592,7 @@ mod tests {
         let token = token.unwrap();
         // todo (see unexpected)
         assert!(if let Err(err) = token {
-            assert_eq!(err.location, Location { line: 1, column: 2 });
+            assert_eq!(err.location, Location::new(1, 2));
             assert_eq!(err.error, "expected `=` or `~`, got `a`");
             true
         } else {
