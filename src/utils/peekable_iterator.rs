@@ -24,6 +24,10 @@ where
         }
     }
 
+    pub fn peek(&mut self) -> Option<&I::Item> {
+        self.peek_nth(0)
+    }
+
     pub fn peek_nth(&mut self, n: usize) -> Option<&I::Item> {
         while self.buffer.len() < n.clone() + 1 {
             match self.iter.next() {
