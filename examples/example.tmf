@@ -1,0 +1,49 @@
+#!/bin/transmute
+
+/*
+method call:
+  - value | method        <=> method value
+  - method param1 param2   => &0=param1, &1=param2, etc.
+  - method p1=v1 p2=v2     => &0=p1=v1
+  - v1 v2 | method p1 p2   => method v1 v2 p1 p2
+*/
+
+main username {
+    let empty = "";
+    let sqlite = sql.dataSource "sqlite:///db.sqlite";
+
+    match http.get "/users/{{username}}" {
+        .status != 200                                => fail "error fetching data",
+        .headers["content-type"] ~ "application/json" => json.from .body.text or fail "not json",
+        .headers["content-type"] ~ "text/plain"       => json.from data=.body.text "{ username: data }",
+        .headers["content-type"] ~ "text/plain"       => .body.text | json.from "{ username: &0 }",
+        .headers["content-type"] ~ "text/plain"       => json.from "{ username: .body.text }",
+        _                                             => fail "not json",
+    }
+    match {
+        ".username" == null or
+        ".username" == empty => fail "no username found",
+        _                    => continue,
+    }
+    fork {
+        ".username" | text.lower as username
+        ".username" | fetchPosts "{$}" as posts or fail "error fetching posts: {err}"
+    }
+    join {
+        json.from "{ username: username, posts: posts }"
+    }
+}
+
+fetchPosts username {
+    let query = """;
+        select title, text
+        from post
+        where username={username};
+
+    match sqlite.query query {
+        // result.error == true =>
+        error => fail "unable to fetch posts from database for user {username}: {err}",
+        // _ => result.row
+        _     => row | split "|" | json.from "{ title: &0, text: &1 }"
+    }
+}
