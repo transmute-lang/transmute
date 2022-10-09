@@ -9,14 +9,14 @@ pub struct Error {
 }
 
 impl Error {
-    fn expected_but_got(expectations: Vec<&str>, received: &char, location: Location) -> Error {
+    fn expected_but_got(expectations: Vec<&str>, received: &char, location: Location) -> Self {
         if received == &'\n' {
-            Error::err(
-                format!("expected `{}`, got `\\n`", expectations.join("` or `"),),
+            Self::err(
+                format!("expected `{}`, got `\\n`", expectations.join("` or `")),
                 location,
             )
         } else {
-            Error::err(
+            Self::err(
                 format!(
                     "expected `{}`, got `{}`",
                     expectations.join("` or `"),
@@ -27,23 +27,23 @@ impl Error {
         }
     }
 
-    fn expected(expectations: Vec<&str>, location: Location) -> Error {
-        Error::err(
+    fn expected(expectations: Vec<&str>, location: Location) -> Self {
+        Self::err(
             format!("expected `{}`, got nothing", expectations.join("` or `")),
             location,
         )
     }
 
-    fn expected_any_char(location: Location) -> Error {
-        Error::err("expected any character, got nothing".to_string(), location)
+    fn expected_any_char(location: Location) -> Self {
+        Self::err("expected any character, got nothing".to_string(), location)
     }
 
-    fn unexpected(received: &char, location: Location) -> Error {
-        Error::err(format!("unexpected `{}`", received), location)
+    fn unexpected(received: &char, location: Location) -> Self {
+        Self::err(format!("unexpected `{}`", received), location)
     }
 
-    fn err(error: String, location: Location) -> Error {
-        Error { error, location }
+    fn err(error: String, location: Location) -> Self {
+        Self { error, location }
     }
 }
 
