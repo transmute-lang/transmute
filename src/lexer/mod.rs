@@ -140,7 +140,6 @@ pub struct Lexer<'t> {
     iter: Peekable<Chars<'t>>,
     curr_char: Option<char>,
     location: Location,
-    previous_location: Location,
 }
 
 impl<'t> Lexer<'t> {
@@ -387,9 +386,6 @@ impl<'t> Iterator for Lexer<'t> {
                 Err(Error::unexpected(&c, loc))
             }
         };
-
-        self.previous_location.line = self.location.line;
-        self.previous_location.column = self.location.column;
 
         Some(token)
     }
