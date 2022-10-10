@@ -1,7 +1,12 @@
 use crate::lexer::Lexer;
 use std::{env, fs};
 
+#[allow(dead_code)]
 mod lexer;
+#[allow(dead_code)]
+mod parser;
+#[allow(dead_code)]
+mod utils;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

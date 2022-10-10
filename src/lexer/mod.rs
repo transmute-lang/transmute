@@ -3,9 +3,9 @@ use std::iter::Peekable;
 use std::str::Chars;
 
 #[derive(Debug)]
-pub struct Error {
-    error: String,
-    location: Location,
+pub struct Error { // todo turn into enum
+    pub error: String,
+    pub location: Location,
 }
 
 impl Error {
@@ -53,7 +53,7 @@ impl Display for Error {
     }
 }
 
-type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Location {
@@ -74,7 +74,6 @@ impl Display for Location {
 }
 
 pub enum Token {
-    Amp(Location),
     And(Location),
     Comma(Location),
     Continue(Location),
@@ -87,28 +86,80 @@ pub enum Token {
     Fail(Location),
     Fn(Location),
     Fork(Location),
-    Join(Location),
+    Gt(Location),
+    GtEqual(Location),
     Identifier(Location, String),
     Integer(Location, u32),
+    Join(Location),
     LeftBrace(Location),
     LeftBracket(Location),
     Let(Location),
+    Lt(Location),
+    LtEqual(Location),
     Match(Location),
+    Minus(Location),
     Null(Location),
     Or(Location),
+    Percent(Location),
     Pipe(Location),
+    Plus(Location),
     RightBrace(Location),
     RightBracket(Location),
     Semicolon(Location),
+    Slash(Location),
+    Star(Location),
     String(Location, String),
     Tilde(Location),
     Underscore(Location),
 }
 
+impl Token {
+    pub fn location(&self) -> &Location {
+        match self {
+            Token::And(loc) => loc,
+            Token::Comma(loc) => loc,
+            Token::Continue(loc) => loc,
+            Token::Dot(loc) => loc,
+            Token::Equal(loc) => loc,
+            Token::EqualEqual(loc) => loc,
+            Token::EqualGt(loc) => loc,
+            Token::ExclamEqual(loc) => loc,
+            Token::ExclamTilde(loc) => loc,
+            Token::Fail(loc) => loc,
+            Token::Fn(loc) => loc,
+            Token::Fork(loc) => loc,
+            Token::Gt(loc) => loc,
+            Token::GtEqual(loc) => loc,
+            Token::Identifier(loc, _) => loc,
+            Token::Integer(loc, _) => loc,
+            Token::Join(loc) => loc,
+            Token::LeftBrace(loc) => loc,
+            Token::LeftBracket(loc) => loc,
+            Token::Let(loc) => loc,
+            Token::Lt(loc) => loc,
+            Token::LtEqual(loc) => loc,
+            Token::Match(loc) => loc,
+            Token::Minus(loc) => loc,
+            Token::Null(loc) => loc,
+            Token::Or(loc) => loc,
+            Token::Percent(loc) => loc,
+            Token::Pipe(loc) => loc,
+            Token::Plus(loc) => loc,
+            Token::RightBrace(loc) => loc,
+            Token::RightBracket(loc) => loc,
+            Token::Semicolon(loc) => loc,
+            Token::Slash(loc) => loc,
+            Token::Star(loc) => loc,
+            Token::String(loc, _) => loc,
+            Token::Tilde(loc) => loc,
+            Token::Underscore(loc) => loc,
+        }
+    }
+}
+
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Token::Amp(_) => write!(f, "[&]"),
             Token::And(_) => write!(f, "[and]"),
             Token::Comma(_) => write!(f, "[,]"),
             Token::Continue(_) => write!(f, "[continue]"),
@@ -121,19 +172,28 @@ impl Display for Token {
             Token::Fail(_) => write!(f, "[fail]"),
             Token::Fn(_) => write!(f, "[fn]"),
             Token::Fork(_) => write!(f, "[fork]"),
-            Token::Join(_) => write!(f, "[join]"),
+            Token::Gt(_) => write!(f, "[>]"),
+            Token::GtEqual(_) => write!(f, "[>=]"),
             Token::Identifier(_, value) => write!(f, "[identifier:{}]", value),
             Token::Integer(_, value) => write!(f, "[integer:{}]", value),
+            Token::Join(_) => write!(f, "[join]"),
             Token::LeftBrace(_) => write!(f, "[{{]"),
             Token::LeftBracket(_) => write!(f, "[[]"),
             Token::Let(_) => write!(f, "[let]"),
+            Token::Lt(_) => write!(f, "[<]"),
+            Token::LtEqual(_) => write!(f, "[<=]"),
             Token::Match(_) => write!(f, "[match]"),
+            Token::Minus(_) => write!(f, "[-]"),
             Token::Null(_) => write!(f, "[null]"),
             Token::Or(_) => write!(f, "[or]"),
+            Token::Percent(_) => write!(f, "[%]"),
             Token::Pipe(_) => write!(f, "[|]"),
+            Token::Plus(_) => write!(f, "[+]"),
             Token::RightBrace(_) => write!(f, "[}}]"),
             Token::RightBracket(_) => write!(f, "[]]"),
             Token::Semicolon(_) => write!(f, "[;]"),
+            Token::Slash(_) => write!(f, "[/]"),
+            Token::Star(_) => write!(f, "[*]"),
             Token::String(_, value) => write!(f, "[string:{}]", value),
             Token::Tilde(_) => write!(f, "[~]"),
             Token::Underscore(_) => write!(f, "[_]"),
@@ -181,9 +241,12 @@ impl<'t> Lexer<'t> {
         while let Some(c) = self.next_char() {
             match c {
                 '#' => self.skip_line_comment(),
-                '/' => match self.next_char() {
+                '/' => match self.peek_char() {
                     Some('/') => self.skip_line_comment(),
-                    Some('*') => self.skip_multiline_comment(),
+                    Some('*') => {
+                        self.next_char();
+                        self.skip_multiline_comment()
+                    }
                     _ => break,
                 },
                 c if c.is_whitespace() => continue,
@@ -348,9 +411,17 @@ impl<'t> Iterator for Lexer<'t> {
         let loc = self.location.clone();
 
         let token = match self.curr_char? {
-            '&' => Ok(Token::Amp(loc)),
+            ';' => Ok(Token::Semicolon(loc)),
             ',' => Ok(Token::Comma(loc)),
+            '_' => Ok(Token::Underscore(loc)),
+            '|' => Ok(Token::Pipe(loc)),
             '.' => Ok(Token::Dot(loc)),
+            '+' => Ok(Token::Plus(loc)),
+            '-' => Ok(Token::Minus(loc)),
+            '*' => Ok(Token::Star(loc)),
+            '/' => Ok(Token::Slash(loc)),
+            '%' => Ok(Token::Percent(loc)),
+            '~' => Ok(Token::Tilde(loc)),
             '=' => match self.next_char() {
                 Some('=') => Ok(Token::EqualEqual(loc)),
                 Some('>') => Ok(Token::EqualGt(loc)),
@@ -363,13 +434,17 @@ impl<'t> Iterator for Lexer<'t> {
                 None => Err(Error::expected(vec!["=", "~"], loc)),
             },
             '{' => Ok(Token::LeftBrace(loc)),
-            '[' => Ok(Token::LeftBracket(loc)),
-            '|' => Ok(Token::Pipe(loc)),
             '}' => Ok(Token::RightBrace(loc)),
+            '[' => Ok(Token::LeftBracket(loc)),
             ']' => Ok(Token::RightBracket(loc)),
-            ';' => Ok(Token::Semicolon(loc)),
-            '~' => Ok(Token::Tilde(loc)),
-            '_' => Ok(Token::Underscore(loc)),
+            '>' => match self.next_char() {
+                Some('=') => Ok(Token::GtEqual(loc)),
+                _ => Ok(Token::Gt(loc)),
+            },
+            '<' => match self.next_char() {
+                Some('=') => Ok(Token::LtEqual(loc)),
+                _ => Ok(Token::Lt(loc)),
+            },
             '"' => match self.peek_char() {
                 Some('"') => {
                     self.next_char();
@@ -441,6 +516,17 @@ mod tests {
     }
 
     #[test]
+    fn skip_empty_multiline_comment() {
+        let mut lexer = Lexer::new("/**/]");
+        let token = lexer.next();
+        assert!(token.is_some());
+        let token = token.unwrap();
+        assert!(token.is_ok());
+        let token = token.unwrap();
+        assert!(matches!(token, Token::RightBracket(_)));
+    }
+
+    #[test]
     fn unexpected() {
         let mut lexer = Lexer::new("§");
 
@@ -482,7 +568,6 @@ mod tests {
     }
 
     empty_token! {
-        token_amp:              "&"         => Token::Amp(_),
         token_and:              "and"       => Token::And(_),
         token_comma:            ","         => Token::Comma(_),
         token_continue:         "continue"  => Token::Continue(_),
@@ -495,17 +580,26 @@ mod tests {
         token_fail:             "fail"      => Token::Fail(_),
         token_fn:               "fn"        => Token::Fn(_),
         token_fork:             "fork"      => Token::Fork(_),
+        token_gt:               ">"         => Token::Gt(_),
+        token_gt_equal:         ">="        => Token::GtEqual(_),
         token_join:             "join"      => Token::Join(_),
         token_left_brace:       "{"         => Token::LeftBrace(_),
         token_left_bracket:     "["         => Token::LeftBracket(_),
         token_let:              "let"       => Token::Let(_),
+        token_lt:               "<"         => Token::Lt(_),
+        token_lt_equal:         "<="        => Token::LtEqual(_),
         token_match:            "match"     => Token::Match(_),
+        token_minus:            "-"         => Token::Minus(_),
         token_null:             "null"      => Token::Null(_),
         token_or:               "or"        => Token::Or(_),
+        token_percent:          "%"         => Token::Percent(_),
         token_pipe:             "|"         => Token::Pipe(_),
+        token_plus:             "+"         => Token::Plus(_),
         token_right_brace:      "}"         => Token::RightBrace(_),
         token_right_bracket:    "]"         => Token::RightBracket(_),
         token_semicolon:        ";"         => Token::Semicolon(_),
+        token_slash:            "/"         => Token::Slash(_),
+        token_star:             "*"         => Token::Star(_),
         token_tilde:            "~"         => Token::Tilde(_),
         token_underscore:       "_"         => Token::Underscore(_),
     }
