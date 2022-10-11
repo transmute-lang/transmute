@@ -3,7 +3,8 @@ use std::iter::Peekable;
 use std::str::Chars;
 
 #[derive(Debug)]
-pub struct Error { // todo turn into enum
+pub struct Error {
+    // todo turn into enum
     pub error: String,
     pub location: Location,
 }

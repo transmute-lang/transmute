@@ -1,13 +1,11 @@
-mod ast;
-
 use crate::lexer;
 use crate::lexer::{Lexer, Location, Token};
 use crate::utils::peekable_iterator::PeekableIterator;
-use std::env::set_current_dir;
 use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
-pub struct Error { // todo turn into enum
+pub struct Error {
+    // todo turn into enum
     // todo lexer_error: Option<&'t lexer::Error>,
     pub error: String,
     pub location: Location,
