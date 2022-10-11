@@ -82,6 +82,7 @@ pub enum Token {
     Equal(Location),
     EqualEqual(Location),
     EqualGt(Location),
+    Exclam(Location),
     ExclamEqual(Location),
     ExclamTilde(Location),
     Fail(Location),
@@ -124,6 +125,7 @@ impl Token {
             Token::Equal(loc) => loc,
             Token::EqualEqual(loc) => loc,
             Token::EqualGt(loc) => loc,
+            Token::Exclam(loc) => loc,
             Token::ExclamEqual(loc) => loc,
             Token::ExclamTilde(loc) => loc,
             Token::Fail(loc) => loc,
@@ -168,6 +170,7 @@ impl Display for Token {
             Token::Equal(_) => write!(f, "[=]"),
             Token::EqualEqual(_) => write!(f, "[==]"),
             Token::EqualGt(_) => write!(f, "[=>]"),
+            Token::Exclam(_) => write!(f, "[!]"),
             Token::ExclamEqual(_) => write!(f, "[!=]"),
             Token::ExclamTilde(_) => write!(f, "[!~]"),
             Token::Fail(_) => write!(f, "[fail]"),
@@ -219,6 +222,7 @@ impl<'t> Lexer<'t> {
         }
     }
 
+    /// Reads and return the next char; returns `None` when there is none.
     fn next_char(&mut self) -> Option<char> {
         self.curr_char = self.iter.next();
 
@@ -403,6 +407,27 @@ impl<'t> Lexer<'t> {
     }
 }
 
+/// Returns `next_char()` if `peek_char()` returns any of the provided chars.
+/// ```
+/// next_char_if!(self, 'a', 'b')
+/// ```
+/// is turned into
+/// ```
+/// match self.peek_char() {
+///     Some('a') => self.next_char(),
+///     Some('b') => self.next_char(),
+///     _ => None,
+/// }
+/// ```
+macro_rules! next_char_if {
+    ($self:expr, $($expr:expr),*) => {{
+        match $self.peek_char() {
+            $(Some($expr) => $self.next_char(),)+
+            _ => None,
+        }
+    }}
+}
+
 impl<'t> Iterator for Lexer<'t> {
     type Item = Result<Token>;
 
@@ -423,40 +448,33 @@ impl<'t> Iterator for Lexer<'t> {
             '/' => Ok(Token::Slash(loc)),
             '%' => Ok(Token::Percent(loc)),
             '~' => Ok(Token::Tilde(loc)),
-            '=' => match self.next_char() {
+            '=' => match next_char_if!(self, '=', '>') {
                 Some('=') => Ok(Token::EqualEqual(loc)),
                 Some('>') => Ok(Token::EqualGt(loc)),
                 _ => Ok(Token::Equal(loc)),
             },
-            '!' => match self.next_char() {
+            '!' => match next_char_if!(self, '=', '~') {
                 Some('=') => Ok(Token::ExclamEqual(loc)),
                 Some('~') => Ok(Token::ExclamTilde(loc)),
-                Some(c) => Err(Error::expected_but_got(vec!["=", "~"], &c, loc)),
-                None => Err(Error::expected(vec!["=", "~"], loc)),
+                _ => Ok(Token::Exclam(loc)),
             },
             '{' => Ok(Token::LeftBrace(loc)),
             '}' => Ok(Token::RightBrace(loc)),
             '[' => Ok(Token::LeftBracket(loc)),
             ']' => Ok(Token::RightBracket(loc)),
-            '>' => match self.next_char() {
+            '>' => match next_char_if!(self, '=') {
                 Some('=') => Ok(Token::GtEqual(loc)),
                 _ => Ok(Token::Gt(loc)),
             },
-            '<' => match self.next_char() {
+            '<' => match next_char_if!(self, '=') {
                 Some('=') => Ok(Token::LtEqual(loc)),
                 _ => Ok(Token::Lt(loc)),
             },
-            '"' => match self.peek_char() {
-                Some('"') => {
-                    self.next_char();
-                    match self.peek_char() {
-                        Some('"') => {
-                            self.next_char();
-                            self.make_block_string(loc)
-                        }
-                        _ => Ok(Token::String(loc, "".to_string())),
-                    }
-                }
+            '"' => match next_char_if!(self, '"') {
+                Some('"') => match next_char_if!(self, '"') {
+                    Some('"') => self.make_block_string(loc),
+                    _ => Ok(Token::String(loc, "".to_string())),
+                },
                 _ => self.make_string(loc),
             },
             c if c.is_ascii_digit() => self.make_number(loc),
@@ -576,6 +594,7 @@ mod tests {
         token_equal:            "="         => Token::Equal(_),
         token_equal_equal:      "=="        => Token::EqualEqual(_),
         token_equal_gt:         "=>"        => Token::EqualGt(_),
+        token_exclam:           "!"         => Token::Exclam(_),
         token_exclam_equal:     "!="        => Token::ExclamEqual(_),
         token_exclam_tilde:     "!~"        => Token::ExclamTilde(_),
         token_fail:             "fail"      => Token::Fail(_),
@@ -660,39 +679,39 @@ mod tests {
     }
 
     #[test]
-    fn exclam_nothing() {
-        let mut lexer = Lexer::new("!");
-
+    fn sequence_exclam_dot() {
+        let mut lexer = Lexer::new("!.");
         let token = lexer.next();
-        assert!(token.is_some());
-
-        let token = token.unwrap();
-        // todo (see unexpected)
-        assert!(if let Err(err) = token {
-            assert_eq!(err.location, Location::new(1, 2));
-            assert_eq!(err.error, "expected `=` or `~`, got nothing");
-            true
-        } else {
-            false
-        });
+        assert!(matches!(token, Some(Ok(Token::Exclam(_)))));
+        let token = lexer.next();
+        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
     }
 
     #[test]
-    fn exclam_something() {
-        let mut lexer = Lexer::new("!a");
-
+    fn sequence_equal_dot() {
+        let mut lexer = Lexer::new("=.");
         let token = lexer.next();
-        assert!(token.is_some());
+        assert!(matches!(token, Some(Ok(Token::Equal(_)))));
+        let token = lexer.next();
+        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
+    }
 
-        let token = token.unwrap();
-        // todo (see unexpected)
-        assert!(if let Err(err) = token {
-            assert_eq!(err.location, Location::new(1, 2));
-            assert_eq!(err.error, "expected `=` or `~`, got `a`");
-            true
-        } else {
-            false
-        });
+    #[test]
+    fn sequence_gt_dot() {
+        let mut lexer = Lexer::new(">.");
+        let token = lexer.next();
+        assert!(matches!(token, Some(Ok(Token::Gt(_)))));
+        let token = lexer.next();
+        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
+    }
+
+    #[test]
+    fn sequence_lt_dot() {
+        let mut lexer = Lexer::new("<.");
+        let token = lexer.next();
+        assert!(matches!(token, Some(Ok(Token::Lt(_)))));
+        let token = lexer.next();
+        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
     }
 
     macro_rules! string {

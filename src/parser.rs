@@ -72,7 +72,8 @@ impl Display for Expression {
 enum ExpressionKind {
     Identifier(String),
     Integer(u32),
-    Binary(Box<Expression>, Operator, Box<Expression>),
+    Binary(Box<Expression>, BinaryOperator, Box<Expression>),
+    Unary(UnaryOperator, Box<Expression>),
 }
 
 impl Display for ExpressionKind {
@@ -83,7 +84,10 @@ impl Display for ExpressionKind {
             match self {
                 ExpressionKind::Identifier(identifier) => identifier.clone(),
                 ExpressionKind::Integer(integer) => format!("{}", integer),
-                ExpressionKind::Binary(left, op, right) => format!("({} {} {})", left, op, right),
+                ExpressionKind::Binary(left, op, right) =>
+                    format!("({} {} {})", left, op.to_string(), right),
+                ExpressionKind::Unary(op, expression) =>
+                    format!("({}{})", op.to_string(), expression),
             }
         )
     }
@@ -109,7 +113,7 @@ enum OperatorPrecedence {
 }
 
 #[derive(Debug)]
-enum OperatorKind {
+enum BinaryOperatorKind {
     Add,
     And,
     Divide,
@@ -129,63 +133,59 @@ enum OperatorKind {
     Access,
 }
 
-impl OperatorKind {
+impl BinaryOperatorKind {
     fn precedence(&self) -> OperatorPrecedence {
+        use OperatorPrecedence::*;
         match *self {
-            OperatorKind::And => OperatorPrecedence::Product,
-            OperatorKind::Access => OperatorPrecedence::Access,
-            OperatorKind::Equals => OperatorPrecedence::Comparison,
-            OperatorKind::NotEquals => OperatorPrecedence::Comparison,
-            OperatorKind::NotMatches => OperatorPrecedence::Comparison,
-            OperatorKind::GreaterThan => OperatorPrecedence::Comparison,
-            OperatorKind::GreaterOrEqual => OperatorPrecedence::Comparison,
-            OperatorKind::LessThan => OperatorPrecedence::Comparison,
-            OperatorKind::LessOrEqual => OperatorPrecedence::Comparison,
-            OperatorKind::Subtract => OperatorPrecedence::Sum,
-            OperatorKind::Or => OperatorPrecedence::Sum,
-            OperatorKind::Reminder => OperatorPrecedence::Product,
-            OperatorKind::PrefixCall => OperatorPrecedence::Pipe,
-            OperatorKind::Add => OperatorPrecedence::Sum,
-            OperatorKind::Divide => OperatorPrecedence::Product,
-            OperatorKind::Multiply => OperatorPrecedence::Product,
-            OperatorKind::Matches => OperatorPrecedence::Comparison,
+            BinaryOperatorKind::And => Product,
+            BinaryOperatorKind::Access => Access,
+            BinaryOperatorKind::Equals => Comparison,
+            BinaryOperatorKind::NotEquals => Comparison,
+            BinaryOperatorKind::NotMatches => Comparison,
+            BinaryOperatorKind::GreaterThan => Comparison,
+            BinaryOperatorKind::GreaterOrEqual => Comparison,
+            BinaryOperatorKind::LessThan => Comparison,
+            BinaryOperatorKind::LessOrEqual => Comparison,
+            BinaryOperatorKind::Subtract => Sum,
+            BinaryOperatorKind::Or => Sum,
+            BinaryOperatorKind::Reminder => Product,
+            BinaryOperatorKind::PrefixCall => Pipe,
+            BinaryOperatorKind::Add => Sum,
+            BinaryOperatorKind::Divide => Product,
+            BinaryOperatorKind::Multiply => Product,
+            BinaryOperatorKind::Matches => Comparison,
+        }
+    }
+
+    fn to_string(&self) -> &str {
+        use BinaryOperatorKind::*;
+        match *self {
+            Add => "+",
+            And => "and",
+            Divide => "/",
+            Equals => "==",
+            GreaterOrEqual => ">=",
+            GreaterThan => ">",
+            LessOrEqual => "<=",
+            LessThan => "<",
+            Matches => "~",
+            Multiply => "*",
+            NotEquals => "!=",
+            NotMatches => "!~",
+            Or => "or",
+            PrefixCall => "|",
+            Reminder => "%",
+            Subtract => "-",
+            Access => ".",
         }
     }
 }
 
-impl Display for OperatorKind {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                OperatorKind::Add => "+",
-                OperatorKind::And => "and",
-                OperatorKind::Divide => "/",
-                OperatorKind::Equals => "==",
-                OperatorKind::GreaterOrEqual => ">=",
-                OperatorKind::GreaterThan => ">",
-                OperatorKind::LessOrEqual => "<=",
-                OperatorKind::LessThan => "<",
-                OperatorKind::Matches => "~",
-                OperatorKind::Multiply => "*",
-                OperatorKind::NotEquals => "!=",
-                OperatorKind::NotMatches => "!~",
-                OperatorKind::Or => "or",
-                OperatorKind::PrefixCall => "|",
-                OperatorKind::Reminder => "%",
-                OperatorKind::Subtract => "-",
-                OperatorKind::Access => ".",
-            }
-        )
-    }
-}
-
-impl TryFrom<&Token> for OperatorKind {
+impl TryFrom<&Token> for BinaryOperatorKind {
     type Error = ();
 
     fn try_from(token: &Token) -> std::result::Result<Self, Self::Error> {
-        use OperatorKind::*;
+        use BinaryOperatorKind::*;
         match *token {
             Token::And(_) => Ok(And),
             Token::Dot(_) => Ok(Access),
@@ -210,20 +210,46 @@ impl TryFrom<&Token> for OperatorKind {
 }
 
 #[derive(Debug)]
-struct Operator {
+struct BinaryOperator {
     location: Location,
-    kind: OperatorKind,
+    kind: BinaryOperatorKind,
 }
 
-impl Operator {
+impl BinaryOperator {
     fn precedence(&self) -> OperatorPrecedence {
         self.kind.precedence()
     }
+
+    fn to_string(&self) -> &str {
+        self.kind.to_string()
+    }
 }
 
-impl Display for Operator {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.kind)
+#[derive(Debug)]
+enum UnaryOperatorKind {
+    Negative,
+    Not,
+}
+
+impl UnaryOperatorKind {
+    fn to_string(&self) -> &str {
+        use UnaryOperatorKind::*;
+        match self {
+            Negative => "-",
+            Not => "!",
+        }
+    }
+}
+
+#[derive(Debug)]
+struct UnaryOperator {
+    location: Location,
+    kind: UnaryOperatorKind,
+}
+
+impl UnaryOperator {
+    fn to_string(&self) -> &str {
+        self.kind.to_string()
     }
 }
 
@@ -268,13 +294,34 @@ impl<'t> Parser<'t> {
     fn peek_operator_precedence(&mut self) -> Option<OperatorPrecedence> {
         self.peek_token()
             .and_then(|t| t.try_into().ok())
-            .map(|k: OperatorKind| k.precedence())
+            .map(|k: BinaryOperatorKind| k.precedence())
     }
 
     fn parse_expression(&mut self, precedence: OperatorPrecedence) -> Result<Expression> {
         let mut expression = match self.next_token() {
+            // fixme proper location
             None => return Err(Error::expected(vec!["[Expression]"], Location::new(0, 0))),
             Some(t) => match t {
+                Token::Minus(loc) => Expression {
+                    location: loc.clone(),
+                    expression: ExpressionKind::Unary(
+                        UnaryOperator {
+                            location: loc,
+                            kind: UnaryOperatorKind::Negative,
+                        },
+                        self.parse_expression(OperatorPrecedence::Prefix)?.into(),
+                    ),
+                },
+                Token::Exclam(loc) => Expression {
+                    location: loc.clone(),
+                    expression: ExpressionKind::Unary(
+                        UnaryOperator {
+                            location: loc,
+                            kind: UnaryOperatorKind::Not,
+                        },
+                        self.parse_expression(OperatorPrecedence::Prefix)?.into(),
+                    ),
+                },
                 Token::Identifier(loc, name) => Expression {
                     location: loc,
                     expression: ExpressionKind::Identifier(name),
@@ -283,7 +330,12 @@ impl<'t> Parser<'t> {
                     location: loc,
                     expression: ExpressionKind::Integer(value),
                 },
-                t => return Err(Error::expected_but_got(vec!["identifier"], &t)),
+                t => {
+                    return Err(Error::expected_but_got(
+                        vec!["!", "-", "identifier", "integer"],
+                        &t,
+                    ))
+                }
             },
         };
 
@@ -309,10 +361,10 @@ impl<'t> Parser<'t> {
         })
     }
 
-    fn parse_operator(&mut self) -> Option<Operator> {
+    fn parse_operator(&mut self) -> Option<BinaryOperator> {
         self.peek_token()
             .and_then(|t| t.try_into().ok())
-            .map(|kind| Operator {
+            .map(|kind| BinaryOperator {
                 location: self
                     .next_token()
                     .expect("there must be a next token, we were able to peek it")
@@ -343,23 +395,23 @@ mod tests {
     }
 
     parse_operator! {
-        add:              "+"   => OperatorKind::Add,
-        and:              "and" => OperatorKind::And,
-        divide:           "/"   => OperatorKind::Divide,
-        equals:           "=="  => OperatorKind::Equals,
-        greater_or_equal: ">="  => OperatorKind::GreaterOrEqual,
-        greater_than:     ">"   => OperatorKind::GreaterThan,
-        less_or_equal:    "<="  => OperatorKind::LessOrEqual,
-        less_than:        "<"   => OperatorKind::LessThan,
-        matches:          "~"   => OperatorKind::Matches,
-        multiply:         "*"   => OperatorKind::Multiply,
-        not_equals:       "!="  => OperatorKind::NotEquals,
-        not_matches:      "!~"  => OperatorKind::NotMatches,
-        or:               "or"  => OperatorKind::Or,
-        prefix_call:      "|"   => OperatorKind::PrefixCall,
-        reminder:         "%"   => OperatorKind::Reminder,
-        subtract:         "-"   => OperatorKind::Subtract,
-        suffix_call:      "."   => OperatorKind::Access,
+        add:              "+"   => BinaryOperatorKind::Add,
+        and:              "and" => BinaryOperatorKind::And,
+        divide:           "/"   => BinaryOperatorKind::Divide,
+        equals:           "=="  => BinaryOperatorKind::Equals,
+        greater_or_equal: ">="  => BinaryOperatorKind::GreaterOrEqual,
+        greater_than:     ">"   => BinaryOperatorKind::GreaterThan,
+        less_or_equal:    "<="  => BinaryOperatorKind::LessOrEqual,
+        less_than:        "<"   => BinaryOperatorKind::LessThan,
+        matches:          "~"   => BinaryOperatorKind::Matches,
+        multiply:         "*"   => BinaryOperatorKind::Multiply,
+        not_equals:       "!="  => BinaryOperatorKind::NotEquals,
+        not_matches:      "!~"  => BinaryOperatorKind::NotMatches,
+        or:               "or"  => BinaryOperatorKind::Or,
+        prefix_call:      "|"   => BinaryOperatorKind::PrefixCall,
+        reminder:         "%"   => BinaryOperatorKind::Reminder,
+        subtract:         "-"   => BinaryOperatorKind::Subtract,
+        suffix_call:      "."   => BinaryOperatorKind::Access,
     }
 
     macro_rules! parse_expression {
@@ -370,7 +422,6 @@ mod tests {
                 let mut parser = Parser::new(Lexer::new($text));
                 let node = parser.parse_expression(OperatorPrecedence::Lowest);
                 let next_node = parser.parse_expression(OperatorPrecedence::Lowest);
-                assert!(node.is_ok());
                 let node: Expression = node.unwrap();
 
                 assert!(next_node.is_err(), "unexpected expression: {}", next_node.unwrap());
@@ -382,13 +433,17 @@ mod tests {
     }
 
     parse_expression! {
-        expression_integer:      "42"                   => "42",
-        expression_identifier:   "id"                   => "id",
-        expression_binary2:      "1 + 2"                => "(1 + 2)",
-        expression_binary3:      "1 + 2 + 3"            => "((1 + 2) + 3)",
-        expression_precedence1:  "1 * 2 + 3"            => "((1 * 2) + 3)",
-        expression_precedence2:  "1 + 2 * 3"            => "(1 + (2 * 3))",
-        expression_infix_call:   "1 + ident.sub * 2"    => "(1 + ((ident . sub) * 2))",
-        expression_prefix_call:  "1 == 1 | method"       => "((1 == 1) | method)",
+        expression_integer:          "42"                   => "42",
+        expression_identifier:       "id"                   => "id",
+        expression_binary2:          "1 + 2"                => "(1 + 2)",
+        expression_binary3:          "1 + 2 + 3"            => "((1 + 2) + 3)",
+        expression_precedence1:      "1 * 2 + 3"            => "((1 * 2) + 3)",
+        expression_precedence2:      "1 + 2 * 3"            => "(1 + (2 * 3))",
+        expression_infix_call:       "1 + ident.sub * 2"    => "(1 + ((ident . sub) * 2))",
+        expression_prefix_call:      "1 == 1 | method"      => "((1 == 1) | method)",
+        expression_unary_minus:      "-1"                   => "(-1)",
+        expression_unary_exclam:     "!1"                   => "(!1)",
+        expression_unary_in_binary1: "-1 + 1"               => "((-1) + 1)",
+        expression_unary_in_binary2: "-1.method"            => "((-1) . method)",
     }
 }
