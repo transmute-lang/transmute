@@ -62,29 +62,6 @@ struct Expression {
     expression: ExpressionKind,
 }
 
-impl Expression {
-    fn new_identifier(location: Location, name: String) -> Self {
-        Self {
-            location,
-            expression: ExpressionKind::Identifier(name),
-        }
-    }
-
-    fn new_integer(location: Location, value: u32) -> Self {
-        Self {
-            location,
-            expression: ExpressionKind::Integer(value),
-        }
-    }
-
-    fn new_binary(left: Expression, operator: Operator, right: Expression) -> Self {
-        Self {
-            location: left.location.clone(),
-            expression: ExpressionKind::Binary(left.into(), operator, right.into()),
-        }
-    }
-}
-
 impl Display for Expression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.expression)
@@ -204,28 +181,29 @@ impl Display for OperatorKind {
     }
 }
 
-impl TryFrom<Option<&Token>> for OperatorKind {
+impl TryFrom<&Token> for OperatorKind {
     type Error = ();
 
-    fn try_from(token: Option<&Token>) -> std::result::Result<Self, Self::Error> {
-        match token {
-            Some(&Token::And(_)) => Ok(OperatorKind::And),
-            Some(&Token::Dot(_)) => Ok(OperatorKind::Access),
-            Some(&Token::EqualEqual(_)) => Ok(OperatorKind::Equals),
-            Some(&Token::ExclamEqual(_)) => Ok(OperatorKind::NotEquals),
-            Some(&Token::ExclamTilde(_)) => Ok(OperatorKind::NotMatches),
-            Some(&Token::Gt(_)) => Ok(OperatorKind::GreaterThan),
-            Some(&Token::GtEqual(_)) => Ok(OperatorKind::GreaterOrEqual),
-            Some(&Token::Lt(_)) => Ok(OperatorKind::LessThan),
-            Some(&Token::LtEqual(_)) => Ok(OperatorKind::LessOrEqual),
-            Some(&Token::Minus(_)) => Ok(OperatorKind::Subtract),
-            Some(&Token::Or(_)) => Ok(OperatorKind::Or),
-            Some(&Token::Percent(_)) => Ok(OperatorKind::Reminder),
-            Some(&Token::Pipe(_)) => Ok(OperatorKind::PrefixCall),
-            Some(&Token::Plus(_)) => Ok(OperatorKind::Add),
-            Some(&Token::Slash(_)) => Ok(OperatorKind::Divide),
-            Some(&Token::Star(_)) => Ok(OperatorKind::Multiply),
-            Some(&Token::Tilde(_)) => Ok(OperatorKind::Matches),
+    fn try_from(token: &Token) -> std::result::Result<Self, Self::Error> {
+        use OperatorKind::*;
+        match *token {
+            Token::And(_) => Ok(And),
+            Token::Dot(_) => Ok(Access),
+            Token::EqualEqual(_) => Ok(Equals),
+            Token::ExclamEqual(_) => Ok(NotEquals),
+            Token::ExclamTilde(_) => Ok(NotMatches),
+            Token::Gt(_) => Ok(GreaterThan),
+            Token::GtEqual(_) => Ok(GreaterOrEqual),
+            Token::Lt(_) => Ok(LessThan),
+            Token::LtEqual(_) => Ok(LessOrEqual),
+            Token::Minus(_) => Ok(Subtract),
+            Token::Or(_) => Ok(Or),
+            Token::Percent(_) => Ok(Reminder),
+            Token::Pipe(_) => Ok(PrefixCall),
+            Token::Plus(_) => Ok(Add),
+            Token::Slash(_) => Ok(Divide),
+            Token::Star(_) => Ok(Multiply),
+            Token::Tilde(_) => Ok(Matches),
             _ => Err(()),
         }
     }
@@ -280,34 +258,31 @@ impl<'t> Parser<'t> {
             self.lexer.next();
         }
 
-        self.lexer.peek().map(|t| t.as_ref().unwrap())
+        self.lexer
+            .peek()
+            .map(|t| t.as_ref().expect("cannot be an error, we weeded them"))
     }
 
     /// Returns the next operator's precedence, if the next token is an operator token; otherwise,
-    /// returns `None`
+    /// returns `None`.
     fn peek_operator_precedence(&mut self) -> Option<OperatorPrecedence> {
-        match <Option<&Token> as TryInto<OperatorKind>>::try_into(self.peek_token()) {
-            Ok(kind) => Some(kind.precedence()),
-            Err(_) => None,
-        }
-    }
-
-    fn parse_operator(&mut self) -> Option<Operator> {
-        match self.peek_token().try_into() {
-            Err(_) => None,
-            Ok(kind) => Some(Operator {
-                location: self.next_token().unwrap().location().to_owned(),
-                kind,
-            }),
-        }
+        self.peek_token()
+            .and_then(|t| t.try_into().ok())
+            .map(|k: OperatorKind| k.precedence())
     }
 
     fn parse_expression(&mut self, precedence: OperatorPrecedence) -> Result<Expression> {
         let mut expression = match self.next_token() {
             None => return Err(Error::expected(vec!["[Expression]"], Location::new(0, 0))),
             Some(t) => match t {
-                Token::Identifier(loc, name) => Expression::new_identifier(loc, name),
-                Token::Integer(loc, value) => Expression::new_integer(loc, value),
+                Token::Identifier(loc, name) => Expression {
+                    location: loc,
+                    expression: ExpressionKind::Identifier(name),
+                },
+                Token::Integer(loc, value) => Expression {
+                    location: loc,
+                    expression: ExpressionKind::Integer(value),
+                },
                 t => return Err(Error::expected_but_got(vec!["identifier"], &t)),
             },
         };
@@ -324,10 +299,27 @@ impl<'t> Parser<'t> {
     }
 
     fn parse_infix_expression(&mut self, left: Expression) -> Result<Expression> {
-        // we're sure there is one as we got a precedence
-        let operator = self.parse_operator().unwrap();
+        let operator = self
+            .parse_operator()
+            .expect("there must be an operator as we got a precedence");
         let right = self.parse_expression(operator.precedence())?;
-        Ok(Expression::new_binary(left, operator, right))
+        Ok(Expression {
+            location: left.location.clone(),
+            expression: ExpressionKind::Binary(left.into(), operator, right.into()),
+        })
+    }
+
+    fn parse_operator(&mut self) -> Option<Operator> {
+        self.peek_token()
+            .and_then(|t| t.try_into().ok())
+            .map(|kind| Operator {
+                location: self
+                    .next_token()
+                    .expect("there must be a next token, we were able to peek it")
+                    .location()
+                    .to_owned(),
+                kind,
+            })
     }
 }
 
