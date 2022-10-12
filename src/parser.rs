@@ -74,6 +74,7 @@ enum ExpressionKind {
     Integer(u32),
     Binary(Box<Expression>, BinaryOperator, Box<Expression>),
     Unary(UnaryOperator, Box<Expression>),
+    Call(String, Location, Vec<Expression>),
 }
 
 impl Display for ExpressionKind {
@@ -88,6 +89,14 @@ impl Display for ExpressionKind {
                     format!("({} {} {})", left, op.to_string(), right),
                 ExpressionKind::Unary(op, expression) =>
                     format!("({}{})", op.to_string(), expression),
+                ExpressionKind::Call(method, _, parameters) => {
+                    let parameters = parameters
+                        .iter()
+                        .map(|e| format!("{}", e.expression))
+                        .collect::<Vec<String>>()
+                        .join(", ");
+                    format!("{}({})", method, parameters)
+                }
             }
         )
     }
@@ -298,10 +307,13 @@ impl<'t> Parser<'t> {
     }
 
     fn parse_expression(&mut self, precedence: OperatorPrecedence) -> Result<Expression> {
+        // todo see if we can refactor this
         let mut expression = match self.next_token() {
             // fixme proper location
-            None => return Err(Error::expected(vec!["[Expression]"], Location::new(0, 0))),
+            None => return Err(Error::expected(vec!["[expression]"], Location::new(0, 0))),
             Some(t) => match t {
+                Token::LeftParenthesis(loc) => todo!(),
+                Token::Plus(loc) => todo!(),
                 Token::Minus(loc) => self.parse_unary_expression(UnaryOperator {
                     location: loc,
                     kind: UnaryOperatorKind::Negative,
@@ -310,9 +322,12 @@ impl<'t> Parser<'t> {
                     location: loc,
                     kind: UnaryOperatorKind::Not,
                 })?,
-                Token::Identifier(loc, name) => Expression {
-                    location: loc,
-                    expression: ExpressionKind::Identifier(name),
+                Token::Identifier(loc, name) => match self.peek_token() {
+                    Some(Token::LeftParenthesis(_)) => self.parse_call_expression(loc, name)?,
+                    _ => Expression {
+                        location: loc,
+                        expression: ExpressionKind::Identifier(name),
+                    },
                 },
                 Token::Integer(loc, value) => Expression {
                     location: loc,
@@ -345,6 +360,50 @@ impl<'t> Parser<'t> {
                 operator,
                 self.parse_expression(OperatorPrecedence::Prefix)?.into(),
             ),
+        })
+    }
+
+    /// parses `[(] ( [expression] [,] )* [expression]? [)]`
+    fn parse_call_expression(
+        &mut self,
+        method_name_location: Location,
+        method_name: String,
+    ) -> Result<Expression> {
+        // todo better location
+        let parenthesis_location = match self.next_token() {
+            None => return Err(Error::expected(vec!["("], method_name_location)),
+            Some(Token::LeftParenthesis(parenthesis_location)) => parenthesis_location,
+            Some(token) => return Err(Error::expected_but_got(vec!["("], &token)),
+        };
+
+        let mut parameters = Vec::new();
+        while let Some(token) = self.peek_token() {
+            match token {
+                Token::RightParenthesis(_) => break,
+                Token::Comma(_) if !parameters.is_empty() => {
+                    self.next_token()
+                        .expect("we are sure there is one as we just peeked it");
+                    if let Some(Token::RightParenthesis(_)) = self.peek_token() {
+                        break;
+                    }
+                }
+                _ => {
+                    // todo add ")" in the list of accepted chars in the returned error
+                    parameters.push(self.parse_expression(OperatorPrecedence::Lowest)?);
+                }
+            }
+        }
+
+        match self.next_token() {
+            // todo better location
+            None => return Err(Error::expected(vec![")"], method_name_location)),
+            Some(Token::RightParenthesis(_)) => (),
+            Some(token) => return Err(Error::expected_but_got(vec![")"], &token)),
+        }
+
+        Ok(Expression {
+            location: method_name_location,
+            expression: ExpressionKind::Call(method_name, parenthesis_location, parameters),
         })
     }
 
@@ -431,17 +490,22 @@ mod tests {
     }
 
     parse_expression! {
-        expression_integer:          "42"                   => "42",
-        expression_identifier:       "id"                   => "id",
-        expression_binary2:          "1 + 2"                => "(1 + 2)",
-        expression_binary3:          "1 + 2 + 3"            => "((1 + 2) + 3)",
-        expression_precedence1:      "1 * 2 + 3"            => "((1 * 2) + 3)",
-        expression_precedence2:      "1 + 2 * 3"            => "(1 + (2 * 3))",
-        expression_infix_call:       "1 + ident.sub * 2"    => "(1 + ((ident . sub) * 2))",
-        expression_prefix_call:      "1 == 1 | method"      => "((1 == 1) | method)",
-        expression_unary_minus:      "-1"                   => "(-1)",
-        expression_unary_exclam:     "!1"                   => "(!1)",
-        expression_unary_in_binary1: "-1 + 1"               => "((-1) + 1)",
-        expression_unary_in_binary2: "-1.method"            => "((-1) . method)",
+        expression_integer:          "42"                => "42",
+        expression_identifier:       "id"                => "id",
+        expression_binary2:          "1 + 2"             => "(1 + 2)",
+        expression_binary3:          "1 + 2 + 3"         => "((1 + 2) + 3)",
+        expression_precedence1:      "1 * 2 + 3"         => "((1 * 2) + 3)",
+        expression_precedence2:      "1 + 2 * 3"         => "(1 + (2 * 3))",
+        expression_infix_call:       "1 + ident.sub * 2" => "(1 + ((ident . sub) * 2))",
+        expression_prefix_call:      "1 == 1 | method"   => "((1 == 1) | method)",
+        expression_unary_minus:      "-1"                => "(-1)",
+        expression_unary_exclam:     "!1"                => "(!1)",
+        expression_unary_in_binary1: "-1 + 1"            => "((-1) + 1)",
+        expression_unary_in_binary2: "-1.field"          => "((-1) . field)",
+        expression_call_par1:        "method()"          => "method()",
+        expression_call_par2:        "method(p1)"        => "method(p1)",
+        expression_call_par3:        "method(p1,)"       => "method(p1)",
+        expression_call_par4:        "method(p1,p2)"     => "method(p1, p2)",
+        expression_call_par5:        "method(p1,p2+p3)"  => "method(p1, (p2 + p3))",
     }
 }
