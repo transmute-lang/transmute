@@ -302,26 +302,14 @@ impl<'t> Parser<'t> {
             // fixme proper location
             None => return Err(Error::expected(vec!["[Expression]"], Location::new(0, 0))),
             Some(t) => match t {
-                Token::Minus(loc) => Expression {
-                    location: loc.clone(),
-                    expression: ExpressionKind::Unary(
-                        UnaryOperator {
-                            location: loc,
-                            kind: UnaryOperatorKind::Negative,
-                        },
-                        self.parse_expression(OperatorPrecedence::Prefix)?.into(),
-                    ),
-                },
-                Token::Exclam(loc) => Expression {
-                    location: loc.clone(),
-                    expression: ExpressionKind::Unary(
-                        UnaryOperator {
-                            location: loc,
-                            kind: UnaryOperatorKind::Not,
-                        },
-                        self.parse_expression(OperatorPrecedence::Prefix)?.into(),
-                    ),
-                },
+                Token::Minus(loc) => self.parse_unary_expression(UnaryOperator {
+                    location: loc,
+                    kind: UnaryOperatorKind::Negative,
+                })?,
+                Token::Exclam(loc) => self.parse_unary_expression(UnaryOperator {
+                    location: loc,
+                    kind: UnaryOperatorKind::Not,
+                })?,
                 Token::Identifier(loc, name) => Expression {
                     location: loc,
                     expression: ExpressionKind::Identifier(name),
@@ -348,6 +336,16 @@ impl<'t> Parser<'t> {
         }
 
         Ok(expression)
+    }
+
+    fn parse_unary_expression(&mut self, operator: UnaryOperator) -> Result<Expression> {
+        Ok(Expression {
+            location: operator.location.clone(),
+            expression: ExpressionKind::Unary(
+                operator,
+                self.parse_expression(OperatorPrecedence::Prefix)?.into(),
+            ),
+        })
     }
 
     fn parse_infix_expression(&mut self, left: Expression) -> Result<Expression> {
