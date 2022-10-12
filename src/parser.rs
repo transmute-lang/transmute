@@ -310,41 +310,52 @@ impl<'t> Parser<'t> {
 
     fn parse_expression(&mut self, precedence: OperatorPrecedence) -> Result<Expression> {
         // todo see if we can refactor this
-        let mut expression = match self.next_token() {
-            // fixme proper location
-            None => return Err(Error::expected(vec!["[expression]"], Location::new(0, 0))),
-            Some(t) => match t {
-                Token::LeftParenthesis(loc) => todo!(),
-                Token::Plus(loc) => self.parse_unary_expression(UnaryOperator {
+        // fixme proper location
+        let expression = self.next_token().ok_or_else(|| {
+            Error::expected(
+                vec!["(", "+", "-", "!", "identifier", "integer"],
+                Location::new(0, 0),
+            )
+        })?;
+        let mut expression = match expression {
+            Token::LeftParenthesis(loc) => {
+                let expression = self.parse_expression(OperatorPrecedence::Lowest);
+                match self.next_token() {
+                    Some(Token::RightParenthesis(_)) => expression,
+                    Some(token) => Err(Error::expected_but_got(vec![")"], &token)),
+                    // todo add location of opening parenthesis
+                    _ => Err(Error::expected(vec![")"], Location::new(0, 0))),
+                }?
+            }
+            Token::Plus(loc) => self.parse_unary_expression(UnaryOperator {
+                location: loc,
+                kind: UnaryOperatorKind::Positive,
+            })?,
+            Token::Minus(loc) => self.parse_unary_expression(UnaryOperator {
+                location: loc,
+                kind: UnaryOperatorKind::Negative,
+            })?,
+            Token::Exclam(loc) => self.parse_unary_expression(UnaryOperator {
+                location: loc,
+                kind: UnaryOperatorKind::Not,
+            })?,
+            Token::Identifier(loc, name) => match self.peek_token() {
+                Some(Token::LeftParenthesis(_)) => self.parse_call_expression(loc, name)?,
+                _ => Expression {
                     location: loc,
-                    kind: UnaryOperatorKind::Positive,
-                })?,
-                Token::Minus(loc) => self.parse_unary_expression(UnaryOperator {
-                    location: loc,
-                    kind: UnaryOperatorKind::Negative,
-                })?,
-                Token::Exclam(loc) => self.parse_unary_expression(UnaryOperator {
-                    location: loc,
-                    kind: UnaryOperatorKind::Not,
-                })?,
-                Token::Identifier(loc, name) => match self.peek_token() {
-                    Some(Token::LeftParenthesis(_)) => self.parse_call_expression(loc, name)?,
-                    _ => Expression {
-                        location: loc,
-                        expression: ExpressionKind::Identifier(name),
-                    },
+                    expression: ExpressionKind::Identifier(name),
                 },
-                Token::Integer(loc, value) => Expression {
-                    location: loc,
-                    expression: ExpressionKind::Integer(value),
-                },
-                t => {
-                    return Err(Error::expected_but_got(
-                        vec!["!", "-", "identifier", "integer"],
-                        &t,
-                    ))
-                }
             },
+            Token::Integer(loc, value) => Expression {
+                location: loc,
+                expression: ExpressionKind::Integer(value),
+            },
+            token => {
+                return Err(Error::expected_but_got(
+                    vec!["(", "+", "-", "!", "identifier", "integer"],
+                    &token,
+                ))
+            }
         };
 
         while let Some(next_precedence) = self.peek_operator_precedence() {
@@ -501,6 +512,7 @@ mod tests {
         expression_binary3:          "1 + 2 + 3"         => "((1 + 2) + 3)",
         expression_precedence1:      "1 * 2 + 3"         => "((1 * 2) + 3)",
         expression_precedence2:      "1 + 2 * 3"         => "(1 + (2 * 3))",
+        expression_parenthesis:      "(1 + 2) * 3"       => "((1 + 2) * 3)",
         expression_infix_call:       "1 + ident.sub * 2" => "(1 + ((ident . sub) * 2))",
         expression_prefix_call:      "1 == 1 | method"   => "((1 == 1) | method)",
         expression_unary_plus:       "+1"                => "(+1)",
