@@ -236,6 +236,7 @@ impl BinaryOperator {
 
 #[derive(Debug)]
 enum UnaryOperatorKind {
+    Positive,
     Negative,
     Not,
 }
@@ -244,6 +245,7 @@ impl UnaryOperatorKind {
     fn to_string(&self) -> &str {
         use UnaryOperatorKind::*;
         match self {
+            Positive => "+",
             Negative => "-",
             Not => "!",
         }
@@ -313,7 +315,10 @@ impl<'t> Parser<'t> {
             None => return Err(Error::expected(vec!["[expression]"], Location::new(0, 0))),
             Some(t) => match t {
                 Token::LeftParenthesis(loc) => todo!(),
-                Token::Plus(loc) => todo!(),
+                Token::Plus(loc) => self.parse_unary_expression(UnaryOperator {
+                    location: loc,
+                    kind: UnaryOperatorKind::Positive,
+                })?,
                 Token::Minus(loc) => self.parse_unary_expression(UnaryOperator {
                     location: loc,
                     kind: UnaryOperatorKind::Negative,
@@ -498,6 +503,7 @@ mod tests {
         expression_precedence2:      "1 + 2 * 3"         => "(1 + (2 * 3))",
         expression_infix_call:       "1 + ident.sub * 2" => "(1 + ((ident . sub) * 2))",
         expression_prefix_call:      "1 == 1 | method"   => "((1 == 1) | method)",
+        expression_unary_plus:       "+1"                => "(+1)",
         expression_unary_minus:      "-1"                => "(-1)",
         expression_unary_exclam:     "!1"                => "(!1)",
         expression_unary_in_binary1: "-1 + 1"            => "((-1) + 1)",
