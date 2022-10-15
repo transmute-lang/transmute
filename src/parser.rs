@@ -72,11 +72,12 @@ impl Display for Expression {
 
 #[derive(Debug)]
 enum ExpressionKind {
+    Binary(Box<Expression>, BinaryOperator, Box<Expression>),
+    Call(String, Location, Vec<Expression>),
     Identifier(String),
     Integer(u32),
-    Binary(Box<Expression>, BinaryOperator, Box<Expression>),
+    String(String),
     Unary(UnaryOperator, Box<Expression>),
-    Call(String, Location, Vec<Expression>),
 }
 
 impl Display for ExpressionKind {
@@ -85,12 +86,8 @@ impl Display for ExpressionKind {
             f,
             "{}",
             match self {
-                ExpressionKind::Identifier(identifier) => identifier.clone(),
-                ExpressionKind::Integer(integer) => format!("{}", integer),
                 ExpressionKind::Binary(left, op, right) =>
                     format!("({} {} {})", left, op.to_string(), right),
-                ExpressionKind::Unary(op, expression) =>
-                    format!("({}{})", op.to_string(), expression),
                 ExpressionKind::Call(method, _, parameters) => {
                     let parameters = parameters
                         .iter()
@@ -99,6 +96,11 @@ impl Display for ExpressionKind {
                         .join(", ");
                     format!("{}({})", method, parameters)
                 }
+                ExpressionKind::Identifier(identifier) => identifier.clone(),
+                ExpressionKind::Integer(integer) => format!("{}", integer),
+                ExpressionKind::String(string) => format!("\"{}\"", string),
+                ExpressionKind::Unary(op, expression) =>
+                    format!("({}{})", op.to_string(), expression),
             }
         )
     }
@@ -355,6 +357,10 @@ impl<'t> Parser<'t> {
             Token::Integer(loc, value) => Expression {
                 location: loc,
                 expression: ExpressionKind::Integer(value),
+            },
+            Token::String(loc, value) => Expression {
+                location: loc,
+                expression: ExpressionKind::String(value),
             },
             token => {
                 return Err(Error {
@@ -629,6 +635,7 @@ mod tests {
     parse_expression! {
         expression_integer:          "42"                => "42",
         expression_identifier:       "id"                => "id",
+        expression_string:           "\"string\""        => "\"string\"",
         expression_binary2:          "1 + 2"             => "(1 + 2)",
         expression_binary3:          "1 + 2 + 3"         => "((1 + 2) + 3)",
         expression_precedence1:      "1 * 2 + 3"         => "((1 * 2) + 3)",
