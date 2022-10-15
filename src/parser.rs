@@ -265,6 +265,7 @@ impl UnaryOperator {
 pub struct Parser<'t> {
     lexer: PeekableIterator<Lexer<'t>>,
     errors: Vec<Error>,
+    eof: Location,
 }
 
 impl<'t> Parser<'t> {
@@ -272,6 +273,7 @@ impl<'t> Parser<'t> {
         Self {
             lexer: lexer.into(),
             errors: Vec::new(),
+            eof: Location::new(1, 1),
         }
     }
 
@@ -282,14 +284,17 @@ impl<'t> Parser<'t> {
     /// Returns next valid token, pushes errors if invalid tokens are found on the way.
     fn next_token(&mut self) -> Token {
         loop {
-            match self.lexer.next().expect("previous Eof token was ignored") {
-                token @ Token::Invalid(_, _) => self.errors.push(Error {
+            match self.lexer.next() {
+                Some(token @ Token::Invalid(_, _)) => self.errors.push(Error {
                     token,
                     kind: ErrorKind::InvalidToken(),
                 }),
-                token => {
+                Some(token @ Token::Eof(_)) => {
+                    self.eof = token.location().clone();
                     return token;
                 }
+                Some(token) => return token,
+                None => return Token::Eof(self.eof.clone()),
             }
         }
     }
@@ -401,7 +406,6 @@ impl<'t> Parser<'t> {
         method_name_location: Location,
         method_name: String,
     ) -> Result<Expression> {
-        // todo better location
         let parenthesis_location = match self.next_token() {
             Token::LeftParenthesis(parenthesis_location) => parenthesis_location,
             token => {
@@ -415,25 +419,46 @@ impl<'t> Parser<'t> {
         };
 
         let mut parameters = Vec::new();
+        let mut expect_comma = false;
         while let Some(token) = self.peek_token() {
             match token {
                 Token::RightParenthesis(_) => break,
                 Token::Comma(_) if !parameters.is_empty() => {
                     self.next_token();
+                    expect_comma = false;
                     if let Some(Token::RightParenthesis(_)) = self.peek_token() {
                         break;
                     }
                 }
-                _ => {
-                    // todo add ")" in the list of accepted chars in the returned error
-                    parameters.push(self.parse_expression()?);
-                }
+                _ => match self.parse_expression() {
+                    Ok(expression) => {
+                        parameters.push(expression);
+                        expect_comma = true;
+                    }
+                    Err(e) => {
+                        return match e {
+                            Error {
+                                kind: ErrorKind::UnexpectedToken(mut wanted),
+                                token,
+                            } => {
+                                if expect_comma {
+                                    wanted.push(Token::Comma(token.location().clone()));
+                                }
+                                wanted.push(Token::RightParenthesis(token.location().clone()));
+                                Err(Error {
+                                    kind: ErrorKind::UnexpectedToken(wanted),
+                                    token,
+                                })
+                            }
+                            e => Err(e),
+                        }
+                    }
+                },
             }
         }
 
         match self.next_token() {
             Token::RightParenthesis(_) => (),
-            // token => return Err(Error::expected_but_got(vec![")"], &token)),
             token => {
                 return Err(Error {
                     kind: ErrorKind::UnexpectedToken(vec![Token::LeftParenthesis(
@@ -479,12 +504,12 @@ mod tests {
     use super::*;
 
     #[test]
-    #[should_panic(expected = "previous Eof token was ignored")]
     fn next_token_past_eof() {
         let mut parser = Parser::new(Lexer::new(""));
         let token = parser.next_token();
         assert!(matches!(token, Token::Eof(_)));
-        let _ = parser.next_token(); // panics
+        let token = parser.next_token();
+        assert!(matches!(token, Token::Eof(_)));
     }
 
     #[test]
@@ -494,6 +519,58 @@ mod tests {
         assert!(matches!(token, Token::Eof(_)));
         let token = parser.peek_token();
         assert!(token.is_none());
+    }
+
+    #[test]
+    fn lexer_invalid_character() {
+        let mut parser = Parser::new(Lexer::new("&"));
+        let _ = parser.parse_expression();
+        let errors = parser.errors();
+        assert_eq!(errors.len(), 1);
+        let error = &errors[0];
+        assert_eq!(
+            format!("{}", error),
+            "Parsing error: invalid character `&` found at 1:1"
+        );
+    }
+
+    #[test]
+    fn lexer_expected_characters() {
+        let mut parser = Parser::new(Lexer::new("\"\\"));
+        let _ = parser.parse_expression();
+        let errors = parser.errors();
+        assert_eq!(errors.len(), 1);
+        let error = &errors[0];
+        assert_eq!(
+            format!("{}", error),
+            "Parsing error: expected one of `\"`, `\\` at 1:3"
+        );
+    }
+
+    #[test]
+    fn unterminated_string() {
+        let mut parser = Parser::new(Lexer::new("\""));
+        let _ = parser.parse_expression();
+        let errors = parser.errors();
+        assert_eq!(errors.len(), 1);
+        let error = &errors[0];
+        assert_eq!(
+            format!("{}", error),
+            "Parsing error: unterminated string at 1:1"
+        );
+    }
+
+    #[test]
+    fn unterminated_block_string() {
+        let mut parser = Parser::new(Lexer::new("\"\"\";"));
+        let _ = parser.parse_expression();
+        let errors = parser.errors();
+        assert_eq!(errors.len(), 1);
+        let error = &errors[0];
+        assert_eq!(
+            format!("{}", error),
+            "Parsing error: unterminated string at 1:1"
+        );
     }
 
     macro_rules! parse_operator {
@@ -569,6 +646,7 @@ mod tests {
         expression_call_par3:        "method(p1,)"       => "method(p1)",
         expression_call_par4:        "method(p1,p2)"     => "method(p1, p2)",
         expression_call_par5:        "method(p1,p2+p3)"  => "method(p1, (p2 + p3))",
+        expression_call_par6:        "method(p1,)"       => "method(p1)",
     }
 
     macro_rules! parse_error {
@@ -593,57 +671,8 @@ mod tests {
         expression_error_3, parse_expression: "  "    => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:3",
         expression_error_4, parse_expression: " (1"   => "Parsing error: expected `)` from matching `(` at 1:2, got `EOF` at 1:4",
         expression_error_5, parse_expression: "("     => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:2",
-    }
-
-    #[test]
-    fn lexer_errors() {
-        let mut parser = Parser::new(Lexer::new("&"));
-        let _ = parser.parse_expression();
-        let errors = parser.errors();
-        assert_eq!(errors.len(), 1);
-        let error = &errors[0];
-        assert_eq!(
-            format!("{}", error),
-            "Parsing error: invalid character `&` found at 1:1"
-        );
-    }
-
-    #[test]
-    fn lexer_errors3() {
-        let mut parser = Parser::new(Lexer::new("\"\\"));
-        let _ = parser.parse_expression();
-        let errors = parser.errors();
-        assert_eq!(errors.len(), 1);
-        let error = &errors[0];
-        assert_eq!(
-            format!("{}", error),
-            "Parsing error: expected one of `\"`, `\\` at 1:3"
-        );
-    }
-
-    #[test]
-    fn unterminated_string() {
-        let mut parser = Parser::new(Lexer::new("\""));
-        let _ = parser.parse_expression();
-        let errors = parser.errors();
-        assert_eq!(errors.len(), 1);
-        let error = &errors[0];
-        assert_eq!(
-            format!("{}", error),
-            "Parsing error: unterminated string at 1:1"
-        );
-    }
-
-    #[test]
-    fn unterminated_block_string() {
-        let mut parser = Parser::new(Lexer::new("\"\"\";"));
-        let _ = parser.parse_expression();
-        let errors = parser.errors();
-        assert_eq!(errors.len(), 1);
-        let error = &errors[0];
-        assert_eq!(
-            format!("{}", error),
-            "Parsing error: unterminated string at 1:1"
-        );
+        call_error_1,       parse_expression: "m(a"   => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `,` or `)`, got `EOF` at 1:4",
+        call_error_2,       parse_expression: "m(a,"  => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)`, got `EOF` at 1:5",
+        call_error_4,       parse_expression: "m(,"   => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)`, got `,` at 1:3",
     }
 }
