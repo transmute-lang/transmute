@@ -67,6 +67,7 @@ struct Statement {
 #[derive(Debug)]
 enum StatementKind {
     Fail(Expression),
+    Let(String, Expression),
 }
 
 #[derive(Debug)]
@@ -323,6 +324,7 @@ impl<'t> Parser<'t> {
         self.lexer.peek()
     }
 
+    /// parses `[Fail] := [fail] [Expression]`
     fn parse_fail_statement(&mut self) -> Result<Statement> {
         match self.next_token() {
             Token::Fail(loc) => Ok(Statement {
@@ -334,6 +336,47 @@ impl<'t> Parser<'t> {
                 token,
             }),
         }
+    }
+
+    /// parses `[Let] = [let] [identifier] [=] [Expression]`
+    fn parse_let_statement(&mut self) -> Result<Statement> {
+        let let_location = match self.next_token() {
+            Token::Let(loc) => Ok(loc),
+            token => Err(Error {
+                kind: ErrorKind::UnexpectedToken(vec![Token::Let(
+                    token.location().clone(),
+                )]),
+                token,
+            }),
+        }?;
+
+        let identifier = match self.next_token() {
+            Token::Identifier(_, value) => Ok(value),
+            token => Err(Error {
+                kind: ErrorKind::UnexpectedToken(vec![Token::Identifier(
+                    token.location().clone(),
+                    "".to_string(),
+                )]),
+                token,
+            }),
+        }?;
+
+        match self.next_token() {
+            Token::Equal(_) => {}
+            token => {
+                return Err(Error {
+                    kind: ErrorKind::UnexpectedToken(vec![Token::Equal(token.location().clone())]),
+                    token,
+                })
+            }
+        };
+
+        let expression = self.parse_expression()?;
+
+        Ok(Statement {
+            location: let_location,
+            kind: StatementKind::Let(identifier, expression),
+        })
     }
 
     fn parse_expression(&mut self) -> Result<Expression> {
@@ -424,7 +467,7 @@ impl<'t> Parser<'t> {
         })
     }
 
-    /// parses `[(] ( [expression] [,] )* [expression]? [)]`
+    /// parses `[(] ( [Expression] [,] )* [Expression]? [)]`
     fn parse_call_expression(
         &mut self,
         method_name_location: Location,
@@ -698,6 +741,28 @@ mod tests {
         }
     }
 
+    #[test]
+    fn parse_let_statement() {
+        let mut parser = Parser::new(Lexer::new("let variable = value;"));
+        match parser.parse_let_statement().expect("expected Ok") {
+            Statement {
+                kind:
+                    StatementKind::Let(
+                        variable,
+                        Expression {
+                            expression: ExpressionKind::Identifier(value),
+                            ..
+                        },
+                    ),
+                ..
+            } => {
+                assert_eq!(variable, "variable");
+                assert_eq!(value, "value");
+            }
+            stmt => assert!(false, "{:?} does not match pattern", stmt),
+        }
+    }
+
     macro_rules! parse_error {
         ($($name:ident, $root:ident: $text:expr => $result:expr,)*) => {
         $(
@@ -715,14 +780,17 @@ mod tests {
     }
 
     parse_error! {
-        expression_error_1, parse_expression:     "1 + *"=> "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `*` at 1:5",
-        expression_error_2, parse_expression:     "%1"   => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `%` at 1:1",
-        expression_error_3, parse_expression:     "  "   => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:3",
-        expression_error_4, parse_expression:     " (1"  => "Parsing error: expected `)` from matching `(` at 1:2, got `EOF` at 1:4",
-        expression_error_5, parse_expression:     "("    => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:2",
-        call_error_1,       parse_expression:     "m(a"  => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `,` or `)`, got `EOF` at 1:4",
-        call_error_2,       parse_expression:     "m(a," => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)`, got `EOF` at 1:5",
-        call_error_4,       parse_expression:     "m(,"  => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)`, got `,` at 1:3",
-        fail,               parse_fail_statement: "fail" => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:5",
+        expression_error_1, parse_expression:     "1 + *"   => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `*` at 1:5",
+        expression_error_2, parse_expression:     "%1"      => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `%` at 1:1",
+        expression_error_3, parse_expression:     "  "      => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:3",
+        expression_error_4, parse_expression:     " (1"     => "Parsing error: expected `)` from matching `(` at 1:2, got `EOF` at 1:4",
+        expression_error_5, parse_expression:     "("       => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:2",
+        call_error_1,       parse_expression:     "m(a"     => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `,` or `)`, got `EOF` at 1:4",
+        call_error_2,       parse_expression:     "m(a,"    => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)`, got `EOF` at 1:5",
+        call_error_4,       parse_expression:     "m(,"     => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)`, got `,` at 1:3",
+        fail,               parse_fail_statement: "fail"    => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:5",
+        let_1,              parse_let_statement:  "let"     => "Parsing error: expected `identifier`, got `EOF` at 1:4",
+        let_2,              parse_let_statement:  "let x"   => "Parsing error: expected `=`, got `EOF` at 1:6",
+        let_3,              parse_let_statement:  "let x =" => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:8",
     }
 }

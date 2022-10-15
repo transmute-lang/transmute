@@ -8,10 +8,10 @@ method call:
 */
 
 fn main username {
-    let empty = "";
-    let sqlite = sql.dataSource("sqlite:///db.sqlite");
+    let empty = ""
+    let sqlite = sql.dataSource("sqlite:///db.sqlite")
 
-    match http.get "/users/{{username}}" {
+    match http.get("/users/{{username}}") {
         .status != 200                                => fail "error fetching data",
         .headers["content-type"] ~ "application/json" => json.from(.body.text) or fail "not json",
         .headers["content-type"] ~ "text/plain"       => json.from("{ username: &1 }", .body.text),
@@ -40,7 +40,7 @@ fetchPosts username {
         // result.error == true =>
         error => fail "unable to fetch posts from database for user {username}: {err}",
         // _ => result.row
-        _     => row | split("|") | json.from "{ title: &0, text: &1 }"
+        _     => row | split("|") | json.from("{ title: &0, text: &1 }")
         // ==> split("|")(row) <==> split("|", row)
     }
 }
