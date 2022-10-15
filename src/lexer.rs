@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::iter::Peekable;
 use std::str::Chars;
 
@@ -10,24 +10,6 @@ pub struct Error {
 }
 
 impl Error {
-    fn expected_but_got(expectations: Vec<&str>, received: &char, location: Location) -> Self {
-        if received == &'\n' {
-            Self::err(
-                format!("expected `{}`, got `\\n`", expectations.join("` or `")),
-                location,
-            )
-        } else {
-            Self::err(
-                format!(
-                    "expected `{}`, got `{}`",
-                    expectations.join("` or `"),
-                    received
-                ),
-                location,
-            )
-        }
-    }
-
     fn expected(expectations: Vec<&str>, location: Location) -> Self {
         Self::err(
             format!("expected `{}`, got nothing", expectations.join("` or `")),
@@ -74,7 +56,7 @@ impl Display for Location {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone)]
 pub enum Token {
     And(Location),
     Comma(Location),
@@ -121,96 +103,150 @@ pub enum Token {
 
 impl Token {
     pub fn location(&self) -> &Location {
+        use Token::*;
         match self {
-            Token::And(loc) => loc,
-            Token::Comma(loc) => loc,
-            Token::Continue(loc) => loc,
-            Token::Dot(loc) => loc,
-            Token::Eof(loc) => loc,
-            Token::Equal(loc) => loc,
-            Token::EqualEqual(loc) => loc,
-            Token::EqualGt(loc) => loc,
-            Token::Exclam(loc) => loc,
-            Token::ExclamEqual(loc) => loc,
-            Token::ExclamTilde(loc) => loc,
-            Token::Fail(loc) => loc,
-            Token::Fn(loc) => loc,
-            Token::Fork(loc) => loc,
-            Token::Gt(loc) => loc,
-            Token::GtEqual(loc) => loc,
-            Token::Identifier(loc, _) => loc,
-            Token::Integer(loc, _) => loc,
-            Token::Join(loc) => loc,
-            Token::LeftBrace(loc) => loc,
-            Token::LeftBracket(loc) => loc,
-            Token::LeftParenthesis(loc) => loc,
-            Token::Let(loc) => loc,
-            Token::Lt(loc) => loc,
-            Token::LtEqual(loc) => loc,
-            Token::Match(loc) => loc,
-            Token::Minus(loc) => loc,
-            Token::Null(loc) => loc,
-            Token::Or(loc) => loc,
-            Token::Percent(loc) => loc,
-            Token::Pipe(loc) => loc,
-            Token::Plus(loc) => loc,
-            Token::RightBrace(loc) => loc,
-            Token::RightBracket(loc) => loc,
-            Token::RightParenthesis(loc) => loc,
-            Token::Semicolon(loc) => loc,
-            Token::Slash(loc) => loc,
-            Token::Star(loc) => loc,
-            Token::String(loc, _) => loc,
-            Token::Tilde(loc) => loc,
-            Token::Underscore(loc) => loc,
+            And(loc) => loc,
+            Comma(loc) => loc,
+            Continue(loc) => loc,
+            Dot(loc) => loc,
+            Eof(loc) => loc,
+            Equal(loc) => loc,
+            EqualEqual(loc) => loc,
+            EqualGt(loc) => loc,
+            Exclam(loc) => loc,
+            ExclamEqual(loc) => loc,
+            ExclamTilde(loc) => loc,
+            Fail(loc) => loc,
+            Fn(loc) => loc,
+            Fork(loc) => loc,
+            Gt(loc) => loc,
+            GtEqual(loc) => loc,
+            Identifier(loc, _) => loc,
+            Integer(loc, _) => loc,
+            Join(loc) => loc,
+            LeftBrace(loc) => loc,
+            LeftBracket(loc) => loc,
+            LeftParenthesis(loc) => loc,
+            Let(loc) => loc,
+            Lt(loc) => loc,
+            LtEqual(loc) => loc,
+            Match(loc) => loc,
+            Minus(loc) => loc,
+            Null(loc) => loc,
+            Or(loc) => loc,
+            Percent(loc) => loc,
+            Pipe(loc) => loc,
+            Plus(loc) => loc,
+            RightBrace(loc) => loc,
+            RightBracket(loc) => loc,
+            RightParenthesis(loc) => loc,
+            Semicolon(loc) => loc,
+            Slash(loc) => loc,
+            Star(loc) => loc,
+            String(loc, _) => loc,
+            Tilde(loc) => loc,
+            Underscore(loc) => loc,
+        }
+    }
+}
+
+impl Debug for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use Token::*;
+        match self {
+            And(_) => write!(f, "[and]"),
+            Comma(_) => write!(f, "[,]"),
+            Continue(_) => write!(f, "[continue]"),
+            Dot(_) => write!(f, "[.]"),
+            Eof(_) => write!(f, "[EOF]"),
+            Equal(_) => write!(f, "[=]"),
+            EqualEqual(_) => write!(f, "[==]"),
+            EqualGt(_) => write!(f, "[=>]"),
+            Exclam(_) => write!(f, "[!]"),
+            ExclamEqual(_) => write!(f, "[!=]"),
+            ExclamTilde(_) => write!(f, "[!~]"),
+            Fail(_) => write!(f, "[fail]"),
+            Fn(_) => write!(f, "[fn]"),
+            Fork(_) => write!(f, "[fork]"),
+            Gt(_) => write!(f, "[>]"),
+            GtEqual(_) => write!(f, "[>=]"),
+            Identifier(_, value) => write!(f, "[identifier:{}]", value),
+            Integer(_, value) => write!(f, "[integer:{}]", value),
+            Join(_) => write!(f, "[join]"),
+            LeftBrace(_) => write!(f, "[{{]"),
+            LeftBracket(_) => write!(f, "[[]"),
+            LeftParenthesis(_) => write!(f, "[(]"),
+            Let(_) => write!(f, "[let]"),
+            Lt(_) => write!(f, "[<]"),
+            LtEqual(_) => write!(f, "[<=]"),
+            Match(_) => write!(f, "[match]"),
+            Minus(_) => write!(f, "[-]"),
+            Null(_) => write!(f, "[null]"),
+            Or(_) => write!(f, "[or]"),
+            Percent(_) => write!(f, "[%]"),
+            Pipe(_) => write!(f, "[|]"),
+            Plus(_) => write!(f, "[+]"),
+            RightBrace(_) => write!(f, "[}}]"),
+            RightBracket(_) => write!(f, "[]]"),
+            RightParenthesis(_) => write!(f, "[)]"),
+            Semicolon(_) => write!(f, "[;]"),
+            Slash(_) => write!(f, "[/]"),
+            Star(_) => write!(f, "[*]"),
+            String(_, value) => write!(f, "[string:{}]", value),
+            Tilde(_) => write!(f, "[~]"),
+            Underscore(_) => write!(f, "[_]"),
         }
     }
 }
 
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use Token::*;
         match self {
-            Token::And(_) => write!(f, "[and]"),
-            Token::Comma(_) => write!(f, "[,]"),
-            Token::Continue(_) => write!(f, "[continue]"),
-            Token::Dot(_) => write!(f, "[.]"),
-            Token::Eof(_) => write!(f, "[EOF]"),
-            Token::Equal(_) => write!(f, "[=]"),
-            Token::EqualEqual(_) => write!(f, "[==]"),
-            Token::EqualGt(_) => write!(f, "[=>]"),
-            Token::Exclam(_) => write!(f, "[!]"),
-            Token::ExclamEqual(_) => write!(f, "[!=]"),
-            Token::ExclamTilde(_) => write!(f, "[!~]"),
-            Token::Fail(_) => write!(f, "[fail]"),
-            Token::Fn(_) => write!(f, "[fn]"),
-            Token::Fork(_) => write!(f, "[fork]"),
-            Token::Gt(_) => write!(f, "[>]"),
-            Token::GtEqual(_) => write!(f, "[>=]"),
-            Token::Identifier(_, value) => write!(f, "[identifier:{}]", value),
-            Token::Integer(_, value) => write!(f, "[integer:{}]", value),
-            Token::Join(_) => write!(f, "[join]"),
-            Token::LeftBrace(_) => write!(f, "[{{]"),
-            Token::LeftBracket(_) => write!(f, "[[]"),
-            Token::LeftParenthesis(_) => write!(f, "[(]"),
-            Token::Let(_) => write!(f, "[let]"),
-            Token::Lt(_) => write!(f, "[<]"),
-            Token::LtEqual(_) => write!(f, "[<=]"),
-            Token::Match(_) => write!(f, "[match]"),
-            Token::Minus(_) => write!(f, "[-]"),
-            Token::Null(_) => write!(f, "[null]"),
-            Token::Or(_) => write!(f, "[or]"),
-            Token::Percent(_) => write!(f, "[%]"),
-            Token::Pipe(_) => write!(f, "[|]"),
-            Token::Plus(_) => write!(f, "[+]"),
-            Token::RightBrace(_) => write!(f, "[}}]"),
-            Token::RightBracket(_) => write!(f, "[]]"),
-            Token::RightParenthesis(_) => write!(f, "[)]"),
-            Token::Semicolon(_) => write!(f, "[;]"),
-            Token::Slash(_) => write!(f, "[/]"),
-            Token::Star(_) => write!(f, "[*]"),
-            Token::String(_, value) => write!(f, "[string:{}]", value),
-            Token::Tilde(_) => write!(f, "[~]"),
-            Token::Underscore(_) => write!(f, "[_]"),
+            And(_) => write!(f, "and"),
+            Comma(_) => write!(f, ","),
+            Continue(_) => write!(f, "continue"),
+            Dot(_) => write!(f, "."),
+            Eof(_) => write!(f, "EOF"),
+            Equal(_) => write!(f, "="),
+            EqualEqual(_) => write!(f, "=="),
+            EqualGt(_) => write!(f, "=>"),
+            Exclam(_) => write!(f, "!"),
+            ExclamEqual(_) => write!(f, "!="),
+            ExclamTilde(_) => write!(f, "!~"),
+            Fail(_) => write!(f, "fail"),
+            Fn(_) => write!(f, "fn"),
+            Fork(_) => write!(f, "fork"),
+            Gt(_) => write!(f, ">"),
+            GtEqual(_) => write!(f, ">="),
+            Identifier(_, _) if f.alternate() => write!(f, "identifier"),
+            Identifier(_, value) => write!(f, "{}", value),
+            Integer(_, _) if f.alternate() => write!(f, "integer"),
+            Integer(_, value) => write!(f, "{}", value),
+            Join(_) => write!(f, "join"),
+            LeftBrace(_) => write!(f, "{{"),
+            LeftBracket(_) => write!(f, ""),
+            LeftParenthesis(_) => write!(f, "("),
+            Let(_) => write!(f, "let"),
+            Lt(_) => write!(f, "<"),
+            LtEqual(_) => write!(f, "<="),
+            Match(_) => write!(f, "match"),
+            Minus(_) => write!(f, "-"),
+            Null(_) => write!(f, "null"),
+            Or(_) => write!(f, "or"),
+            Percent(_) => write!(f, "%"),
+            Pipe(_) => write!(f, "|"),
+            Plus(_) => write!(f, "+"),
+            RightBrace(_) => write!(f, "}}"),
+            RightBracket(_) => write!(f, ""),
+            RightParenthesis(_) => write!(f, ")"),
+            Semicolon(_) => write!(f, ";"),
+            Slash(_) => write!(f, "/"),
+            Star(_) => write!(f, "*"),
+            String(_, _) if f.alternate() => write!(f, "string"),
+            String(_, value) => write!(f, "{}", value),
+            Tilde(_) => write!(f, "~"),
+            Underscore(_) => write!(f, "_"),
         }
     }
 }
@@ -494,6 +530,7 @@ impl<'t> Iterator for Lexer<'t> {
             },
             Some(c) if c.is_ascii_digit() => self.make_number(loc),
             Some(c) if c.is_alphabetic() => self.make_identifier(loc),
+            // todo rework that: invalid tokens should be tokens as well...
             Some(c) => Err(Error::unexpected(&c, loc)),
             None if !self.eof => {
                 self.eof = true;

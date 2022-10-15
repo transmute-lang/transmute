@@ -4,58 +4,54 @@ use crate::utils::peekable_iterator::PeekableIterator;
 use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
-pub struct Error {
-    // todo turn into enum
-    // todo lexer_error: Option<&'t lexer::Error>,
-    pub error: String,
-    pub location: Location,
+pub enum ErrorKind {
+    /// The lexer returned an invalid token error.
+    InvalidToken(lexer::Error),
+    /// We found an unexpected token
+    UnexpectedToken(Vec<Token>),
+    /// We found an unexpected token while looking for a closing one
+    UnmatchedToken { wanted: Token, matching: Token },
 }
 
-impl Error {
-    fn err(error: String, location: Location) -> Self {
-        Self { error, location }
-    }
-
-    fn expected_but_got(expectations: Vec<&str>, received: &Token) -> Self {
-        Self::err(
-            format!(
-                "expected [{}], got {}",
-                expectations.join("] or ["),
-                received
-            ),
-            received.location().to_owned(),
-        )
-    }
-
-    fn expected_from_but_got(expectations: Vec<&str>, received: &Token, source: &Location) -> Self {
-        Self::err(
-            format!(
-                "expected [{}] (opening at {}), got {}",
-                expectations.join("] or ["),
-                source,
-                received
-            ),
-            received.location().to_owned(),
-        )
-    }
+#[derive(Debug)]
+pub struct Error {
+    pub location: Location,
+    pub token: Option<Token>,
+    pub kind: ErrorKind,
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Parsing error: {} at {}", self.error, self.location)
+        let error = match &self.kind {
+            ErrorKind::InvalidToken(e) => format!("{}", e),
+            ErrorKind::UnexpectedToken(wanted) => format!(
+                "expected {}, got `{:#}`",
+                wanted
+                    .iter()
+                    .map(|t| format!("`{:#}`", t))
+                    .collect::<Vec<String>>()
+                    .join(" or "),
+                self.token.as_ref().expect("a token must be there")
+            ),
+            ErrorKind::UnmatchedToken { wanted, matching } => format!(
+                "expected `{:#}` from matching `{:#}` at {:#}, got `{}`",
+                wanted,
+                matching,
+                matching.location(),
+                self.token.as_ref().expect("a token must be there")
+            ),
+        };
+        write!(f, "Parsing error: {} at {}", error, self.location)
     }
 }
 
 impl From<lexer::Error> for Error {
     fn from(e: lexer::Error) -> Self {
-        Error::err(e.error, e.location)
-    }
-}
-
-impl From<&lexer::Error> for Error {
-    // todo remove if we keep a ref. to the initial error?
-    fn from(e: &lexer::Error) -> Self {
-        Error::err(e.error.clone(), e.location.clone())
+        Error {
+            location: e.location.clone(),
+            token: None,
+            kind: ErrorKind::InvalidToken(e),
+        }
     }
 }
 
@@ -293,7 +289,7 @@ impl<'t> Parser<'t> {
     /// Peeks next valid token. Skipping erroneous token on the way and storing related errors.
     fn peek_token(&mut self) -> Option<&Token> {
         while let Some(Err(e)) = self.lexer.peek() {
-            self.errors.push(Error::from(e));
+            // just ignore errors, they will be caught when we call `next_token()`
             self.lexer.next();
         }
 
@@ -318,11 +314,20 @@ impl<'t> Parser<'t> {
         precedence: OperatorPrecedence,
     ) -> Result<Expression> {
         let mut expression = match self.next_token() {
-            Token::LeftParenthesis(loc) => {
+            left @ Token::LeftParenthesis(_) => {
                 let expression = self.parse_expression()?;
                 match self.next_token() {
                     Token::RightParenthesis(_) => expression,
-                    token => return Err(Error::expected_from_but_got(vec![")"], &token, &loc)),
+                    token => {
+                        return Err(Error {
+                            location: token.location().clone(),
+                            kind: ErrorKind::UnmatchedToken {
+                                wanted: Token::RightParenthesis(token.location().clone()),
+                                matching: left,
+                            },
+                            token: Some(token),
+                        })
+                    }
                 }
             }
             Token::Plus(loc) => self.parse_unary_expression(UnaryOperator {
@@ -349,10 +354,18 @@ impl<'t> Parser<'t> {
                 expression: ExpressionKind::Integer(value),
             },
             token => {
-                return Err(Error::expected_but_got(
-                    vec!["(", "+", "-", "!", "identifier", "integer"],
-                    &token,
-                ))
+                return Err(Error {
+                    location: token.location().clone(),
+                    kind: ErrorKind::UnexpectedToken(vec![
+                        Token::LeftParenthesis(token.location().clone()),
+                        Token::Plus(token.location().clone()),
+                        Token::Minus(token.location().clone()),
+                        Token::Exclam(token.location().clone()),
+                        Token::Identifier(token.location().clone(), "".to_string()),
+                        Token::Integer(token.location().clone(), 0),
+                    ]),
+                    token: Some(token),
+                })
             }
         };
 
@@ -387,7 +400,15 @@ impl<'t> Parser<'t> {
         // todo better location
         let parenthesis_location = match self.next_token() {
             Token::LeftParenthesis(parenthesis_location) => parenthesis_location,
-            token => return Err(Error::expected_but_got(vec!["("], &token)),
+            token => {
+                return Err(Error {
+                    location: token.location().clone(),
+                    kind: ErrorKind::UnexpectedToken(vec![Token::LeftParenthesis(
+                        token.location().clone(),
+                    )]),
+                    token: Some(token),
+                })
+            }
         };
 
         let mut parameters = Vec::new();
@@ -409,7 +430,16 @@ impl<'t> Parser<'t> {
 
         match self.next_token() {
             Token::RightParenthesis(_) => (),
-            token => return Err(Error::expected_but_got(vec![")"], &token)),
+            // token => return Err(Error::expected_but_got(vec![")"], &token)),
+            token => {
+                return Err(Error {
+                    location: token.location().clone(),
+                    kind: ErrorKind::UnexpectedToken(vec![Token::LeftParenthesis(
+                        token.location().clone(),
+                    )]),
+                    token: Some(token),
+                })
+            }
         }
 
         Ok(Expression {
@@ -556,10 +586,10 @@ mod tests {
     }
 
     parse_error! {
-        expression_error_1, parse_expression: "1 + *" => "Parsing error: expected [(] or [+] or [-] or [!] or [identifier] or [integer], got [*] at 1:5",
-        expression_error_2, parse_expression: "%1"    => "Parsing error: expected [(] or [+] or [-] or [!] or [identifier] or [integer], got [%] at 1:1",
-        expression_error_3, parse_expression: "  "    => "Parsing error: expected [(] or [+] or [-] or [!] or [identifier] or [integer], got [EOF] at 1:3",
-        expression_error_4, parse_expression: " (1"   => "Parsing error: expected [)] (opening at 1:2), got [EOF] at 1:4",
-        expression_error_5, parse_expression: "("     => "Parsing error: expected [(] or [+] or [-] or [!] or [identifier] or [integer], got [EOF] at 1:2",
+        expression_error_1, parse_expression: "1 + *" => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `*` at 1:5",
+        expression_error_2, parse_expression: "%1"    => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `%` at 1:1",
+        expression_error_3, parse_expression: "  "    => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:3",
+        expression_error_4, parse_expression: " (1"   => "Parsing error: expected `)` from matching `(` at 1:2, got `EOF` at 1:4",
+        expression_error_5, parse_expression: "("     => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:2",
     }
 }
