@@ -124,6 +124,22 @@ enum OperatorPrecedence {
 }
 
 #[derive(Debug)]
+struct BinaryOperator {
+    location: Location,
+    kind: BinaryOperatorKind,
+}
+
+impl BinaryOperator {
+    fn precedence(&self) -> OperatorPrecedence {
+        self.kind.precedence()
+    }
+
+    fn to_string(&self) -> &str {
+        self.kind.to_string()
+    }
+}
+
+#[derive(Debug)]
 enum BinaryOperatorKind {
     Add,
     And,
@@ -217,16 +233,12 @@ impl BinaryOperatorKind {
 }
 
 #[derive(Debug)]
-struct BinaryOperator {
+struct UnaryOperator {
     location: Location,
-    kind: BinaryOperatorKind,
+    kind: UnaryOperatorKind,
 }
 
-impl BinaryOperator {
-    fn precedence(&self) -> OperatorPrecedence {
-        self.kind.precedence()
-    }
-
+impl UnaryOperator {
     fn to_string(&self) -> &str {
         self.kind.to_string()
     }
@@ -247,18 +259,6 @@ impl UnaryOperatorKind {
             Negative => "-",
             Not => "!",
         }
-    }
-}
-
-#[derive(Debug)]
-struct UnaryOperator {
-    location: Location,
-    kind: UnaryOperatorKind,
-}
-
-impl UnaryOperator {
-    fn to_string(&self) -> &str {
-        self.kind.to_string()
     }
 }
 
@@ -307,13 +307,6 @@ impl<'t> Parser<'t> {
         }
 
         self.lexer.peek()
-    }
-
-    /// Returns the next operator's precedence, if the next token is an operator token; otherwise,
-    /// returns `None`.
-    fn peek_operator_precedence(&mut self) -> Option<OperatorPrecedence> {
-        self.peek_token()
-            .and_then(|t| BinaryOperatorKind::from_token(t).map(|o| o.precedence()))
     }
 
     fn parse_expression(&mut self) -> Result<Expression> {
@@ -473,6 +466,13 @@ impl<'t> Parser<'t> {
             location: method_name_location,
             expression: ExpressionKind::Call(method_name, parenthesis_location, parameters),
         })
+    }
+
+    /// Returns the next operator's precedence, if the next token is an operator token; otherwise,
+    /// returns `None`.
+    fn peek_operator_precedence(&mut self) -> Option<OperatorPrecedence> {
+        self.peek_token()
+            .and_then(|t| BinaryOperatorKind::from_token(t).map(|o| o.precedence()))
     }
 
     fn parse_infix_expression(&mut self, left: Expression) -> Result<Expression> {
