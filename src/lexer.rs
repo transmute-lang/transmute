@@ -74,11 +74,13 @@ impl Display for Location {
     }
 }
 
+#[derive(Debug)]
 pub enum Token {
     And(Location),
     Comma(Location),
     Continue(Location),
     Dot(Location),
+    Eof(Location),
     Equal(Location),
     EqualEqual(Location),
     EqualGt(Location),
@@ -124,6 +126,7 @@ impl Token {
             Token::Comma(loc) => loc,
             Token::Continue(loc) => loc,
             Token::Dot(loc) => loc,
+            Token::Eof(loc) => loc,
             Token::Equal(loc) => loc,
             Token::EqualEqual(loc) => loc,
             Token::EqualGt(loc) => loc,
@@ -171,6 +174,7 @@ impl Display for Token {
             Token::Comma(_) => write!(f, "[,]"),
             Token::Continue(_) => write!(f, "[continue]"),
             Token::Dot(_) => write!(f, "[.]"),
+            Token::Eof(_) => write!(f, "[EOF]"),
             Token::Equal(_) => write!(f, "[=]"),
             Token::EqualEqual(_) => write!(f, "[==]"),
             Token::EqualGt(_) => write!(f, "[=>]"),
@@ -216,6 +220,7 @@ pub struct Lexer<'t> {
     iter: Peekable<Chars<'t>>,
     curr_char: Option<char>,
     location: Location,
+    eof: bool,
 }
 
 impl<'t> Lexer<'t> {
@@ -224,24 +229,26 @@ impl<'t> Lexer<'t> {
             source,
             iter: source.chars().peekable(),
             curr_char: None,
-            location: Location::new(1, 1),
+            location: Location::new(1, 0),
+            eof: false,
         }
     }
 
     /// Reads and return the next char; returns `None` when there is none.
     fn next_char(&mut self) -> Option<char> {
         self.curr_char = self.iter.next();
-
         match self.curr_char {
             Some('\n') => {
-                self.location.column = 1;
+                self.location.column = 0;
                 self.location.line += 1;
+                Some('\n')
             }
-            Some(_) => self.location.column += 1,
-            _ => (),
+            Some(c) => {
+                self.location.column += 1;
+                Some(c)
+            }
+            _ => None,
         }
-
-        self.curr_char
     }
 
     fn peek_char(&mut self) -> Option<char> {
@@ -442,56 +449,57 @@ impl<'t> Iterator for Lexer<'t> {
 
         let loc = self.location.clone();
 
-        let token = match self.curr_char? {
-            ';' => Ok(Token::Semicolon(loc)),
-            ',' => Ok(Token::Comma(loc)),
-            '_' => Ok(Token::Underscore(loc)),
-            '|' => Ok(Token::Pipe(loc)),
-            '.' => Ok(Token::Dot(loc)),
-            '+' => Ok(Token::Plus(loc)),
-            '-' => Ok(Token::Minus(loc)),
-            '*' => Ok(Token::Star(loc)),
-            '/' => Ok(Token::Slash(loc)),
-            '%' => Ok(Token::Percent(loc)),
-            '~' => Ok(Token::Tilde(loc)),
-            '=' => match next_char_if!(self, '=', '>') {
+        let token = match self.curr_char {
+            Some(';') => Ok(Token::Semicolon(loc)),
+            Some(',') => Ok(Token::Comma(loc)),
+            Some('_') => Ok(Token::Underscore(loc)),
+            Some('|') => Ok(Token::Pipe(loc)),
+            Some('.') => Ok(Token::Dot(loc)),
+            Some('+') => Ok(Token::Plus(loc)),
+            Some('-') => Ok(Token::Minus(loc)),
+            Some('*') => Ok(Token::Star(loc)),
+            Some('/') => Ok(Token::Slash(loc)),
+            Some('%') => Ok(Token::Percent(loc)),
+            Some('~') => Ok(Token::Tilde(loc)),
+            Some('=') => match next_char_if!(self, '=', '>') {
                 Some('=') => Ok(Token::EqualEqual(loc)),
                 Some('>') => Ok(Token::EqualGt(loc)),
                 _ => Ok(Token::Equal(loc)),
             },
-            '!' => match next_char_if!(self, '=', '~') {
+            Some('!') => match next_char_if!(self, '=', '~') {
                 Some('=') => Ok(Token::ExclamEqual(loc)),
                 Some('~') => Ok(Token::ExclamTilde(loc)),
                 _ => Ok(Token::Exclam(loc)),
             },
-            '(' => Ok(Token::LeftParenthesis(loc)),
-            ')' => Ok(Token::RightParenthesis(loc)),
-            '{' => Ok(Token::LeftBrace(loc)),
-            '}' => Ok(Token::RightBrace(loc)),
-            '[' => Ok(Token::LeftBracket(loc)),
-            ']' => Ok(Token::RightBracket(loc)),
-            '>' => match next_char_if!(self, '=') {
+            Some('(') => Ok(Token::LeftParenthesis(loc)),
+            Some(')') => Ok(Token::RightParenthesis(loc)),
+            Some('{') => Ok(Token::LeftBrace(loc)),
+            Some('}') => Ok(Token::RightBrace(loc)),
+            Some('[') => Ok(Token::LeftBracket(loc)),
+            Some(']') => Ok(Token::RightBracket(loc)),
+            Some('>') => match next_char_if!(self, '=') {
                 Some('=') => Ok(Token::GtEqual(loc)),
                 _ => Ok(Token::Gt(loc)),
             },
-            '<' => match next_char_if!(self, '=') {
+            Some('<') => match next_char_if!(self, '=') {
                 Some('=') => Ok(Token::LtEqual(loc)),
                 _ => Ok(Token::Lt(loc)),
             },
-            '"' => match next_char_if!(self, '"') {
+            Some('"') => match next_char_if!(self, '"') {
                 Some('"') => match next_char_if!(self, '"') {
                     Some('"') => self.make_block_string(loc),
                     _ => Ok(Token::String(loc, "".to_string())),
                 },
                 _ => self.make_string(loc),
             },
-            c if c.is_ascii_digit() => self.make_number(loc),
-            c if c.is_alphabetic() => self.make_identifier(loc),
-            c => {
-                let mut loc = loc;
-                loc.column -= 1;
-                Err(Error::unexpected(&c, loc))
+            Some(c) if c.is_ascii_digit() => self.make_number(loc),
+            Some(c) if c.is_alphabetic() => self.make_identifier(loc),
+            Some(c) => Err(Error::unexpected(&c, loc)),
+            None if !self.eof => {
+                self.eof = true;
+                return Some(Ok(Token::Eof(Location::new(loc.line, loc.column + 1))));
             }
+            _ => return None,
         };
 
         Some(token)
@@ -503,20 +511,32 @@ mod tests {
     use super::*;
 
     #[test]
+    fn eof_is_last_token() {
+        let mut lexer = Lexer::new("");
+        let token = lexer.next();
+        let token = token.expect("token must be Some");
+        let token = token.expect("token must be Ok");
+        assert!(matches!(token, Token::Eof(Location { line: 1, column: 1 })));
+
+        let token = lexer.next();
+        assert!(token.is_none());
+    }
+
+    #[test]
     fn skip_whitespaces() {
         let mut lexer = Lexer::new(" ");
         let token = lexer.next();
-        assert!(token.is_none());
+        let token = token.expect("token must be Some");
+        let token = token.expect("token must be Ok");
+        assert!(matches!(token, Token::Eof(Location { line: 1, column: 2 })));
     }
 
     #[test]
     fn skip_c_line_comment() {
         let mut lexer = Lexer::new("// [\n]");
         let token = lexer.next();
-        assert!(token.is_some());
-        let token = token.unwrap();
-        assert!(token.is_ok());
-        let token = token.unwrap();
+        let token = token.expect("token must be Some");
+        let token = token.expect("token must be Ok");
         assert!(matches!(token, Token::RightBracket(_)));
     }
 
@@ -524,10 +544,8 @@ mod tests {
     fn skip_shell_line_comment() {
         let mut lexer = Lexer::new("# [\n]");
         let token = lexer.next();
-        assert!(token.is_some());
-        let token = token.unwrap();
-        assert!(token.is_ok());
-        let token = token.unwrap();
+        let token = token.expect("token must be Some");
+        let token = token.expect("token must be Ok");
         assert!(matches!(token, Token::RightBracket(_)));
     }
 
@@ -535,10 +553,8 @@ mod tests {
     fn skip_multiline_comment() {
         let mut lexer = Lexer::new("/*\n[ */ ]");
         let token = lexer.next();
-        assert!(token.is_some());
-        let token = token.unwrap();
-        assert!(token.is_ok());
-        let token = token.unwrap();
+        let token = token.expect("token must be Some");
+        let token = token.expect("token must be Ok");
         assert!(matches!(token, Token::RightBracket(_)));
     }
 
@@ -546,10 +562,8 @@ mod tests {
     fn skip_empty_multiline_comment() {
         let mut lexer = Lexer::new("/**/]");
         let token = lexer.next();
-        assert!(token.is_some());
-        let token = token.unwrap();
-        assert!(token.is_ok());
-        let token = token.unwrap();
+        let token = token.expect("token must be Some");
+        let token = token.expect("token must be Ok");
         assert!(matches!(token, Token::RightBracket(_)));
     }
 
@@ -558,9 +572,7 @@ mod tests {
         let mut lexer = Lexer::new("§");
 
         let token = lexer.next();
-        assert!(token.is_some());
-
-        let token = token.unwrap();
+        let token = token.expect("token must be Some");
 
         // todo
         // assert_enum!(token, Token::Error(loc, error), {
@@ -584,11 +596,9 @@ mod tests {
             fn $name() {
                 let mut lexer = Lexer::new($str);
                 let token = lexer.next();
-                assert!(token.is_some());
-                let token = token.unwrap();
-                assert!(token.is_ok());
-                let token = token.unwrap();
-                assert!(matches!(token, $token));
+                let token = token.expect("token must be Some");
+                let token = token.expect("token must be Ok");
+                assert!(matches!(token, $token), "got {:?}", token);
             }
         )*
         }
@@ -599,6 +609,7 @@ mod tests {
         token_comma:             ","         => Token::Comma(_),
         token_continue:          "continue"  => Token::Continue(_),
         token_dot:               "."         => Token::Dot(_),
+        token_eof:               ""          => Token::Eof(_),
         token_equal:             "="         => Token::Equal(_),
         token_equal_equal:       "=="        => Token::EqualEqual(_),
         token_equal_gt:          "=>"        => Token::EqualGt(_),
@@ -632,6 +643,10 @@ mod tests {
         token_star:              "*"         => Token::Star(_),
         token_tilde:             "~"         => Token::Tilde(_),
         token_underscore:        "_"         => Token::Underscore(_),
+        token_loc_1_1:           "+"         => Token::Plus(Location{line:1,column:1}),
+        token_loc_2_1:           "\n+"       => Token::Plus(Location{line:2,column:1}),
+        token_loc_1_2:           " +"        => Token::Plus(Location{line:1,column:2}),
+        token_loc_2_2:           "\n +"      => Token::Plus(Location{line:2,column:2}),
     }
 
     #[test]

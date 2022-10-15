@@ -19,18 +19,23 @@ impl Error {
     fn expected_but_got(expectations: Vec<&str>, received: &Token) -> Self {
         Self::err(
             format!(
-                "expected `[{}]`, got `{}`",
-                expectations.join("` or `"),
+                "expected [{}], got {}",
+                expectations.join("] or ["),
                 received
             ),
             received.location().to_owned(),
         )
     }
 
-    fn expected(expectations: Vec<&str>, location: Location) -> Self {
+    fn expected_from_but_got(expectations: Vec<&str>, received: &Token, source: &Location) -> Self {
         Self::err(
-            format!("expected `{}`, got nothing", expectations.join("` or `")),
-            location,
+            format!(
+                "expected [{}] (opening at {}), got {}",
+                expectations.join("] or ["),
+                source,
+                received
+            ),
+            received.location().to_owned(),
         )
     }
 }
@@ -188,32 +193,28 @@ impl BinaryOperatorKind {
             Access => ".",
         }
     }
-}
 
-impl TryFrom<&Token> for BinaryOperatorKind {
-    type Error = ();
-
-    fn try_from(token: &Token) -> std::result::Result<Self, Self::Error> {
+    fn from_token(token: &Token) -> Option<BinaryOperatorKind> {
         use BinaryOperatorKind::*;
         match *token {
-            Token::And(_) => Ok(And),
-            Token::Dot(_) => Ok(Access),
-            Token::EqualEqual(_) => Ok(Equals),
-            Token::ExclamEqual(_) => Ok(NotEquals),
-            Token::ExclamTilde(_) => Ok(NotMatches),
-            Token::Gt(_) => Ok(GreaterThan),
-            Token::GtEqual(_) => Ok(GreaterOrEqual),
-            Token::Lt(_) => Ok(LessThan),
-            Token::LtEqual(_) => Ok(LessOrEqual),
-            Token::Minus(_) => Ok(Subtract),
-            Token::Or(_) => Ok(Or),
-            Token::Percent(_) => Ok(Reminder),
-            Token::Pipe(_) => Ok(PrefixCall),
-            Token::Plus(_) => Ok(Add),
-            Token::Slash(_) => Ok(Divide),
-            Token::Star(_) => Ok(Multiply),
-            Token::Tilde(_) => Ok(Matches),
-            _ => Err(()),
+            Token::And(_) => Some(And),
+            Token::Dot(_) => Some(Access),
+            Token::EqualEqual(_) => Some(Equals),
+            Token::ExclamEqual(_) => Some(NotEquals),
+            Token::ExclamTilde(_) => Some(NotMatches),
+            Token::Gt(_) => Some(GreaterThan),
+            Token::GtEqual(_) => Some(GreaterOrEqual),
+            Token::Lt(_) => Some(LessThan),
+            Token::LtEqual(_) => Some(LessOrEqual),
+            Token::Minus(_) => Some(Subtract),
+            Token::Or(_) => Some(Or),
+            Token::Percent(_) => Some(Reminder),
+            Token::Pipe(_) => Some(PrefixCall),
+            Token::Plus(_) => Some(Add),
+            Token::Slash(_) => Some(Divide),
+            Token::Star(_) => Some(Multiply),
+            Token::Tilde(_) => Some(Matches),
+            _ => None,
         }
     }
 }
@@ -278,12 +279,13 @@ impl<'t> Parser<'t> {
     }
 
     /// Returns next valid token, pushes errors if invalid tokens are found on the way.
-    fn next_token(&mut self) -> Option<Token> {
+    fn next_token(&mut self) -> Token {
         loop {
-            match self.lexer.next() {
-                Some(Err(error)) => self.errors.push(Error::from(error)),
-                Some(Ok(token)) => return Some(token),
-                None => return None,
+            match self.lexer.next().expect("previous Eof token was ignored") {
+                Err(error) => self.errors.push(Error::from(error)),
+                Ok(token) => {
+                    return token;
+                }
             }
         }
     }
@@ -304,28 +306,24 @@ impl<'t> Parser<'t> {
     /// returns `None`.
     fn peek_operator_precedence(&mut self) -> Option<OperatorPrecedence> {
         self.peek_token()
-            .and_then(|t| t.try_into().ok())
-            .map(|k: BinaryOperatorKind| k.precedence())
+            .and_then(|t| BinaryOperatorKind::from_token(t).map(|o| o.precedence()))
     }
 
-    fn parse_expression(&mut self, precedence: OperatorPrecedence) -> Result<Expression> {
-        // todo see if we can refactor this
-        // fixme proper location
-        let expression = self.next_token().ok_or_else(|| {
-            Error::expected(
-                vec!["(", "+", "-", "!", "identifier", "integer"],
-                Location::new(0, 0),
-            )
-        })?;
-        let mut expression = match expression {
+    fn parse_expression(&mut self) -> Result<Expression> {
+        self.parse_expression_with_precedence(OperatorPrecedence::Lowest)
+    }
+
+    fn parse_expression_with_precedence(
+        &mut self,
+        precedence: OperatorPrecedence,
+    ) -> Result<Expression> {
+        let mut expression = match self.next_token() {
             Token::LeftParenthesis(loc) => {
-                let expression = self.parse_expression(OperatorPrecedence::Lowest);
+                let expression = self.parse_expression()?;
                 match self.next_token() {
-                    Some(Token::RightParenthesis(_)) => expression,
-                    Some(token) => Err(Error::expected_but_got(vec![")"], &token)),
-                    // todo add location of opening parenthesis
-                    _ => Err(Error::expected(vec![")"], Location::new(0, 0))),
-                }?
+                    Token::RightParenthesis(_) => expression,
+                    token => return Err(Error::expected_from_but_got(vec![")"], &token, &loc)),
+                }
             }
             Token::Plus(loc) => self.parse_unary_expression(UnaryOperator {
                 location: loc,
@@ -374,7 +372,8 @@ impl<'t> Parser<'t> {
             location: operator.location.clone(),
             expression: ExpressionKind::Unary(
                 operator,
-                self.parse_expression(OperatorPrecedence::Prefix)?.into(),
+                self.parse_expression_with_precedence(OperatorPrecedence::Prefix)?
+                    .into(),
             ),
         })
     }
@@ -387,9 +386,8 @@ impl<'t> Parser<'t> {
     ) -> Result<Expression> {
         // todo better location
         let parenthesis_location = match self.next_token() {
-            None => return Err(Error::expected(vec!["("], method_name_location)),
-            Some(Token::LeftParenthesis(parenthesis_location)) => parenthesis_location,
-            Some(token) => return Err(Error::expected_but_got(vec!["("], &token)),
+            Token::LeftParenthesis(parenthesis_location) => parenthesis_location,
+            token => return Err(Error::expected_but_got(vec!["("], &token)),
         };
 
         let mut parameters = Vec::new();
@@ -397,24 +395,21 @@ impl<'t> Parser<'t> {
             match token {
                 Token::RightParenthesis(_) => break,
                 Token::Comma(_) if !parameters.is_empty() => {
-                    self.next_token()
-                        .expect("we are sure there is one as we just peeked it");
+                    self.next_token();
                     if let Some(Token::RightParenthesis(_)) = self.peek_token() {
                         break;
                     }
                 }
                 _ => {
                     // todo add ")" in the list of accepted chars in the returned error
-                    parameters.push(self.parse_expression(OperatorPrecedence::Lowest)?);
+                    parameters.push(self.parse_expression()?);
                 }
             }
         }
 
         match self.next_token() {
-            // todo better location
-            None => return Err(Error::expected(vec![")"], method_name_location)),
-            Some(Token::RightParenthesis(_)) => (),
-            Some(token) => return Err(Error::expected_but_got(vec![")"], &token)),
+            Token::RightParenthesis(_) => (),
+            token => return Err(Error::expected_but_got(vec![")"], &token)),
         }
 
         Ok(Expression {
@@ -427,7 +422,7 @@ impl<'t> Parser<'t> {
         let operator = self
             .parse_operator()
             .expect("there must be an operator as we got a precedence");
-        let right = self.parse_expression(operator.precedence())?;
+        let right = self.parse_expression_with_precedence(operator.precedence())?;
         Ok(Expression {
             location: left.location.clone(),
             expression: ExpressionKind::Binary(left.into(), operator, right.into()),
@@ -435,22 +430,39 @@ impl<'t> Parser<'t> {
     }
 
     fn parse_operator(&mut self) -> Option<BinaryOperator> {
-        self.peek_token()
-            .and_then(|t| t.try_into().ok())
-            .map(|kind| BinaryOperator {
-                location: self
-                    .next_token()
-                    .expect("there must be a next token, we were able to peek it")
-                    .location()
-                    .to_owned(),
-                kind,
-            })
+        if let Some(token) = self.peek_token() {
+            if let Some(operator) = BinaryOperatorKind::from_token(token) {
+                return Some(BinaryOperator {
+                    location: self.next_token().location().clone(),
+                    kind: operator,
+                });
+            }
+        }
+        None
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[should_panic(expected = "previous Eof token was ignored")]
+    fn next_token_past_eof() {
+        let mut parser = Parser::new(Lexer::new(""));
+        let token = parser.next_token();
+        assert!(matches!(token, Token::Eof(_)));
+        let _ = parser.next_token(); // panics
+    }
+
+    #[test]
+    fn peek_token_past_eof() {
+        let mut parser = Parser::new(Lexer::new(""));
+        let token = parser.next_token();
+        assert!(matches!(token, Token::Eof(_)));
+        let token = parser.peek_token();
+        assert!(token.is_none());
+    }
 
     macro_rules! parse_operator {
         ($($name:ident: $text:expr => $pat:pat,)*) => {
@@ -493,9 +505,9 @@ mod tests {
             #[test]
             fn $name() {
                 let mut parser = Parser::new(Lexer::new($text));
-                let node = parser.parse_expression(OperatorPrecedence::Lowest);
-                let next_node = parser.parse_expression(OperatorPrecedence::Lowest);
-                let node: Expression = node.unwrap();
+                let node = parser.parse_expression();
+                let next_node = parser.parse_expression();
+                let node: Expression = node.expect("expression expected, got err");
 
                 assert!(next_node.is_err(), "unexpected expression: {}", next_node.unwrap());
 
@@ -525,5 +537,29 @@ mod tests {
         expression_call_par3:        "method(p1,)"       => "method(p1)",
         expression_call_par4:        "method(p1,p2)"     => "method(p1, p2)",
         expression_call_par5:        "method(p1,p2+p3)"  => "method(p1, (p2 + p3))",
+    }
+
+    macro_rules! parse_error {
+        ($($name:ident, $root:ident: $text:expr => $result:expr,)*) => {
+        $(
+        #[test]
+            fn $name() {
+                let mut parser = Parser::new(Lexer::new($text));
+                let error = parser
+                    .$root()
+                    .expect_err("err expected, got ok");
+
+                assert_eq!(format!("{}", error), $result);
+            }
+        )*
+        }
+    }
+
+    parse_error! {
+        expression_error_1, parse_expression: "1 + *" => "Parsing error: expected [(] or [+] or [-] or [!] or [identifier] or [integer], got [*] at 1:5",
+        expression_error_2, parse_expression: "%1"    => "Parsing error: expected [(] or [+] or [-] or [!] or [identifier] or [integer], got [%] at 1:1",
+        expression_error_3, parse_expression: "  "    => "Parsing error: expected [(] or [+] or [-] or [!] or [identifier] or [integer], got [EOF] at 1:3",
+        expression_error_4, parse_expression: " (1"   => "Parsing error: expected [)] (opening at 1:2), got [EOF] at 1:4",
+        expression_error_5, parse_expression: "("     => "Parsing error: expected [(] or [+] or [-] or [!] or [identifier] or [integer], got [EOF] at 1:2",
     }
 }
