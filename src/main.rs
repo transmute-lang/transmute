@@ -15,9 +15,6 @@ fn main() {
 
     let lexer = Lexer::new(&file);
     for token in lexer {
-        match token {
-            Ok(token) => println!("{}", token),
-            Err(e) => eprintln!("{}", e),
-        }
+        println!("{}", token)
     }
 }

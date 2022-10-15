@@ -3,40 +3,18 @@ use std::iter::Peekable;
 use std::str::Chars;
 
 #[derive(Debug)]
+pub enum ErrorKind {
+    ExpectedOneOf(Vec<String>),
+    ExpectedAny(),
+    Unexpected(char),
+    UnterminatedString(),
+}
+
+#[derive(Debug)]
 pub struct Error {
-    // todo turn into enum
-    pub error: String,
-    pub location: Location,
+    location: Location,
+    kind: ErrorKind,
 }
-
-impl Error {
-    fn expected(expectations: Vec<&str>, location: Location) -> Self {
-        Self::err(
-            format!("expected `{}`, got nothing", expectations.join("` or `")),
-            location,
-        )
-    }
-
-    fn expected_any_char(location: Location) -> Self {
-        Self::err("expected any character, got nothing".to_string(), location)
-    }
-
-    fn unexpected(received: &char, location: Location) -> Self {
-        Self::err(format!("unexpected `{}`", received), location)
-    }
-
-    fn err(error: String, location: Location) -> Self {
-        Self { error, location }
-    }
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Lexing error: {} at {}", self.error, self.location)
-    }
-}
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Location {
@@ -56,7 +34,6 @@ impl Display for Location {
     }
 }
 
-#[derive(Clone)]
 pub enum Token {
     And(Location),
     Comma(Location),
@@ -76,6 +53,7 @@ pub enum Token {
     GtEqual(Location),
     Identifier(Location, String),
     Integer(Location, u32),
+    Invalid(Location, ErrorKind),
     Join(Location),
     LeftBrace(Location),
     LeftBracket(Location),
@@ -123,6 +101,7 @@ impl Token {
             GtEqual(loc) => loc,
             Identifier(loc, _) => loc,
             Integer(loc, _) => loc,
+            Invalid(loc, _) => loc,
             Join(loc) => loc,
             LeftBrace(loc) => loc,
             LeftBracket(loc) => loc,
@@ -172,6 +151,7 @@ impl Debug for Token {
             GtEqual(_) => write!(f, "[>=]"),
             Identifier(_, value) => write!(f, "[identifier:{}]", value),
             Integer(_, value) => write!(f, "[integer:{}]", value),
+            Invalid(_, value) => write!(f, "[invalid:{:?}]", value),
             Join(_) => write!(f, "[join]"),
             LeftBrace(_) => write!(f, "[{{]"),
             LeftBracket(_) => write!(f, "[[]"),
@@ -223,6 +203,15 @@ impl Display for Token {
             Identifier(_, value) => write!(f, "{}", value),
             Integer(_, _) if f.alternate() => write!(f, "integer"),
             Integer(_, value) => write!(f, "{}", value),
+            Invalid(_, _) if f.alternate() => write!(f, "invalid"),
+            Invalid(_, value) => match value {
+                ErrorKind::UnterminatedString() => write!(f, "UNTERMINATED_STRING"),
+                ErrorKind::Unexpected(c) => write!(f, "_{}_", c),
+                // todo find better representation
+                ErrorKind::ExpectedAny() => write!(f, "ANY"),
+                // todo find better representation
+                ErrorKind::ExpectedOneOf(v) => write!(f, "({})", v.join(", ")),
+            },
             Join(_) => write!(f, "join"),
             LeftBrace(_) => write!(f, "{{"),
             LeftBracket(_) => write!(f, ""),
@@ -331,15 +320,25 @@ impl<'t> Lexer<'t> {
     }
 
     /// Creates a string token, using `\` as escape character.
-    fn make_string(&mut self, location: Location) -> Result<Token> {
+    fn make_string(&mut self, location: Location) -> Token {
         let mut string = String::new();
 
         loop {
             match self.next_char() {
-                None => return Err(Error::expected(vec!["\""], self.location.clone())),
-                Some('"') => return Ok(Token::String(location, string)),
+                None => {
+                    return Token::Invalid(self.location.clone(), ErrorKind::UnterminatedString())
+                }
+                Some('"') => return Token::String(location, string),
                 Some('\\') => match self.next_char() {
-                    None => return Err(Error::expected(vec!["\"", "\\"], self.location.clone())),
+                    None => {
+                        return Token::Invalid(
+                            Location {
+                                line: self.location.line,
+                                column: self.location.column + 1,
+                            },
+                            ErrorKind::ExpectedOneOf(vec!["\"".to_string(), "\\".to_string()]),
+                        );
+                    }
                     Some(c) => string.push(c),
                 },
                 Some(c) => string.push(c),
@@ -363,10 +362,10 @@ impl<'t> Lexer<'t> {
     /// select * from table
     /// where column = 'value'
     /// ```
-    fn make_block_string(&mut self, location: Location) -> Result<Token> {
+    fn make_block_string(&mut self, location: Location) -> Token {
         let delimiter = self.next_char();
         if delimiter.is_none() {
-            return Err(Error::expected_any_char(location));
+            return Token::Invalid(location, ErrorKind::ExpectedAny());
         }
         let delimiter = delimiter.unwrap();
 
@@ -383,7 +382,7 @@ impl<'t> Lexer<'t> {
 
         while let Some(c) = self.next_char() {
             match c {
-                c if c == delimiter => return Ok(Token::String(location, string)),
+                c if c == delimiter => return Token::String(location, string),
                 c if c.is_whitespace() && c != '\n' => prefix += 1,
                 c => {
                     string.push(c);
@@ -400,7 +399,7 @@ impl<'t> Lexer<'t> {
                     string.push(c);
                     whitespaces_left = prefix;
                 }
-                c if c == delimiter => break,
+                c if c == delimiter => return Token::String(location, string),
                 c if c.is_whitespace() && whitespaces_left > 0 => whitespaces_left -= 1,
                 c => {
                     string.push(c);
@@ -409,11 +408,11 @@ impl<'t> Lexer<'t> {
             }
         }
 
-        Ok(Token::String(location, string))
+        Token::Invalid(location, ErrorKind::UnterminatedString())
     }
 
     /// Creates a 32 bits unsigned number token.
-    fn make_number(&mut self, location: Location) -> Result<Token> {
+    fn make_number(&mut self, location: Location) -> Token {
         let mut number: u32 = self.curr_char.unwrap().to_digit(10).unwrap();
         while let Some(c) = self.peek_char() {
             if c.is_ascii_digit() {
@@ -424,11 +423,11 @@ impl<'t> Lexer<'t> {
                 break;
             }
         }
-        Ok(Token::Integer(location, number))
+        Token::Integer(location, number)
     }
 
     /// Creates either a keyword token or an identifier one.
-    fn make_identifier(&mut self, location: Location) -> Result<Token> {
+    fn make_identifier(&mut self, location: Location) -> Token {
         let mut string = String::from(self.curr_char.unwrap());
 
         while let Some(c) = self.peek_char() {
@@ -440,7 +439,7 @@ impl<'t> Lexer<'t> {
             }
         }
 
-        Ok(match string.as_str() {
+        match string.as_str() {
             "and" => Token::And(location),
             "continue" => Token::Continue(location),
             "fail" => Token::Fail(location),
@@ -452,7 +451,7 @@ impl<'t> Lexer<'t> {
             "null" => Token::Null(location),
             "or" => Token::Or(location),
             _ => Token::Identifier(location, string),
-        })
+        }
     }
 }
 
@@ -478,7 +477,7 @@ macro_rules! next_char_if {
 }
 
 impl<'t> Iterator for Lexer<'t> {
-    type Item = Result<Token>;
+    type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.skip_whitespaces_and_comments();
@@ -486,55 +485,55 @@ impl<'t> Iterator for Lexer<'t> {
         let loc = self.location.clone();
 
         let token = match self.curr_char {
-            Some(';') => Ok(Token::Semicolon(loc)),
-            Some(',') => Ok(Token::Comma(loc)),
-            Some('_') => Ok(Token::Underscore(loc)),
-            Some('|') => Ok(Token::Pipe(loc)),
-            Some('.') => Ok(Token::Dot(loc)),
-            Some('+') => Ok(Token::Plus(loc)),
-            Some('-') => Ok(Token::Minus(loc)),
-            Some('*') => Ok(Token::Star(loc)),
-            Some('/') => Ok(Token::Slash(loc)),
-            Some('%') => Ok(Token::Percent(loc)),
-            Some('~') => Ok(Token::Tilde(loc)),
+            Some(';') => Token::Semicolon(loc),
+            Some(',') => Token::Comma(loc),
+            Some('_') => Token::Underscore(loc),
+            Some('|') => Token::Pipe(loc),
+            Some('.') => Token::Dot(loc),
+            Some('+') => Token::Plus(loc),
+            Some('-') => Token::Minus(loc),
+            Some('*') => Token::Star(loc),
+            Some('/') => Token::Slash(loc),
+            Some('%') => Token::Percent(loc),
+            Some('~') => Token::Tilde(loc),
             Some('=') => match next_char_if!(self, '=', '>') {
-                Some('=') => Ok(Token::EqualEqual(loc)),
-                Some('>') => Ok(Token::EqualGt(loc)),
-                _ => Ok(Token::Equal(loc)),
+                Some('=') => Token::EqualEqual(loc),
+                Some('>') => Token::EqualGt(loc),
+                _ => Token::Equal(loc),
             },
             Some('!') => match next_char_if!(self, '=', '~') {
-                Some('=') => Ok(Token::ExclamEqual(loc)),
-                Some('~') => Ok(Token::ExclamTilde(loc)),
-                _ => Ok(Token::Exclam(loc)),
+                Some('=') => Token::ExclamEqual(loc),
+                Some('~') => Token::ExclamTilde(loc),
+                _ => Token::Exclam(loc),
             },
-            Some('(') => Ok(Token::LeftParenthesis(loc)),
-            Some(')') => Ok(Token::RightParenthesis(loc)),
-            Some('{') => Ok(Token::LeftBrace(loc)),
-            Some('}') => Ok(Token::RightBrace(loc)),
-            Some('[') => Ok(Token::LeftBracket(loc)),
-            Some(']') => Ok(Token::RightBracket(loc)),
+            Some('(') => Token::LeftParenthesis(loc),
+            Some(')') => Token::RightParenthesis(loc),
+            Some('{') => Token::LeftBrace(loc),
+            Some('}') => Token::RightBrace(loc),
+            Some('[') => Token::LeftBracket(loc),
+            Some(']') => Token::RightBracket(loc),
             Some('>') => match next_char_if!(self, '=') {
-                Some('=') => Ok(Token::GtEqual(loc)),
-                _ => Ok(Token::Gt(loc)),
+                Some('=') => Token::GtEqual(loc),
+                _ => Token::Gt(loc),
             },
             Some('<') => match next_char_if!(self, '=') {
-                Some('=') => Ok(Token::LtEqual(loc)),
-                _ => Ok(Token::Lt(loc)),
+                Some('=') => Token::LtEqual(loc),
+                _ => Token::Lt(loc),
             },
             Some('"') => match next_char_if!(self, '"') {
                 Some('"') => match next_char_if!(self, '"') {
                     Some('"') => self.make_block_string(loc),
-                    _ => Ok(Token::String(loc, "".to_string())),
+                    _ => Token::String(loc, "".to_string()),
                 },
                 _ => self.make_string(loc),
             },
             Some(c) if c.is_ascii_digit() => self.make_number(loc),
             Some(c) if c.is_alphabetic() => self.make_identifier(loc),
             // todo rework that: invalid tokens should be tokens as well...
-            Some(c) => Err(Error::unexpected(&c, loc)),
+            Some(c) => Token::Invalid(loc, ErrorKind::Unexpected(c)),
             None if !self.eof => {
                 self.eof = true;
-                return Some(Ok(Token::Eof(Location::new(loc.line, loc.column + 1))));
+                return Some(Token::Eof(Location::new(loc.line, loc.column + 1)));
             }
             _ => return None,
         };
@@ -547,12 +546,12 @@ impl<'t> Iterator for Lexer<'t> {
 mod tests {
     use super::*;
 
+    // todo test for unterminated strings
+
     #[test]
     fn eof_is_last_token() {
         let mut lexer = Lexer::new("");
-        let token = lexer.next();
-        let token = token.expect("token must be Some");
-        let token = token.expect("token must be Ok");
+        let token = lexer.next().expect("expected Some");
         assert!(matches!(token, Token::Eof(Location { line: 1, column: 1 })));
 
         let token = lexer.next();
@@ -562,68 +561,46 @@ mod tests {
     #[test]
     fn skip_whitespaces() {
         let mut lexer = Lexer::new(" ");
-        let token = lexer.next();
-        let token = token.expect("token must be Some");
-        let token = token.expect("token must be Ok");
+        let token = lexer.next().expect("expected Some");
         assert!(matches!(token, Token::Eof(Location { line: 1, column: 2 })));
     }
 
     #[test]
     fn skip_c_line_comment() {
         let mut lexer = Lexer::new("// [\n]");
-        let token = lexer.next();
-        let token = token.expect("token must be Some");
-        let token = token.expect("token must be Ok");
+        let token = lexer.next().expect("expected Some");
         assert!(matches!(token, Token::RightBracket(_)));
     }
 
     #[test]
     fn skip_shell_line_comment() {
         let mut lexer = Lexer::new("# [\n]");
-        let token = lexer.next();
-        let token = token.expect("token must be Some");
-        let token = token.expect("token must be Ok");
+        let token = lexer.next().expect("expected Some");
         assert!(matches!(token, Token::RightBracket(_)));
     }
 
     #[test]
     fn skip_multiline_comment() {
         let mut lexer = Lexer::new("/*\n[ */ ]");
-        let token = lexer.next();
-        let token = token.expect("token must be Some");
-        let token = token.expect("token must be Ok");
+        let token = lexer.next().expect("expected Some");
         assert!(matches!(token, Token::RightBracket(_)));
     }
 
     #[test]
     fn skip_empty_multiline_comment() {
         let mut lexer = Lexer::new("/**/]");
-        let token = lexer.next();
-        let token = token.expect("token must be Some");
-        let token = token.expect("token must be Ok");
+        let token = lexer.next().expect("expected Some");
         assert!(matches!(token, Token::RightBracket(_)));
     }
 
     #[test]
     fn unexpected() {
         let mut lexer = Lexer::new("§");
-
-        let token = lexer.next();
-        let token = token.expect("token must be Some");
-
-        // todo
-        // assert_enum!(token, Token::Error(loc, error), {
-        //     assert_eq!(Location::new(1, 1), loc);
-        //     assert_eq!("unexpected `§`", error);
-        // });
-
-        assert!(if let Err(err) = token {
-            assert_eq!(err.location, Location::new(1, 1));
-            assert_eq!(err.error, "unexpected `§`");
-            true
-        } else {
-            false
-        });
+        let token = lexer.next().expect("expected Some");
+        assert!(matches!(
+            token,
+            Token::Invalid(Location { line: 1, column: 1 }, ErrorKind::Unexpected('§'))
+        ));
     }
 
     macro_rules! empty_token {
@@ -634,7 +611,6 @@ mod tests {
                 let mut lexer = Lexer::new($str);
                 let token = lexer.next();
                 let token = token.expect("token must be Some");
-                let token = token.expect("token must be Ok");
                 assert!(matches!(token, $token), "got {:?}", token);
             }
         )*
@@ -690,90 +666,90 @@ mod tests {
     fn sequence_dot_equal() {
         let mut lexer = Lexer::new(".=");
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
+        assert!(matches!(token, Some(Token::Dot(_))));
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Equal(_)))));
+        assert!(matches!(token, Some(Token::Equal(_))));
     }
 
     #[test]
     fn sequence_empty_string_dot() {
         let mut lexer = Lexer::new("\"\".");
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::String(_, _)))));
+        assert!(matches!(token, Some(Token::String(_, _))));
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
+        assert!(matches!(token, Some(Token::Dot(_))));
     }
 
     #[test]
     fn sequence_string_dot() {
         let mut lexer = Lexer::new("\"str\".");
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::String(_, _)))));
+        assert!(matches!(token, Some(Token::String(_, _))));
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
+        assert!(matches!(token, Some(Token::Dot(_))));
     }
 
     #[test]
     fn sequence_block_string_dot() {
         let mut lexer = Lexer::new("\"\"\";\nline1;.");
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::String(_, _)))));
+        assert!(matches!(token, Some(Token::String(_, _))));
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
+        assert!(matches!(token, Some(Token::Dot(_))));
     }
 
     #[test]
     fn sequence_identifier_dot() {
         let mut lexer = Lexer::new("identifier.");
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Identifier(_, _)))));
+        assert!(matches!(token, Some(Token::Identifier(_, _))));
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
+        assert!(matches!(token, Some(Token::Dot(_))));
     }
 
     #[test]
     fn sequence_integer_dot() {
         let mut lexer = Lexer::new("200.");
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Integer(_, _)))));
+        assert!(matches!(token, Some(Token::Integer(_, _))));
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
+        assert!(matches!(token, Some(Token::Dot(_))));
     }
 
     #[test]
     fn sequence_exclam_dot() {
         let mut lexer = Lexer::new("!.");
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Exclam(_)))));
+        assert!(matches!(token, Some(Token::Exclam(_))));
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
+        assert!(matches!(token, Some(Token::Dot(_))));
     }
 
     #[test]
     fn sequence_equal_dot() {
         let mut lexer = Lexer::new("=.");
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Equal(_)))));
+        assert!(matches!(token, Some(Token::Equal(_))));
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
+        assert!(matches!(token, Some(Token::Dot(_))));
     }
 
     #[test]
     fn sequence_gt_dot() {
         let mut lexer = Lexer::new(">.");
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Gt(_)))));
+        assert!(matches!(token, Some(Token::Gt(_))));
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
+        assert!(matches!(token, Some(Token::Dot(_))));
     }
 
     #[test]
     fn sequence_lt_dot() {
         let mut lexer = Lexer::new("<.");
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Lt(_)))));
+        assert!(matches!(token, Some(Token::Lt(_))));
         let token = lexer.next();
-        assert!(matches!(token, Some(Ok(Token::Dot(_)))));
+        assert!(matches!(token, Some(Token::Dot(_))));
     }
 
     macro_rules! string {
@@ -782,11 +758,7 @@ mod tests {
             #[test]
             fn $name() {
                 let mut lexer = Lexer::new($strin);
-                let token = lexer.next();
-                assert!(token.is_some());
-                let token = token.unwrap();
-                assert!(token.is_ok());
-                let token = token.unwrap();
+                let token = lexer.next().expect("expected Some");
                 assert!(if let Token::String(_, string) = token {
                     assert_eq!(string, $strout);
                     true
@@ -809,11 +781,7 @@ mod tests {
     #[test]
     fn integer() {
         let mut lexer = Lexer::new("200");
-        let token = lexer.next();
-        assert!(token.is_some());
-        let token = token.unwrap();
-        assert!(token.is_ok());
-        let token = token.unwrap();
+        let token = lexer.next().expect("expected Some");
         assert!(if let Token::Integer(_, integer) = token {
             assert_eq!(integer, 200);
             true
@@ -825,11 +793,7 @@ mod tests {
     #[test]
     fn identifier() {
         let mut lexer = Lexer::new("identifier");
-        let token = lexer.next();
-        assert!(token.is_some());
-        let token = token.unwrap();
-        assert!(token.is_ok());
-        let token = token.unwrap();
+        let token = lexer.next().expect("expected Some");
         assert!(if let Token::Identifier(_, identifier) = token {
             assert_eq!(identifier, "identifier");
             true

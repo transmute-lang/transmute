@@ -4,9 +4,10 @@ use crate::utils::peekable_iterator::PeekableIterator;
 use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum ErrorKind {
     /// The lexer returned an invalid token error.
-    InvalidToken(lexer::Error),
+    InvalidToken(),
     /// We found an unexpected token
     UnexpectedToken(Vec<Token>),
     /// We found an unexpected token while looking for a closing one
@@ -15,15 +16,25 @@ pub enum ErrorKind {
 
 #[derive(Debug)]
 pub struct Error {
-    pub location: Location,
-    pub token: Option<Token>,
     pub kind: ErrorKind,
+    /// The token that caused the error
+    pub token: Token,
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let error = match &self.kind {
-            ErrorKind::InvalidToken(e) => format!("{}", e),
+            ErrorKind::InvalidToken() => match &self.token {
+                Token::Invalid(_, error_kind) => match error_kind {
+                    lexer::ErrorKind::UnterminatedString() => "unterminated string".to_string(),
+                    lexer::ErrorKind::ExpectedOneOf(chars) => {
+                        format!("expected one of `{}`", chars.join("`, `"))
+                    }
+                    lexer::ErrorKind::ExpectedAny() => "expected any character".to_string(),
+                    lexer::ErrorKind::Unexpected(c) => format!("invalid character `{}` found", c),
+                },
+                _ => unreachable!("should never be here"),
+            },
             ErrorKind::UnexpectedToken(wanted) => format!(
                 "expected {}, got `{:#}`",
                 wanted
@@ -31,27 +42,17 @@ impl Display for Error {
                     .map(|t| format!("`{:#}`", t))
                     .collect::<Vec<String>>()
                     .join(" or "),
-                self.token.as_ref().expect("a token must be there")
+                self.token
             ),
             ErrorKind::UnmatchedToken { wanted, matching } => format!(
                 "expected `{:#}` from matching `{:#}` at {:#}, got `{}`",
                 wanted,
                 matching,
                 matching.location(),
-                self.token.as_ref().expect("a token must be there")
+                self.token
             ),
         };
-        write!(f, "Parsing error: {} at {}", error, self.location)
-    }
-}
-
-impl From<lexer::Error> for Error {
-    fn from(e: lexer::Error) -> Self {
-        Error {
-            location: e.location.clone(),
-            token: None,
-            kind: ErrorKind::InvalidToken(e),
-        }
+        write!(f, "Parsing error: {} at {}", error, self.token.location())
     }
 }
 
@@ -274,12 +275,19 @@ impl<'t> Parser<'t> {
         }
     }
 
+    pub fn errors(&self) -> &Vec<Error> {
+        &self.errors
+    }
+
     /// Returns next valid token, pushes errors if invalid tokens are found on the way.
     fn next_token(&mut self) -> Token {
         loop {
             match self.lexer.next().expect("previous Eof token was ignored") {
-                Err(error) => self.errors.push(Error::from(error)),
-                Ok(token) => {
+                token @ Token::Invalid(_, _) => self.errors.push(Error {
+                    token,
+                    kind: ErrorKind::InvalidToken(),
+                }),
+                token => {
                     return token;
                 }
             }
@@ -288,14 +296,12 @@ impl<'t> Parser<'t> {
 
     /// Peeks next valid token. Skipping erroneous token on the way and storing related errors.
     fn peek_token(&mut self) -> Option<&Token> {
-        while let Some(Err(e)) = self.lexer.peek() {
-            // just ignore errors, they will be caught when we call `next_token()`
+        while let Some(Token::Invalid(_, _)) = self.lexer.peek() {
+            // just ignore invalid tokens, they will be caught when we call `next_token()`
             self.lexer.next();
         }
 
-        self.lexer
-            .peek()
-            .map(|t| t.as_ref().expect("cannot be an error, we weeded them"))
+        self.lexer.peek()
     }
 
     /// Returns the next operator's precedence, if the next token is an operator token; otherwise,
@@ -320,12 +326,11 @@ impl<'t> Parser<'t> {
                     Token::RightParenthesis(_) => expression,
                     token => {
                         return Err(Error {
-                            location: token.location().clone(),
                             kind: ErrorKind::UnmatchedToken {
                                 wanted: Token::RightParenthesis(token.location().clone()),
                                 matching: left,
                             },
-                            token: Some(token),
+                            token,
                         })
                     }
                 }
@@ -355,7 +360,6 @@ impl<'t> Parser<'t> {
             },
             token => {
                 return Err(Error {
-                    location: token.location().clone(),
                     kind: ErrorKind::UnexpectedToken(vec![
                         Token::LeftParenthesis(token.location().clone()),
                         Token::Plus(token.location().clone()),
@@ -364,7 +368,7 @@ impl<'t> Parser<'t> {
                         Token::Identifier(token.location().clone(), "".to_string()),
                         Token::Integer(token.location().clone(), 0),
                     ]),
-                    token: Some(token),
+                    token,
                 })
             }
         };
@@ -402,11 +406,10 @@ impl<'t> Parser<'t> {
             Token::LeftParenthesis(parenthesis_location) => parenthesis_location,
             token => {
                 return Err(Error {
-                    location: token.location().clone(),
                     kind: ErrorKind::UnexpectedToken(vec![Token::LeftParenthesis(
                         token.location().clone(),
                     )]),
-                    token: Some(token),
+                    token,
                 })
             }
         };
@@ -433,11 +436,10 @@ impl<'t> Parser<'t> {
             // token => return Err(Error::expected_but_got(vec![")"], &token)),
             token => {
                 return Err(Error {
-                    location: token.location().clone(),
                     kind: ErrorKind::UnexpectedToken(vec![Token::LeftParenthesis(
                         token.location().clone(),
                     )]),
-                    token: Some(token),
+                    token,
                 })
             }
         }
@@ -591,5 +593,57 @@ mod tests {
         expression_error_3, parse_expression: "  "    => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:3",
         expression_error_4, parse_expression: " (1"   => "Parsing error: expected `)` from matching `(` at 1:2, got `EOF` at 1:4",
         expression_error_5, parse_expression: "("     => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:2",
+    }
+
+    #[test]
+    fn lexer_errors() {
+        let mut parser = Parser::new(Lexer::new("&"));
+        let _ = parser.parse_expression();
+        let errors = parser.errors();
+        assert_eq!(errors.len(), 1);
+        let error = &errors[0];
+        assert_eq!(
+            format!("{}", error),
+            "Parsing error: invalid character `&` found at 1:1"
+        );
+    }
+
+    #[test]
+    fn lexer_errors3() {
+        let mut parser = Parser::new(Lexer::new("\"\\"));
+        let _ = parser.parse_expression();
+        let errors = parser.errors();
+        assert_eq!(errors.len(), 1);
+        let error = &errors[0];
+        assert_eq!(
+            format!("{}", error),
+            "Parsing error: expected one of `\"`, `\\` at 1:3"
+        );
+    }
+
+    #[test]
+    fn unterminated_string() {
+        let mut parser = Parser::new(Lexer::new("\""));
+        let _ = parser.parse_expression();
+        let errors = parser.errors();
+        assert_eq!(errors.len(), 1);
+        let error = &errors[0];
+        assert_eq!(
+            format!("{}", error),
+            "Parsing error: unterminated string at 1:1"
+        );
+    }
+
+    #[test]
+    fn unterminated_block_string() {
+        let mut parser = Parser::new(Lexer::new("\"\"\";"));
+        let _ = parser.parse_expression();
+        let errors = parser.errors();
+        assert_eq!(errors.len(), 1);
+        let error = &errors[0];
+        assert_eq!(
+            format!("{}", error),
+            "Parsing error: unterminated string at 1:1"
+        );
     }
 }
