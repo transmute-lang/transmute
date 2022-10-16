@@ -1,5 +1,6 @@
 use crate::lexer;
 use crate::lexer::{Lexer, Location, Token};
+use crate::parser::ErrorKind::UnexpectedToken;
 use crate::utils::peekable_iterator::PeekableIterator;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -274,6 +275,30 @@ impl BinaryOperatorKind {
             _ => None,
         }
     }
+
+    /// Tokens that may be present if the thing being parsed was a binary operation
+    fn tokens(location: &Location) -> Vec<Token> {
+        use Token::*;
+        vec![
+            And(location.clone()),
+            Dot(location.clone()),
+            EqualEqual(location.clone()),
+            ExclamEqual(location.clone()),
+            ExclamTilde(location.clone()),
+            Gt(location.clone()),
+            GtEqual(location.clone()),
+            Lt(location.clone()),
+            LtEqual(location.clone()),
+            Minus(location.clone()),
+            Or(location.clone()),
+            Percent(location.clone()),
+            Pipe(location.clone()),
+            Plus(location.clone()),
+            Slash(location.clone()),
+            Star(location.clone()),
+            Tilde(location.clone()),
+        ]
+    }
 }
 
 #[derive(Debug)]
@@ -316,26 +341,22 @@ macro_rules! require_token {
     ($self:ident, $token:path) => {
         match $self.next_token() {
             token @ $token(_) => Ok(token),
-            token => {
-                return Err(Error {
-                    kind: ErrorKind::UnexpectedToken(vec![$token(token.location().clone())]),
-                    token,
-                })
-            }
+            token => Err(Error {
+                kind: ErrorKind::UnexpectedToken(vec![$token(token.location().clone())]),
+                token,
+            }),
         }
     };
     ($self:ident, $token:path, $ex:expr) => {
         match $self.next_token() {
             token @ $token(_, _) => Ok(token),
-            token => {
-                return Err(Error {
-                    kind: ErrorKind::UnexpectedToken(vec![$token(
-                        token.location().clone(),
-                        $ex.into(),
-                    )]),
-                    token,
-                })
-            }
+            token => Err(Error {
+                kind: ErrorKind::UnexpectedToken(vec![$token(
+                    token.location().clone(),
+                    $ex.into(),
+                )]),
+                token,
+            }),
         }
     };
 }
@@ -344,16 +365,14 @@ macro_rules! require_matching_token {
     ($self:ident, $token:path, $opening:expr) => {
         match $self.next_token() {
             token @ $token(_) => Ok(token),
-            token => {
-                return Err(Error {
-                    kind: ErrorKind::UnmatchedToken {
-                        valid: Vec::new(),
-                        closing: $token(token.location().clone()),
-                        opening: $opening,
-                    },
-                    token,
-                })
-            }
+            token => Err(Error {
+                kind: ErrorKind::UnmatchedToken {
+                    valid: Vec::new(),
+                    closing: $token(token.location().clone()),
+                    opening: $opening,
+                },
+                token,
+            }),
         }
     };
 }
@@ -417,7 +436,7 @@ impl<'t> Parser<'t> {
                         Ok(statement) => statements.push(statement),
                         Err(Error {
                             token,
-                            kind: ErrorKind::UnexpectedToken(valid),
+                            kind: UnexpectedToken(valid),
                         }) => {
                             return Err(Error {
                                 kind: ErrorKind::UnmatchedToken {
@@ -447,7 +466,7 @@ impl<'t> Parser<'t> {
                 // even if peek_token() returns None, next_token() returns at least Some(Token::Eof)
                 let token = self.next_token();
                 Err(Error {
-                    kind: ErrorKind::UnexpectedToken(vec![
+                    kind: UnexpectedToken(vec![
                         Token::LeftBrace(token.location().clone()),
                         Token::Let(token.location().clone()),
                         Token::Match(token.location().clone()),
@@ -462,7 +481,21 @@ impl<'t> Parser<'t> {
     fn parse_fail_statement(&mut self) -> Result<Statement> {
         let location = require_token!(self, Token::Fail)?.location().clone();
         let expression = self.parse_expression()?;
-        require_token!(self, Token::Semicolon)?;
+        match require_token!(self, Token::Semicolon) {
+            Ok(_) => {}
+            Err(Error {
+                token,
+                kind: UnexpectedToken(mut valid),
+            }) => {
+                valid.append(&mut BinaryOperatorKind::tokens(token.location()));
+                valid.push(Token::LeftParenthesis(token.location().clone()));
+                return Err(Error {
+                    kind: UnexpectedToken(valid),
+                    token,
+                });
+            }
+            Err(e) => return Err(e),
+        };
 
         Ok(Statement {
             location,
@@ -520,7 +553,7 @@ impl<'t> Parser<'t> {
                 Some(_) => {
                     let token = self.next_token();
                     return Err(Error {
-                        kind: ErrorKind::UnexpectedToken(vec![
+                        kind: UnexpectedToken(vec![
                             Token::RightBrace(token.location().clone()),
                             Token::Comma(token.location().clone()),
                         ]),
@@ -549,7 +582,30 @@ impl<'t> Parser<'t> {
         let mut expression = match self.next_token() {
             left @ Token::LeftParenthesis(_) => {
                 let expression = self.parse_expression()?;
-                require_matching_token!(self, Token::RightParenthesis, left)?;
+                match require_matching_token!(self, Token::RightParenthesis, left) {
+                    Ok(_) => {}
+                    Err(Error {
+                        token,
+                        kind:
+                            ErrorKind::UnmatchedToken {
+                                mut valid,
+                                closing,
+                                opening,
+                            },
+                    }) => {
+                        valid.append(&mut BinaryOperatorKind::tokens(token.location()));
+                        valid.push(Token::LeftParenthesis(token.location().clone()));
+                        return Err(Error {
+                            kind: ErrorKind::UnmatchedToken {
+                                valid,
+                                closing,
+                                opening,
+                            },
+                            token,
+                        });
+                    }
+                    Err(e) => return Err(e),
+                }
                 expression
             }
             Token::Plus(loc) => self.parse_unary_expression(UnaryOperator {
@@ -581,7 +637,7 @@ impl<'t> Parser<'t> {
             },
             token => {
                 return Err(Error {
-                    kind: ErrorKind::UnexpectedToken(vec![
+                    kind: UnexpectedToken(vec![
                         Token::LeftParenthesis(token.location().clone()),
                         Token::Plus(token.location().clone()),
                         Token::Minus(token.location().clone()),
@@ -622,48 +678,69 @@ impl<'t> Parser<'t> {
         method_name_location: Location,
         method_name: String,
     ) -> Result<Expression> {
-        let parenthesis_location = require_token!(self, Token::LeftParenthesis)?
-            .location()
-            .clone();
+        let open_parenthesis = require_token!(self, Token::LeftParenthesis)?;
 
         let mut parameters = Vec::new();
 
-        // todo rewrite as match statement
-        let mut expect_comma = false;
-        while let Some(token) = self.peek_token() {
-            match token {
-                Token::RightParenthesis(_) => break,
-                Token::Comma(_) if !parameters.is_empty() => {
+        loop {
+            match self.peek_token() {
+                Some(Token::RightParenthesis(_)) => break,
+                _ => match self.parse_expression() {
+                    Ok(expression) => parameters.push(expression),
+                    Err(Error {
+                        token,
+                        kind: UnexpectedToken(valid),
+                    }) => {
+                        return Err(Error {
+                            kind: ErrorKind::UnmatchedToken {
+                                valid,
+                                closing: Token::RightParenthesis(token.location().clone()),
+                                opening: open_parenthesis,
+                            },
+                            token,
+                        })
+                    }
+                    Err(e) => return Err(e),
+                },
+            }
+            match self.peek_token() {
+                Some(Token::RightParenthesis(_)) => break,
+                Some(Token::Comma(_)) => {
                     self.next_token();
-                    expect_comma = false;
                     if let Some(Token::RightParenthesis(_)) = self.peek_token() {
                         break;
                     }
                 }
-                _ => match self.parse_expression() {
-                    Ok(expression) => {
-                        parameters.push(expression);
-                        expect_comma = true;
-                    }
-                    Err(e) => {
-                        return match e {
-                            Error {
-                                kind: ErrorKind::UnexpectedToken(mut valid),
-                                token,
-                            } => {
-                                if expect_comma {
-                                    valid.push(Token::Comma(token.location().clone()));
-                                }
-                                valid.push(Token::RightParenthesis(token.location().clone()));
-                                Err(Error {
-                                    kind: ErrorKind::UnexpectedToken(valid),
-                                    token,
-                                })
-                            }
-                            e => Err(e),
-                        }
-                    }
-                },
+                _ => {
+                    let token = self.next_token();
+                    return Err(Error {
+                        kind: ErrorKind::UnmatchedToken {
+                            valid: vec![
+                                Token::And(token.location().clone()),
+                                Token::Dot(token.location().clone()),
+                                Token::EqualEqual(token.location().clone()),
+                                Token::ExclamEqual(token.location().clone()),
+                                Token::ExclamTilde(token.location().clone()),
+                                Token::Gt(token.location().clone()),
+                                Token::GtEqual(token.location().clone()),
+                                Token::Lt(token.location().clone()),
+                                Token::LtEqual(token.location().clone()),
+                                Token::Minus(token.location().clone()),
+                                Token::Or(token.location().clone()),
+                                Token::Percent(token.location().clone()),
+                                Token::Pipe(token.location().clone()),
+                                Token::Plus(token.location().clone()),
+                                Token::Slash(token.location().clone()),
+                                Token::Star(token.location().clone()),
+                                Token::Tilde(token.location().clone()),
+                                Token::Comma(token.location().clone()),
+                            ],
+                            closing: Token::RightParenthesis(token.location().clone()),
+                            opening: open_parenthesis,
+                        },
+                        token,
+                    });
+                }
             }
         }
 
@@ -671,9 +748,7 @@ impl<'t> Parser<'t> {
             Token::RightParenthesis(_) => (),
             token => {
                 return Err(Error {
-                    kind: ErrorKind::UnexpectedToken(vec![Token::LeftParenthesis(
-                        token.location().clone(),
-                    )]),
+                    kind: UnexpectedToken(vec![Token::LeftParenthesis(token.location().clone())]),
                     token,
                 })
             }
@@ -681,7 +756,11 @@ impl<'t> Parser<'t> {
 
         Ok(Expression {
             location: method_name_location,
-            kind: ExpressionKind::Call(method_name, parenthesis_location, parameters),
+            kind: ExpressionKind::Call(
+                method_name,
+                open_parenthesis.location().clone(),
+                parameters,
+            ),
         })
     }
 
@@ -1077,13 +1156,13 @@ mod tests {
         expression_error_1, parse_expression:      "1 + *"                   => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `*` at 1:5",
         expression_error_2, parse_expression:      "%1"                      => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `%` at 1:1",
         expression_error_3, parse_expression:      "  "                      => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:3",
-        expression_error_4, parse_expression:      " (1"                     => "Parsing error: expected `)` from matching `(` at 1:2, got `EOF` at 1:4",
+        expression_error_4, parse_expression:      " (a"                     => "Parsing error: expected `and` or `.` or `==` or `!=` or `!~` or `>` or `>=` or `<` or `<=` or `-` or `or` or `%` or `|` or `+` or `/` or `*` or `~` or `(` or `)` from matching `(` at 1:2, got `EOF` at 1:4",
         expression_error_5, parse_expression:      "("                       => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:2",
-        call_error_1,       parse_expression:      "m(a"                     => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `,` or `)`, got `EOF` at 1:4",
-        call_error_2,       parse_expression:      "m(a,"                    => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)`, got `EOF` at 1:5",
-        call_error_4,       parse_expression:      "m(,"                     => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)`, got `,` at 1:3",
+        call_error_1,       parse_expression:      "m(a"                     => "Parsing error: expected `and` or `.` or `==` or `!=` or `!~` or `>` or `>=` or `<` or `<=` or `-` or `or` or `%` or `|` or `+` or `/` or `*` or `~` or `,` or `)` from matching `(` at 1:2, got `EOF` at 1:4",
+        call_error_2,       parse_expression:      "m(a,"                    => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)` from matching `(` at 1:2, got `EOF` at 1:5",
+        call_error_4,       parse_expression:      "m(,"                     => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)` from matching `(` at 1:2, got `,` at 1:3",
         fail_1,             parse_fail_statement:  "fail"                    => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:5",
-        fail_2,             parse_fail_statement:  "fail a"                  => "Parsing error: expected `;`, got `EOF` at 1:7",
+        fail_2,             parse_fail_statement:  "fail a"                  => "Parsing error: expected `;` or `and` or `.` or `==` or `!=` or `!~` or `>` or `>=` or `<` or `<=` or `-` or `or` or `%` or `|` or `+` or `/` or `*` or `~` or `(`, got `EOF` at 1:7",
         let_1,              parse_let_statement:   "let"                     => "Parsing error: expected `identifier`, got `EOF` at 1:4",
         let_2,              parse_let_statement:   "let x"                   => "Parsing error: expected `=`, got `EOF` at 1:6",
         let_3,              parse_let_statement:   "let x ="                 => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:8",
@@ -1092,10 +1171,10 @@ mod tests {
         match_2,            parse_match_statement: "match a {}"              => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `}` at 1:10",
         match_3,            parse_match_statement: "match a { v }"           => "Parsing error: expected `=>`, got `}` at 1:13",
         match_4,            parse_match_statement: "match a { v => }"        => "Parsing error: expected `{` or `let` or `match`, got `}` at 1:16",
-        match_5,            parse_match_statement: "match a { v => fail 1 }" => "Parsing error: expected `;`, got `}` at 1:23",
+        match_5,            parse_match_statement: "match a { v => fail 1 }" => "Parsing error: expected `;` or `and` or `.` or `==` or `!=` or `!~` or `>` or `>=` or `<` or `<=` or `-` or `or` or `%` or `|` or `+` or `/` or `*` or `~` or `(`, got `}` at 1:23",
         statements_1,       parse_statements:      "1;"                      => "Parsing error: expected `{` or `let` or `match`, got `integer` at 1:1",
-        statements_2,       parse_statements:      "fail 1"                  => "Parsing error: expected `;`, got `EOF` at 1:7",
-        statements_3,       parse_statements:      "{ fail 1"                => "Parsing error: expected `;`, got `EOF` at 1:9",
+        statements_2,       parse_statements:      "fail 1"                  => "Parsing error: expected `;` or `and` or `.` or `==` or `!=` or `!~` or `>` or `>=` or `<` or `<=` or `-` or `or` or `%` or `|` or `+` or `/` or `*` or `~` or `(`, got `EOF` at 1:7",
+        statements_3,       parse_statements:      "{ fail 1"                => "Parsing error: expected `;` or `and` or `.` or `==` or `!=` or `!~` or `>` or `>=` or `<` or `<=` or `-` or `or` or `%` or `|` or `+` or `/` or `*` or `~` or `(`, got `EOF` at 1:9",
         statements_4,       parse_statements:      "{ fail 1;"               => "Parsing error: expected `{` or `let` or `match` or `}` from matching `{` at 1:1, got `EOF` at 1:10",
     }
 }
