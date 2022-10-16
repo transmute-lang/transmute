@@ -8,8 +8,8 @@ method call:
 */
 
 fn main username {
-    let empty = ""
-    let sqlite = sql.dataSource("sqlite:///db.sqlite")
+    let empty = "";
+    let sqlite = sql.dataSource("sqlite:///db.sqlite");
 
     match http.get("/users/{{username}}") {
         .status != 200                                => fail "error fetching data",

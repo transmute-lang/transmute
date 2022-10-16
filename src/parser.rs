@@ -9,9 +9,19 @@ pub enum ErrorKind {
     /// The lexer returned an invalid token error.
     InvalidToken(),
     /// We found an unexpected token
-    UnexpectedToken(Vec<Token>),
+    UnexpectedToken(
+        /// All valid tokens
+        Vec<Token>,
+    ),
     /// We found an unexpected token while looking for a closing one
-    UnmatchedToken { wanted: Token, matching: Token },
+    UnmatchedToken {
+        /// All tokens that could be at that position, expect for the closing one
+        valid: Vec<Token>,
+        /// The required closing token
+        closing: Token,
+        /// The opening token corresponding to the closing one
+        opening: Token,
+    },
 }
 
 #[derive(Debug)]
@@ -35,20 +45,30 @@ impl Display for Error {
                 },
                 _ => unreachable!("should never be here"),
             },
-            ErrorKind::UnexpectedToken(wanted) => format!(
+            ErrorKind::UnexpectedToken(valid) => format!(
                 "expected {}, got `{:#}`",
-                wanted
+                valid
                     .iter()
                     .map(|t| format!("`{:#}`", t))
                     .collect::<Vec<String>>()
                     .join(" or "),
                 self.token
             ),
-            ErrorKind::UnmatchedToken { wanted, matching } => format!(
-                "expected `{:#}` from matching `{:#}` at {:#}, got `{}`",
-                wanted,
-                matching,
-                matching.location(),
+            ErrorKind::UnmatchedToken {
+                valid,
+                closing,
+                opening,
+            } => format!(
+                "expected {}{}`{:#}` from matching `{:#}` at {:#}, got `{}`",
+                valid
+                    .iter()
+                    .map(|t| format!("`{:#}`", t))
+                    .collect::<Vec<String>>()
+                    .join(" or "),
+                if !valid.is_empty() { " or " } else { "" },
+                closing,
+                opening,
+                opening.location(),
                 self.token
             ),
         };
@@ -321,6 +341,24 @@ macro_rules! require_token {
     };
 }
 
+macro_rules! require_matching_token {
+    ($self:ident, $token:path, $opening:expr) => {
+        match $self.next_token() {
+            token @ $token(_) => Ok(token),
+            token => {
+                return Err(Error {
+                    kind: ErrorKind::UnmatchedToken {
+                        valid: Vec::new(),
+                        closing: $token(token.location().clone()),
+                        opening: $opening,
+                    },
+                    token,
+                })
+            }
+        }
+    };
+}
+
 impl<'t> Parser<'t> {
     pub fn new(lexer: Lexer<'t>) -> Self {
         Self {
@@ -362,8 +400,63 @@ impl<'t> Parser<'t> {
         self.lexer.peek()
     }
 
-    fn parse_statement(&mut self) -> Result<Statements> {
-        unimplemented!()
+    fn parse_statements(&mut self) -> Result<Statements> {
+        let opening_brace = match self.peek_token() {
+            Some(Token::LeftBrace(_)) => Some(self.next_token()),
+            _ => None,
+        };
+
+        let mut statements = vec![self.parse_statement()?];
+
+        if let Some(opening_brace) = opening_brace {
+            loop {
+                match self.peek_token() {
+                    // just skip empty statements
+                    Some(Token::Semicolon(_)) => {}
+                    Some(Token::RightBrace(_)) => break,
+                    _ => match self.parse_statement() {
+                        Ok(statement) => statements.push(statement),
+                        Err(Error {
+                            token,
+                            kind: ErrorKind::UnexpectedToken(valid),
+                        }) => {
+                            return Err(Error {
+                                kind: ErrorKind::UnmatchedToken {
+                                    valid,
+                                    closing: Token::RightBrace(token.location().clone()),
+                                    opening: opening_brace,
+                                },
+                                token,
+                            })
+                        }
+                        Err(e) => return Err(e),
+                    },
+                }
+            }
+            require_matching_token!(self, Token::RightBrace, opening_brace)?;
+        }
+
+        Ok(statements)
+    }
+
+    fn parse_statement(&mut self) -> Result<Statement> {
+        match self.peek_token() {
+            Some(Token::Fail(_)) => self.parse_fail_statement(),
+            Some(Token::Let(_)) => self.parse_let_statement(),
+            Some(Token::Match(_)) => self.parse_match_statement(),
+            _ => {
+                // even if peek_token() returns None, next_token() returns at least Some(Token::Eof)
+                let token = self.next_token();
+                Err(Error {
+                    kind: ErrorKind::UnexpectedToken(vec![
+                        Token::LeftBrace(token.location().clone()),
+                        Token::Let(token.location().clone()),
+                        Token::Match(token.location().clone()),
+                    ]),
+                    token,
+                })
+            }
+        }
     }
 
     /// parses `[Fail] := [fail] [Expression]`
@@ -408,8 +501,7 @@ impl<'t> Parser<'t> {
         loop {
             let expression = self.parse_expression()?;
             require_token!(self, Token::EqualGt)?;
-            // todo replace with actual statements parsing
-            let statements = vec![self.parse_fail_statement()?];
+            let statements = self.parse_statements()?;
 
             arms.push(MatchArm {
                 location: expression.location.clone(),
@@ -458,18 +550,8 @@ impl<'t> Parser<'t> {
         let mut expression = match self.next_token() {
             left @ Token::LeftParenthesis(_) => {
                 let expression = self.parse_expression()?;
-                match self.next_token() {
-                    Token::RightParenthesis(_) => expression,
-                    token => {
-                        return Err(Error {
-                            kind: ErrorKind::UnmatchedToken {
-                                wanted: Token::RightParenthesis(token.location().clone()),
-                                matching: left,
-                            },
-                            token,
-                        })
-                    }
-                }
+                require_matching_token!(self, Token::RightParenthesis, left)?;
+                expression
             }
             Token::Plus(loc) => self.parse_unary_expression(UnaryOperator {
                 location: loc,
@@ -567,15 +649,15 @@ impl<'t> Parser<'t> {
                     Err(e) => {
                         return match e {
                             Error {
-                                kind: ErrorKind::UnexpectedToken(mut wanted),
+                                kind: ErrorKind::UnexpectedToken(mut valid),
                                 token,
                             } => {
                                 if expect_comma {
-                                    wanted.push(Token::Comma(token.location().clone()));
+                                    valid.push(Token::Comma(token.location().clone()));
                                 }
-                                wanted.push(Token::RightParenthesis(token.location().clone()));
+                                valid.push(Token::RightParenthesis(token.location().clone()));
                                 Err(Error {
-                                    kind: ErrorKind::UnexpectedToken(wanted),
+                                    kind: ErrorKind::UnexpectedToken(valid),
                                     token,
                                 })
                             }
@@ -787,6 +869,41 @@ mod tests {
     }
 
     #[test]
+    fn parse_statements_one() {
+        let mut parser = Parser::new(Lexer::new("let a = 1;"));
+        let mut statements = parser.parse_statements().expect("expected Ok");
+        assert_eq!(statements.len(), 1);
+        assert!(matches!(
+            statements.remove(0),
+            Statement {
+                kind: StatementKind::Let(_, _),
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_statements_several() {
+        let mut parser = Parser::new(Lexer::new("{ let a = 1; fail 2; }"));
+        let mut statements = parser.parse_statements().expect("expected Ok");
+        assert_eq!(statements.len(), 2);
+        assert!(matches!(
+            statements.remove(0),
+            Statement {
+                kind: StatementKind::Let(_, _),
+                ..
+            }
+        ));
+        assert!(matches!(
+            statements.remove(0),
+            Statement {
+                kind: StatementKind::Fail(_),
+                ..
+            }
+        ));
+    }
+
+    #[test]
     fn parse_fail_statement() {
         let mut parser = Parser::new(Lexer::new("fail \"error\";"));
 
@@ -851,7 +968,7 @@ mod tests {
         };
 
         assert_eq!(arms.len(), 1);
-        let mut statements = match arms.remove(0) {
+        let statements = match arms.remove(0) {
             MatchArm {
                 condition:
                     Expression {
@@ -871,13 +988,6 @@ mod tests {
         };
 
         assert_eq!(statements.len(), 1);
-        assert!(matches!(
-            statements.remove(0),
-            Statement {
-                kind: StatementKind::Fail(_),
-                ..
-            }
-        ));
     }
 
     #[test]
@@ -979,10 +1089,14 @@ mod tests {
         let_2,              parse_let_statement:   "let x"                   => "Parsing error: expected `=`, got `EOF` at 1:6",
         let_3,              parse_let_statement:   "let x ="                 => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:8",
         let_4,              parse_let_statement:   "let x = a"               => "Parsing error: expected `;`, got `EOF` at 1:10",
-        match_0,            parse_match_statement: "match {}"                => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `{` at 1:7",
-        match_1,            parse_match_statement: "match a {}"              => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `}` at 1:10",
-        match_2,            parse_match_statement: "match a { v }"           => "Parsing error: expected `=>`, got `}` at 1:13",
-        match_3,            parse_match_statement: "match a { v => }"        => "Parsing error: expected `fail`, got `}` at 1:16",
-        match_4,            parse_match_statement: "match a { v => fail 1 }" => "Parsing error: expected `;`, got `}` at 1:23",
+        match_1,            parse_match_statement: "match {}"                => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `{` at 1:7",
+        match_2,            parse_match_statement: "match a {}"              => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `}` at 1:10",
+        match_3,            parse_match_statement: "match a { v }"           => "Parsing error: expected `=>`, got `}` at 1:13",
+        match_4,            parse_match_statement: "match a { v => }"        => "Parsing error: expected `{` or `let` or `match`, got `}` at 1:16",
+        match_5,            parse_match_statement: "match a { v => fail 1 }" => "Parsing error: expected `;`, got `}` at 1:23",
+        statements_1,       parse_statements:      "1;"                      => "Parsing error: expected `{` or `let` or `match`, got `integer` at 1:1",
+        statements_2,       parse_statements:      "fail 1"                  => "Parsing error: expected `;`, got `EOF` at 1:7",
+        statements_3,       parse_statements:      "{ fail 1"                => "Parsing error: expected `;`, got `EOF` at 1:9",
+        statements_4,       parse_statements:      "{ fail 1;"               => "Parsing error: expected `{` or `let` or `match` or `}` from matching `{` at 1:1, got `EOF` at 1:10",
     }
 }
