@@ -529,7 +529,6 @@ impl<'t> Iterator for Lexer<'t> {
             },
             Some(c) if c.is_ascii_digit() => self.make_number(loc),
             Some(c) if c.is_alphabetic() => self.make_identifier(loc),
-            // todo rework that: invalid tokens should be tokens as well...
             Some(c) => Token::Invalid(loc, ErrorKind::Unexpected(c)),
             None if !self.eof => {
                 self.eof = true;

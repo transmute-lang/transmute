@@ -103,13 +103,12 @@ struct MatchArm {
 #[derive(Debug)]
 struct Expression {
     location: Location,
-    // todo rename to kind
-    expression: ExpressionKind,
+    kind: ExpressionKind,
 }
 
 impl Display for Expression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.expression)
+        write!(f, "{}", self.kind)
     }
 }
 
@@ -134,7 +133,7 @@ impl Display for ExpressionKind {
                 ExpressionKind::Call(method, _, parameters) => {
                     let parameters = parameters
                         .iter()
-                        .map(|e| format!("{}", e.expression))
+                        .map(|e| format!("{}", e.kind))
                         .collect::<Vec<String>>()
                         .join(", ");
                     format!("{}({})", method, parameters)
@@ -569,16 +568,16 @@ impl<'t> Parser<'t> {
                 Some(Token::LeftParenthesis(_)) => self.parse_call_expression(loc, name)?,
                 _ => Expression {
                     location: loc,
-                    expression: ExpressionKind::Identifier(name),
+                    kind: ExpressionKind::Identifier(name),
                 },
             },
             Token::Integer(loc, value) => Expression {
                 location: loc,
-                expression: ExpressionKind::Integer(value),
+                kind: ExpressionKind::Integer(value),
             },
             Token::String(loc, value) => Expression {
                 location: loc,
-                expression: ExpressionKind::String(value),
+                kind: ExpressionKind::String(value),
             },
             token => {
                 return Err(Error {
@@ -609,7 +608,7 @@ impl<'t> Parser<'t> {
     fn parse_unary_expression(&mut self, operator: UnaryOperator) -> Result<Expression> {
         Ok(Expression {
             location: operator.location.clone(),
-            expression: ExpressionKind::Unary(
+            kind: ExpressionKind::Unary(
                 operator,
                 self.parse_expression_with_precedence(OperatorPrecedence::Prefix)?
                     .into(),
@@ -682,7 +681,7 @@ impl<'t> Parser<'t> {
 
         Ok(Expression {
             location: method_name_location,
-            expression: ExpressionKind::Call(method_name, parenthesis_location, parameters),
+            kind: ExpressionKind::Call(method_name, parenthesis_location, parameters),
         })
     }
 
@@ -700,7 +699,7 @@ impl<'t> Parser<'t> {
         let right = self.parse_expression_with_precedence(operator.precedence())?;
         Ok(Expression {
             location: left.location.clone(),
-            expression: ExpressionKind::Binary(left.into(), operator, right.into()),
+            kind: ExpressionKind::Binary(left.into(), operator, right.into()),
         })
     }
 
@@ -911,7 +910,7 @@ mod tests {
             Statement {
                 kind:
                     StatementKind::Fail(Expression {
-                        expression: ExpressionKind::String(error),
+                        kind: ExpressionKind::String(error),
                         ..
                     }),
                 ..
@@ -929,7 +928,7 @@ mod tests {
                     StatementKind::Let(
                         variable,
                         Expression {
-                            expression: ExpressionKind::Identifier(value),
+                            kind: ExpressionKind::Identifier(value),
                             ..
                         },
                     ),
@@ -951,7 +950,7 @@ mod tests {
                 kind:
                     StatementKind::Match(
                         Expression {
-                            expression: ExpressionKind::Identifier(variable),
+                            kind: ExpressionKind::Identifier(variable),
                             ..
                         },
                         arms,
@@ -972,7 +971,7 @@ mod tests {
             MatchArm {
                 condition:
                     Expression {
-                        expression: ExpressionKind::Identifier(value),
+                        kind: ExpressionKind::Identifier(value),
                         ..
                     },
                 statements,
@@ -1030,7 +1029,7 @@ mod tests {
             MatchArm {
                 condition:
                     Expression {
-                        expression: ExpressionKind::Identifier(value),
+                        kind: ExpressionKind::Identifier(value),
                         ..
                     },
                 ..
@@ -1045,7 +1044,7 @@ mod tests {
             MatchArm {
                 condition:
                     Expression {
-                        expression: ExpressionKind::Identifier(value),
+                        kind: ExpressionKind::Identifier(value),
                         ..
                     },
                 ..
