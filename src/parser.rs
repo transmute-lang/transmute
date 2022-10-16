@@ -80,6 +80,7 @@ impl Display for Error {
 type Result<T> = std::result::Result<T, Error>;
 
 type Statements = Vec<Statement>;
+type Arms = Vec<Arm>;
 
 #[derive(Debug)]
 struct Statement {
@@ -90,12 +91,13 @@ struct Statement {
 #[derive(Debug)]
 enum StatementKind {
     Fail(Expression),
+    Fork(Arms),
     Let(String, Expression),
-    Match(Expression, Vec<MatchArm>),
+    Match(Expression, Arms),
 }
 
 #[derive(Debug)]
-struct MatchArm {
+struct Arm {
     location: Location,
     condition: Expression,
     statements: Statements,
@@ -545,7 +547,7 @@ impl<'t> Parser<'t> {
             }
             let statements = self.parse_statements()?;
 
-            arms.push(MatchArm {
+            arms.push(Arm {
                 location: expression.location.clone(),
                 condition: expression,
                 statements,
@@ -578,6 +580,62 @@ impl<'t> Parser<'t> {
         Ok(Statement {
             location: match_location,
             kind: StatementKind::Match(expression, arms),
+        })
+    }
+
+    fn parse_fork_statement(&mut self) -> Result<Statement> {
+        let fork_location = require_token!(self, Token::Fork)?.location().clone();
+        require_token!(self, Token::LeftBrace)?;
+
+        let mut arms = Vec::new();
+        loop {
+            let expression = self.parse_expression()?;
+            require_token!(self, Token::EqualGt)?;
+            match self.peek_token() {
+                Some(Token::LeftBrace(_)) => {}
+                _ => {
+                    let token = self.next_token();
+                    return Err(Error {
+                        kind: UnexpectedToken(vec![Token::LeftBrace(token.location().clone())]),
+                        token,
+                    });
+                }
+            }
+            let statements = self.parse_statements()?;
+
+            arms.push(Arm {
+                location: expression.location.clone(),
+                condition: expression,
+                statements,
+            });
+
+            match self.peek_token() {
+                None => break,
+                Some(Token::RightBrace(_)) => break,
+                Some(Token::Comma(_)) => {
+                    self.next_token();
+                    if let Some(Token::RightBrace(_)) = self.peek_token() {
+                        break;
+                    }
+                }
+                Some(_) => {
+                    let token = self.next_token();
+                    return Err(Error {
+                        kind: UnexpectedToken(vec![
+                            Token::RightBrace(token.location().clone()),
+                            Token::Comma(token.location().clone()),
+                        ]),
+                        token,
+                    });
+                }
+            }
+        }
+
+        require_token!(self, Token::RightBrace)?;
+
+        Ok(Statement {
+            location: fork_location,
+            kind: StatementKind::Fork(arms),
         })
     }
 
@@ -1057,7 +1115,7 @@ mod tests {
 
         assert_eq!(arms.len(), 1);
         let statements = match arms.remove(0) {
-            MatchArm {
+            Arm {
                 condition:
                     Expression {
                         kind: ExpressionKind::Identifier(value),
@@ -1117,7 +1175,7 @@ mod tests {
 
         assert_eq!(arms.len(), 2);
         match arms.remove(0) {
-            MatchArm {
+            Arm {
                 condition:
                     Expression {
                         kind: ExpressionKind::Identifier(value),
@@ -1132,7 +1190,113 @@ mod tests {
             }
         };
         match arms.remove(0) {
-            MatchArm {
+            Arm {
+                condition:
+                    Expression {
+                        kind: ExpressionKind::Identifier(value),
+                        ..
+                    },
+                ..
+            } => {
+                assert_eq!(value, "value2");
+            }
+            arm => {
+                assert!(false, "{:?} does not match pattern", arm);
+            }
+        };
+    }
+
+    #[test]
+    fn parse_fork_statement() {
+        let mut parser = Parser::new(Lexer::new("fork { value => { fail \"fail\"; } }"));
+
+        let mut arms = match parser.parse_fork_statement().expect("expected Ok") {
+            Statement {
+                kind: StatementKind::Fork(arms),
+                ..
+            } => arms,
+            stmt => {
+                assert!(false, "{:?} does not match pattern", stmt);
+                Vec::new()
+            }
+        };
+
+        assert_eq!(arms.len(), 1);
+        let statements = match arms.remove(0) {
+            Arm {
+                condition:
+                    Expression {
+                        kind: ExpressionKind::Identifier(value),
+                        ..
+                    },
+                statements,
+                ..
+            } => {
+                assert_eq!(value, "value");
+                statements
+            }
+            arm => {
+                assert!(false, "{:?} does not match pattern", arm);
+                Vec::new()
+            }
+        };
+
+        assert_eq!(statements.len(), 1);
+    }
+
+    #[test]
+    fn parse_fork_statement_trailing_coma() {
+        let mut parser = Parser::new(Lexer::new("fork { value => { fail \"fail\"; }, }"));
+
+        let arms = match parser.parse_fork_statement().expect("expected Ok") {
+            Statement {
+                kind: StatementKind::Fork(arms),
+                ..
+            } => arms,
+            stmt => {
+                assert!(false, "{:?} does not match pattern", stmt);
+                Vec::new()
+            }
+        };
+
+        assert_eq!(arms.len(), 1);
+    }
+
+    #[test]
+    fn parse_fork_statement_multiple_arms() {
+        let mut parser = Parser::new(Lexer::new(
+            "fork { value1 => { fail \"fail1\"; }, value2 => { fail \"fail2\"; } }",
+        ));
+
+        let mut arms = match parser.parse_fork_statement().expect("expected Ok") {
+            Statement {
+                kind: StatementKind::Fork(arms),
+                ..
+            } => arms,
+            stmt => {
+                assert!(false, "{:?} does not match pattern", stmt);
+                Vec::new()
+            }
+        };
+
+        assert_eq!(arms.len(), 2);
+        match arms.remove(0) {
+            Arm {
+                condition:
+                    Expression {
+                        kind: ExpressionKind::Identifier(value),
+                        ..
+                    },
+                ..
+            } => {
+                assert_eq!(value, "value1");
+            }
+            arm => {
+                assert!(false, "{:?} does not match pattern", arm);
+            }
+        };
+        match arms.remove(0) {
+            Arm {
                 condition:
                     Expression {
                         kind: ExpressionKind::Identifier(value),
@@ -1189,5 +1353,10 @@ mod tests {
         statements_2,       parse_statements:      "fail 1"                    => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got 'EOF' at 1:7",
         statements_3,       parse_statements:      "{ fail 1"                  => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got 'EOF' at 1:9",
         statements_4,       parse_statements:      "{ fail 1;"                 => "Parsing error: expected '{', 'let', 'match', '}' from matching '{' at 1:1, got 'EOF' at 1:10",
+        fork_1,             parse_fork_statement:  "fork {}"                   => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got '}' at 1:7",
+        fork_3,             parse_fork_statement:  "fork { v }"                => "Parsing error: expected '=>', got '}' at 1:10",
+        fork_4,             parse_fork_statement:  "fork { v => }"             => "Parsing error: expected '{', got '}' at 1:13",
+        fork_5,             parse_fork_statement:  "fork { v => fail }"        => "Parsing error: expected '{', got 'fail' at 1:13",
+        fork_6,             parse_fork_statement:  "fork { v => { fail 1 }"    => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got '}' at 1:22",
     }
 }
