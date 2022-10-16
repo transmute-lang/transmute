@@ -58,6 +58,8 @@ impl Display for Error {
 
 type Result<T> = std::result::Result<T, Error>;
 
+type Statements = Vec<Statement>;
+
 #[derive(Debug)]
 struct Statement {
     location: Location,
@@ -68,6 +70,14 @@ struct Statement {
 enum StatementKind {
     Fail(Expression),
     Let(String, Expression),
+    Match(Expression, Vec<MatchArm>),
+}
+
+#[derive(Debug)]
+struct MatchArm {
+    location: Location,
+    condition: Expression,
+    statements: Statements,
 }
 
 #[derive(Debug)]
@@ -283,6 +293,34 @@ pub struct Parser<'t> {
     eof: Location,
 }
 
+macro_rules! require_token {
+    ($self:ident, $token:path) => {
+        match $self.next_token() {
+            token @ $token(_) => Ok(token),
+            token => {
+                return Err(Error {
+                    kind: ErrorKind::UnexpectedToken(vec![$token(token.location().clone())]),
+                    token,
+                })
+            }
+        }
+    };
+    ($self:ident, $token:path, $ex:expr) => {
+        match $self.next_token() {
+            token @ $token(_, _) => Ok(token),
+            token => {
+                return Err(Error {
+                    kind: ErrorKind::UnexpectedToken(vec![$token(
+                        token.location().clone(),
+                        $ex.into(),
+                    )]),
+                    token,
+                })
+            }
+        }
+    };
+}
+
 impl<'t> Parser<'t> {
     pub fn new(lexer: Lexer<'t>) -> Self {
         Self {
@@ -324,80 +362,88 @@ impl<'t> Parser<'t> {
         self.lexer.peek()
     }
 
+    fn parse_statement(&mut self) -> Result<Statements> {
+        unimplemented!()
+    }
+
     /// parses `[Fail] := [fail] [Expression]`
     fn parse_fail_statement(&mut self) -> Result<Statement> {
-        let statement = match self.next_token() {
-            Token::Fail(loc) => Ok(Statement {
-                location: loc,
-                kind: StatementKind::Fail(self.parse_expression()?),
-            }),
-            token => Err(Error {
-                kind: ErrorKind::UnexpectedToken(vec![Token::Fail(token.location().clone())]),
-                token,
-            }),
-        }?;
+        let location = require_token!(self, Token::Fail)?.location().clone();
+        let expression = self.parse_expression()?;
+        require_token!(self, Token::Semicolon)?;
 
-        match self.next_token() {
-            Token::Semicolon(_) => {  },
-            token => {
-                return Err(Error {
-                    kind: ErrorKind::UnexpectedToken(vec![Token::Semicolon(token.location().clone())]),
-                    token,
-                })
-            }
-        }
-
-        Ok(statement)
+        Ok(Statement {
+            location,
+            kind: StatementKind::Fail(expression),
+        })
     }
 
     /// parses `[Let] = [let] [identifier] [=] [Expression]`
     fn parse_let_statement(&mut self) -> Result<Statement> {
-        let let_location = match self.next_token() {
-            Token::Let(loc) => Ok(loc),
-            token => Err(Error {
-                kind: ErrorKind::UnexpectedToken(vec![Token::Let(
-                    token.location().clone(),
-                )]),
-                token,
-            }),
-        }?;
-
-        let identifier = match self.next_token() {
-            Token::Identifier(_, value) => Ok(value),
-            token => Err(Error {
-                kind: ErrorKind::UnexpectedToken(vec![Token::Identifier(
-                    token.location().clone(),
-                    "".to_string(),
-                )]),
-                token,
-            }),
-        }?;
-
-        match self.next_token() {
-            Token::Equal(_) => {}
-            token => {
-                return Err(Error {
-                    kind: ErrorKind::UnexpectedToken(vec![Token::Equal(token.location().clone())]),
-                    token,
-                })
-            }
-        };
-
+        let location = require_token!(self, Token::Let)?.location().clone();
+        let identifier = require_token!(self, Token::Identifier, "")?;
+        require_token!(self, Token::Equal)?;
         let expression = self.parse_expression()?;
+        require_token!(self, Token::Semicolon)?;
 
-        match self.next_token() {
-            Token::Semicolon(_) => {}
-            token => {
-                return Err(Error {
-                    kind: ErrorKind::UnexpectedToken(vec![Token::Semicolon(token.location().clone())]),
-                    token,
-                })
-            }
+        let identifier = match identifier {
+            Token::Identifier(_, value) => value,
+            _ => unreachable!(
+                "Token::Identifier(..) pattern matches as required a Token::Identifier"
+            ),
         };
 
         Ok(Statement {
-            location: let_location,
+            location,
             kind: StatementKind::Let(identifier, expression),
+        })
+    }
+
+    fn parse_match_statement(&mut self) -> Result<Statement> {
+        let match_location = require_token!(self, Token::Match)?.location().clone();
+        let expression = self.parse_expression()?;
+        require_token!(self, Token::LeftBrace)?;
+
+        let mut arms = Vec::new();
+        loop {
+            let expression = self.parse_expression()?;
+            require_token!(self, Token::EqualGt)?;
+            // todo replace with actual statements parsing
+            let statements = vec![self.parse_fail_statement()?];
+
+            arms.push(MatchArm {
+                location: expression.location.clone(),
+                condition: expression,
+                statements,
+            });
+
+            match self.peek_token() {
+                None => break,
+                Some(Token::RightBrace(_)) => break,
+                Some(Token::Comma(_)) => {
+                    self.next_token();
+                    if let Some(Token::RightBrace(_)) = self.peek_token() {
+                        break;
+                    }
+                }
+                Some(_) => {
+                    let token = self.next_token();
+                    return Err(Error {
+                        kind: ErrorKind::UnexpectedToken(vec![
+                            Token::RightBrace(token.location().clone()),
+                            Token::Comma(token.location().clone()),
+                        ]),
+                        token,
+                    });
+                }
+            }
+        }
+
+        require_token!(self, Token::RightBrace)?;
+
+        Ok(Statement {
+            location: match_location,
+            kind: StatementKind::Match(expression, arms),
         })
     }
 
@@ -495,19 +541,13 @@ impl<'t> Parser<'t> {
         method_name_location: Location,
         method_name: String,
     ) -> Result<Expression> {
-        let parenthesis_location = match self.next_token() {
-            Token::LeftParenthesis(parenthesis_location) => parenthesis_location,
-            token => {
-                return Err(Error {
-                    kind: ErrorKind::UnexpectedToken(vec![Token::LeftParenthesis(
-                        token.location().clone(),
-                    )]),
-                    token,
-                })
-            }
-        };
+        let parenthesis_location = require_token!(self, Token::LeftParenthesis)?
+            .location()
+            .clone();
 
         let mut parameters = Vec::new();
+
+        // todo rewrite as match statement
         let mut expect_comma = false;
         while let Some(token) = self.peek_token() {
             match token {
@@ -785,10 +825,133 @@ mod tests {
         }
     }
 
+    #[test]
+    fn parse_match_statement() {
+        let mut parser = Parser::new(Lexer::new("match variable { value => fail \"fail\"; }"));
+
+        let mut arms = match parser.parse_match_statement().expect("expected Ok") {
+            Statement {
+                kind:
+                    StatementKind::Match(
+                        Expression {
+                            expression: ExpressionKind::Identifier(variable),
+                            ..
+                        },
+                        arms,
+                    ),
+                ..
+            } => {
+                assert_eq!(variable, "variable");
+                arms
+            }
+            stmt => {
+                assert!(false, "{:?} does not match pattern", stmt);
+                Vec::new()
+            }
+        };
+
+        assert_eq!(arms.len(), 1);
+        let mut statements = match arms.remove(0) {
+            MatchArm {
+                condition:
+                    Expression {
+                        expression: ExpressionKind::Identifier(value),
+                        ..
+                    },
+                statements,
+                ..
+            } => {
+                assert_eq!(value, "value");
+                statements
+            }
+            arm => {
+                assert!(false, "{:?} does not match pattern", arm);
+                Vec::new()
+            }
+        };
+
+        assert_eq!(statements.len(), 1);
+        assert!(matches!(
+            statements.remove(0),
+            Statement {
+                kind: StatementKind::Fail(_),
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_match_statement_trailing_coma() {
+        let mut parser = Parser::new(Lexer::new("match variable { value => fail \"fail\";, }"));
+
+        let arms = match parser.parse_match_statement().expect("expected Ok") {
+            Statement {
+                kind: StatementKind::Match(_, arms),
+                ..
+            } => arms,
+            stmt => {
+                assert!(false, "{:?} does not match pattern", stmt);
+                Vec::new()
+            }
+        };
+
+        assert_eq!(arms.len(), 1);
+    }
+
+    #[test]
+    fn parse_match_statement_multiple_arms() {
+        let mut parser = Parser::new(Lexer::new(
+            "match variable { value1 => fail \"fail1\";, value2 => fail \"fail2\"; }",
+        ));
+
+        let mut arms = match parser.parse_match_statement().expect("expected Ok") {
+            Statement {
+                kind: StatementKind::Match(_, arms),
+                ..
+            } => arms,
+            stmt => {
+                assert!(false, "{:?} does not match pattern", stmt);
+                Vec::new()
+            }
+        };
+
+        assert_eq!(arms.len(), 2);
+        match arms.remove(0) {
+            MatchArm {
+                condition:
+                    Expression {
+                        expression: ExpressionKind::Identifier(value),
+                        ..
+                    },
+                ..
+            } => {
+                assert_eq!(value, "value1");
+            }
+            arm => {
+                assert!(false, "{:?} does not match pattern", arm);
+            }
+        };
+        match arms.remove(0) {
+            MatchArm {
+                condition:
+                    Expression {
+                        expression: ExpressionKind::Identifier(value),
+                        ..
+                    },
+                ..
+            } => {
+                assert_eq!(value, "value2");
+            }
+            arm => {
+                assert!(false, "{:?} does not match pattern", arm);
+            }
+        };
+    }
+
     macro_rules! parse_error {
         ($($name:ident, $root:ident: $text:expr => $result:expr,)*) => {
         $(
-        #[test]
+            #[test]
             fn $name() {
                 let mut parser = Parser::new(Lexer::new($text));
                 let error = parser
@@ -802,19 +965,24 @@ mod tests {
     }
 
     parse_error! {
-        expression_error_1, parse_expression:     "1 + *"     => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `*` at 1:5",
-        expression_error_2, parse_expression:     "%1"        => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `%` at 1:1",
-        expression_error_3, parse_expression:     "  "        => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:3",
-        expression_error_4, parse_expression:     " (1"       => "Parsing error: expected `)` from matching `(` at 1:2, got `EOF` at 1:4",
-        expression_error_5, parse_expression:     "("         => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:2",
-        call_error_1,       parse_expression:     "m(a"       => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `,` or `)`, got `EOF` at 1:4",
-        call_error_2,       parse_expression:     "m(a,"      => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)`, got `EOF` at 1:5",
-        call_error_4,       parse_expression:     "m(,"       => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)`, got `,` at 1:3",
-        fail_1,             parse_fail_statement: "fail"      => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:5",
-        fail_2,             parse_fail_statement: "fail a"    => "Parsing error: expected `;`, got `EOF` at 1:7",
-        let_1,              parse_let_statement:  "let"       => "Parsing error: expected `identifier`, got `EOF` at 1:4",
-        let_2,              parse_let_statement:  "let x"     => "Parsing error: expected `=`, got `EOF` at 1:6",
-        let_3,              parse_let_statement:  "let x ="   => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:8",
-        let_4,              parse_let_statement:  "let x = a" => "Parsing error: expected `;`, got `EOF` at 1:10",
+        expression_error_1, parse_expression:      "1 + *"                   => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `*` at 1:5",
+        expression_error_2, parse_expression:      "%1"                      => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `%` at 1:1",
+        expression_error_3, parse_expression:      "  "                      => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:3",
+        expression_error_4, parse_expression:      " (1"                     => "Parsing error: expected `)` from matching `(` at 1:2, got `EOF` at 1:4",
+        expression_error_5, parse_expression:      "("                       => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:2",
+        call_error_1,       parse_expression:      "m(a"                     => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `,` or `)`, got `EOF` at 1:4",
+        call_error_2,       parse_expression:      "m(a,"                    => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)`, got `EOF` at 1:5",
+        call_error_4,       parse_expression:      "m(,"                     => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer` or `)`, got `,` at 1:3",
+        fail_1,             parse_fail_statement:  "fail"                    => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:5",
+        fail_2,             parse_fail_statement:  "fail a"                  => "Parsing error: expected `;`, got `EOF` at 1:7",
+        let_1,              parse_let_statement:   "let"                     => "Parsing error: expected `identifier`, got `EOF` at 1:4",
+        let_2,              parse_let_statement:   "let x"                   => "Parsing error: expected `=`, got `EOF` at 1:6",
+        let_3,              parse_let_statement:   "let x ="                 => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `EOF` at 1:8",
+        let_4,              parse_let_statement:   "let x = a"               => "Parsing error: expected `;`, got `EOF` at 1:10",
+        match_0,            parse_match_statement: "match {}"                => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `{` at 1:7",
+        match_1,            parse_match_statement: "match a {}"              => "Parsing error: expected `(` or `+` or `-` or `!` or `identifier` or `integer`, got `}` at 1:10",
+        match_2,            parse_match_statement: "match a { v }"           => "Parsing error: expected `=>`, got `}` at 1:13",
+        match_3,            parse_match_statement: "match a { v => }"        => "Parsing error: expected `fail`, got `}` at 1:16",
+        match_4,            parse_match_statement: "match a { v => fail 1 }" => "Parsing error: expected `;`, got `}` at 1:23",
     }
 }
