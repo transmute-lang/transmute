@@ -92,6 +92,7 @@ struct Statement {
 enum StatementKind {
     Fail(Expression),
     Fork(Arms),
+    Join(Statements),
     Let(String, Expression),
     Match(Expression, Arms),
 }
@@ -464,6 +465,8 @@ impl<'t> Parser<'t> {
             Some(Token::Fail(_)) => self.parse_fail_statement(),
             Some(Token::Let(_)) => self.parse_let_statement(),
             Some(Token::Match(_)) => self.parse_match_statement(),
+            Some(Token::Fork(_)) => self.parse_fork_statement(),
+            Some(Token::Join(_)) => self.parse_join_statement(),
             _ => {
                 // even if peek_token() returns None, next_token() returns at least Some(Token::Eof)
                 let token = self.next_token();
@@ -472,6 +475,8 @@ impl<'t> Parser<'t> {
                         Token::LeftBrace(token.location().clone()),
                         Token::Let(token.location().clone()),
                         Token::Match(token.location().clone()),
+                        Token::Fork(token.location().clone()),
+                        Token::Join(token.location().clone()),
                     ]),
                     token,
                 })
@@ -636,6 +641,26 @@ impl<'t> Parser<'t> {
         Ok(Statement {
             location: fork_location,
             kind: StatementKind::Fork(arms),
+        })
+    }
+
+    fn parse_join_statement(&mut self) -> Result<Statement> {
+        let join_location = require_token!(self, Token::Join)?.location().clone();
+
+        match self.peek_token() {
+            Some(Token::LeftBrace(_)) => {}
+            _ => {
+                let token = self.next_token();
+                return Err(Error {
+                    kind: UnexpectedToken(vec![Token::LeftBrace(token.location().clone())]),
+                    token,
+                });
+            }
+        }
+
+        Ok(Statement {
+            location: join_location,
+            kind: StatementKind::Join(self.parse_statements()?),
         })
     }
 
@@ -1312,6 +1337,31 @@ mod tests {
         };
     }
 
+    #[test]
+    fn parse_join_statement() {
+        let mut parser = Parser::new(Lexer::new("join { fail \"fail\"; }"));
+
+        let mut statements = match parser.parse_join_statement().expect("expected Ok") {
+            Statement {
+                kind: StatementKind::Join(statements),
+                ..
+            } => statements,
+            stmt => {
+                assert!(false, "{:?} does not match pattern", stmt);
+                Vec::new()
+            }
+        };
+
+        assert_eq!(statements.len(), 1);
+        assert!(matches!(
+            statements.remove(0),
+            Statement {
+                kind: StatementKind::Fail(_),
+                ..
+            }
+        ));
+    }
+
     macro_rules! parse_error {
         ($($name:ident, $root:ident: $text:expr => $result:expr,)*) => {
         $(
@@ -1329,34 +1379,38 @@ mod tests {
     }
 
     parse_error! {
-        expression_error_1, parse_expression:      "1 + *"                     => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got '*' at 1:5",
-        expression_error_2, parse_expression:      "%1"                        => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got '%' at 1:1",
-        expression_error_3, parse_expression:      "  "                        => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got 'EOF' at 1:3",
-        expression_error_4, parse_expression:      " (a"                       => "Parsing error: expected 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', ')' from matching '(' at 1:2, got 'EOF' at 1:4",
-        expression_error_5, parse_expression:      "("                         => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got 'EOF' at 1:2",
-        call_error_1,       parse_expression:      "m(a"                       => "Parsing error: expected 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', ',', ')' from matching '(' at 1:2, got 'EOF' at 1:4",
-        call_error_2,       parse_expression:      "m(a,"                      => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', ')' from matching '(' at 1:2, got 'EOF' at 1:5",
-        call_error_4,       parse_expression:      "m(,"                       => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', ')' from matching '(' at 1:2, got ',' at 1:3",
-        fail_1,             parse_fail_statement:  "fail"                      => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got 'EOF' at 1:5",
-        fail_2,             parse_fail_statement:  "fail a"                    => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got 'EOF' at 1:7",
-        let_1,              parse_let_statement:   "let"                       => "Parsing error: expected 'identifier', got 'EOF' at 1:4",
-        let_2,              parse_let_statement:   "let x"                     => "Parsing error: expected '=', got 'EOF' at 1:6",
-        let_3,              parse_let_statement:   "let x ="                   => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got 'EOF' at 1:8",
-        let_4,              parse_let_statement:   "let x = a"                 => "Parsing error: expected ';', got 'EOF' at 1:10",
-        match_1,            parse_match_statement: "match {}"                  => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got '{' at 1:7",
-        match_2,            parse_match_statement: "match a {}"                => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got '}' at 1:10",
-        match_3,            parse_match_statement: "match a { v }"             => "Parsing error: expected '=>', got '}' at 1:13",
-        match_4,            parse_match_statement: "match a { v => }"          => "Parsing error: expected '{', got '}' at 1:16",
-        match_5,            parse_match_statement: "match a { v => fail }"     => "Parsing error: expected '{', got 'fail' at 1:16",
-        match_6,            parse_match_statement: "match a { v => { fail 1 }" => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got '}' at 1:25",
-        statements_1,       parse_statements:      "1;"                        => "Parsing error: expected '{', 'let', 'match', got 'integer' at 1:1",
-        statements_2,       parse_statements:      "fail 1"                    => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got 'EOF' at 1:7",
-        statements_3,       parse_statements:      "{ fail 1"                  => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got 'EOF' at 1:9",
-        statements_4,       parse_statements:      "{ fail 1;"                 => "Parsing error: expected '{', 'let', 'match', '}' from matching '{' at 1:1, got 'EOF' at 1:10",
-        fork_1,             parse_fork_statement:  "fork {}"                   => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got '}' at 1:7",
-        fork_3,             parse_fork_statement:  "fork { v }"                => "Parsing error: expected '=>', got '}' at 1:10",
-        fork_4,             parse_fork_statement:  "fork { v => }"             => "Parsing error: expected '{', got '}' at 1:13",
-        fork_5,             parse_fork_statement:  "fork { v => fail }"        => "Parsing error: expected '{', got 'fail' at 1:13",
-        fork_6,             parse_fork_statement:  "fork { v => { fail 1 }"    => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got '}' at 1:22",
+        err_expression_1, parse_expression:      "1 + *"                     => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got '*' at 1:5",
+        err_expression_2, parse_expression:      "%1"                        => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got '%' at 1:1",
+        err_expression_3, parse_expression:      "  "                        => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got 'EOF' at 1:3",
+        err_expression_4, parse_expression:      " (a"                       => "Parsing error: expected 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', ')' from matching '(' at 1:2, got 'EOF' at 1:4",
+        err_expression_5, parse_expression:      "("                         => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got 'EOF' at 1:2",
+        err_call_1,       parse_expression:      "m(a"                       => "Parsing error: expected 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', ',', ')' from matching '(' at 1:2, got 'EOF' at 1:4",
+        err_call_2,       parse_expression:      "m(a,"                      => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', ')' from matching '(' at 1:2, got 'EOF' at 1:5",
+        err_call_4,       parse_expression:      "m(,"                       => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', ')' from matching '(' at 1:2, got ',' at 1:3",
+        err_fail_1,       parse_fail_statement:  "fail"                      => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got 'EOF' at 1:5",
+        err_fail_2,       parse_fail_statement:  "fail a"                    => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got 'EOF' at 1:7",
+        err_let_1,        parse_let_statement:   "let"                       => "Parsing error: expected 'identifier', got 'EOF' at 1:4",
+        err_let_2,        parse_let_statement:   "let x"                     => "Parsing error: expected '=', got 'EOF' at 1:6",
+        err_let_3,        parse_let_statement:   "let x ="                   => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got 'EOF' at 1:8",
+        err_let_4,        parse_let_statement:   "let x = a"                 => "Parsing error: expected ';', got 'EOF' at 1:10",
+        err_match_1,      parse_match_statement: "match {}"                  => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got '{' at 1:7",
+        err_match_2,      parse_match_statement: "match a {"                 => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got 'EOF' at 1:10",
+        err_match_3,      parse_match_statement: "match a { v"               => "Parsing error: expected '=>', got 'EOF' at 1:12",
+        err_match_4,      parse_match_statement: "match a { v =>"            => "Parsing error: expected '{', got 'EOF' at 1:15",
+        err_match_5,      parse_match_statement: "match a { v => fail"       => "Parsing error: expected '{', got 'fail' at 1:16",
+        err_match_6,      parse_match_statement: "match a { v => { fail 1"   => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got 'EOF' at 1:24",
+        err_match_7,      parse_match_statement: "match a { v => { fail 1; " => "Parsing error: expected '{', 'let', 'match', 'fork', 'join', '}' from matching '{' at 1:16, got 'EOF' at 1:26",
+        err_statements_1, parse_statements:      "1;"                        => "Parsing error: expected '{', 'let', 'match', 'fork', 'join', got 'integer' at 1:1",
+        err_statements_2, parse_statements:      "fail 1"                    => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got 'EOF' at 1:7",
+        err_statements_3, parse_statements:      "{ fail 1"                  => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got 'EOF' at 1:9",
+        err_statements_4, parse_statements:      "{ fail 1;"                 => "Parsing error: expected '{', 'let', 'match', 'fork', 'join', '}' from matching '{' at 1:1, got 'EOF' at 1:10",
+        err_fork_1,       parse_fork_statement:  "fork"                      => "Parsing error: expected '{', got 'EOF' at 1:5",
+        err_fork_2,       parse_fork_statement:  "fork {"                    => "Parsing error: expected '(', '+', '-', '!', 'identifier', 'integer', got 'EOF' at 1:7",
+        err_fork_3,       parse_fork_statement:  "fork { v"                  => "Parsing error: expected '=>', got 'EOF' at 1:9",
+        err_fork_4,       parse_fork_statement:  "fork { v =>"               => "Parsing error: expected '{', got 'EOF' at 1:12",
+        err_fork_5,       parse_fork_statement:  "fork { v => fail }"        => "Parsing error: expected '{', got 'fail' at 1:13",
+        err_fork_6,       parse_fork_statement:  "fork { v => { fail 1 }"    => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got '}' at 1:22",
+        err_join_1,       parse_join_statement:  "join"                      => "Parsing error: expected '{', got 'EOF' at 1:5",
+        err_join_2,       parse_join_statement:  "join {"                    => "Parsing error: expected '{', 'let', 'match', 'fork', 'join', got 'EOF' at 1:7",
     }
 }
