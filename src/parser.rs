@@ -166,7 +166,7 @@ impl Display for Expression {
 #[derive(Debug)]
 enum ExpressionKind {
     Binary(Box<Expression>, BinaryOperator, Box<Expression>),
-    Call(String, Location, Vec<Expression>),
+    Call(String, Vec<Expression>),
     Identifier(String),
     Integer(u32),
     String(String),
@@ -181,7 +181,7 @@ impl Display for ExpressionKind {
             match self {
                 ExpressionKind::Binary(left, op, right) =>
                     format!("({} {} {})", left, op.to_string(), right),
-                ExpressionKind::Call(method, _, parameters) => {
+                ExpressionKind::Call(method, parameters) => {
                     let parameters = parameters
                         .iter()
                         .map(|e| format!("{}", e.kind))
@@ -979,11 +979,7 @@ impl<'t> Parser<'t> {
 
         Ok(Expression {
             location: method_name_location,
-            kind: ExpressionKind::Call(
-                method_name,
-                open_parenthesis.location().clone(),
-                parameters,
-            ),
+            kind: ExpressionKind::Call(method_name, parameters),
         })
     }
 
