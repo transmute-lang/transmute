@@ -79,8 +79,16 @@ impl Display for Error {
 
 type Result<T> = std::result::Result<T, Error>;
 
+#[derive(Debug)]
+struct Function {
+    location: Location,
+    name: String,
+    // todo give them names
+    parameters: Vec<String>,
+    body: Statements,
+}
+
 type Statements = Vec<Statement>;
-type Arms = Vec<Arm>;
 
 #[derive(Debug)]
 struct Statement {
@@ -96,6 +104,8 @@ enum StatementKind {
     Let(String, Expression),
     Match(Expression, Arms),
 }
+
+type Arms = Vec<Arm>;
 
 #[derive(Debug)]
 struct Arm {
@@ -421,6 +431,90 @@ impl<'t> Parser<'t> {
         self.lexer.peek()
     }
 
+    fn parse_function(&mut self) -> Result<Function> {
+        let location = require_token!(self, Token::Fn)?.location().clone();
+        let name = match require_token!(self, Token::Identifier, "")? {
+            Token::Identifier(_, value) => value,
+            _ => unreachable!(
+                "Token::Identifier(..) pattern matches as required a Token::Identifier"
+            ),
+        };
+
+        let open_parenthesis = require_token!(self, Token::LeftParenthesis)?;
+        let mut parameters = Vec::new();
+        loop {
+            match self.peek_token() {
+                Some(Token::RightParenthesis(_)) => break,
+                _ => {
+                    match require_token!(self, Token::Identifier, "") {
+                        Ok(Token::Identifier(_, value)) => {
+                            parameters.push(value);
+                        }
+                        Ok(_) => unreachable!(
+                            "Token::Identifier(..) pattern matches as required a Token::Identifier"
+                        ),
+                        Err(Error {
+                            token,
+                            kind: UnexpectedToken(mut valid),
+                        }) => {
+                            valid.push(Token::LeftParenthesis(token.location().clone()));
+                            return Err(Error {
+                                kind: ErrorKind::UnmatchedToken {
+                                    valid,
+                                    closing: Token::RightParenthesis(token.location().clone()),
+                                    opening: open_parenthesis,
+                                },
+                                token,
+                            });
+                        }
+                        Err(e) => return Err(e),
+                    }
+                    match self.peek_token() {
+                        Some(Token::RightParenthesis(_)) => break,
+                        Some(Token::Comma(_)) => {
+                            self.next_token();
+                            if let Some(Token::RightParenthesis(_)) = self.peek_token() {
+                                break;
+                            }
+                        }
+                        _ => {
+                            let token = self.next_token();
+                            let mut valid = BinaryOperatorKind::tokens(token.location());
+                            valid.push(Token::Comma(token.location().clone()));
+                            return Err(Error {
+                                kind: ErrorKind::UnmatchedToken {
+                                    valid,
+                                    closing: Token::RightParenthesis(token.location().clone()),
+                                    opening: open_parenthesis,
+                                },
+                                token,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        require_matching_token!(self, Token::RightParenthesis, open_parenthesis)?;
+
+        match self.peek_token() {
+            Some(Token::LeftBrace(_)) => {}
+            _ => {
+                let token = self.next_token();
+                return Err(Error {
+                    kind: UnexpectedToken(vec![Token::LeftBrace(token.location().clone())]),
+                    token,
+                });
+            }
+        };
+
+        Ok(Function {
+            location,
+            name,
+            parameters,
+            body: self.parse_statements()?,
+        })
+    }
+
     fn parse_statements(&mut self) -> Result<Statements> {
         let opening_brace = match self.peek_token() {
             Some(Token::LeftBrace(_)) => Some(self.next_token()),
@@ -454,6 +548,7 @@ impl<'t> Parser<'t> {
                             token,
                         });
                     }
+                    // todo this might not be the start of an expression
                     _ => statements.push(self.parse_statement()?),
                 }
             }
@@ -785,6 +880,7 @@ impl<'t> Parser<'t> {
         loop {
             match self.peek_token() {
                 Some(Token::RightParenthesis(_)) => break,
+                // todo this might not be the start of an expression
                 _ => match self.parse_expression() {
                     Ok(expression) => parameters.push(expression),
                     Err(Error {
@@ -816,6 +912,7 @@ impl<'t> Parser<'t> {
                     return Err(Error {
                         kind: ErrorKind::UnmatchedToken {
                             valid: vec![
+                                // todo replace with BinaryOperatorKind::tokens()
                                 Token::And(token.location().clone()),
                                 Token::Dot(token.location().clone()),
                                 Token::EqualEqual(token.location().clone()),
@@ -1045,6 +1142,8 @@ mod tests {
         expression_call_par5:        "method(p1,p2+p3)"  => "method(p1, (p2 + p3))",
         expression_call_par6:        "method(p1,)"       => "method(p1)",
     }
+
+    // todo rewrite tests assertions using let patterns
 
     #[test]
     fn parse_statements_none_1() {
@@ -1383,6 +1482,61 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn parse_function() {
+        let mut parser = Parser::new(Lexer::new("fn main() { fail 12; }"));
+
+        let Function {
+            name,
+            parameters,
+            mut body,
+            ..
+        } = parser.parse_function().expect("expected Ok");
+        assert_eq!(name, "main");
+        assert!(parameters.is_empty());
+        assert_eq!(body.len(), 1);
+        assert!(matches!(
+            body.remove(0),
+            Statement {
+                kind: StatementKind::Fail(_),
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_function_parameter() {
+        let mut parser = Parser::new(Lexer::new("fn main(p1) { }"));
+
+        let Function {
+            mut parameters,
+            body,
+            ..
+        } = parser.parse_function().expect("expected Ok");
+        assert!(body.is_empty());
+        assert_eq!(parameters.len(), 1);
+        assert_eq!(parameters.remove(0), "p1");
+    }
+
+    #[test]
+    fn parse_function_parameter_trailing_comma() {
+        let mut parser = Parser::new(Lexer::new("fn main(p1,) { }"));
+
+        let Function { mut parameters, .. } = parser.parse_function().expect("expected Ok");
+        assert_eq!(parameters.len(), 1);
+        assert_eq!(parameters.remove(0), "p1");
+    }
+
+    #[test]
+    fn parse_function_parameters() {
+        let mut parser = Parser::new(Lexer::new("fn main(p1, p2) { }"));
+
+        let Function { mut parameters, .. } = parser.parse_function().expect("expected Ok");
+        assert_eq!(parameters.len(), 2);
+        assert_eq!(parameters.remove(0), "p1");
+        assert_eq!(parameters.remove(0), "p2");
+    }
+
     macro_rules! parse_error {
         ($($name:ident, $root:ident: $text:expr => $result:expr,)*) => {
         $(
@@ -1439,5 +1593,13 @@ mod tests {
         err_join_1,       parse_join_statement:  ""                          => "Parsing error: expected 'join', got 'EOF' at 1:1",
         err_join_2,       parse_join_statement:  "join"                      => "Parsing error: expected '{', got 'EOF' at 1:5",
         err_join_3,       parse_join_statement:  "join {"                    => "Parsing error: expected '{', 'let', 'match', 'fork', 'join', '}' from matching '{' at 1:6, got 'EOF' at 1:7",
+        err_function_1,   parse_function:        "fn"                        => "Parsing error: expected 'identifier', got 'EOF' at 1:3",
+        err_function_2,   parse_function:        "fn main"                   => "Parsing error: expected '(', got 'EOF' at 1:8",
+        err_function_3,   parse_function:        "fn main ("                 => "Parsing error: expected 'identifier', '(', ')' from matching '(' at 1:9, got 'EOF' at 1:10",
+        err_function_4,   parse_function:        "fn main (,"                => "Parsing error: expected 'identifier', '(', ')' from matching '(' at 1:9, got ',' at 1:10",
+        err_function_5,   parse_function:        "fn main (p1"               => "Parsing error: expected 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', ',', ')' from matching '(' at 1:9, got 'EOF' at 1:12",
+        err_function_6,   parse_function:        "fn main ()"                => "Parsing error: expected '{', got 'EOF' at 1:11",
+        err_function_7,   parse_function:        "fn main () {"              => "Parsing error: expected '{', 'let', 'match', 'fork', 'join', '}' from matching '{' at 1:12, got 'EOF' at 1:13",
+        err_function_8,   parse_function:        "fn main () {fn"            => "Parsing error: expected '{', 'let', 'match', 'fork', 'join', got 'fn' at 1:13",
     }
 }
