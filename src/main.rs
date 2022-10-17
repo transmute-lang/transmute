@@ -1,4 +1,5 @@
 use crate::lexer::Lexer;
+use crate::parser::Parser;
 use std::{env, fs};
 
 #[allow(dead_code)]
@@ -13,8 +14,13 @@ fn main() {
 
     let file = fs::read_to_string(&args[1]).unwrap();
 
-    let lexer = Lexer::new(&file);
-    for token in lexer {
-        println!("{}", token)
+    let parser = Parser::new(Lexer::new(&file));
+    match parser.parse() {
+        Ok(root) => println!("{:?}", root),
+        Err(errors) => {
+            for error in errors {
+                println!("{}", error);
+            }
+        }
     }
 }

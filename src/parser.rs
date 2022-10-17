@@ -80,7 +80,7 @@ impl Display for Error {
 type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug)]
-struct Root {
+pub struct Root {
     functions: Functions,
 }
 
@@ -436,6 +436,22 @@ impl<'t> Parser<'t> {
         }
     }
 
+    pub fn parse(mut self) -> std::result::Result<Root, Vec<Error>> {
+        match self.parse_root() {
+            Ok(root) => {
+                if self.errors.is_empty() {
+                    Ok(root)
+                } else {
+                    Err(self.errors)
+                }
+            }
+            Err(e) => {
+                self.errors.push(e);
+                Err(self.errors)
+            }
+        }
+    }
+
     pub fn errors(&self) -> &Vec<Error> {
         &self.errors
     }
@@ -574,11 +590,13 @@ impl<'t> Parser<'t> {
             loop {
                 match self.peek_token() {
                     Some(Token::RightBrace(_)) => break,
-                    // just skip empty statements
-                    Some(Token::Semicolon(_)) => {}
-                    // no next token, just report an error
+                    Some(Token::Semicolon(_)) => {
+                        // just skip empty statements
+                        self.next_token();
+                    }
                     None | Some(Token::Eof(_)) => {
-                        // we need a location, next_token() gives Token::Eof(_)
+                        // no next token, just report an error. We need a location, next_token()
+                        // gives Token::Eof(_)
                         let token = self.next_token();
                         return Err(Error {
                             kind: ErrorKind::UnmatchedToken {

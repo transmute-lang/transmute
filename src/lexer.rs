@@ -363,6 +363,7 @@ impl<'t> Lexer<'t> {
     /// where column = 'value'
     /// ```
     fn make_block_string(&mut self, location: Location) -> Token {
+        // todo if the delimiter is ";", don't eat it at the end
         let delimiter = self.next_char();
         if delimiter.is_none() {
             return Token::Invalid(location, ErrorKind::ExpectedAny());
