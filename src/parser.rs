@@ -80,6 +80,13 @@ impl Display for Error {
 type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug)]
+struct Root {
+    functions: Functions,
+}
+
+type Functions = Vec<Function>;
+
+#[derive(Debug)]
 struct Function {
     location: Location,
     name: String,
@@ -459,6 +466,17 @@ impl<'t> Parser<'t> {
         }
 
         self.lexer.peek()
+    }
+
+    fn parse_root(&mut self) -> Result<Root> {
+        let mut functions = Vec::new();
+        loop {
+            if let Some(Token::Eof(_)) = self.peek_token() {
+                break;
+            }
+            functions.push(self.parse_function()?);
+        }
+        Ok(Root { functions })
     }
 
     fn parse_function(&mut self) -> Result<Function> {
@@ -1512,6 +1530,16 @@ mod tests {
         assert_eq!(parameters.remove(0), "p2");
     }
 
+    #[test]
+    fn parse_root() {
+        let mut parser = Parser::new(Lexer::new("fn main() {} fn do_stuff() {}"));
+
+        let Root { mut functions } = parser.parse_root().expect("expected Ok");
+        assert_eq!(functions.len(), 2);
+        assert_eq!(functions.remove(0).name, "main");
+        assert_eq!(functions.remove(0).name, "do_stuff");
+    }
+
     macro_rules! parse_error {
         ($($name:ident, $root:ident: $text:expr => $result:expr,)*) => {
         $(
@@ -1576,5 +1604,6 @@ mod tests {
         err_function_6,   parse_function:        "fn main ()"                => "Parsing error: expected '{', got 'EOF' at 1:11",
         err_function_7,   parse_function:        "fn main () {"              => "Parsing error: expected 'fork', 'join', '{', 'let', 'match', ';', '}' from matching '{' at 1:12, got 'EOF' at 1:13",
         err_function_8,   parse_function:        "fn main () {fn"            => "Parsing error: expected 'fork', 'join', '{', 'let', 'match', ';', got 'fn' at 1:13",
+        err_root,         parse_root:            "let "                      => "Parsing error: expected 'fn', got 'let' at 1:1",
     }
 }

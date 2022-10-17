@@ -7,7 +7,7 @@ method call:
   - method(param=value)    => &param=value (if ...)
 */
 
-fn main username {
+fn main(username) {
     let empty = "";
     let sqlite = sql.dataSource("sqlite:///db.sqlite");
 
@@ -30,7 +30,7 @@ fn main username {
     }
 }
 
-fetchPosts username {
+fetchPosts(username) {
     let query = """;
         select title, text
         from post
