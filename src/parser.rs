@@ -1,5 +1,5 @@
 use crate::lexer;
-use crate::lexer::{Lexer, Location, Token};
+use crate::lexer::{Lexer, Location, Token, TokenKind, TokenValue};
 use crate::parser::ErrorKind::UnexpectedToken;
 use crate::utils::peekable_iterator::PeekableIterator;
 use std::fmt::{Debug, Display, Formatter};
@@ -8,18 +8,18 @@ use std::fmt::{Debug, Display, Formatter};
 #[allow(clippy::enum_variant_names)]
 pub enum ErrorKind {
     /// The lexer returned an invalid token error.
-    InvalidToken(),
+    InvalidToken,
     /// We found an unexpected token
     UnexpectedToken(
-        /// All valid tokens
-        Vec<Token>,
+        /// All valid tokens kinds
+        Vec<TokenKind>,
     ),
     /// We found an unexpected token while looking for a closing one
     UnmatchedToken {
-        /// All tokens that could be at that position, expect for the closing one
-        valid: Vec<Token>,
-        /// The required closing token
-        closing: Token,
+        /// All tokens kinds that could be at that position, expect for the closing one
+        valid: Vec<TokenKind>,
+        /// The required closing token kind
+        closing: TokenKind,
         /// The opening token corresponding to the closing one
         opening: Token,
     },
@@ -35,13 +35,17 @@ pub struct Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let error = match &self.kind {
-            ErrorKind::InvalidToken() => match &self.token {
-                Token::Invalid(_, error_kind) => match error_kind {
-                    lexer::ErrorKind::UnterminatedString() => "unterminated string".to_string(),
+            ErrorKind::InvalidToken => match &self.token {
+                Token {
+                    kind: TokenKind::Invalid,
+                    value: TokenValue::Error(error_kind),
+                    ..
+                } => match error_kind {
+                    lexer::ErrorKind::UnterminatedString => "unterminated string".to_string(),
                     lexer::ErrorKind::ExpectedOneOf(chars) => {
                         format!("expected one of '{}'", chars.join("', '"))
                     }
-                    lexer::ErrorKind::ExpectedAny() => "expected any character".to_string(),
+                    lexer::ErrorKind::ExpectedAny => "expected any character".to_string(),
                     lexer::ErrorKind::Unexpected(c) => format!("invalid character '{}' found", c),
                 },
                 _ => unreachable!("should never be here"),
@@ -105,16 +109,10 @@ struct Statement {
 
 impl Statement {
     /// Tokens that may be present if the thing being parsed was a statement
-    fn tokens(location: &Location) -> Vec<Token> {
-        use Token::*;
-        vec![
-            Fork(location.clone()),
-            Join(location.clone()),
-            LeftBrace(location.clone()),
-            Let(location.clone()),
-            Match(location.clone()),
-            Semicolon(location.clone()),
-        ]
+    // todo rename
+    fn tokens() -> Vec<TokenKind> {
+        use TokenKind::*;
+        vec![Fork, Join, LeftBrace, Let, Match, Semicolon]
     }
 }
 
@@ -143,17 +141,10 @@ struct Expression {
 }
 
 impl Expression {
-    /// Tokens that may be present if the thing being parsed was an expression
-    fn tokens(location: &Location) -> Vec<Token> {
-        use Token::*;
-        vec![
-            Exclam(location.clone()),
-            Identifier(location.clone(), "".to_string()),
-            Integer(location.clone(), 0),
-            LeftParenthesis(location.clone()),
-            Minus(location.clone()),
-            Plus(location.clone()),
-        ]
+    /// Tokens kinds that may be present if the thing being parsed was an expression
+    fn token_kinds() -> Vec<TokenKind> {
+        use TokenKind::*;
+        vec![Exclam, Identifier, Integer, LeftParenthesis, Minus, Plus]
     }
 }
 
@@ -302,51 +293,51 @@ impl BinaryOperatorKind {
         }
     }
 
-    fn from_token(token: &Token) -> Option<BinaryOperatorKind> {
+    fn from_token_kind(token_kind: &TokenKind) -> Option<BinaryOperatorKind> {
         use BinaryOperatorKind::*;
-        match *token {
-            Token::And(_) => Some(And),
-            Token::Dot(_) => Some(Access),
-            Token::EqualEqual(_) => Some(Equals),
-            Token::ExclamEqual(_) => Some(NotEquals),
-            Token::ExclamTilde(_) => Some(NotMatches),
-            Token::Gt(_) => Some(GreaterThan),
-            Token::GtEqual(_) => Some(GreaterOrEqual),
-            Token::Lt(_) => Some(LessThan),
-            Token::LtEqual(_) => Some(LessOrEqual),
-            Token::Minus(_) => Some(Subtract),
-            Token::Or(_) => Some(Or),
-            Token::Percent(_) => Some(Reminder),
-            Token::Pipe(_) => Some(PrefixCall),
-            Token::Plus(_) => Some(Add),
-            Token::Slash(_) => Some(Divide),
-            Token::Star(_) => Some(Multiply),
-            Token::Tilde(_) => Some(Matches),
+        match *token_kind {
+            TokenKind::And => Some(And),
+            TokenKind::Dot => Some(Access),
+            TokenKind::EqualEqual => Some(Equals),
+            TokenKind::ExclamEqual => Some(NotEquals),
+            TokenKind::ExclamTilde => Some(NotMatches),
+            TokenKind::Gt => Some(GreaterThan),
+            TokenKind::GtEqual => Some(GreaterOrEqual),
+            TokenKind::Lt => Some(LessThan),
+            TokenKind::LtEqual => Some(LessOrEqual),
+            TokenKind::Minus => Some(Subtract),
+            TokenKind::Or => Some(Or),
+            TokenKind::Percent => Some(Reminder),
+            TokenKind::Pipe => Some(PrefixCall),
+            TokenKind::Plus => Some(Add),
+            TokenKind::Slash => Some(Divide),
+            TokenKind::Star => Some(Multiply),
+            TokenKind::Tilde => Some(Matches),
             _ => None,
         }
     }
 
-    /// Tokens that may be present if the thing being parsed was a binary operation
-    fn tokens(location: &Location) -> Vec<Token> {
-        use Token::*;
+    /// Tokens kinds that may be present if the thing being parsed was a binary operation
+    fn token_kinds() -> Vec<TokenKind> {
+        use TokenKind::*;
         vec![
-            And(location.clone()),
-            Dot(location.clone()),
-            EqualEqual(location.clone()),
-            ExclamEqual(location.clone()),
-            ExclamTilde(location.clone()),
-            Gt(location.clone()),
-            GtEqual(location.clone()),
-            Lt(location.clone()),
-            LtEqual(location.clone()),
-            Minus(location.clone()),
-            Or(location.clone()),
-            Percent(location.clone()),
-            Pipe(location.clone()),
-            Plus(location.clone()),
-            Slash(location.clone()),
-            Star(location.clone()),
-            Tilde(location.clone()),
+            And,
+            Dot,
+            EqualEqual,
+            ExclamEqual,
+            ExclamTilde,
+            Gt,
+            GtEqual,
+            Lt,
+            LtEqual,
+            Minus,
+            Or,
+            Percent,
+            Pipe,
+            Plus,
+            Slash,
+            Star,
+            Tilde,
         ]
     }
 }
@@ -390,21 +381,9 @@ pub struct Parser<'t> {
 macro_rules! require_token {
     ($self:ident, $token:path) => {
         match $self.next_token() {
-            token @ $token(_) => Ok(token),
+            token @ Token { kind: $token, .. } => Ok(token),
             token => Err(Error {
-                kind: ErrorKind::UnexpectedToken(vec![$token(token.location().clone())]),
-                token,
-            }),
-        }
-    };
-    ($self:ident, $token:path, $ex:expr) => {
-        match $self.next_token() {
-            token @ $token(_, _) => Ok(token),
-            token => Err(Error {
-                kind: ErrorKind::UnexpectedToken(vec![$token(
-                    token.location().clone(),
-                    $ex.into(),
-                )]),
+                kind: ErrorKind::UnexpectedToken(vec![$token]),
                 token,
             }),
         }
@@ -412,13 +391,15 @@ macro_rules! require_token {
 }
 
 macro_rules! require_matching_token {
-    ($self:ident, $token:path, $opening:expr) => {
+    ($self:ident, $token_kind:path, $opening:expr) => {
         match $self.next_token() {
-            token @ $token(_) => Ok(token),
+            token @ Token {
+                kind: $token_kind, ..
+            } => Ok(token),
             token => Err(Error {
                 kind: ErrorKind::UnmatchedToken {
                     valid: Vec::new(),
-                    closing: $token(token.location().clone()),
+                    closing: $token_kind,
                     opening: $opening,
                 },
                 token,
@@ -460,23 +441,43 @@ impl<'t> Parser<'t> {
     fn next_token(&mut self) -> Token {
         loop {
             match self.lexer.next() {
-                Some(token @ Token::Invalid(_, _)) => self.errors.push(Error {
+                Some(
+                    token @ Token {
+                        kind: TokenKind::Invalid,
+                        ..
+                    },
+                ) => self.errors.push(Error {
                     token,
-                    kind: ErrorKind::InvalidToken(),
+                    kind: ErrorKind::InvalidToken,
                 }),
-                Some(token @ Token::Eof(_)) => {
+                Some(
+                    token @ Token {
+                        kind: TokenKind::Eof,
+                        ..
+                    },
+                ) => {
                     self.eof = token.location().clone();
                     return token;
                 }
                 Some(token) => return token,
-                None => return Token::Eof(self.eof.clone()),
+                None => {
+                    return Token {
+                        location: self.eof.clone(),
+                        kind: TokenKind::Eof,
+                        value: TokenValue::None,
+                    }
+                }
             }
         }
     }
 
     /// Peeks next valid token. Skipping erroneous token on the way and storing related errors.
     fn peek_token(&mut self) -> Option<&Token> {
-        while let Some(Token::Invalid(_, _)) = self.lexer.peek() {
+        while let Some(Token {
+            kind: TokenKind::Invalid,
+            ..
+        }) = self.lexer.peek()
+        {
             // just ignore invalid tokens, they will be caught when we call next_token()
             self.lexer.next();
         }
@@ -487,7 +488,11 @@ impl<'t> Parser<'t> {
     fn parse_root(&mut self) -> Result<Root> {
         let mut functions = Vec::new();
         loop {
-            if let Some(Token::Eof(_)) = self.peek_token() {
+            if let Some(Token {
+                kind: TokenKind::Eof,
+                ..
+            }) = self.peek_token()
+            {
                 break;
             }
             functions.push(self.parse_function()?);
@@ -496,22 +501,33 @@ impl<'t> Parser<'t> {
     }
 
     fn parse_function(&mut self) -> Result<Function> {
-        let location = require_token!(self, Token::Fn)?.location().clone();
-        let name = match require_token!(self, Token::Identifier, "")? {
-            Token::Identifier(_, value) => value,
+        let location = require_token!(self, TokenKind::Fn)?.location().clone();
+        let name = match require_token!(self, TokenKind::Identifier)? {
+            Token {
+                kind: TokenKind::Identifier,
+                value: TokenValue::String(value),
+                ..
+            } => value,
             _ => unreachable!(
                 "Token::Identifier(..) pattern matches as required a Token::Identifier"
             ),
         };
 
-        let open_parenthesis = require_token!(self, Token::LeftParenthesis)?;
+        let open_parenthesis = require_token!(self, TokenKind::LeftParenthesis)?;
         let mut parameters = Vec::new();
         loop {
             match self.peek_token() {
-                Some(Token::RightParenthesis(_)) => break,
+                Some(Token {
+                    kind: TokenKind::RightParenthesis,
+                    ..
+                }) => break,
                 _ => {
-                    match require_token!(self, Token::Identifier, "") {
-                        Ok(Token::Identifier(_, value)) => {
+                    match require_token!(self, TokenKind::Identifier) {
+                        Ok(Token {
+                            kind: TokenKind::Identifier,
+                            value: TokenValue::String(value),
+                            ..
+                        }) => {
                             parameters.push(value);
                         }
                         Ok(_) => unreachable!(
@@ -524,7 +540,7 @@ impl<'t> Parser<'t> {
                             return Err(Error {
                                 kind: ErrorKind::UnmatchedToken {
                                     valid,
-                                    closing: Token::RightParenthesis(token.location().clone()),
+                                    closing: TokenKind::RightParenthesis,
                                     opening: open_parenthesis,
                                 },
                                 token,
@@ -533,21 +549,31 @@ impl<'t> Parser<'t> {
                         Err(e) => return Err(e),
                     }
                     match self.peek_token() {
-                        Some(Token::RightParenthesis(_)) => break,
-                        Some(Token::Comma(_)) => {
+                        Some(Token {
+                            kind: TokenKind::RightParenthesis,
+                            ..
+                        }) => break,
+                        Some(Token {
+                            kind: TokenKind::Comma,
+                            ..
+                        }) => {
                             self.next_token();
-                            if let Some(Token::RightParenthesis(_)) = self.peek_token() {
+                            if let Some(Token {
+                                kind: TokenKind::RightParenthesis,
+                                ..
+                            }) = self.peek_token()
+                            {
                                 break;
                             }
                         }
                         _ => {
                             let token = self.next_token();
-                            let mut valid = BinaryOperatorKind::tokens(token.location());
-                            valid.push(Token::Comma(token.location().clone()));
+                            let mut valid = BinaryOperatorKind::token_kinds();
+                            valid.push(TokenKind::Comma);
                             return Err(Error {
                                 kind: ErrorKind::UnmatchedToken {
                                     valid,
-                                    closing: Token::RightParenthesis(token.location().clone()),
+                                    closing: TokenKind::RightParenthesis,
                                     opening: open_parenthesis,
                                 },
                                 token,
@@ -557,14 +583,17 @@ impl<'t> Parser<'t> {
                 }
             }
         }
-        require_matching_token!(self, Token::RightParenthesis, open_parenthesis)?;
+        require_matching_token!(self, TokenKind::RightParenthesis, open_parenthesis)?;
 
         match self.peek_token() {
-            Some(Token::LeftBrace(_)) => {}
+            Some(Token {
+                kind: TokenKind::LeftBrace,
+                ..
+            }) => {}
             _ => {
                 let token = self.next_token();
                 return Err(Error {
-                    kind: UnexpectedToken(vec![Token::LeftBrace(token.location().clone())]),
+                    kind: UnexpectedToken(vec![TokenKind::LeftBrace]),
                     token,
                 });
             }
@@ -580,7 +609,10 @@ impl<'t> Parser<'t> {
 
     fn parse_statements(&mut self) -> Result<Statements> {
         let opening_brace = match self.peek_token() {
-            Some(Token::LeftBrace(_)) => Some(self.next_token()),
+            Some(Token {
+                kind: TokenKind::LeftBrace,
+                ..
+            }) => Some(self.next_token()),
             _ => None,
         };
 
@@ -589,19 +621,29 @@ impl<'t> Parser<'t> {
         if let Some(opening_brace) = opening_brace {
             loop {
                 match self.peek_token() {
-                    Some(Token::RightBrace(_)) => break,
-                    Some(Token::Semicolon(_)) => {
+                    Some(Token {
+                        kind: TokenKind::RightBrace,
+                        ..
+                    }) => break,
+                    Some(Token {
+                        kind: TokenKind::Semicolon,
+                        ..
+                    }) => {
                         // just skip empty statements
                         self.next_token();
                     }
-                    None | Some(Token::Eof(_)) => {
+                    None
+                    | Some(Token {
+                        kind: TokenKind::Eof,
+                        ..
+                    }) => {
                         // no next token, just report an error. We need a location, next_token()
-                        // gives Token::Eof(_)
+                        // gives TokenKind::Eof
                         let token = self.next_token();
                         return Err(Error {
                             kind: ErrorKind::UnmatchedToken {
-                                valid: Statement::tokens(token.location()),
-                                closing: Token::RightBrace(token.location().clone()),
+                                valid: Statement::tokens(),
+                                closing: TokenKind::RightBrace,
                                 opening: opening_brace,
                             },
                             token,
@@ -610,8 +652,12 @@ impl<'t> Parser<'t> {
                     _ => statements.push(self.parse_statement()?),
                 }
             }
-            require_matching_token!(self, Token::RightBrace, opening_brace)?;
-        } else if let Some(Token::Semicolon(_)) = self.peek_token() {
+            require_matching_token!(self, TokenKind::RightBrace, opening_brace)?;
+        } else if let Some(Token {
+            kind: TokenKind::Semicolon,
+            ..
+        }) = self.peek_token()
+        {
             self.next_token();
         } else {
             statements.push(self.parse_statement()?);
@@ -622,16 +668,31 @@ impl<'t> Parser<'t> {
 
     fn parse_statement(&mut self) -> Result<Statement> {
         match self.peek_token() {
-            Some(Token::Fail(_)) => self.parse_fail_statement(),
-            Some(Token::Let(_)) => self.parse_let_statement(),
-            Some(Token::Match(_)) => self.parse_match_statement(),
-            Some(Token::Fork(_)) => self.parse_fork_statement(),
-            Some(Token::Join(_)) => self.parse_join_statement(),
+            Some(Token {
+                kind: TokenKind::Fail,
+                ..
+            }) => self.parse_fail_statement(),
+            Some(Token {
+                kind: TokenKind::Let,
+                ..
+            }) => self.parse_let_statement(),
+            Some(Token {
+                kind: TokenKind::Match,
+                ..
+            }) => self.parse_match_statement(),
+            Some(Token {
+                kind: TokenKind::Fork,
+                ..
+            }) => self.parse_fork_statement(),
+            Some(Token {
+                kind: TokenKind::Join,
+                ..
+            }) => self.parse_join_statement(),
             _ => {
                 // even if peek_token() returns None, next_token() returns at least Some(Token::Eof)
                 let token = self.next_token();
                 Err(Error {
-                    kind: UnexpectedToken(Statement::tokens(token.location())),
+                    kind: UnexpectedToken(Statement::tokens()),
                     token,
                 })
             }
@@ -640,16 +701,16 @@ impl<'t> Parser<'t> {
 
     /// parses `[Fail] := [fail] [Expression]`
     fn parse_fail_statement(&mut self) -> Result<Statement> {
-        let location = require_token!(self, Token::Fail)?.location().clone();
+        let location = require_token!(self, TokenKind::Fail)?.location().clone();
         let expression = self.parse_expression()?;
-        match require_token!(self, Token::Semicolon) {
+        match require_token!(self, TokenKind::Semicolon) {
             Ok(_) => {}
             Err(Error {
                 token,
                 kind: UnexpectedToken(mut valid),
             }) => {
-                valid.append(&mut BinaryOperatorKind::tokens(token.location()));
-                valid.push(Token::LeftParenthesis(token.location().clone()));
+                valid.append(&mut BinaryOperatorKind::token_kinds());
+                valid.push(TokenKind::LeftParenthesis);
                 return Err(Error {
                     kind: UnexpectedToken(valid),
                     token,
@@ -666,14 +727,18 @@ impl<'t> Parser<'t> {
 
     /// parses `[Let] = [let] [identifier] [=] [Expression]`
     fn parse_let_statement(&mut self) -> Result<Statement> {
-        let location = require_token!(self, Token::Let)?.location().clone();
-        let identifier = require_token!(self, Token::Identifier, "")?;
-        require_token!(self, Token::Equal)?;
+        let location = require_token!(self, TokenKind::Let)?.location().clone();
+        let identifier = require_token!(self, TokenKind::Identifier)?;
+        require_token!(self, TokenKind::Equal)?;
         let expression = self.parse_expression()?;
-        require_token!(self, Token::Semicolon)?;
+        require_token!(self, TokenKind::Semicolon)?;
 
         let identifier = match identifier {
-            Token::Identifier(_, value) => value,
+            Token {
+                kind: TokenKind::Identifier,
+                value: TokenValue::String(value),
+                ..
+            } => value,
             _ => unreachable!(
                 "Token::Identifier(..) pattern matches as required a Token::Identifier"
             ),
@@ -686,20 +751,23 @@ impl<'t> Parser<'t> {
     }
 
     fn parse_match_statement(&mut self) -> Result<Statement> {
-        let match_location = require_token!(self, Token::Match)?.location().clone();
+        let match_location = require_token!(self, TokenKind::Match)?.location().clone();
         let expression = self.parse_expression()?;
-        require_token!(self, Token::LeftBrace)?;
+        require_token!(self, TokenKind::LeftBrace)?;
 
         let mut arms = Vec::new();
         loop {
             let expression = self.parse_expression()?;
-            require_token!(self, Token::EqualGt)?;
+            require_token!(self, TokenKind::EqualGt)?;
             match self.peek_token() {
-                Some(Token::LeftBrace(_)) => {}
+                Some(Token {
+                    kind: TokenKind::LeftBrace,
+                    ..
+                }) => {}
                 _ => {
                     let token = self.next_token();
                     return Err(Error {
-                        kind: UnexpectedToken(vec![Token::LeftBrace(token.location().clone())]),
+                        kind: UnexpectedToken(vec![TokenKind::LeftBrace]),
                         token,
                     });
                 }
@@ -714,27 +782,34 @@ impl<'t> Parser<'t> {
 
             match self.peek_token() {
                 None => break,
-                Some(Token::RightBrace(_)) => break,
-                Some(Token::Comma(_)) => {
+                Some(Token {
+                    kind: TokenKind::RightBrace,
+                    ..
+                }) => break,
+                Some(Token {
+                    kind: TokenKind::Comma,
+                    ..
+                }) => {
                     self.next_token();
-                    if let Some(Token::RightBrace(_)) = self.peek_token() {
+                    if let Some(Token {
+                        kind: TokenKind::RightBrace,
+                        ..
+                    }) = self.peek_token()
+                    {
                         break;
                     }
                 }
                 Some(_) => {
                     let token = self.next_token();
                     return Err(Error {
-                        kind: UnexpectedToken(vec![
-                            Token::RightBrace(token.location().clone()),
-                            Token::Comma(token.location().clone()),
-                        ]),
+                        kind: UnexpectedToken(vec![TokenKind::RightBrace, TokenKind::Comma]),
                         token,
                     });
                 }
             }
         }
 
-        require_token!(self, Token::RightBrace)?;
+        require_token!(self, TokenKind::RightBrace)?;
 
         Ok(Statement {
             location: match_location,
@@ -743,19 +818,22 @@ impl<'t> Parser<'t> {
     }
 
     fn parse_fork_statement(&mut self) -> Result<Statement> {
-        let fork_location = require_token!(self, Token::Fork)?.location().clone();
-        require_token!(self, Token::LeftBrace)?;
+        let fork_location = require_token!(self, TokenKind::Fork)?.location().clone();
+        require_token!(self, TokenKind::LeftBrace)?;
 
         let mut arms = Vec::new();
         loop {
             let expression = self.parse_expression()?;
-            require_token!(self, Token::EqualGt)?;
+            require_token!(self, TokenKind::EqualGt)?;
             match self.peek_token() {
-                Some(Token::LeftBrace(_)) => {}
+                Some(Token {
+                    kind: TokenKind::LeftBrace,
+                    ..
+                }) => {}
                 _ => {
                     let token = self.next_token();
                     return Err(Error {
-                        kind: UnexpectedToken(vec![Token::LeftBrace(token.location().clone())]),
+                        kind: UnexpectedToken(vec![TokenKind::LeftBrace]),
                         token,
                     });
                 }
@@ -770,27 +848,34 @@ impl<'t> Parser<'t> {
 
             match self.peek_token() {
                 None => break,
-                Some(Token::RightBrace(_)) => break,
-                Some(Token::Comma(_)) => {
+                Some(Token {
+                    kind: TokenKind::RightBrace,
+                    ..
+                }) => break,
+                Some(Token {
+                    kind: TokenKind::Comma,
+                    ..
+                }) => {
                     self.next_token();
-                    if let Some(Token::RightBrace(_)) = self.peek_token() {
+                    if let Some(Token {
+                        kind: TokenKind::RightBrace,
+                        ..
+                    }) = self.peek_token()
+                    {
                         break;
                     }
                 }
                 Some(_) => {
                     let token = self.next_token();
                     return Err(Error {
-                        kind: UnexpectedToken(vec![
-                            Token::RightBrace(token.location().clone()),
-                            Token::Comma(token.location().clone()),
-                        ]),
+                        kind: UnexpectedToken(vec![TokenKind::RightBrace, TokenKind::Comma]),
                         token,
                     });
                 }
             }
         }
 
-        require_token!(self, Token::RightBrace)?;
+        require_token!(self, TokenKind::RightBrace)?;
 
         Ok(Statement {
             location: fork_location,
@@ -799,14 +884,17 @@ impl<'t> Parser<'t> {
     }
 
     fn parse_join_statement(&mut self) -> Result<Statement> {
-        let join_location = require_token!(self, Token::Join)?.location().clone();
+        let join_location = require_token!(self, TokenKind::Join)?.location().clone();
 
         match self.peek_token() {
-            Some(Token::LeftBrace(_)) => {}
+            Some(Token {
+                kind: TokenKind::LeftBrace,
+                ..
+            }) => {}
             _ => {
                 let token = self.next_token();
                 return Err(Error {
-                    kind: UnexpectedToken(vec![Token::LeftBrace(token.location().clone())]),
+                    kind: UnexpectedToken(vec![TokenKind::LeftBrace]),
                     token,
                 });
             }
@@ -827,9 +915,12 @@ impl<'t> Parser<'t> {
         precedence: OperatorPrecedence,
     ) -> Result<Expression> {
         let mut expression = match self.next_token() {
-            left @ Token::LeftParenthesis(_) => {
+            left @ Token {
+                kind: TokenKind::LeftParenthesis,
+                ..
+            } => {
                 let expression = self.parse_expression()?;
-                match require_matching_token!(self, Token::RightParenthesis, left) {
+                match require_matching_token!(self, TokenKind::RightParenthesis, left) {
                     Ok(_) => {}
                     Err(Error {
                         token,
@@ -840,8 +931,8 @@ impl<'t> Parser<'t> {
                                 opening,
                             },
                     }) => {
-                        valid.append(&mut BinaryOperatorKind::tokens(token.location()));
-                        valid.push(Token::LeftParenthesis(token.location().clone()));
+                        valid.append(&mut BinaryOperatorKind::token_kinds());
+                        valid.push(TokenKind::LeftParenthesis);
                         return Err(Error {
                             kind: ErrorKind::UnmatchedToken {
                                 valid,
@@ -855,36 +946,63 @@ impl<'t> Parser<'t> {
                 }
                 expression
             }
-            Token::Plus(loc) => self.parse_unary_expression(UnaryOperator {
-                location: loc,
+            Token {
+                kind: TokenKind::Plus,
+                location,
+                ..
+            } => self.parse_unary_expression(UnaryOperator {
+                location,
                 kind: UnaryOperatorKind::Positive,
             })?,
-            Token::Minus(loc) => self.parse_unary_expression(UnaryOperator {
+            Token {
+                kind: TokenKind::Minus,
+                location: loc,
+                ..
+            } => self.parse_unary_expression(UnaryOperator {
                 location: loc,
                 kind: UnaryOperatorKind::Negative,
             })?,
-            Token::Exclam(loc) => self.parse_unary_expression(UnaryOperator {
-                location: loc,
+            Token {
+                kind: TokenKind::Exclam,
+                location,
+                ..
+            } => self.parse_unary_expression(UnaryOperator {
+                location,
                 kind: UnaryOperatorKind::Not,
             })?,
-            Token::Identifier(loc, name) => match self.peek_token() {
-                Some(Token::LeftParenthesis(_)) => self.parse_call_expression(loc, name)?,
+            Token {
+                kind: TokenKind::Identifier,
+                location,
+                value: TokenValue::String(name),
+            } => match self.peek_token() {
+                Some(Token {
+                    kind: TokenKind::LeftParenthesis,
+                    ..
+                }) => self.parse_call_expression(location, name)?,
                 _ => Expression {
-                    location: loc,
+                    location,
                     kind: ExpressionKind::Identifier(name),
                 },
             },
-            Token::Integer(loc, value) => Expression {
-                location: loc,
+            Token {
+                kind: TokenKind::Integer,
+                location,
+                value: TokenValue::Integer(value),
+            } => Expression {
+                location,
                 kind: ExpressionKind::Integer(value),
             },
-            Token::String(loc, value) => Expression {
+            Token {
+                kind: TokenKind::String,
+                location: loc,
+                value: TokenValue::String(value),
+            } => Expression {
                 location: loc,
                 kind: ExpressionKind::String(value),
             },
             token => {
                 return Err(Error {
-                    kind: UnexpectedToken(Expression::tokens(token.location())),
+                    kind: UnexpectedToken(Expression::token_kinds()),
                     token,
                 })
             }
@@ -918,13 +1036,16 @@ impl<'t> Parser<'t> {
         method_name_location: Location,
         method_name: String,
     ) -> Result<Expression> {
-        let open_parenthesis = require_token!(self, Token::LeftParenthesis)?;
+        let open_parenthesis = require_token!(self, TokenKind::LeftParenthesis)?;
 
         let mut parameters = Vec::new();
 
         loop {
             match self.peek_token() {
-                Some(Token::RightParenthesis(_)) => break,
+                Some(Token {
+                    kind: TokenKind::RightParenthesis,
+                    ..
+                }) => break,
                 _ => match self.parse_expression() {
                     Ok(expression) => parameters.push(expression),
                     Err(Error {
@@ -934,7 +1055,7 @@ impl<'t> Parser<'t> {
                         return Err(Error {
                             kind: ErrorKind::UnmatchedToken {
                                 valid,
-                                closing: Token::RightParenthesis(token.location().clone()),
+                                closing: TokenKind::RightParenthesis,
                                 opening: open_parenthesis,
                             },
                             token,
@@ -944,21 +1065,31 @@ impl<'t> Parser<'t> {
                 },
             }
             match self.peek_token() {
-                Some(Token::RightParenthesis(_)) => break,
-                Some(Token::Comma(_)) => {
+                Some(Token {
+                    kind: TokenKind::RightParenthesis,
+                    ..
+                }) => break,
+                Some(Token {
+                    kind: TokenKind::Comma,
+                    ..
+                }) => {
                     self.next_token();
-                    if let Some(Token::RightParenthesis(_)) = self.peek_token() {
+                    if let Some(Token {
+                        kind: TokenKind::RightParenthesis,
+                        ..
+                    }) = self.peek_token()
+                    {
                         break;
                     }
                 }
                 _ => {
                     let token = self.next_token();
-                    let mut valid = BinaryOperatorKind::tokens(token.location());
-                    valid.push(Token::Comma(token.location().clone()));
+                    let mut valid = BinaryOperatorKind::token_kinds();
+                    valid.push(TokenKind::Comma);
                     return Err(Error {
                         kind: ErrorKind::UnmatchedToken {
                             valid,
-                            closing: Token::RightParenthesis(token.location().clone()),
+                            closing: TokenKind::RightParenthesis,
                             opening: open_parenthesis,
                         },
                         token,
@@ -968,10 +1099,13 @@ impl<'t> Parser<'t> {
         }
 
         match self.next_token() {
-            Token::RightParenthesis(_) => (),
+            Token {
+                kind: TokenKind::RightParenthesis,
+                ..
+            } => (),
             token => {
                 return Err(Error {
-                    kind: UnexpectedToken(vec![Token::LeftParenthesis(token.location().clone())]),
+                    kind: UnexpectedToken(vec![TokenKind::LeftParenthesis]),
                     token,
                 })
             }
@@ -987,7 +1121,7 @@ impl<'t> Parser<'t> {
     /// returns `None`.
     fn peek_operator_precedence(&mut self) -> Option<OperatorPrecedence> {
         self.peek_token()
-            .and_then(|t| BinaryOperatorKind::from_token(t).map(|o| o.precedence()))
+            .and_then(|t| BinaryOperatorKind::from_token_kind(&t.kind).map(|o| o.precedence()))
     }
 
     fn parse_infix_expression(&mut self, left: Expression) -> Result<Expression> {
@@ -1003,7 +1137,7 @@ impl<'t> Parser<'t> {
 
     fn parse_operator(&mut self) -> Option<BinaryOperator> {
         if let Some(token) = self.peek_token() {
-            if let Some(operator) = BinaryOperatorKind::from_token(token) {
+            if let Some(operator) = BinaryOperatorKind::from_token_kind(&token.kind) {
                 return Some(BinaryOperator {
                     location: self.next_token().location().clone(),
                     kind: operator,
@@ -1022,16 +1156,34 @@ mod tests {
     fn next_token_past_eof() {
         let mut parser = Parser::new(Lexer::new(""));
         let token = parser.next_token();
-        assert!(matches!(token, Token::Eof(_)));
+        assert!(matches!(
+            token,
+            Token {
+                kind: TokenKind::Eof,
+                ..
+            }
+        ));
         let token = parser.next_token();
-        assert!(matches!(token, Token::Eof(_)));
+        assert!(matches!(
+            token,
+            Token {
+                kind: TokenKind::Eof,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn peek_token_past_eof() {
         let mut parser = Parser::new(Lexer::new(""));
         let token = parser.next_token();
-        assert!(matches!(token, Token::Eof(_)));
+        assert!(matches!(
+            token,
+            Token {
+                kind: TokenKind::Eof,
+                ..
+            }
+        ));
         let token = parser.peek_token();
         assert!(token.is_none());
     }
@@ -1571,37 +1723,37 @@ mod tests {
     }
 
     parse_error! {
-        err_expression_1, parse_expression:      "1 + *"                     => "Parsing error: expected '!', 'identifier', 'integer', '(', '-', '+', got '*' at 1:5",
-        err_expression_2, parse_expression:      "%1"                        => "Parsing error: expected '!', 'identifier', 'integer', '(', '-', '+', got '%' at 1:1",
-        err_expression_3, parse_expression:      "  "                        => "Parsing error: expected '!', 'identifier', 'integer', '(', '-', '+', got 'EOF' at 1:3",
+        err_expression_1, parse_expression:      "1 + *"                     => "Parsing error: expected '!', 'IDENTIFIER', 'INTEGER', '(', '-', '+', got '*' at 1:5",
+        err_expression_2, parse_expression:      "%1"                        => "Parsing error: expected '!', 'IDENTIFIER', 'INTEGER', '(', '-', '+', got '%' at 1:1",
+        err_expression_3, parse_expression:      "  "                        => "Parsing error: expected '!', 'IDENTIFIER', 'INTEGER', '(', '-', '+', got 'EOF' at 1:3",
         err_expression_4, parse_expression:      " (a"                       => "Parsing error: expected 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', ')' from matching '(' at 1:2, got 'EOF' at 1:4",
-        err_expression_5, parse_expression:      "("                         => "Parsing error: expected '!', 'identifier', 'integer', '(', '-', '+', got 'EOF' at 1:2",
+        err_expression_5, parse_expression:      "("                         => "Parsing error: expected '!', 'IDENTIFIER', 'INTEGER', '(', '-', '+', got 'EOF' at 1:2",
         err_call_1,       parse_expression:      "m(a"                       => "Parsing error: expected 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', ',', ')' from matching '(' at 1:2, got 'EOF' at 1:4",
-        err_call_2,       parse_expression:      "m(a,"                      => "Parsing error: expected '!', 'identifier', 'integer', '(', '-', '+', ')' from matching '(' at 1:2, got 'EOF' at 1:5",
-        err_call_4,       parse_expression:      "m(,"                       => "Parsing error: expected '!', 'identifier', 'integer', '(', '-', '+', ')' from matching '(' at 1:2, got ',' at 1:3",
+        err_call_2,       parse_expression:      "m(a,"                      => "Parsing error: expected '!', 'IDENTIFIER', 'INTEGER', '(', '-', '+', ')' from matching '(' at 1:2, got 'EOF' at 1:5",
+        err_call_4,       parse_expression:      "m(,"                       => "Parsing error: expected '!', 'IDENTIFIER', 'INTEGER', '(', '-', '+', ')' from matching '(' at 1:2, got ',' at 1:3",
         err_fail_1,       parse_fail_statement:  ""                          => "Parsing error: expected 'fail', got 'EOF' at 1:1",
-        err_fail_2,       parse_fail_statement:  "fail"                      => "Parsing error: expected '!', 'identifier', 'integer', '(', '-', '+', got 'EOF' at 1:5",
+        err_fail_2,       parse_fail_statement:  "fail"                      => "Parsing error: expected '!', 'IDENTIFIER', 'INTEGER', '(', '-', '+', got 'EOF' at 1:5",
         err_fail_3,       parse_fail_statement:  "fail a"                    => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got 'EOF' at 1:7",
         err_let_1,        parse_let_statement:   ""                          => "Parsing error: expected 'let', got 'EOF' at 1:1",
-        err_let_2,        parse_let_statement:   "let"                       => "Parsing error: expected 'identifier', got 'EOF' at 1:4",
+        err_let_2,        parse_let_statement:   "let"                       => "Parsing error: expected 'IDENTIFIER', got 'EOF' at 1:4",
         err_let_3,        parse_let_statement:   "let x"                     => "Parsing error: expected '=', got 'EOF' at 1:6",
-        err_let_4,        parse_let_statement:   "let x ="                   => "Parsing error: expected '!', 'identifier', 'integer', '(', '-', '+', got 'EOF' at 1:8",
+        err_let_4,        parse_let_statement:   "let x ="                   => "Parsing error: expected '!', 'IDENTIFIER', 'INTEGER', '(', '-', '+', got 'EOF' at 1:8",
         err_let_5,        parse_let_statement:   "let x = a"                 => "Parsing error: expected ';', got 'EOF' at 1:10",
         err_match_1,      parse_match_statement: ""                          => "Parsing error: expected 'match', got 'EOF' at 1:1",
-        err_match_2,      parse_match_statement: "match"                     => "Parsing error: expected '!', 'identifier', 'integer', '(', '-', '+', got 'EOF' at 1:6",
-        err_match_3,      parse_match_statement: "match a {"                 => "Parsing error: expected '!', 'identifier', 'integer', '(', '-', '+', got 'EOF' at 1:10",
+        err_match_2,      parse_match_statement: "match"                     => "Parsing error: expected '!', 'IDENTIFIER', 'INTEGER', '(', '-', '+', got 'EOF' at 1:6",
+        err_match_3,      parse_match_statement: "match a {"                 => "Parsing error: expected '!', 'IDENTIFIER', 'INTEGER', '(', '-', '+', got 'EOF' at 1:10",
         err_match_4,      parse_match_statement: "match a { v"               => "Parsing error: expected '=>', got 'EOF' at 1:12",
         err_match_5,      parse_match_statement: "match a { v =>"            => "Parsing error: expected '{', got 'EOF' at 1:15",
         err_match_6,      parse_match_statement: "match a { v => fail"       => "Parsing error: expected '{', got 'fail' at 1:16",
         err_match_7,      parse_match_statement: "match a { v => { fail 1"   => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got 'EOF' at 1:24",
         err_match_8,      parse_match_statement: "match a { v => { fail 1; " => "Parsing error: expected 'fork', 'join', '{', 'let', 'match', ';', '}' from matching '{' at 1:16, got 'EOF' at 1:26",
-        err_statements_1, parse_statements:      "1;"                        => "Parsing error: expected 'fork', 'join', '{', 'let', 'match', ';', got 'integer' at 1:1",
+        err_statements_1, parse_statements:      "1;"                        => "Parsing error: expected 'fork', 'join', '{', 'let', 'match', ';', got '1' at 1:1",
         err_statements_2, parse_statements:      "fail 1"                    => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got 'EOF' at 1:7",
         err_statements_3, parse_statements:      "{ fail 1"                  => "Parsing error: expected ';', 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', '(', got 'EOF' at 1:9",
         err_statements_4, parse_statements:      "{ fail 1;"                 => "Parsing error: expected 'fork', 'join', '{', 'let', 'match', ';', '}' from matching '{' at 1:1, got 'EOF' at 1:10",
         err_fork_1,       parse_fork_statement:  ""                          => "Parsing error: expected 'fork', got 'EOF' at 1:1",
         err_fork_2,       parse_fork_statement:  "fork"                      => "Parsing error: expected '{', got 'EOF' at 1:5",
-        err_fork_3,       parse_fork_statement:  "fork {"                    => "Parsing error: expected '!', 'identifier', 'integer', '(', '-', '+', got 'EOF' at 1:7",
+        err_fork_3,       parse_fork_statement:  "fork {"                    => "Parsing error: expected '!', 'IDENTIFIER', 'INTEGER', '(', '-', '+', got 'EOF' at 1:7",
         err_fork_4,       parse_fork_statement:  "fork { v"                  => "Parsing error: expected '=>', got 'EOF' at 1:9",
         err_fork_5,       parse_fork_statement:  "fork { v =>"               => "Parsing error: expected '{', got 'EOF' at 1:12",
         err_fork_6,       parse_fork_statement:  "fork { v => fail }"        => "Parsing error: expected '{', got 'fail' at 1:13",
@@ -1610,10 +1762,10 @@ mod tests {
         err_join_1,       parse_join_statement:  ""                          => "Parsing error: expected 'join', got 'EOF' at 1:1",
         err_join_2,       parse_join_statement:  "join"                      => "Parsing error: expected '{', got 'EOF' at 1:5",
         err_join_3,       parse_join_statement:  "join {"                    => "Parsing error: expected 'fork', 'join', '{', 'let', 'match', ';', '}' from matching '{' at 1:6, got 'EOF' at 1:7",
-        err_function_1,   parse_function:        "fn"                        => "Parsing error: expected 'identifier', got 'EOF' at 1:3",
+        err_function_1,   parse_function:        "fn"                        => "Parsing error: expected 'IDENTIFIER', got 'EOF' at 1:3",
         err_function_2,   parse_function:        "fn main"                   => "Parsing error: expected '(', got 'EOF' at 1:8",
-        err_function_3,   parse_function:        "fn main ("                 => "Parsing error: expected 'identifier', ')' from matching '(' at 1:9, got 'EOF' at 1:10",
-        err_function_4,   parse_function:        "fn main (,"                => "Parsing error: expected 'identifier', ')' from matching '(' at 1:9, got ',' at 1:10",
+        err_function_3,   parse_function:        "fn main ("                 => "Parsing error: expected 'IDENTIFIER', ')' from matching '(' at 1:9, got 'EOF' at 1:10",
+        err_function_4,   parse_function:        "fn main (,"                => "Parsing error: expected 'IDENTIFIER', ')' from matching '(' at 1:9, got ',' at 1:10",
         err_function_5,   parse_function:        "fn main (p1"               => "Parsing error: expected 'and', '.', '==', '!=', '!~', '>', '>=', '<', '<=', '-', 'or', '%', '|', '+', '/', '*', '~', ',', ')' from matching '(' at 1:9, got 'EOF' at 1:12",
         err_function_6,   parse_function:        "fn main ()"                => "Parsing error: expected '{', got 'EOF' at 1:11",
         err_function_7,   parse_function:        "fn main () {"              => "Parsing error: expected 'fork', 'join', '{', 'let', 'match', ';', '}' from matching '{' at 1:12, got 'EOF' at 1:13",
