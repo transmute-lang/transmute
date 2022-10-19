@@ -29,7 +29,8 @@ fn main(username) {
     }
     join {
         let x = 1;
-//Fix   json.from("{ username: &username, posts: &posts }", username=username, posts=posts);
+//fix   json.from("{ username: &0, posts: &1 }", username, posts);
+//fix   json.from("{ username: &username, posts: &posts }", username=username, posts=posts);
     }
 }
 

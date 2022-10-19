@@ -16,7 +16,11 @@ fn main() {
 
     let parser = Parser::new(Lexer::new(&file));
     match parser.parse() {
-        Ok(root) => println!("{:?}", root),
+        Ok(root) => {
+            let yaml =
+                serde_yaml::to_string(&root).unwrap_or_else(|e| format!("{{\"error\":\"{}\"}}", e));
+            println!("{}", yaml)
+        }
         Err(errors) => {
             for error in errors {
                 println!("{}", error);

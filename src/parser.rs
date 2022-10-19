@@ -2,6 +2,8 @@ use crate::lexer;
 use crate::lexer::{Lexer, Location, Token, TokenKind, TokenValue};
 use crate::parser::ErrorKind::UnexpectedToken;
 use crate::utils::peekable_iterator::PeekableIterator;
+use serde::ser::SerializeMap;
+use serde::{Serialize, Serializer};
 use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
@@ -83,15 +85,16 @@ impl Display for Error {
 
 type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Root {
     functions: Functions,
 }
 
 type Functions = Vec<Function>;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 struct Function {
+    #[serde(skip)]
     location: Location,
     name: String,
     // todo give them names/types ...
@@ -109,10 +112,29 @@ struct Statement {
 
 impl Statement {
     /// Tokens that may be present if the thing being parsed was a statement
-    // todo rename
-    fn tokens() -> Vec<TokenKind> {
+    fn token_kinds() -> Vec<TokenKind> {
         use TokenKind::*;
         vec![Fork, Join, LeftBrace, Let, Match, Semicolon]
+    }
+}
+
+impl Serialize for Statement {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut map = serializer.serialize_map(Some(1))?;
+        map.serialize_entry(
+            match &self.kind {
+                StatementKind::Fail(_) => "fail",
+                StatementKind::Fork(_) => "fork",
+                StatementKind::Join(_) => "join",
+                StatementKind::Let(_, _) => "let",
+                StatementKind::Match(_, _) => "match",
+            },
+            &self.kind,
+        )?;
+        map.end()
     }
 }
 
@@ -125,10 +147,40 @@ enum StatementKind {
     Match(Expression, Arms),
 }
 
+impl Serialize for StatementKind {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            StatementKind::Fail(expression) => serializer.serialize_some(expression),
+            StatementKind::Fork(arms) => {
+                let mut map = serializer.serialize_map(Some(1))?;
+                map.serialize_entry("arms", arms)?;
+                map.end()
+            }
+            StatementKind::Join(statements) => serializer.serialize_some(statements),
+            StatementKind::Let(variable, expression) => {
+                let mut map = serializer.serialize_map(Some(2))?;
+                map.serialize_entry("variable", variable)?;
+                map.serialize_entry("expression", expression)?;
+                map.end()
+            }
+            StatementKind::Match(expression, arms) => {
+                let mut map = serializer.serialize_map(Some(2))?;
+                map.serialize_entry("expression", expression)?;
+                map.serialize_entry("arms", arms)?;
+                map.end()
+            }
+        }
+    }
+}
+
 type Arms = Vec<Arm>;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 struct Arm {
+    #[serde(skip)]
     location: Location,
     condition: Expression,
     statements: Statements,
@@ -151,6 +203,15 @@ impl Expression {
 impl Display for Expression {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.kind)
+    }
+}
+
+impl Serialize for Expression {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&format!("{}", self.kind))
     }
 }
 
@@ -642,7 +703,7 @@ impl<'t> Parser<'t> {
                         let token = self.next_token();
                         return Err(Error {
                             kind: ErrorKind::UnmatchedToken {
-                                valid: Statement::tokens(),
+                                valid: Statement::token_kinds(),
                                 closing: TokenKind::RightBrace,
                                 opening: opening_brace,
                             },
@@ -692,7 +753,7 @@ impl<'t> Parser<'t> {
                 // even if peek_token() returns None, next_token() returns at least Some(Token::Eof)
                 let token = self.next_token();
                 Err(Error {
-                    kind: UnexpectedToken(Statement::tokens()),
+                    kind: UnexpectedToken(Statement::token_kinds()),
                     token,
                 })
             }
@@ -1150,6 +1211,7 @@ impl<'t> Parser<'t> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use super::*;
 
     #[test]
@@ -1771,5 +1833,13 @@ mod tests {
         err_function_7,   parse_function:        "fn main () {"              => "Parsing error: expected 'fork', 'join', '{', 'let', 'match', ';', '}' from matching '{' at 1:12, got 'EOF' at 1:13",
         err_function_8,   parse_function:        "fn main () {fn"            => "Parsing error: expected 'fork', 'join', '{', 'let', 'match', ';', got 'fn' at 1:13",
         err_root,         parse_root:            "let "                      => "Parsing error: expected 'fn', got 'let' at 1:1",
+    }
+
+    #[test]
+    fn full_example() {
+        let file = fs::read_to_string("examples/example.tmf").unwrap();
+        let parser = Parser::new(Lexer::new(&file));
+        let root = parser.parse().unwrap();
+        insta::assert_yaml_snapshot!(root);
     }
 }
