@@ -27,9 +27,12 @@ pub struct Token {
 }
 
 impl Token {
-    // todo remove
-    pub fn location(&self) -> &Location {
-        &self.location
+    pub fn value_string(self) -> Option<String> {
+        if let TokenValue::String(string) = self.value {
+            Some(string)
+        } else {
+            None
+        }
     }
 }
 

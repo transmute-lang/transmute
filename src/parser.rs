@@ -34,6 +34,17 @@ pub struct Error {
     pub token: Token,
 }
 
+macro_rules! token {
+    ($($kind:path)*) => {
+    $(
+        Token {
+            kind: $kind,
+            ..
+        }
+    )*
+    }
+}
+
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let error = match &self.kind {
@@ -75,11 +86,11 @@ impl Display for Error {
                 if !valid.is_empty() { ", " } else { "" },
                 closing,
                 opening,
-                opening.location(),
+                opening.location,
                 self.token
             ),
         };
-        write!(f, "Parsing error: {} at {}", error, self.token.location())
+        write!(f, "Parsing error: {} at {}", error, self.token.location)
     }
 }
 
@@ -440,11 +451,11 @@ pub struct Parser<'t> {
 }
 
 macro_rules! require_token {
-    ($self:ident, $token:path) => {
+    ($self:ident, $token_kind:path) => {
         match $self.next_token() {
-            token @ Token { kind: $token, .. } => Ok(token),
+            token @ token!($token_kind) => Ok(token),
             token => Err(Error {
-                kind: ErrorKind::UnexpectedToken(vec![$token]),
+                kind: ErrorKind::UnexpectedToken(vec![$token_kind]),
                 token,
             }),
         }
@@ -454,9 +465,7 @@ macro_rules! require_token {
 macro_rules! require_matching_token {
     ($self:ident, $token_kind:path, $opening:expr) => {
         match $self.next_token() {
-            token @ Token {
-                kind: $token_kind, ..
-            } => Ok(token),
+            token @ token!($token_kind) => Ok(token),
             token => Err(Error {
                 kind: ErrorKind::UnmatchedToken {
                     valid: Vec::new(),
@@ -502,22 +511,12 @@ impl<'t> Parser<'t> {
     fn next_token(&mut self) -> Token {
         loop {
             match self.lexer.next() {
-                Some(
-                    token @ Token {
-                        kind: TokenKind::Invalid,
-                        ..
-                    },
-                ) => self.errors.push(Error {
+                Some(token @ token!(TokenKind::Invalid)) => self.errors.push(Error {
                     token,
                     kind: ErrorKind::InvalidToken,
                 }),
-                Some(
-                    token @ Token {
-                        kind: TokenKind::Eof,
-                        ..
-                    },
-                ) => {
-                    self.eof = token.location().clone();
+                Some(token @ token!(TokenKind::Eof)) => {
+                    self.eof = token.location.clone();
                     return token;
                 }
                 Some(token) => return token,
@@ -534,11 +533,7 @@ impl<'t> Parser<'t> {
 
     /// Peeks next valid token. Skipping erroneous token on the way and storing related errors.
     fn peek_token(&mut self) -> Option<&Token> {
-        while let Some(Token {
-            kind: TokenKind::Invalid,
-            ..
-        }) = self.lexer.peek()
-        {
+        while let Some(token!(TokenKind::Invalid)) = self.lexer.peek() {
             // just ignore invalid tokens, they will be caught when we call next_token()
             self.lexer.next();
         }
@@ -549,11 +544,7 @@ impl<'t> Parser<'t> {
     fn parse_root(&mut self) -> Result<Root> {
         let mut functions = Vec::new();
         loop {
-            if let Some(Token {
-                kind: TokenKind::Eof,
-                ..
-            }) = self.peek_token()
-            {
+            if let Some(token!(TokenKind::Eof)) = self.peek_token() {
                 break;
             }
             functions.push(self.parse_function()?);
@@ -562,13 +553,11 @@ impl<'t> Parser<'t> {
     }
 
     fn parse_function(&mut self) -> Result<Function> {
-        let location = require_token!(self, TokenKind::Fn)?.location().clone();
+        let location = require_token!(self, TokenKind::Fn)?.location;
         let name = match require_token!(self, TokenKind::Identifier)? {
-            Token {
-                kind: TokenKind::Identifier,
-                value: TokenValue::String(value),
-                ..
-            } => value,
+            token @ token!(TokenKind::Identifier) => token
+                .value_string()
+                .expect("identifier's value must be a string"),
             _ => unreachable!(
                 "Token::Identifier(..) pattern matches as required a Token::Identifier"
             ),
@@ -578,10 +567,7 @@ impl<'t> Parser<'t> {
         let mut parameters = Vec::new();
         loop {
             match self.peek_token() {
-                Some(Token {
-                    kind: TokenKind::RightParenthesis,
-                    ..
-                }) => break,
+                Some(token!(TokenKind::RightParenthesis)) => break,
                 _ => {
                     match require_token!(self, TokenKind::Identifier) {
                         Ok(Token {
@@ -610,20 +596,10 @@ impl<'t> Parser<'t> {
                         Err(e) => return Err(e),
                     }
                     match self.peek_token() {
-                        Some(Token {
-                            kind: TokenKind::RightParenthesis,
-                            ..
-                        }) => break,
-                        Some(Token {
-                            kind: TokenKind::Comma,
-                            ..
-                        }) => {
+                        Some(token!(TokenKind::RightParenthesis)) => break,
+                        Some(token!(TokenKind::Comma)) => {
                             self.next_token();
-                            if let Some(Token {
-                                kind: TokenKind::RightParenthesis,
-                                ..
-                            }) = self.peek_token()
-                            {
+                            if let Some(token!(TokenKind::RightParenthesis)) = self.peek_token() {
                                 break;
                             }
                         }
@@ -647,10 +623,7 @@ impl<'t> Parser<'t> {
         require_matching_token!(self, TokenKind::RightParenthesis, open_parenthesis)?;
 
         match self.peek_token() {
-            Some(Token {
-                kind: TokenKind::LeftBrace,
-                ..
-            }) => {}
+            Some(token!(TokenKind::LeftBrace)) => {}
             _ => {
                 let token = self.next_token();
                 return Err(Error {
@@ -670,10 +643,7 @@ impl<'t> Parser<'t> {
 
     fn parse_statements(&mut self) -> Result<Statements> {
         let opening_brace = match self.peek_token() {
-            Some(Token {
-                kind: TokenKind::LeftBrace,
-                ..
-            }) => Some(self.next_token()),
+            Some(token!(TokenKind::LeftBrace)) => Some(self.next_token()),
             _ => None,
         };
 
@@ -682,22 +652,12 @@ impl<'t> Parser<'t> {
         if let Some(opening_brace) = opening_brace {
             loop {
                 match self.peek_token() {
-                    Some(Token {
-                        kind: TokenKind::RightBrace,
-                        ..
-                    }) => break,
-                    Some(Token {
-                        kind: TokenKind::Semicolon,
-                        ..
-                    }) => {
+                    Some(token!(TokenKind::RightBrace)) => break,
+                    Some(token!(TokenKind::Semicolon)) => {
                         // just skip empty statements
                         self.next_token();
                     }
-                    None
-                    | Some(Token {
-                        kind: TokenKind::Eof,
-                        ..
-                    }) => {
+                    None | Some(token!(TokenKind::Eof)) => {
                         // no next token, just report an error. We need a location, next_token()
                         // gives TokenKind::Eof
                         let token = self.next_token();
@@ -714,11 +674,7 @@ impl<'t> Parser<'t> {
                 }
             }
             require_matching_token!(self, TokenKind::RightBrace, opening_brace)?;
-        } else if let Some(Token {
-            kind: TokenKind::Semicolon,
-            ..
-        }) = self.peek_token()
-        {
+        } else if let Some(token!(TokenKind::Semicolon)) = self.peek_token() {
             self.next_token();
         } else {
             statements.push(self.parse_statement()?);
@@ -729,26 +685,11 @@ impl<'t> Parser<'t> {
 
     fn parse_statement(&mut self) -> Result<Statement> {
         match self.peek_token() {
-            Some(Token {
-                kind: TokenKind::Fail,
-                ..
-            }) => self.parse_fail_statement(),
-            Some(Token {
-                kind: TokenKind::Let,
-                ..
-            }) => self.parse_let_statement(),
-            Some(Token {
-                kind: TokenKind::Match,
-                ..
-            }) => self.parse_match_statement(),
-            Some(Token {
-                kind: TokenKind::Fork,
-                ..
-            }) => self.parse_fork_statement(),
-            Some(Token {
-                kind: TokenKind::Join,
-                ..
-            }) => self.parse_join_statement(),
+            Some(token!(TokenKind::Fail)) => self.parse_fail_statement(),
+            Some(token!(TokenKind::Let)) => self.parse_let_statement(),
+            Some(token!(TokenKind::Match)) => self.parse_match_statement(),
+            Some(token!(TokenKind::Fork)) => self.parse_fork_statement(),
+            Some(token!(TokenKind::Join)) => self.parse_join_statement(),
             _ => {
                 // even if peek_token() returns None, next_token() returns at least Some(Token::Eof)
                 let token = self.next_token();
@@ -762,7 +703,7 @@ impl<'t> Parser<'t> {
 
     /// parses `[Fail] := [fail] [Expression]`
     fn parse_fail_statement(&mut self) -> Result<Statement> {
-        let location = require_token!(self, TokenKind::Fail)?.location().clone();
+        let location = require_token!(self, TokenKind::Fail)?.location;
         let expression = self.parse_expression()?;
         match require_token!(self, TokenKind::Semicolon) {
             Ok(_) => {}
@@ -788,18 +729,16 @@ impl<'t> Parser<'t> {
 
     /// parses `[Let] = [let] [identifier] [=] [Expression]`
     fn parse_let_statement(&mut self) -> Result<Statement> {
-        let location = require_token!(self, TokenKind::Let)?.location().clone();
+        let location = require_token!(self, TokenKind::Let)?.location;
         let identifier = require_token!(self, TokenKind::Identifier)?;
         require_token!(self, TokenKind::Equal)?;
         let expression = self.parse_expression()?;
         require_token!(self, TokenKind::Semicolon)?;
 
         let identifier = match identifier {
-            Token {
-                kind: TokenKind::Identifier,
-                value: TokenValue::String(value),
-                ..
-            } => value,
+            token @ token!(TokenKind::Identifier) => token
+                .value_string()
+                .expect("identifier's value must be a string"),
             _ => unreachable!(
                 "Token::Identifier(..) pattern matches as required a Token::Identifier"
             ),
@@ -812,7 +751,7 @@ impl<'t> Parser<'t> {
     }
 
     fn parse_match_statement(&mut self) -> Result<Statement> {
-        let match_location = require_token!(self, TokenKind::Match)?.location().clone();
+        let match_location = require_token!(self, TokenKind::Match)?.location;
         let expression = self.parse_expression()?;
         require_token!(self, TokenKind::LeftBrace)?;
 
@@ -821,10 +760,7 @@ impl<'t> Parser<'t> {
             let expression = self.parse_expression()?;
             require_token!(self, TokenKind::EqualGt)?;
             match self.peek_token() {
-                Some(Token {
-                    kind: TokenKind::LeftBrace,
-                    ..
-                }) => {}
+                Some(token!(TokenKind::LeftBrace)) => {}
                 _ => {
                     let token = self.next_token();
                     return Err(Error {
@@ -843,20 +779,10 @@ impl<'t> Parser<'t> {
 
             match self.peek_token() {
                 None => break,
-                Some(Token {
-                    kind: TokenKind::RightBrace,
-                    ..
-                }) => break,
-                Some(Token {
-                    kind: TokenKind::Comma,
-                    ..
-                }) => {
+                Some(token!(TokenKind::RightBrace)) => break,
+                Some(token!(TokenKind::Comma)) => {
                     self.next_token();
-                    if let Some(Token {
-                        kind: TokenKind::RightBrace,
-                        ..
-                    }) = self.peek_token()
-                    {
+                    if let Some(token!(TokenKind::RightBrace)) = self.peek_token() {
                         break;
                     }
                 }
@@ -879,7 +805,7 @@ impl<'t> Parser<'t> {
     }
 
     fn parse_fork_statement(&mut self) -> Result<Statement> {
-        let fork_location = require_token!(self, TokenKind::Fork)?.location().clone();
+        let fork_location = require_token!(self, TokenKind::Fork)?.location;
         require_token!(self, TokenKind::LeftBrace)?;
 
         let mut arms = Vec::new();
@@ -887,10 +813,7 @@ impl<'t> Parser<'t> {
             let expression = self.parse_expression()?;
             require_token!(self, TokenKind::EqualGt)?;
             match self.peek_token() {
-                Some(Token {
-                    kind: TokenKind::LeftBrace,
-                    ..
-                }) => {}
+                Some(token!(TokenKind::LeftBrace)) => {}
                 _ => {
                     let token = self.next_token();
                     return Err(Error {
@@ -909,20 +832,10 @@ impl<'t> Parser<'t> {
 
             match self.peek_token() {
                 None => break,
-                Some(Token {
-                    kind: TokenKind::RightBrace,
-                    ..
-                }) => break,
-                Some(Token {
-                    kind: TokenKind::Comma,
-                    ..
-                }) => {
+                Some(token!(TokenKind::RightBrace)) => break,
+                Some(token!(TokenKind::Comma)) => {
                     self.next_token();
-                    if let Some(Token {
-                        kind: TokenKind::RightBrace,
-                        ..
-                    }) = self.peek_token()
-                    {
+                    if let Some(token!(TokenKind::RightBrace)) = self.peek_token() {
                         break;
                     }
                 }
@@ -945,13 +858,10 @@ impl<'t> Parser<'t> {
     }
 
     fn parse_join_statement(&mut self) -> Result<Statement> {
-        let join_location = require_token!(self, TokenKind::Join)?.location().clone();
+        let join_location = require_token!(self, TokenKind::Join)?.location;
 
         match self.peek_token() {
-            Some(Token {
-                kind: TokenKind::LeftBrace,
-                ..
-            }) => {}
+            Some(token!(TokenKind::LeftBrace)) => {}
             _ => {
                 let token = self.next_token();
                 return Err(Error {
@@ -976,10 +886,7 @@ impl<'t> Parser<'t> {
         precedence: OperatorPrecedence,
     ) -> Result<Expression> {
         let mut expression = match self.next_token() {
-            left @ Token {
-                kind: TokenKind::LeftParenthesis,
-                ..
-            } => {
+            left @ token!(TokenKind::LeftParenthesis) => {
                 let expression = self.parse_expression()?;
                 match require_matching_token!(self, TokenKind::RightParenthesis, left) {
                     Ok(_) => {}
@@ -1007,28 +914,16 @@ impl<'t> Parser<'t> {
                 }
                 expression
             }
-            Token {
-                kind: TokenKind::Plus,
-                location,
-                ..
-            } => self.parse_unary_expression(UnaryOperator {
-                location,
+            token @ token!(TokenKind::Plus) => self.parse_unary_expression(UnaryOperator {
+                location: token.location,
                 kind: UnaryOperatorKind::Positive,
             })?,
-            Token {
-                kind: TokenKind::Minus,
-                location: loc,
-                ..
-            } => self.parse_unary_expression(UnaryOperator {
-                location: loc,
+            token @ token!(TokenKind::Minus) => self.parse_unary_expression(UnaryOperator {
+                location: token.location,
                 kind: UnaryOperatorKind::Negative,
             })?,
-            Token {
-                kind: TokenKind::Exclam,
-                location,
-                ..
-            } => self.parse_unary_expression(UnaryOperator {
-                location,
+            token @ token!(TokenKind::Exclam) => self.parse_unary_expression(UnaryOperator {
+                location: token.location,
                 kind: UnaryOperatorKind::Not,
             })?,
             Token {
@@ -1055,10 +950,10 @@ impl<'t> Parser<'t> {
             },
             Token {
                 kind: TokenKind::String,
-                location: loc,
+                location,
                 value: TokenValue::String(value),
             } => Expression {
-                location: loc,
+                location,
                 kind: ExpressionKind::String(value),
             },
             token => {
@@ -1103,10 +998,7 @@ impl<'t> Parser<'t> {
 
         loop {
             match self.peek_token() {
-                Some(Token {
-                    kind: TokenKind::RightParenthesis,
-                    ..
-                }) => break,
+                Some(token!(TokenKind::RightParenthesis)) => break,
                 _ => match self.parse_expression() {
                     Ok(expression) => parameters.push(expression),
                     Err(Error {
@@ -1126,20 +1018,10 @@ impl<'t> Parser<'t> {
                 },
             }
             match self.peek_token() {
-                Some(Token {
-                    kind: TokenKind::RightParenthesis,
-                    ..
-                }) => break,
-                Some(Token {
-                    kind: TokenKind::Comma,
-                    ..
-                }) => {
+                Some(token!(TokenKind::RightParenthesis)) => break,
+                Some(token!(TokenKind::Comma)) => {
                     self.next_token();
-                    if let Some(Token {
-                        kind: TokenKind::RightParenthesis,
-                        ..
-                    }) = self.peek_token()
-                    {
+                    if let Some(token!(TokenKind::RightParenthesis)) = self.peek_token() {
                         break;
                     }
                 }
@@ -1160,10 +1042,7 @@ impl<'t> Parser<'t> {
         }
 
         match self.next_token() {
-            Token {
-                kind: TokenKind::RightParenthesis,
-                ..
-            } => (),
+            token!(TokenKind::RightParenthesis) => (),
             token => {
                 return Err(Error {
                     kind: UnexpectedToken(vec![TokenKind::LeftParenthesis]),
@@ -1200,7 +1079,7 @@ impl<'t> Parser<'t> {
         if let Some(token) = self.peek_token() {
             if let Some(operator) = BinaryOperatorKind::from_token_kind(&token.kind) {
                 return Some(BinaryOperator {
-                    location: self.next_token().location().clone(),
+                    location: self.next_token().location,
                     kind: operator,
                 });
             }
@@ -1211,41 +1090,23 @@ impl<'t> Parser<'t> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
     use super::*;
+    use std::fs;
 
     #[test]
     fn next_token_past_eof() {
         let mut parser = Parser::new(Lexer::new(""));
         let token = parser.next_token();
-        assert!(matches!(
-            token,
-            Token {
-                kind: TokenKind::Eof,
-                ..
-            }
-        ));
+        assert!(matches!(token, token!(TokenKind::Eof)));
         let token = parser.next_token();
-        assert!(matches!(
-            token,
-            Token {
-                kind: TokenKind::Eof,
-                ..
-            }
-        ));
+        assert!(matches!(token, token!(TokenKind::Eof)));
     }
 
     #[test]
     fn peek_token_past_eof() {
         let mut parser = Parser::new(Lexer::new(""));
         let token = parser.next_token();
-        assert!(matches!(
-            token,
-            Token {
-                kind: TokenKind::Eof,
-                ..
-            }
-        ));
+        assert!(matches!(token, token!(TokenKind::Eof)));
         let token = parser.peek_token();
         assert!(token.is_none());
     }
