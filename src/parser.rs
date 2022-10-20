@@ -34,17 +34,6 @@ pub struct Error {
     pub token: Token,
 }
 
-macro_rules! token {
-    ($($kind:path)*) => {
-    $(
-        Token {
-            kind: $kind,
-            ..
-        }
-    )*
-    }
-}
-
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let error = match &self.kind {
@@ -460,6 +449,17 @@ macro_rules! require_token {
             }),
         }
     };
+}
+
+macro_rules! token {
+    ($($kind:path)*) => {
+    $(
+        Token {
+            kind: $kind,
+            ..
+        }
+    )*
+    }
 }
 
 macro_rules! require_matching_token {
