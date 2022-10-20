@@ -8,6 +8,9 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0.145", features = ["derive"] }
 serde_yaml = "0.9.13"
+serde_json = "1.0.87"
+jaq-core = "0.8.2"
+jaq-std = "0.8.1"
 
 [dev-dependencies]
 insta = { version = "1.21.0", features = ["yaml"] }
