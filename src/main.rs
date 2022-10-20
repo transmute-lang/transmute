@@ -1,6 +1,8 @@
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 use std::{env, fs};
+use jql::{Group, Selector};
+use serde_json::Value;
 
 #[allow(dead_code)]
 mod lexer;
@@ -10,21 +12,32 @@ mod parser;
 mod utils;
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let data = "{\"data\": {\"key\":\"val\"}, \"non-data\": 12}";
+    let data = serde_json::from_str::<Value>(data).unwrap();
 
-    let file = fs::read_to_string(&args[1]).unwrap();
+    let groups = jql::selectors_parser("\"data\".\"key\" | ucase").unwrap();
 
-    let parser = Parser::new(Lexer::new(&file));
-    match parser.parse() {
-        Ok(root) => {
-            let yaml =
-                serde_yaml::to_string(&root).unwrap_or_else(|e| format!("{{\"error\":\"{}\"}}", e));
-            println!("{}", yaml)
-        }
-        Err(errors) => {
-            for error in errors {
-                println!("{}", error);
-            }
-        }
-    }
+    let selection = jql::groups_walker(&data, &groups);
+
+    println!("{:?}", selection);
+
+    // let groupGroup = selectors.remove(0);
+    //
+    // // let selector = group.selectors.remove(0);
+    // for selector in group.selectors {
+    //
+    // }
+    //
+    // let mut value;
+    // match selector {
+    //     Selector::Array => {}
+    //     Selector::Default(name) => {
+    //         value = data.as_object().and_then(|o|o.get(&name))
+    //     }
+    //     Selector::Index(_) => {}
+    //     Selector::Object(_) => {}
+    //     Selector::Range(_) => {}
+    // }
+
+
 }
