@@ -55,4 +55,5 @@ mod tests {
     eval!(simple_precedence_1, "2 + 20 * 2" => 42);
     eval!(simple_precedence_2, "20 * 2 + 2" => 42);
     eval!(parenthesis_precedence, "(20 + 1) * 2" => 42);
+    eval!(negative_number, "-1 + 43" => 42);
 }

@@ -18,14 +18,12 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn next(&mut self) -> Result<Token, Error> {
-        let bytes_read = match self.take_while(|c| c.is_whitespace()) {
-            Ok((_, bytes_read)) => bytes_read,
-            Err(_) => 0,
-        };
-        self.remaining = &self.remaining[bytes_read..];
-        self.pos += bytes_read;
+        if let Ok((_, span)) = self.take_while(|c| c.is_whitespace()) {
+            self.advance_consumed(span.len());
+        }
 
-        let next = match self.remaining.chars().next() {
+        let mut chars = self.remaining.chars();
+        let next = match chars.next() {
             Some(c) => Ok(c),
             None => {
                 return Ok(Token {
@@ -37,22 +35,35 @@ impl<'a> Lexer<'a> {
         }?;
 
         let location = self.location.clone();
-        let (kind, bytes_read) = match next {
+        let span = Span::new(self.pos, next.len_utf8());
+        let (kind, span) = match next {
             '+' => {
-                self.location.column += 1;
-                Ok((TokenKind::Plus, next.len_utf8()))
+                self.advance_column();
+                self.advance_span(&span);
+                Ok((TokenKind::Plus, span))
             }
+            '-' => match chars.next().unwrap_or_default() {
+                '0'..='9' => Ok(self.number()?),
+                _ => {
+                    self.advance_column();
+                    self.advance_span(&span);
+                    Ok((TokenKind::Minus, span))
+                }
+            },
             '*' => {
-                self.location.column += 1;
-                Ok((TokenKind::Star, next.len_utf8()))
+                self.advance_column();
+                self.advance_span(&span);
+                Ok((TokenKind::Star, span))
             }
             '(' => {
-                self.location.column += 1;
-                Ok((TokenKind::OpenParenthesis, next.len_utf8()))
+                self.advance_column();
+                self.advance_span(&span);
+                Ok((TokenKind::OpenParenthesis, span))
             }
             ')' => {
-                self.location.column += 1;
-                Ok((TokenKind::CloseParenthesis, next.len_utf8()))
+                self.advance_column();
+                self.advance_span(&span);
+                Ok((TokenKind::CloseParenthesis, span))
             }
             '0'..='9' => Ok(self.number()?),
             c => Err(Error::UnexpectedChar(
@@ -65,17 +76,42 @@ impl<'a> Lexer<'a> {
         let token = Token {
             kind,
             location,
-            span: Span::new(self.pos, bytes_read),
+            span,
         };
-
-        self.remaining = &self.remaining[bytes_read..];
-        self.pos += bytes_read;
 
         Ok(token)
     }
 
-    fn number(&mut self) -> Result<(TokenKind, usize), Error> {
-        let (number, bytes_read) = self.take_while(|c| c.is_ascii_digit() || c == '_')?;
+    fn advance_column(&mut self) {
+        self.location.column += 1;
+    }
+
+    fn advance_span(&mut self, span: &Span) {
+        self.advance_consumed(span.len())
+    }
+
+    fn advance_consumed(&mut self, len: usize) {
+        self.remaining = &self.remaining[len..];
+        self.pos += len;
+    }
+
+    fn number(&mut self) -> Result<(TokenKind, Span), Error> {
+        let (negative, span) = match self
+            .remaining
+            .chars()
+            .next()
+            .expect("we have at least one char")
+        {
+            '-' => {
+                let span = Span::new(self.pos, '-'.len_utf8());
+                self.advance_span(&span);
+
+                (true, Some(span))
+            }
+            _ => (false, None),
+        };
+
+        let (number, digits_span) = self.take_while(|c| c.is_ascii_digit() || c == '_')?;
 
         let mut parsed = 0i64;
         for ch in number.chars() {
@@ -86,15 +122,24 @@ impl<'a> Lexer<'a> {
 
             parsed += (ch as u32 - '0' as u32) as i64;
         }
+        if negative {
+            parsed = -parsed;
+        }
 
-        Ok((TokenKind::Number(parsed), bytes_read))
+        self.advance_consumed(digits_span.len());
+
+        Ok((
+            TokenKind::Number(parsed),
+            span.map(|s| s.extend_to(&digits_span))
+                .unwrap_or(digits_span),
+        ))
     }
 
-    fn take_while<F>(&mut self, pred: F) -> Result<(&str, usize), Error>
+    fn take_while<F>(&mut self, pred: F) -> Result<(&str, Span), Error>
     where
         F: Fn(char) -> bool,
     {
-        let mut end = 0;
+        let mut len = 0;
 
         for ch in self.remaining.chars() {
             if !pred(ch) {
@@ -108,13 +153,13 @@ impl<'a> Lexer<'a> {
                 self.location.column += 1;
             }
 
-            end += ch.len_utf8();
+            len += ch.len_utf8();
         }
 
-        if end == 0 {
+        if len == 0 {
             Err(Error::NoMatch)
         } else {
-            Ok((&self.remaining[..end], end))
+            Ok((&self.remaining[..len], Span::new(self.pos, len)))
         }
     }
 }
@@ -169,6 +214,7 @@ impl Token {
 #[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
     CloseParenthesis,
+    Minus,
     Number(i64),
     OpenParenthesis,
     Plus,
@@ -238,6 +284,10 @@ impl Span {
             end: other.end,
         }
     }
+
+    pub fn len(&self) -> usize {
+        self.end - self.start + 1
+    }
 }
 
 impl Debug for Span {
@@ -261,13 +311,15 @@ mod tests {
                     span: Span::new($start, $len),
                 };
                 let actual = lexer.next().unwrap();
-                assert_eq!(expected, actual)
+                assert_eq!(actual, expected)
             }
         };
     }
 
     lexer_test_next!(next_number, "42" => 42; loc: 1,1; span: 0,2);
+    lexer_test_next!(next_neg_number, "-42" => -42; loc: 1,1; span: 0,3);
     lexer_test_next!(next_plus, "+" => TokenKind::Plus; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_minus, "-" => TokenKind::Minus; loc: 1,1; span: 0,1);
     lexer_test_next!(next_star, "*" => TokenKind::Star; loc: 1,1; span: 0,1);
     lexer_test_next!(next_open_parenthesis, "(" => TokenKind::OpenParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_parenthesis, ")" => TokenKind::CloseParenthesis; loc: 1,1; span: 0,1);
@@ -279,12 +331,13 @@ mod tests {
                 let mut lexer = Lexer::new($src);
                 let expected = TokenKind::from($expected);
                 let (actual, _) = lexer.$f().unwrap();
-                assert_eq!(expected, actual)
+                assert_eq!(actual, expected)
             }
         };
     }
 
     lexer_test_fn!(number, number, "42" => 42);
+    lexer_test_fn!(neg_number, number, "-42" => -42);
 
     #[test]
     fn peek() {

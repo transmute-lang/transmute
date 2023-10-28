@@ -3,7 +3,7 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, BinaryOperatorKind};
 use crate::ast::Ast;
 use crate::error::Error;
-use crate::lexer::{Lexer,  PeekableLexer,  TokenKind};
+use crate::lexer::{Lexer, PeekableLexer, TokenKind};
 
 pub struct Parser<'a> {
     lexer: PeekableLexer<'a>,
@@ -43,10 +43,16 @@ impl<'a> Parser<'a> {
                 if token.kind() == &TokenKind::CloseParenthesis {
                     expression
                 } else {
-                    todo!("parse_expression_with_precedence: error handling {:?}", token.kind())
+                    todo!(
+                        "parse_expression_with_precedence: error handling {:?}",
+                        token.kind()
+                    )
                 }
             }
-            _ => todo!("parse_expression_with_precedence: error handling {:?}", token.kind()),
+            _ => todo!(
+                "parse_expression_with_precedence: error handling {:?}",
+                token.kind()
+            ),
         };
 
         while let Some(next_precedence) = self
@@ -134,8 +140,8 @@ impl From<&TokenKind> for Option<Precedence> {
 
 #[cfg(test)]
 mod tests {
-    use crate::lexer::{Location, Span};
     use super::*;
+    use crate::lexer::{Location, Span};
 
     #[test]
     pub fn literal() {
