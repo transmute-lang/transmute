@@ -1,5 +1,5 @@
 use crate::error::Error;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 pub struct Lexer<'a> {
     remaining: &'a str,
@@ -17,13 +17,24 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn next(&mut self) -> Result<Token, Error> {
+        let bytes_read = match self.take_while(|c| c.is_whitespace()) {
+            Ok((_, bytes_read)) => bytes_read,
+            Err(_) => 0,
+        };
+        self.remaining = &self.remaining[bytes_read..];
+        self.pos += bytes_read;
+
         let next = match self.remaining.chars().next() {
             Some(c) => Ok(c),
             None => Err(Error::UnexpectedEof),
         }?;
 
         let location = self.location.clone();
-        let (token, bytes_read) = match next {
+        let (kind, bytes_read) = match next {
+            '+' => {
+                self.location.column += 1;
+                Ok((TokenKind::Plus, next.len_utf8()))
+            }
             '0'..='9' => Ok(self.number()?),
             c => Err(Error::UnexpectedChar(
                 c,
@@ -32,7 +43,11 @@ impl<'a> Lexer<'a> {
             )),
         }?;
 
-        let token = Token::new(token, location, Span::new(self.pos, bytes_read));
+        let token = Token {
+            kind,
+            location,
+            span: Span::new(self.pos, bytes_read),
+        };
 
         self.remaining = &self.remaining[bytes_read..];
         self.pos += bytes_read;
@@ -87,24 +102,29 @@ impl<'a> Lexer<'a> {
 
 #[derive(Debug, PartialEq)]
 pub struct Token {
-    pub kind: TokenKind,
-    pub location: Location,
-    pub span: Span,
+    kind: TokenKind,
+    location: Location,
+    span: Span,
 }
 
 impl Token {
-    fn new(kind: TokenKind, location: Location, span: Span) -> Self {
-        Self {
-            kind,
-            location,
-            span,
-        }
+    pub fn kind(&self) -> &TokenKind {
+        &self.kind
+    }
+
+    pub fn location(&self) -> &Location {
+        &self.location
+    }
+
+    pub fn span(&self) -> &Span {
+        &self.span
     }
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
     Number(i64),
+    Plus,
 }
 
 impl From<i64> for TokenKind {
@@ -113,7 +133,7 @@ impl From<i64> for TokenKind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Location {
     /// 1-based line
     line: usize,
@@ -127,23 +147,53 @@ impl Location {
     }
 }
 
+impl Debug for Location {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.line, self.column)
+    }
+}
+
 impl Display for Location {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{}", self.line, self.column)
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Span {
     /// start position
     start: usize,
     /// length
-    len: usize,
+    end: usize,
 }
 
 impl Span {
     pub fn new(start: usize, len: usize) -> Self {
-        Self { start, len }
+        Self {
+            start,
+            end: start + len - 1,
+        }
+    }
+
+    pub fn start(&self) -> usize {
+        self.start
+    }
+
+    pub fn end(&self) -> usize {
+        self.end
+    }
+
+    pub fn extend_to(&self, other: &Span) -> Self {
+        Self {
+            start: self.start,
+            end: other.end,
+        }
+    }
+}
+
+impl Debug for Span {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}->{}", self.start, self.end)
     }
 }
 
@@ -156,11 +206,11 @@ mod tests {
             #[test]
             pub fn $name() {
                 let mut lexer = Lexer::new($src);
-                let expected = Token::new(
-                    TokenKind::from($expected),
-                    Location::new($l, $c),
-                    Span::new($start, $len),
-                );
+                let expected = Token {
+                    kind: TokenKind::from($expected),
+                    location: Location::new($l, $c),
+                    span: Span::new($start, $len),
+                };
                 let actual = lexer.next().unwrap();
                 assert_eq!(expected, actual)
             }
@@ -168,6 +218,7 @@ mod tests {
     }
 
     lexer_test_next!(next_number, "42" => 42; loc: 1,1; span: 0,2);
+    lexer_test_next!(next_plus, "+" => TokenKind::Plus; loc: 1,1; span: 0,1);
 
     macro_rules! lexer_test_fn {
         ($name:ident, $f:ident, $src:expr => $expected:expr) => {
