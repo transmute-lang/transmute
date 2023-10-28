@@ -43,7 +43,7 @@ impl<'a> Lexer<'a> {
                 Ok((TokenKind::Plus, span))
             }
             '-' => match chars.next().unwrap_or_default() {
-                '0'..='9' => Ok(self.number()?),
+                '0'..='9' => Ok(self.number()?), // todo is that really useful?
                 _ => {
                     self.advance_column();
                     self.advance_span(&span);

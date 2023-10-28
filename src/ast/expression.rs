@@ -1,5 +1,5 @@
 use crate::ast::literal::Literal;
-use crate::ast::operators::BinaryOperator;
+use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::Visitor;
 use crate::lexer::{Location, Span};
 
@@ -20,7 +20,8 @@ impl Expression {
     pub fn location(&self) -> &Location {
         match &self.kind {
             ExpressionKind::Literal(l) => l.location(),
-            ExpressionKind::Binary(l, _, _) => l.location(),
+            ExpressionKind::Binary(e, _, _) => e.location(),
+            ExpressionKind::Unary(o, _) => o.location(),
         }
     }
 
@@ -28,6 +29,7 @@ impl Expression {
         match &self.kind {
             ExpressionKind::Literal(l) => l.span().clone(),
             ExpressionKind::Binary(l, _, r) => l.span().extend_to(&r.span()),
+            ExpressionKind::Unary(o, e) => o.span().extend_to(&e.span()),
         }
     }
 
@@ -57,4 +59,5 @@ impl From<Literal> for Expression {
 pub enum ExpressionKind {
     Literal(Literal),
     Binary(Box<Expression>, BinaryOperator, Box<Expression>),
+    Unary(UnaryOperator, Box<Expression>),
 }

@@ -1,6 +1,6 @@
 use crate::ast::expression::{Expression, ExpressionKind};
 use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::operators::{BinaryOperator, BinaryOperatorKind};
+use crate::ast::operators::{BinaryOperator, BinaryOperatorKind, UnaryOperator, UnaryOperatorKind};
 use crate::ast::Ast;
 use crate::error::Error;
 use crate::lexer::{Lexer, PeekableLexer, TokenKind};
@@ -37,15 +37,26 @@ impl<'a> Parser<'a> {
                 token.location().clone(),
                 token.span().clone(),
             )),
+            TokenKind::Minus => Expression::new(ExpressionKind::Unary(
+                UnaryOperator::new(
+                    UnaryOperatorKind::Minus,
+                    token.location().clone(),
+                    token.span().clone(),
+                ),
+                Box::new(self.parse_expression_with_precedence(Precedence::Sum)?),
+            )),
             TokenKind::OpenParenthesis => {
+                let open_loc = token.location();
+
                 let expression = self.parse_expression()?;
                 let token = self.lexer.next()?;
                 if token.kind() == &TokenKind::CloseParenthesis {
                     expression
                 } else {
                     todo!(
-                        "parse_expression_with_precedence: error handling {:?}",
-                        token.kind()
+                        "parse_expression_with_precedence: error handling {:?}; expected ) for parentheses open at {}",
+                        token.kind(),
+                        open_loc
                     )
                 }
             }

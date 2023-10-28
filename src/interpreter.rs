@@ -1,6 +1,6 @@
 use crate::ast::expression::{Expression, ExpressionKind};
 use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::operators::BinaryOperatorKind;
+use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
 use crate::ast::{Ast, Visitor};
 
 pub struct Interpreter;
@@ -19,6 +19,12 @@ impl Visitor<i64> for Interpreter {
                 match o.kind() {
                     BinaryOperatorKind::Addition => l + r,
                     BinaryOperatorKind::Multiplication => l * r,
+                }
+            }
+            ExpressionKind::Unary(o, e) => {
+                let e = e.accept(self);
+                match o.kind() {
+                    UnaryOperatorKind::Minus => -e,
                 }
             }
         }
@@ -56,4 +62,6 @@ mod tests {
     eval!(simple_precedence_2, "20 * 2 + 2" => 42);
     eval!(parenthesis_precedence, "(20 + 1) * 2" => 42);
     eval!(negative_number, "-1 + 43" => 42);
+    eval!(unary_operator_minus_number, "- 1 + 43" => 42);
+    eval!(unary_operator_minus_negative_number, "--42" => 42);
 }
