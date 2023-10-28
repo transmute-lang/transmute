@@ -18,8 +18,9 @@ impl Visitor<i64> for Interpreter {
                 let r = r.accept(self);
                 match o.kind() {
                     BinaryOperatorKind::Addition => l + r,
-                    BinaryOperatorKind::Multiplication => l * r,
                     BinaryOperatorKind::Subtraction => l - r,
+                    BinaryOperatorKind::Multiplication => l * r,
+                    BinaryOperatorKind::Division => l / r,
                 }
             }
             ExpressionKind::Unary(o, e) => {
@@ -66,4 +67,5 @@ mod tests {
     eval!(unary_operator_minus_number, "- 1 + 43" => 42);
     eval!(binary_operator_minus, "43 - 1" => 42);
     eval!(unary_operator_minus_negative_number, "--42" => 42);
+    eval!(division, "85 / 2" => 42);
 }

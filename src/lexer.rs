@@ -55,6 +55,11 @@ impl<'a> Lexer<'a> {
                 self.advance_span(&span);
                 Ok((TokenKind::Star, span))
             }
+            '/' => {
+                self.advance_column();
+                self.advance_span(&span);
+                Ok((TokenKind::Slash, span))
+            }
             '(' => {
                 self.advance_column();
                 self.advance_span(&span);
@@ -218,6 +223,7 @@ pub enum TokenKind {
     Number(i64),
     OpenParenthesis,
     Plus,
+    Slash,
     Star,
     Eof,
 }
@@ -321,6 +327,7 @@ mod tests {
     lexer_test_next!(next_plus, "+" => TokenKind::Plus; loc: 1,1; span: 0,1);
     lexer_test_next!(next_minus, "-" => TokenKind::Minus; loc: 1,1; span: 0,1);
     lexer_test_next!(next_star, "*" => TokenKind::Star; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_slash, "/" => TokenKind::Slash; loc: 1,1; span: 0,1);
     lexer_test_next!(next_open_parenthesis, "(" => TokenKind::OpenParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_parenthesis, ")" => TokenKind::CloseParenthesis; loc: 1,1; span: 0,1);
 

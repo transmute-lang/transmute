@@ -54,7 +54,7 @@ impl<'a> Parser<'a> {
                     expression
                 } else {
                     todo!(
-                        "parse_expression_with_precedence: error handling {:?}; expected ) for parentheses open at {}",
+                        "parse_expression_with_precedence: error handling {:?}; expected ) for parenthesis open at {}",
                         token.kind(),
                         open_loc
                     )
@@ -132,6 +132,11 @@ impl<'a> Parser<'a> {
                 token.location().clone(),
                 token.span().clone(),
             )),
+            TokenKind::Slash => Ok(BinaryOperator::new(
+                BinaryOperatorKind::Division,
+                token.location().clone(),
+                token.span().clone(),
+            )),
             _ => todo!("parse_operator: error handling {:?}", token.kind()),
         }
     }
@@ -150,6 +155,7 @@ impl From<&TokenKind> for Option<Precedence> {
             TokenKind::Plus => Some(Precedence::Sum),
             TokenKind::Minus => Some(Precedence::Sum),
             TokenKind::Star => Some(Precedence::Product),
+            TokenKind::Slash => Some(Precedence::Product),
             _ => None,
         }
     }
@@ -214,7 +220,7 @@ mod tests {
     }
 
     #[test]
-    pub fn binart_oeprator_minus() {
+    pub fn binary_operator_minus() {
         let lexer = Lexer::new("43 - 1");
         let mut parser = Parser::new(lexer);
 
@@ -267,5 +273,12 @@ mod tests {
         assert_eq!(actual, expected);
         assert_eq!(actual.span().start(), 0);
         assert_eq!(actual.span().end(), 5);
+    }
+
+    #[test]
+    #[should_panic]
+    fn missing_right_parenthesis() {
+        let mut parser = Parser::new(Lexer::new("(42"));
+        let _ = parser.parse();
     }
 }
