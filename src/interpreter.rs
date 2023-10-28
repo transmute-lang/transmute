@@ -19,6 +19,7 @@ impl Visitor<i64> for Interpreter {
                 match o.kind() {
                     BinaryOperatorKind::Addition => l + r,
                     BinaryOperatorKind::Multiplication => l * r,
+                    BinaryOperatorKind::Subtraction => l - r,
                 }
             }
             ExpressionKind::Unary(o, e) => {
@@ -63,5 +64,6 @@ mod tests {
     eval!(parenthesis_precedence, "(20 + 1) * 2" => 42);
     eval!(negative_number, "-1 + 43" => 42);
     eval!(unary_operator_minus_number, "- 1 + 43" => 42);
+    eval!(binary_operator_minus, "43 - 1" => 42);
     eval!(unary_operator_minus_negative_number, "--42" => 42);
 }

@@ -25,6 +25,7 @@ impl BinaryOperator {
 pub enum BinaryOperatorKind {
     Addition,
     Multiplication,
+    Subtraction,
 }
 
 #[derive(Debug, PartialEq)]
@@ -48,11 +49,11 @@ impl UnaryOperator {
     }
 
     pub fn location(&self) -> &Location {
-        &self.location()
+        &self.location
     }
 
     pub fn span(&self) -> &Span {
-        &self.span()
+        &self.span
     }
 }
 

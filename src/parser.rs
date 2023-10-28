@@ -122,6 +122,11 @@ impl<'a> Parser<'a> {
                 token.location().clone(),
                 token.span().clone(),
             )),
+            TokenKind::Minus => Ok(BinaryOperator::new(
+                BinaryOperatorKind::Subtraction,
+                token.location().clone(),
+                token.span().clone(),
+            )),
             TokenKind::Star => Ok(BinaryOperator::new(
                 BinaryOperatorKind::Multiplication,
                 token.location().clone(),
@@ -143,6 +148,7 @@ impl From<&TokenKind> for Option<Precedence> {
     fn from(kind: &TokenKind) -> Self {
         match kind {
             TokenKind::Plus => Some(Precedence::Sum),
+            TokenKind::Minus => Some(Precedence::Sum),
             TokenKind::Star => Some(Precedence::Product),
             _ => None,
         }
@@ -204,7 +210,34 @@ mod tests {
             ))),
         ));
 
-        assert_eq!(expected, actual);
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    pub fn binart_oeprator_minus() {
+        let lexer = Lexer::new("43 - 1");
+        let mut parser = Parser::new(lexer);
+
+        let actual = parser.parse_expression().unwrap();
+        let expecged = Expression::from(ExpressionKind::Binary(
+            Box::new(Expression::from(Literal::new(
+                LiteralKind::Number(43),
+                Location::new(1, 1),
+                Span::new(0, 2),
+            ))),
+            BinaryOperator::new(
+                BinaryOperatorKind::Subtraction,
+                Location::new(1, 4),
+                Span::new(3, 1),
+            ),
+            Box::new(Expression::from(Literal::new(
+                LiteralKind::Number(1),
+                Location::new(1, 6),
+                Span::new(5, 1),
+            ))),
+        ));
+
+        assert_eq!(actual, expecged);
     }
 
     #[test]
@@ -231,8 +264,8 @@ mod tests {
             ))),
         )));
 
-        assert_eq!(expected, actual);
-        assert_eq!(0, actual.span().start());
-        assert_eq!(5, actual.span().end());
+        assert_eq!(actual, expected);
+        assert_eq!(actual.span().start(), 0);
+        assert_eq!(actual.span().end(), 5);
     }
 }
