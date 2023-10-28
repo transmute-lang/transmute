@@ -1,5 +1,8 @@
 use crate::error::Error;
+use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
+use std::ops::Not;
+use std::panic::panic_any;
 
 pub struct Lexer<'a> {
     remaining: &'a str,
@@ -26,7 +29,13 @@ impl<'a> Lexer<'a> {
 
         let next = match self.remaining.chars().next() {
             Some(c) => Ok(c),
-            None => Err(Error::UnexpectedEof),
+            None => {
+                return Ok(Token {
+                    kind: TokenKind::Eof,
+                    location: self.location.clone(),
+                    span: Span::new(self.pos, 0),
+                })
+            }
         }?;
 
         let location = self.location.clone();
@@ -34,6 +43,10 @@ impl<'a> Lexer<'a> {
             '+' => {
                 self.location.column += 1;
                 Ok((TokenKind::Plus, next.len_utf8()))
+            }
+            '*' => {
+                self.location.column += 1;
+                Ok((TokenKind::Star, next.len_utf8()))
             }
             '0'..='9' => Ok(self.number()?),
             c => Err(Error::UnexpectedChar(
@@ -100,6 +113,32 @@ impl<'a> Lexer<'a> {
     }
 }
 
+pub struct PeekableLexer<'a> {
+    lexer: Lexer<'a>,
+    peeked: VecDeque<Result<Token, Error>>,
+}
+
+impl<'a> PeekableLexer<'a> {
+    pub fn new(lexer: Lexer<'a>, lookahead: usize) -> Self {
+        assert!(lookahead >= 1);
+        Self {
+            lexer,
+            peeked: VecDeque::with_capacity(lookahead),
+        }
+    }
+
+    pub fn next(&mut self) -> Result<Token, Error> {
+        self.peeked.pop_front().unwrap_or_else(|| self.lexer.next())
+    }
+
+    pub fn peek(&mut self) -> &Result<Token, Error> {
+        if self.peeked.is_empty() {
+            self.peeked.push_back(self.lexer.next())
+        }
+        self.peeked.front().expect("we just pushed one")
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct Token {
     kind: TokenKind,
@@ -125,6 +164,8 @@ impl Token {
 pub enum TokenKind {
     Number(i64),
     Plus,
+    Star,
+    Eof,
 }
 
 impl From<i64> for TokenKind {
@@ -219,6 +260,7 @@ mod tests {
 
     lexer_test_next!(next_number, "42" => 42; loc: 1,1; span: 0,2);
     lexer_test_next!(next_plus, "+" => TokenKind::Plus; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_star, "*" => TokenKind::Star; loc: 1,1; span: 0,1);
 
     macro_rules! lexer_test_fn {
         ($name:ident, $f:ident, $src:expr => $expected:expr) => {
@@ -233,4 +275,39 @@ mod tests {
     }
 
     lexer_test_fn!(number, number, "42" => 42);
+
+    #[test]
+    fn peek() {
+        let mut lexer = PeekableLexer::new(Lexer::new("1 2"), 1);
+
+        let token = lexer.peek().as_ref().expect("a token ref");
+        assert_eq!(
+            token,
+            &Token {
+                kind: TokenKind::Number(1),
+                location: Location::new(1, 1),
+                span: Span::new(0, 1),
+            }
+        );
+
+        let token = lexer.next().expect("a token");
+        assert_eq!(
+            token,
+            Token {
+                kind: TokenKind::Number(1),
+                location: Location::new(1, 1),
+                span: Span::new(0, 1),
+            }
+        );
+
+        let token = lexer.next().expect("a token");
+        assert_eq!(
+            token,
+            Token {
+                kind: TokenKind::Number(2),
+                location: Location::new(1, 3),
+                span: Span::new(2, 1),
+            }
+        );
+    }
 }

@@ -24,4 +24,5 @@ impl BinaryOperator {
 #[derive(Debug, PartialEq)]
 pub enum BinaryOperatorKind {
     Addition,
+    Multiplication,
 }

@@ -1,7 +1,7 @@
 use crate::ast::expression::{Expression, ExpressionKind};
+use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::BinaryOperatorKind;
 use crate::ast::{Ast, Visitor};
-use crate::ast::literal::{Literal, LiteralKind};
 
 pub struct Interpreter;
 
@@ -18,6 +18,7 @@ impl Visitor<i64> for Interpreter {
                 let r = r.accept(self);
                 match o.kind() {
                     BinaryOperatorKind::Addition => l + r,
+                    BinaryOperatorKind::Multiplication => l * r,
                 }
             }
         }
@@ -38,7 +39,7 @@ mod tests {
 
     #[test]
     pub fn interpret() {
-        let lexer = Lexer::new("40 + 2");
+        let lexer = Lexer::new("2 + 20 * 2");
         let mut parser = Parser::new(lexer);
 
         let ast = parser.parse().unwrap();
