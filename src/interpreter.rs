@@ -37,16 +37,22 @@ mod tests {
     use crate::lexer::Lexer;
     use crate::parser::Parser;
 
-    #[test]
-    pub fn interpret() {
-        let lexer = Lexer::new("2 + 20 * 2");
-        let mut parser = Parser::new(lexer);
+    macro_rules! eval {
+        ($name:ident, $src:expr => $expected:expr) => {
+            #[test]
+            pub fn $name() {
+                let mut parser = Parser::new(Lexer::new($src));
+                let ast = parser.parse().expect("source is valid");
 
-        let ast = parser.parse().unwrap();
+                let mut interpreter = Interpreter;
+                let actual = ast.accept(&mut interpreter);
 
-        let mut interpreter = Interpreter;
-        let x = ast.accept(&mut interpreter);
-
-        assert_eq!(42, x);
+                assert_eq!($expected, actual)
+            }
+        };
     }
+
+    eval!(simple_precedence_1, "2 + 20 * 2" => 42);
+    eval!(simple_precedence_2, "20 * 2 + 2" => 42);
+    eval!(parenthesis_precedence, "(20 + 1) * 2" => 42);
 }

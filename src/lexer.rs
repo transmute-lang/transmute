@@ -1,8 +1,6 @@
 use crate::error::Error;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
-use std::ops::Not;
-use std::panic::panic_any;
 
 pub struct Lexer<'a> {
     remaining: &'a str,
@@ -47,6 +45,14 @@ impl<'a> Lexer<'a> {
             '*' => {
                 self.location.column += 1;
                 Ok((TokenKind::Star, next.len_utf8()))
+            }
+            '(' => {
+                self.location.column += 1;
+                Ok((TokenKind::OpenParenthesis, next.len_utf8()))
+            }
+            ')' => {
+                self.location.column += 1;
+                Ok((TokenKind::CloseParenthesis, next.len_utf8()))
             }
             '0'..='9' => Ok(self.number()?),
             c => Err(Error::UnexpectedChar(
@@ -162,7 +168,9 @@ impl Token {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
+    CloseParenthesis,
     Number(i64),
+    OpenParenthesis,
     Plus,
     Star,
     Eof,
@@ -261,6 +269,8 @@ mod tests {
     lexer_test_next!(next_number, "42" => 42; loc: 1,1; span: 0,2);
     lexer_test_next!(next_plus, "+" => TokenKind::Plus; loc: 1,1; span: 0,1);
     lexer_test_next!(next_star, "*" => TokenKind::Star; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_open_parenthesis, "(" => TokenKind::OpenParenthesis; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_close_parenthesis, ")" => TokenKind::CloseParenthesis; loc: 1,1; span: 0,1);
 
     macro_rules! lexer_test_fn {
         ($name:ident, $f:ident, $src:expr => $expected:expr) => {
