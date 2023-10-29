@@ -2,6 +2,7 @@ use crate::error::Error;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
 
+#[derive(Debug)]
 pub struct Lexer<'a> {
     remaining: &'a str,
     pos: usize,
@@ -43,6 +44,12 @@ impl<'a> Lexer<'a> {
                 Ok((TokenKind::Plus, span))
             }
             '-' => match chars.next().unwrap_or_default() {
+                '>' => {
+                    self.advance_columns(2);
+                    let span = span.extend('>'.len_utf8());
+                    self.advance_span(&span);
+                    Ok((TokenKind::Arrow, span))
+                }
                 '0'..='9' => Ok(self.number()?), // todo is that really useful?
                 _ => {
                     self.advance_column();
@@ -75,6 +82,11 @@ impl<'a> Lexer<'a> {
                 self.advance_span(&span);
                 Ok((TokenKind::CloseParenthesis, span))
             }
+            ',' => {
+                self.advance_column();
+                self.advance_span(&span);
+                Ok((TokenKind::Comma, span))
+            }
             ';' => {
                 self.advance_column();
                 self.advance_span(&span);
@@ -99,7 +111,11 @@ impl<'a> Lexer<'a> {
     }
 
     fn advance_column(&mut self) {
-        self.location.column += 1;
+        self.advance_columns(1);
+    }
+
+    fn advance_columns(&mut self, count: usize) {
+        self.location.column += count;
     }
 
     fn advance_span(&mut self, span: &Span) {
@@ -227,6 +243,7 @@ fn is_identifier(c: &char) -> bool {
     c.is_ascii_alphanumeric() || c == &'_'
 }
 
+#[derive(Debug)]
 pub struct PeekableLexer<'a> {
     lexer: Lexer<'a>,
     peeked: VecDeque<Result<Token, Error>>,
@@ -245,11 +262,38 @@ impl<'a> PeekableLexer<'a> {
         self.peeked.pop_front().unwrap_or_else(|| self.lexer.next())
     }
 
-    pub fn peek(&mut self) -> &Result<Token, Error> {
-        if self.peeked.is_empty() {
-            self.peeked.push_back(self.lexer.next())
+    pub fn peek(&mut self) -> Result<&Token, &Error> {
+        self.peek_nth(0)
+    }
+
+    pub fn peek_nth(&mut self, n: usize) -> Result<&Token, &Error> {
+        if self.peeked.len() > n {
+            return self
+                .peeked
+                .get(n)
+                .expect("we just check, it's here")
+                .as_ref();
         }
-        self.peeked.front().expect("we just pushed one")
+
+        while self.peeked.len() < n + 1 {
+            self.peeked.push_back(self.lexer.next());
+        }
+        assert_eq!(self.peeked.len(), n + 1);
+
+        self.peeked.back().expect("we just pushed it").as_ref()
+    }
+
+    pub fn peek_until(&mut self, kind: TokenKind) -> Option<usize> {
+        for n in 0usize.. {
+            let token = self.peek_nth(n).ok()?;
+            if token.kind == TokenKind::Eof {
+                return None;
+            }
+            if token.kind == kind {
+                return Some(n);
+            }
+        }
+        unreachable!()
     }
 }
 
@@ -276,7 +320,9 @@ impl Token {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
+    Arrow,
     CloseParenthesis,
+    Comma,
     Equal,
     Identifier(String),
     Let,
@@ -353,6 +399,13 @@ impl Span {
         }
     }
 
+    pub fn extend(&self, len: usize) -> Self {
+        Self {
+            start: self.start,
+            end: self.end + len,
+        }
+    }
+
     pub fn len(&self) -> usize {
         self.end - self.start + 1
     }
@@ -393,6 +446,8 @@ mod tests {
     lexer_test_next!(next_equal, "=" => TokenKind::Equal; loc: 1,1; span: 0,1);
     lexer_test_next!(next_open_parenthesis, "(" => TokenKind::OpenParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_parenthesis, ")" => TokenKind::CloseParenthesis; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_comma, "," => TokenKind::Comma; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_arrow, "->" => TokenKind::Arrow; loc: 1,1; span: 0,2);
     lexer_test_next!(semicolon, ";" => TokenKind::Semicolon; loc: 1,1; span: 0,1);
 
     #[test]
@@ -462,10 +517,65 @@ mod tests {
     lexer_test_fn!(neg_number, number, "-42" => -42);
 
     #[test]
-    fn peek() {
+    fn peek_next_peek_next() {
         let mut lexer = PeekableLexer::new(Lexer::new("1 2"), 1);
 
-        let token = lexer.peek().as_ref().expect("a token ref");
+        let token = lexer.peek().expect("a token ref");
+        assert_eq!(
+            token,
+            &Token {
+                kind: TokenKind::Number(1),
+                location: Location::new(1, 1),
+                span: Span::new(0, 1),
+            }
+        );
+
+        let token = lexer.next().expect("a token");
+        assert_eq!(
+            token,
+            Token {
+                kind: TokenKind::Number(1),
+                location: Location::new(1, 1),
+                span: Span::new(0, 1),
+            }
+        );
+
+        let token = lexer.peek().expect("a token ref");
+        assert_eq!(
+            token,
+            &Token {
+                kind: TokenKind::Number(2),
+                location: Location::new(1, 3),
+                span: Span::new(2, 1),
+            }
+        );
+
+        let token = lexer.next().expect("a token");
+        assert_eq!(
+            token,
+            Token {
+                kind: TokenKind::Number(2),
+                location: Location::new(1, 3),
+                span: Span::new(2, 1),
+            }
+        );
+    }
+
+    #[test]
+    fn peek_peek_next_next() {
+        let mut lexer = PeekableLexer::new(Lexer::new("1 2"), 1);
+
+        let token = lexer.peek().expect("a token ref");
+        assert_eq!(
+            token,
+            &Token {
+                kind: TokenKind::Number(1),
+                location: Location::new(1, 1),
+                span: Span::new(0, 1),
+            }
+        );
+
+        let token = lexer.peek().expect("a token ref");
         assert_eq!(
             token,
             &Token {
@@ -494,5 +604,50 @@ mod tests {
                 span: Span::new(2, 1),
             }
         );
+    }
+
+    #[test]
+    fn peek_nth() {
+        let mut lexer = PeekableLexer::new(Lexer::new("1 2 3 4"), 16);
+        let span1 = lexer.peek().unwrap().span().clone();
+        let span2 = lexer.peek_nth(0).unwrap().span().clone();
+        assert_eq!(span1, span2);
+
+        let mut lexer = PeekableLexer::new(Lexer::new("1 2 3 4"), 16);
+        let span1 = lexer.peek_nth(2).unwrap().span().clone();
+        let span2 = lexer.peek_nth(2).unwrap().span().clone();
+        assert_eq!(span1, span2);
+    }
+
+    #[test]
+    fn peek_nth_next() {
+        let mut lexer = PeekableLexer::new(Lexer::new("1 2 3 4"), 16);
+        let _ = lexer.peek_nth(2).expect("token exists");
+
+        let token = lexer.next().expect("a token");
+        assert_eq!(
+            token,
+            Token {
+                kind: TokenKind::Number(1),
+                location: Location::new(1, 1),
+                span: Span::new(0, 1),
+            }
+        );
+    }
+
+    #[test]
+    fn peek_until() {
+        let mut lexer = PeekableLexer::new(Lexer::new("1 2 + -"), 16);
+        let position = lexer
+            .peek_until(TokenKind::Plus)
+            .expect("+ exists in the token stream");
+
+        assert_eq!(position, 2);
+
+        let token_kind = lexer.peek_nth(position).expect("token exists").kind();
+        assert_eq!(token_kind, &TokenKind::Plus);
+
+        let token_kind = lexer.peek_nth(position + 1).expect("token exists").kind();
+        assert_eq!(token_kind, &TokenKind::Minus);
     }
 }

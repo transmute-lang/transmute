@@ -24,7 +24,10 @@ impl Visitor<i64> for Interpreter {
             StatementKind::Let(ident, expr) => {
                 let val = expr.accept(self);
                 self.env.insert(ident.name().to_string(), val);
-                0 // todo this is wrong}
+                0 // todo this is wrong
+            }
+            StatementKind::LetFn(_, _, _) => {
+                0 // todo this is wrong
             }
         }
     }
@@ -94,8 +97,7 @@ mod tests {
     eval!(binary_operator_minus, "43 - 1;" => 42);
     eval!(unary_operator_minus_negative_number, "--42;" => 42);
     eval!(division, "85 / 2;" => 42);
-
     eval!(let_stmt, "let forty_two = 42;" => 0); // fixme should be a 'none' value
-
     eval!(let_stmt_then_expression, "let forty = 2 * 20; forty + 2;" => 42);
+    eval!(function, "let times_two = (v) -> v * 2;" => 0); // fixme should be a 'none' or a 'function' value value
 }

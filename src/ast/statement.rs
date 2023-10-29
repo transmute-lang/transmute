@@ -35,4 +35,5 @@ impl Statement {
 pub enum StatementKind {
     Expression(Expression),
     Let(Identifier, Expression),
+    LetFn(Identifier, Vec<Identifier>, Expression),
 }

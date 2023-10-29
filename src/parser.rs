@@ -5,7 +5,7 @@ use crate::ast::operators::{BinaryOperator, BinaryOperatorKind, UnaryOperator, U
 use crate::ast::statement::{Statement, StatementKind};
 use crate::ast::Ast;
 use crate::error::Error;
-use crate::lexer::{Lexer, PeekableLexer, TokenKind};
+use crate::lexer::{Lexer, Location, PeekableLexer, Span, TokenKind};
 
 pub struct Parser<'a> {
     lexer: PeekableLexer<'a>,
@@ -14,25 +14,31 @@ pub struct Parser<'a> {
 impl<'a> Parser<'a> {
     pub fn new(lexer: Lexer<'a>) -> Self {
         Self {
-            lexer: PeekableLexer::new(lexer, 1),
+            lexer: PeekableLexer::new(lexer, 16),
         }
     }
 
     pub fn parse(&mut self) -> Result<Ast, Error> {
-        let mut top_levels = Vec::new();
-        while let Ok(token) = self.lexer.peek().as_ref() {
+        let mut statements = Vec::new();
+        while let Ok(token) = self.lexer.peek() {
             if token.kind() == &TokenKind::Eof {
                 break;
             }
 
-            top_levels.push(self.parse_statement()?);
+            statements.push(self.parse_statement()?);
         }
 
-        Ok(Ast::new(top_levels))
+        Ok(Ast::new(statements))
     }
 
+    /// Parses the following:
+    /// ```
+    /// 'let ident = expr ;
+    /// 'let ident = ( expr , ... ) -> expr ;
+    /// 'expr ;
+    /// ```
     fn parse_statement(&mut self) -> Result<Statement, Error> {
-        let token = match self.lexer.peek().as_ref() {
+        let token = match self.lexer.peek() {
             Ok(token) => Ok(token),
             Err(_) => Err(self.lexer.next().expect_err("error case")),
         }?;
@@ -61,6 +67,26 @@ impl<'a> Parser<'a> {
                         equal_token.kind(),
                         equal_token.location()
                     )
+                }
+
+                // let name = '( expr , ... ) -> expr ;
+                if let Ok(open_parenthesis_token) = self.lexer.peek() {
+                    if open_parenthesis_token.kind() == &TokenKind::OpenParenthesis {
+                        if let Some(close_parameters) =
+                            self.lexer.peek_until(TokenKind::CloseParenthesis)
+                        {
+                            // let name = ( expr , ... ) '-> expr ;
+                            if let Ok(arrow_token) = self.lexer.peek_nth(close_parameters + 1) {
+                                if arrow_token.kind() == &TokenKind::Arrow {
+                                    return self.parse_function(
+                                        let_token.location(),
+                                        let_token.span(),
+                                        identifier,
+                                    );
+                                }
+                            }
+                        }
+                    }
                 }
 
                 let expression = self.parse_expression()?;
@@ -110,6 +136,84 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parses the following:
+    /// ```
+    /// let name = '( expr , ... ) -> expr ;
+    /// ```
+    fn parse_function(
+        &mut self,
+        location: &Location,
+        span: &Span,
+        identifier: Identifier,
+    ) -> Result<Statement, Error> {
+        // let name = '( expr , ... ) -> expr ;
+        let open_parenthesis_token = self.lexer.next().expect("present, as we peeked it already");
+        assert_eq!(open_parenthesis_token.kind(), &TokenKind::OpenParenthesis);
+
+        let mut parameters = Vec::new();
+        let mut comma_seen = true;
+
+        loop {
+            let token = self.lexer.next()?;
+            match token.kind() {
+                TokenKind::CloseParenthesis => {
+                    break;
+                }
+                TokenKind::Identifier(ident) if comma_seen => {
+                    parameters.push(Identifier::new(
+                        ident.to_string(),
+                        token.location().clone(),
+                        token.span().clone(),
+                    ));
+                    comma_seen = false;
+                    if let Ok(token) = self.lexer.peek() {
+                        if token.kind() == &TokenKind::Comma {
+                            self.lexer.next().expect("we just peeked it");
+                            comma_seen = true;
+                        }
+                    }
+                }
+                _ => todo!(
+                    "parse_function: error handling {:?} at {}",
+                    token.kind(),
+                    token.location()
+                ),
+            }
+        }
+
+        // let name = ( expr , ... ) '-> expr ;
+        let token = self.lexer.next()?;
+        if token.kind() != &TokenKind::Arrow {
+            todo!(
+                "parse_function: error handling {:?} at {}",
+                token.kind(),
+                token.location()
+            )
+        }
+
+        // let name = (expr, ...) -> 'expr ;
+        let expression = self.parse_expression()?;
+
+        let semicolon_token = self.lexer.next()?;
+        if semicolon_token.kind() != &TokenKind::Semicolon {
+            todo!(
+                "parse_statement: error handling {:?}; expected = at {}",
+                semicolon_token.kind(),
+                semicolon_token.location()
+            )
+        }
+
+        Ok(Statement::new(
+            StatementKind::LetFn(identifier, parameters, expression),
+            location.clone(),
+            span.extend_to(semicolon_token.span()),
+        ))
+    }
+
+    /// Parses the following:
+    /// ```
+    /// 'expr
+    /// ```
     fn parse_expression(&mut self) -> Result<Expression, Error> {
         self.parse_expression_with_precedence(Precedence::Lowest)
     }
@@ -453,6 +557,51 @@ mod tests {
                 Span::new(20, 10),
             ),
         ]);
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn function_statement() {
+        let mut parser = Parser::new(Lexer::new("let times_two = (a) -> a * 2;"));
+
+        // let c = (a, b) -> { ret 0; }
+        // let c = (a, b) -> 0;
+
+        let actual = parser.parse().expect("source is valid");
+        let expected = Ast::new(vec![Statement::new(
+            StatementKind::LetFn(
+                Identifier::new(
+                    "times_two".to_string(),
+                    Location::new(1, 5),
+                    Span::new(4, 9),
+                ),
+                vec![Identifier::new(
+                    "a".to_string(),
+                    Location::new(1, 18),
+                    Span::new(17, 1),
+                )],
+                Expression::new(ExpressionKind::Binary(
+                    Box::new(Expression::new(ExpressionKind::Literal(Literal::new(
+                        LiteralKind::Identifier("a".to_string()),
+                        Location::new(1, 24),
+                        Span::new(23, 1),
+                    )))),
+                    BinaryOperator::new(
+                        BinaryOperatorKind::Multiplication,
+                        Location::new(1, 26),
+                        Span::new(25, 1),
+                    ),
+                    Box::new(Expression::new(ExpressionKind::Literal(Literal::new(
+                        LiteralKind::Number(2),
+                        Location::new(1, 28),
+                        Span::new(27, 1),
+                    )))),
+                )),
+            ),
+            Location::new(1, 1),
+            Span::new(0, 29),
+        )]);
 
         assert_eq!(actual, expected);
     }
