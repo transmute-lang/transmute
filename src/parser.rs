@@ -3,7 +3,7 @@ use crate::ast::identifier::Identifier;
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, BinaryOperatorKind, UnaryOperator, UnaryOperatorKind};
 use crate::ast::statement::{Statement, StatementKind};
-use crate::ast::{Ast, TopLevel};
+use crate::ast::Ast;
 use crate::error::Error;
 use crate::lexer::{Lexer, PeekableLexer, TokenKind};
 
@@ -21,29 +21,25 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<Ast, Error> {
         let mut top_levels = Vec::new();
         while let Ok(token) = self.lexer.peek().as_ref() {
-            let top_level = match token.kind() {
-                TokenKind::Let => TopLevel::Statement(self.parse_statement()?),
-                TokenKind::Minus | TokenKind::Number(_) | TokenKind::OpenParenthesis => {
-                    TopLevel::Expression(self.parse_expression()?)
-                }
-                TokenKind::Eof => break,
-                _ => todo!(
-                    "parse: error handling {:?} at {}",
-                    token.kind(),
-                    token.location()
-                ),
-            };
-            top_levels.push(top_level);
+            if token.kind() == &TokenKind::Eof {
+                break;
+            }
+
+            top_levels.push(self.parse_statement()?);
         }
 
         Ok(Ast::new(top_levels))
     }
 
     fn parse_statement(&mut self) -> Result<Statement, Error> {
-        let token = self.lexer.next()?;
+        let token = match self.lexer.peek().as_ref() {
+            Ok(token) => Ok(token),
+            Err(_) => Err(self.lexer.next().expect_err("error case")),
+        }?;
 
         match token.kind() {
             TokenKind::Let => {
+                let let_token = self.lexer.next()?;
                 let identifier_token = self.lexer.next()?;
                 let identifier = match identifier_token.kind() {
                     TokenKind::Identifier(ident) => Identifier::new(
@@ -53,34 +49,53 @@ impl<'a> Parser<'a> {
                     ),
                     _ => todo!(
                         "parse_statement: error handling {:?} at {}",
-                        token.kind(),
-                        token.location()
+                        identifier_token.kind(),
+                        identifier_token.location()
                     ),
                 };
 
-                if self.lexer.next()?.kind() != &TokenKind::Equal {
+                let equal_token = self.lexer.next()?;
+                if equal_token.kind() != &TokenKind::Equal {
                     todo!(
                         "parse_statement: error handling {:?}; expected = at {}",
-                        token.kind(),
-                        token.location()
+                        equal_token.kind(),
+                        equal_token.location()
                     )
                 }
 
                 let expression = self.parse_expression()?;
 
-                let semicolon = self.lexer.next()?;
-                if semicolon.kind() != &TokenKind::Semicolon {
+                let semicolon_token = self.lexer.next()?;
+                if semicolon_token.kind() != &TokenKind::Semicolon {
                     todo!(
                         "parse_statement: error handling {:?}; expected = at {}",
-                        token.kind(),
-                        token.location()
+                        semicolon_token.kind(),
+                        semicolon_token.location()
                     )
                 }
 
-                let span = token.span().extend_to(&semicolon.span());
+                let span = let_token.span().extend_to(&semicolon_token.span());
                 Ok(Statement::new(
                     StatementKind::Let(identifier, expression),
-                    token.location().clone(),
+                    let_token.location().clone(),
+                    span,
+                ))
+            }
+            TokenKind::Minus | TokenKind::Number(_) | TokenKind::OpenParenthesis => {
+                let expression = self.parse_expression()?;
+                let semicolon_token = self.lexer.next()?;
+                if semicolon_token.kind() != &TokenKind::Semicolon {
+                    todo!(
+                        "parse_statement: error handling {:?}; expected = at {}",
+                        semicolon_token.kind(),
+                        semicolon_token.location()
+                    )
+                }
+                let location = expression.location().clone();
+                let span = expression.span().extend_to(&semicolon_token.span());
+                Ok(Statement::new(
+                    StatementKind::Expression(expression),
+                    location,
                     span,
                 ))
             }
@@ -245,6 +260,7 @@ impl From<&TokenKind> for Option<Precedence> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::Ast;
     use crate::lexer::{Location, Span};
 
     #[test]
@@ -329,12 +345,12 @@ mod tests {
 
     #[test]
     pub fn root() {
-        let lexer = Lexer::new("40 + 2");
+        let lexer = Lexer::new("40 + 2;");
         let mut parser = Parser::new(lexer);
 
         let actual = parser.parse().unwrap();
-        let expected = Ast::new(vec![TopLevel::Expression(Expression::from(
-            ExpressionKind::Binary(
+        let expected = Ast::new(vec![Statement::new(
+            StatementKind::Expression(Expression::from(ExpressionKind::Binary(
                 Box::new(Expression::from(Literal::new(
                     LiteralKind::Number(40),
                     Location::new(1, 1),
@@ -350,12 +366,14 @@ mod tests {
                     Location::new(1, 6),
                     Span::new(5, 1),
                 ))),
-            ),
-        ))]);
+            ))),
+            Location::new(1, 1),
+            Span::new(0, 7),
+        )]);
 
         assert_eq!(actual, expected);
         assert_eq!(actual.span().start(), 0);
-        assert_eq!(actual.span().end(), 5);
+        assert_eq!(actual.span().end(), 6);
     }
 
     #[test]

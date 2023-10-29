@@ -18,6 +18,10 @@ impl Statement {
         }
     }
 
+    pub fn kind(&self) -> &StatementKind {
+        &self.kind
+    }
+
     pub fn location(&self) -> &Location {
         &self.location
     }
@@ -29,5 +33,6 @@ impl Statement {
 
 #[derive(Debug, PartialEq)]
 pub enum StatementKind {
+    Expression(Expression),
     Let(Identifier, Expression),
 }

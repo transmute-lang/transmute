@@ -19,11 +19,11 @@ pub trait Visitor<R> {
 
 #[derive(Debug, PartialEq)]
 pub struct Ast {
-    root: Vec<TopLevel>,
+    root: Vec<Statement>,
 }
 
 impl Ast {
-    pub fn new(root: Vec<TopLevel>) -> Self {
+    pub fn new(root: Vec<Statement>) -> Self {
         assert!(!root.is_empty());
         Self { root }
     }
@@ -40,28 +40,10 @@ impl Ast {
     {
         let mut ret: Option<R> = None;
 
-        for top_level in &self.root {
-            ret = Some(match top_level {
-                TopLevel::Expression(e) => visitor.visit_expression(e),
-                TopLevel::Statement(s) => visitor.visit_statement(s),
-            })
+        for statement in &self.root {
+            ret = Some(visitor.visit_statement(statement))
         }
 
         ret.expect("ast has a value")
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum TopLevel {
-    Expression(Expression),
-    Statement(Statement),
-}
-
-impl TopLevel {
-    pub fn span(&self) -> Span {
-        match self {
-            TopLevel::Expression(e) => e.span(),
-            TopLevel::Statement(s) => s.span().clone(),
-        }
     }
 }

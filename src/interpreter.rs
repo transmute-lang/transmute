@@ -1,15 +1,17 @@
 use crate::ast::expression::{Expression, ExpressionKind};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
-use crate::ast::statement::Statement;
+use crate::ast::statement::{Statement, StatementKind};
 use crate::ast::Visitor;
 
 pub struct Interpreter;
 
 impl Visitor<i64> for Interpreter {
     fn visit_statement(&mut self, stmt: &Statement) -> i64 {
-        // todo this is wrong
-        0
+        match stmt.kind() {
+            StatementKind::Expression(e) => e.accept(self),
+            StatementKind::Let(_, _) => 0, // todo this is wrong
+        }
     }
 
     fn visit_expression(&mut self, expr: &Expression) -> i64 {
@@ -62,14 +64,14 @@ mod tests {
         };
     }
 
-    eval!(simple_precedence_1, "2 + 20 * 2" => 42);
-    eval!(simple_precedence_2, "20 * 2 + 2" => 42);
-    eval!(parenthesis_precedence, "(20 + 1) * 2" => 42);
-    eval!(negative_number, "-1 + 43" => 42);
-    eval!(unary_operator_minus_number, "- 1 + 43" => 42);
-    eval!(binary_operator_minus, "43 - 1" => 42);
-    eval!(unary_operator_minus_negative_number, "--42" => 42);
-    eval!(division, "85 / 2" => 42);
+    eval!(simple_precedence_1, "2 + 20 * 2;" => 42);
+    eval!(simple_precedence_2, "20 * 2 + 2;" => 42);
+    eval!(parenthesis_precedence, "(20 + 1) * 2;" => 42);
+    eval!(negative_number, "-1 + 43;" => 42);
+    eval!(unary_operator_minus_number, "- 1 + 43;" => 42);
+    eval!(binary_operator_minus, "43 - 1;" => 42);
+    eval!(unary_operator_minus_negative_number, "--42;" => 42);
+    eval!(division, "85 / 2;" => 42);
 
     eval!(let_stmt, "let forty_two = 42;" => 0); // fixme should be a 'none' value
 }
