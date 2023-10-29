@@ -424,7 +424,7 @@ mod tests {
     macro_rules! lexer_test_next {
         ($name:ident, $src:expr => $expected:expr; loc: $l:expr,$c:expr; span: $start:expr,$len:expr) => {
             #[test]
-            pub fn $name() {
+            fn $name() {
                 let mut lexer = Lexer::new($src);
                 let expected = Token {
                     kind: TokenKind::from($expected),
@@ -500,11 +500,12 @@ mod tests {
     }
 
     lexer_test_keyword!(keyword_let, "let" => Let);
+    // lexer_test_keyword!(keyword_ret, "ret" => Ret);
 
     macro_rules! lexer_test_fn {
         ($name:ident, $f:ident, $src:expr => $expected:expr) => {
             #[test]
-            pub fn $name() {
+            fn $name() {
                 let mut lexer = Lexer::new($src);
                 let expected = TokenKind::from($expected);
                 let (actual, _) = lexer.$f().unwrap();

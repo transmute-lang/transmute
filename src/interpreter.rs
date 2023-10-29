@@ -77,7 +77,7 @@ mod tests {
     macro_rules! eval {
         ($name:ident, $src:expr => $expected:expr) => {
             #[test]
-            pub fn $name() {
+            fn $name() {
                 let mut parser = Parser::new(Lexer::new($src));
                 let ast = parser.parse().expect("source is valid");
 

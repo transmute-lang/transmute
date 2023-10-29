@@ -241,7 +241,7 @@ impl<'a> Parser<'a> {
                     token.location().clone(),
                     token.span().clone(),
                 ),
-                Box::new(self.parse_expression_with_precedence(Precedence::Sum)?),
+                Box::new(self.parse_expression_with_precedence(Precedence::Prefix)?),
             )),
             TokenKind::OpenParenthesis => {
                 let open_loc = token.location();
@@ -338,6 +338,7 @@ enum Precedence {
     Lowest,
     Sum,
     Product,
+    Prefix,
 }
 
 impl From<&TokenKind> for Option<Precedence> {
@@ -359,7 +360,7 @@ mod tests {
     use crate::lexer::{Location, Span};
 
     #[test]
-    pub fn expression_literal_number() {
+    fn expression_literal_number() {
         let lexer = Lexer::new("42");
         let mut parser = Parser::new(lexer);
 
@@ -377,7 +378,7 @@ mod tests {
     }
 
     #[test]
-    pub fn expression_literal_identifier() {
+    fn expression_literal_identifier() {
         let lexer = Lexer::new("forty_two");
         let mut parser = Parser::new(lexer);
 
@@ -395,7 +396,7 @@ mod tests {
     }
 
     #[test]
-    pub fn expression() {
+    fn expression() {
         let lexer = Lexer::new("2 + 20 * 2");
         let mut parser = Parser::new(lexer);
 
@@ -434,7 +435,7 @@ mod tests {
     }
 
     #[test]
-    pub fn binary_operator_minus() {
+    fn binary_operator_minus() {
         let lexer = Lexer::new("43 - 1");
         let mut parser = Parser::new(lexer);
 
@@ -461,7 +462,56 @@ mod tests {
     }
 
     #[test]
-    pub fn root() {
+    fn prefix_minus() {
+        let mut parser = Parser::new(Lexer::new("- 40 * 2"));
+
+        let actual = parser.parse_expression().expect("expression is valid");
+        let expected = Expression::new(
+            ExpressionKind::Binary(
+                Box::new(
+                    Expression::new(
+                        ExpressionKind::Unary(
+                            UnaryOperator::new(
+                                UnaryOperatorKind::Minus,
+                                Location::new(1,1),
+                                Span::new(0, 1)
+                            ),
+                            Box::new(Expression::new(
+                                ExpressionKind::Literal(
+                                    Literal::new(
+                                        LiteralKind::Number(40),
+                                        Location::new(1, 3),
+                                        Span::new(2, 2)
+                                    )
+                                )
+                            ))
+                        )
+                    )
+                ),
+                BinaryOperator::new(
+                    BinaryOperatorKind::Multiplication,
+                    Location::new(1, 6),
+                    Span::new(5, 1)
+                ),
+                  Box::new(
+                      Expression::new(
+                          ExpressionKind::Literal(
+                              Literal::new(
+                                  LiteralKind::Number(2),
+                                  Location::new(1, 8),
+                                  Span::new(7, 1)
+                              )
+                          )
+                      )
+                  )
+            )
+        );
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn root() {
         let lexer = Lexer::new("40 + 2;");
         let mut parser = Parser::new(lexer);
 
