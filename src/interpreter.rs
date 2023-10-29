@@ -1,32 +1,43 @@
 use crate::ast::expression::{Expression, ExpressionKind};
+use crate::ast::identifier::Identifier;
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
 use crate::ast::statement::{Statement, StatementKind};
-use crate::ast::Visitor;
+use crate::ast::{Ast, Visitor};
 use std::collections::HashMap;
 
-pub struct Interpreter {
-    env: HashMap<String, i64>,
+pub struct Interpreter<'a> {
+    // todo merge functions and variables (needs ValueKind)
+    functions: HashMap<&'a str, (&'a Vec<Identifier>, &'a Expression)>,
+    variables: Vec<HashMap<&'a str, i64>>,
 }
 
-impl Interpreter {
-    pub fn new() -> Self {
+impl<'a> Interpreter<'a> {
+    pub fn start(mut self, ast: &'a Ast) -> i64 {
+        ast.accept(&mut self)
+    }
+}
+
+impl Default for Interpreter<'_> {
+    fn default() -> Self {
         Self {
-            env: HashMap::new(),
+            functions: Default::default(),
+            variables: vec![HashMap::default()],
         }
     }
 }
 
-impl Visitor<i64> for Interpreter {
-    fn visit_statement(&mut self, stmt: &Statement) -> i64 {
+impl<'a> Visitor<'a, i64> for Interpreter<'a> {
+    fn visit_statement(&mut self, stmt: &'a Statement) -> i64 {
         match stmt.kind() {
             StatementKind::Expression(e) => e.accept(self),
             StatementKind::Let(ident, expr) => {
                 let val = expr.accept(self);
-                self.env.insert(ident.name().to_string(), val);
+                self.variables.last_mut().expect("there is an env").insert(ident.name(), val);
                 0 // todo this is wrong
             }
-            StatementKind::LetFn(_, _, _) => {
+            StatementKind::LetFn(ident, params, expr) => {
+                self.functions.insert(ident.name(), (params, expr));
                 0 // todo this is wrong
             }
         }
@@ -51,8 +62,30 @@ impl Visitor<i64> for Interpreter {
                     UnaryOperatorKind::Minus => -e,
                 }
             }
-            ExpressionKind::MethodCall(_, _) => {
-                todo!("eval method call")
+            ExpressionKind::MethodCall(ident, arguments) => {
+                let (parameters, expr) = match self.functions.get(ident.name()) {
+                    Some(f) => *f,
+                    None => panic!("{ident} not in scope")
+                };
+
+                if parameters.len() != arguments.len() {
+                    panic!("Parameters and provided arguments for {ident} differ in length: expected {}, provided {}",
+                        parameters.len(),
+                        arguments.len()
+                    )
+                }
+
+                let env = parameters.iter().zip(arguments.iter())
+                    .map(|(ident, expr)| (ident.name(), expr.accept(self)) )
+                    .collect::<HashMap<&str, i64>>();
+
+                self.variables.push(env);
+
+                let ret = expr.accept(self);
+
+                let _ = self.variables.pop();
+
+                ret
             }
         }
     }
@@ -62,7 +95,7 @@ impl Visitor<i64> for Interpreter {
             LiteralKind::Number(n) => *n,
             LiteralKind::Identifier(ident) => {
                 // todo this is incorrect, no default value allowed
-                match self.env.get(ident.name()) {
+                match self.variables.last_mut().expect("there is an env").get(ident.name()) {
                     None => panic!("{ident} not in scope"),
                     Some(v) => *v,
                 }
@@ -84,8 +117,7 @@ mod tests {
                 let mut parser = Parser::new(Lexer::new($src));
                 let ast = parser.parse().expect("source is valid");
 
-                let mut interpreter = Interpreter::new();
-                let actual = ast.accept(&mut interpreter);
+                let actual = Interpreter::default().start(&ast);
 
                 assert_eq!($expected, actual)
             }
@@ -103,4 +135,5 @@ mod tests {
     eval!(let_stmt, "let forty_two = 42;" => 0); // fixme should be a 'none' value
     eval!(let_stmt_then_expression, "let forty = 2 * 20; forty + 2;" => 42);
     eval!(function, "let times_two = (v) -> v * 2;" => 0); // fixme should be a 'none' or a 'function' value value
+    eval!(function_call, "let times_two = (v) -> v * 2; times_two(21);" => 42);
 }

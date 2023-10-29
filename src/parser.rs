@@ -311,7 +311,7 @@ impl<'a> Parser<'a> {
         let open_parenthesis_token = self.lexer.next()?;
         assert_eq!(open_parenthesis_token.kind(), &TokenKind::OpenParenthesis);
 
-        let mut parameters = Vec::new();
+        let mut arguments = Vec::new();
         let mut comma_seen = true;
 
         let span = loop {
@@ -322,7 +322,7 @@ impl<'a> Parser<'a> {
                     break identifier.span().extend_to(token.span());
                 }
                 _ if comma_seen => {
-                    parameters.push(self.parse_expression()?);
+                    arguments.push(self.parse_expression()?);
                     comma_seen = false;
                     if let Ok(token) = self.lexer.peek() {
                         if token.kind() == &TokenKind::Comma {
@@ -344,7 +344,7 @@ impl<'a> Parser<'a> {
         let location = identifier.location().clone();
 
         Ok(Expression::new(
-            ExpressionKind::MethodCall(identifier, parameters),
+            ExpressionKind::MethodCall(identifier, arguments),
             location,
             span,
         ))

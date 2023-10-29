@@ -370,6 +370,7 @@ impl Display for Location {
 
 #[derive(Clone, PartialEq)]
 pub struct Span {
+    // todo merge with location
     /// start position
     start: usize,
     /// length

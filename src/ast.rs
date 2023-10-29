@@ -9,8 +9,8 @@ use crate::ast::literal::Literal;
 use crate::ast::statement::Statement;
 use crate::lexer::Span;
 
-pub trait Visitor<R> {
-    fn visit_statement(&mut self, stmt: &Statement) -> R;
+pub trait Visitor<'a, R> {
+    fn visit_statement(&mut self, stmt: &'a Statement) -> R;
 
     fn visit_expression(&mut self, expr: &Expression) -> R;
 
@@ -34,9 +34,9 @@ impl Ast {
         start_span.extend_to(stop_span)
     }
 
-    pub fn accept<V, R>(&self, visitor: &mut V) -> R
+    pub fn accept<'a, V, R>(&'a self, visitor: &mut V) -> R
     where
-        V: Visitor<R>,
+        V: Visitor<'a, R>,
     {
         let mut ret: Option<R> = None;
 

@@ -30,9 +30,9 @@ impl Literal {
         &self.span
     }
 
-    pub fn accept<V, R>(&self, visitor: &mut V) -> R
+    pub fn accept<'a, V, R>(&self, visitor: &mut V) -> R
     where
-        V: Visitor<R>,
+        V: Visitor<'a, R>,
     {
         visitor.visit_literal(self)
     }
