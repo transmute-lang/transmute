@@ -1,13 +1,15 @@
 use crate::ast::expression::{Expression, ExpressionKind};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
-use crate::ast::{Ast, Visitor};
+use crate::ast::statement::Statement;
+use crate::ast::Visitor;
 
 pub struct Interpreter;
 
 impl Visitor<i64> for Interpreter {
-    fn visit_ast(&mut self, ast: &Ast) -> i64 {
-        ast.expression().accept(self)
+    fn visit_statement(&mut self, stmt: &Statement) -> i64 {
+        // todo this is wrong
+        0
     }
 
     fn visit_expression(&mut self, expr: &Expression) -> i64 {
@@ -68,4 +70,6 @@ mod tests {
     eval!(binary_operator_minus, "43 - 1" => 42);
     eval!(unary_operator_minus_negative_number, "--42" => 42);
     eval!(division, "85 / 2" => 42);
+
+    eval!(let_stmt, "let forty_two = 42" => 0); // fixme should be a 'none' value
 }

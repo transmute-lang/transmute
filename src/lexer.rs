@@ -60,6 +60,11 @@ impl<'a> Lexer<'a> {
                 self.advance_span(&span);
                 Ok((TokenKind::Slash, span))
             }
+            '=' => {
+                self.advance_column();
+                self.advance_span(&span);
+                Ok((TokenKind::Equal, span))
+            }
             '(' => {
                 self.advance_column();
                 self.advance_span(&span);
@@ -70,7 +75,8 @@ impl<'a> Lexer<'a> {
                 self.advance_span(&span);
                 Ok((TokenKind::CloseParenthesis, span))
             }
-            '0'..='9' => Ok(self.number()?),
+            c if c.is_ascii_digit() => Ok(self.number()?),
+            c if c.is_ascii_alphabetic() || c == '_' => Ok(self.identifier()?),
             c => Err(Error::UnexpectedChar(
                 c,
                 self.location.clone(),
@@ -140,6 +146,53 @@ impl<'a> Lexer<'a> {
         ))
     }
 
+    fn identifier(&mut self) -> Result<(TokenKind, Span), Error> {
+        let mut chars = self.remaining.chars().peekable();
+
+        let mut bytes_read = 0usize;
+        let keyword_token = match chars.next().expect("there is at least one char") {
+            'l' => {
+                self.advance_column();
+                bytes_read += 'l'.len_utf8();
+                match chars.next() {
+                    Some('e') => {
+                        self.advance_column();
+                        bytes_read += 'e'.len_utf8();
+                        match chars.next() {
+                            Some('t') => match chars.peek() {
+                                Some(c) if is_identifier(c) => None,
+                                _ => {
+                                    self.advance_column();
+                                    bytes_read += 't'.len_utf8();
+                                    Some(TokenKind::Let)
+                                }
+                            },
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        };
+
+        let (token, span) = match keyword_token {
+            Some(token) => (token, Span::new(self.pos, bytes_read)),
+            None => {
+                let (_, span) = self.take_while(|c| is_identifier(&c))?;
+                let bytes_read = bytes_read + span.len();
+                (
+                    TokenKind::Identifier(self.remaining[..bytes_read].to_string()),
+                    Span::new(self.pos, bytes_read),
+                )
+            }
+        };
+
+        self.advance_span(&span);
+
+        Ok((token, span))
+    }
+
     fn take_while<F>(&mut self, pred: F) -> Result<(&str, Span), Error>
     where
         F: Fn(char) -> bool,
@@ -167,6 +220,10 @@ impl<'a> Lexer<'a> {
             Ok((&self.remaining[..len], Span::new(self.pos, len)))
         }
     }
+}
+
+fn is_identifier(c: &char) -> bool {
+    c.is_ascii_alphanumeric() || c == &'_'
 }
 
 pub struct PeekableLexer<'a> {
@@ -219,6 +276,9 @@ impl Token {
 #[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
     CloseParenthesis,
+    Equal,
+    Identifier(String),
+    Let,
     Minus,
     Number(i64),
     OpenParenthesis,
@@ -328,8 +388,59 @@ mod tests {
     lexer_test_next!(next_minus, "-" => TokenKind::Minus; loc: 1,1; span: 0,1);
     lexer_test_next!(next_star, "*" => TokenKind::Star; loc: 1,1; span: 0,1);
     lexer_test_next!(next_slash, "/" => TokenKind::Slash; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_equal, "=" => TokenKind::Equal; loc: 1,1; span: 0,1);
     lexer_test_next!(next_open_parenthesis, "(" => TokenKind::OpenParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_parenthesis, ")" => TokenKind::CloseParenthesis; loc: 1,1; span: 0,1);
+
+    #[test]
+    fn next_identifier() {
+        let mut lexer = Lexer::new("ident");
+        let expected = Token {
+            kind: TokenKind::Identifier("ident".to_string()),
+            location: Location::new(1, 1),
+            span: Span::new(0, 5),
+        };
+        let actual = lexer.next().unwrap();
+        assert_eq!(actual, expected);
+
+        let mut lexer = Lexer::new(" ident ");
+        let expected = Token {
+            kind: TokenKind::Identifier("ident".to_string()),
+            location: Location::new(1, 2),
+            span: Span::new(1, 5),
+        };
+        let actual = lexer.next().unwrap();
+        assert_eq!(actual, expected);
+    }
+
+    fn next_identifier_with_keyword_prefix() {
+        let mut lexer = Lexer::new("let123");
+        let expected = Token {
+            kind: TokenKind::Identifier("let123".to_string()),
+            location: Location::new(1, 1),
+            span: Span::new(0, 6),
+        };
+        let actual = lexer.next().unwrap();
+        assert_eq!(actual, expected);
+    }
+
+    macro_rules! lexer_test_keyword {
+        ($name:ident, $src:expr => $keyword:ident) => {
+            #[test]
+            fn $name() {
+                let mut lexer = Lexer::new($src);
+                let expected = Token {
+                    kind: TokenKind::$keyword,
+                    location: Location::new(1, 1),
+                    span: Span::new(0, $src.len()),
+                };
+                let actual = lexer.next().unwrap();
+                assert_eq!(actual, expected);
+            }
+        };
+    }
+
+    lexer_test_keyword!(keyword_let, "let" => Let);
 
     macro_rules! lexer_test_fn {
         ($name:ident, $f:ident, $src:expr => $expected:expr) => {
