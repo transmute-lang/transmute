@@ -1,24 +1,15 @@
-use crate::lexer::{Location, Span};
+use crate::lexer::Span;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq)]
 pub struct Identifier {
     name: String,
-    location: Location,
     span: Span,
 }
 
 impl Identifier {
-    pub fn new(name: String, location: Location, span: Span) -> Self {
-        Self {
-            name,
-            location,
-            span,
-        }
-    }
-
-    pub fn location(&self) -> &Location {
-        &self.location
+    pub fn new(name: String, span: Span) -> Self {
+        Self { name, span }
     }
 
     pub fn span(&self) -> &Span {

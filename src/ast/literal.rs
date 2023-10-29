@@ -1,29 +1,20 @@
 use crate::ast::identifier::Identifier;
 use crate::ast::Visitor;
-use crate::lexer::{Location, Span};
+use crate::lexer::Span;
 
 #[derive(Debug, PartialEq)]
 pub struct Literal {
     kind: LiteralKind,
-    location: Location,
     span: Span,
 }
 
 impl Literal {
-    pub fn new(kind: LiteralKind, location: Location, span: Span) -> Self {
-        Self {
-            kind,
-            location,
-            span,
-        }
+    pub fn new(kind: LiteralKind, span: Span) -> Self {
+        Self { kind, span }
     }
 
     pub fn kind(&self) -> &LiteralKind {
         &self.kind
-    }
-
-    pub fn location(&self) -> &Location {
-        &self.location
     }
 
     pub fn span(&self) -> &Span {

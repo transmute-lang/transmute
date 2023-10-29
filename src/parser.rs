@@ -5,7 +5,7 @@ use crate::ast::operators::{BinaryOperator, BinaryOperatorKind, UnaryOperator, U
 use crate::ast::statement::{Statement, StatementKind};
 use crate::ast::Ast;
 use crate::error::Error;
-use crate::lexer::{Lexer, Location, PeekableLexer, Span, TokenKind};
+use crate::lexer::{Lexer, PeekableLexer, Span, TokenKind};
 
 pub struct Parser<'a> {
     lexer: PeekableLexer<'a>,
@@ -45,24 +45,22 @@ impl<'a> Parser<'a> {
                 let let_token = self.lexer.next()?;
                 let identifier_token = self.lexer.next()?;
                 let identifier = match identifier_token.kind() {
-                    TokenKind::Identifier(ident) => Identifier::new(
-                        ident.to_string(),
-                        identifier_token.location().clone(),
-                        identifier_token.span().clone(),
-                    ),
+                    TokenKind::Identifier(ident) => {
+                        Identifier::new(ident.to_string(), identifier_token.span().clone())
+                    }
                     _ => todo!(
-                        "parse_statement: error handling {:?} at {}",
+                        "parse_statement: error handling {:?} at {:?}",
                         identifier_token.kind(),
-                        identifier_token.location()
+                        identifier_token.span()
                     ),
                 };
 
                 let equal_token = self.lexer.next()?;
                 if equal_token.kind() != &TokenKind::Equal {
                     todo!(
-                        "parse_statement: error handling {:?}; expected = at {}",
+                        "parse_statement: error handling {:?}; expected = at {:?}",
                         equal_token.kind(),
-                        equal_token.location()
+                        equal_token.span()
                     )
                 }
 
@@ -75,11 +73,7 @@ impl<'a> Parser<'a> {
                             // let name = ( expr , ... ) '-> expr ;
                             if let Ok(arrow_token) = self.lexer.peek_nth(close_parameters + 1) {
                                 if arrow_token.kind() == &TokenKind::Arrow {
-                                    return self.parse_function(
-                                        let_token.location(),
-                                        let_token.span(),
-                                        identifier,
-                                    );
+                                    return self.parse_function(let_token.span(), identifier);
                                 }
                             }
                         }
@@ -91,16 +85,15 @@ impl<'a> Parser<'a> {
                 let semicolon_token = self.lexer.next()?;
                 if semicolon_token.kind() != &TokenKind::Semicolon {
                     todo!(
-                        "parse_statement: error handling {:?}; expected = at {}",
+                        "parse_statement: error handling {:?}; expected = at {:?}",
                         semicolon_token.kind(),
-                        semicolon_token.location()
+                        semicolon_token.span()
                     )
                 }
 
                 let span = let_token.span().extend_to(semicolon_token.span());
                 Ok(Statement::new(
                     StatementKind::Let(identifier, expression),
-                    let_token.location().clone(),
                     span,
                 ))
             }
@@ -112,23 +105,18 @@ impl<'a> Parser<'a> {
                 let semicolon_token = self.lexer.next()?;
                 if semicolon_token.kind() != &TokenKind::Semicolon {
                     todo!(
-                        "parse_statement: error handling {:?}; expected = at {}",
+                        "parse_statement: error handling {:?}; expected = at {:?}",
                         semicolon_token.kind(),
-                        semicolon_token.location()
+                        semicolon_token.span()
                     )
                 }
-                let location = expression.location().clone();
                 let span = expression.span().extend_to(semicolon_token.span());
-                Ok(Statement::new(
-                    StatementKind::Expression(expression),
-                    location,
-                    span,
-                ))
+                Ok(Statement::new(StatementKind::Expression(expression), span))
             }
             _ => todo!(
-                "parse_statement: error handling {:?} at {}",
+                "parse_statement: error handling {:?} at {:?}",
                 token.kind(),
-                token.location()
+                token.span()
             ),
         }
     }
@@ -137,12 +125,7 @@ impl<'a> Parser<'a> {
     /// ```
     /// let name = '( expr , ... ) -> expr ;
     /// ```
-    fn parse_function(
-        &mut self,
-        location: &Location,
-        span: &Span,
-        identifier: Identifier,
-    ) -> Result<Statement, Error> {
+    fn parse_function(&mut self, span: &Span, identifier: Identifier) -> Result<Statement, Error> {
         // let name = '( expr , ... ) -> expr ;
         let open_parenthesis_token = self.lexer.next().expect("present, as we peeked it already");
         assert_eq!(open_parenthesis_token.kind(), &TokenKind::OpenParenthesis);
@@ -157,11 +140,7 @@ impl<'a> Parser<'a> {
                     break;
                 }
                 TokenKind::Identifier(ident) if comma_seen => {
-                    parameters.push(Identifier::new(
-                        ident.to_string(),
-                        token.location().clone(),
-                        token.span().clone(),
-                    ));
+                    parameters.push(Identifier::new(ident.to_string(), token.span().clone()));
                     comma_seen = false;
                     if let Ok(token) = self.lexer.peek() {
                         if token.kind() == &TokenKind::Comma {
@@ -171,9 +150,9 @@ impl<'a> Parser<'a> {
                     }
                 }
                 _ => todo!(
-                    "parse_function: error handling {:?} at {}",
+                    "parse_function: error handling {:?} at {:?}",
                     token.kind(),
-                    token.location()
+                    token.span()
                 ),
             }
         }
@@ -182,9 +161,9 @@ impl<'a> Parser<'a> {
         let token = self.lexer.next()?;
         if token.kind() != &TokenKind::Arrow {
             todo!(
-                "parse_function: error handling {:?} at {}",
+                "parse_function: error handling {:?} at {:?}",
                 token.kind(),
-                token.location()
+                token.span()
             )
         }
 
@@ -194,15 +173,14 @@ impl<'a> Parser<'a> {
         let semicolon_token = self.lexer.next()?;
         if semicolon_token.kind() != &TokenKind::Semicolon {
             todo!(
-                "parse_statement: error handling {:?}; expected = at {}",
+                "parse_statement: error handling {:?}; expected = at {:?}",
                 semicolon_token.kind(),
-                semicolon_token.location()
+                semicolon_token.span()
             )
         }
 
         Ok(Statement::new(
             StatementKind::LetFn(identifier, parameters, expression),
-            location.clone(),
             span.extend_to(semicolon_token.span()),
         ))
     }
@@ -223,11 +201,7 @@ impl<'a> Parser<'a> {
 
         let mut expression = match token.kind() {
             TokenKind::Identifier(ident) => {
-                let identifier = Identifier::new(
-                    ident.clone(),
-                    token.location().clone(),
-                    token.span().clone(),
-                );
+                let identifier = Identifier::new(ident.clone(), token.span().clone());
 
                 match self.lexer.peek().expect("cannot fail here") {
                     token if token.kind() == &TokenKind::OpenParenthesis => {
@@ -235,35 +209,26 @@ impl<'a> Parser<'a> {
                     }
                     _ => Expression::from(Literal::new(
                         LiteralKind::Identifier(identifier),
-                        token.location().clone(),
                         token.span().clone(),
                     )),
                 }
             }
-            TokenKind::Number(n) => Expression::from(Literal::new(
-                LiteralKind::Number(*n),
-                token.location().clone(),
-                token.span().clone(),
-            )),
+            TokenKind::Number(n) => {
+                Expression::from(Literal::new(LiteralKind::Number(*n), token.span().clone()))
+            }
             TokenKind::Minus => {
                 let expression = self.parse_expression_with_precedence(Precedence::Prefix)?;
-                let location = token.location().clone();
                 let span = token.span().extend_to(expression.span());
                 Expression::new(
                     ExpressionKind::Unary(
-                        UnaryOperator::new(
-                            UnaryOperatorKind::Minus,
-                            token.location().clone(),
-                            token.span().clone(),
-                        ),
+                        UnaryOperator::new(UnaryOperatorKind::Minus, token.span().clone()),
                         Box::new(expression),
                     ),
-                    location,
                     span,
                 )
             }
             TokenKind::OpenParenthesis => {
-                let open_loc = token.location();
+                let open_loc = token.span();
 
                 let expression = self.parse_expression()?;
                 let token = self.lexer.next()?;
@@ -271,17 +236,17 @@ impl<'a> Parser<'a> {
                     expression
                 } else {
                     todo!(
-                        "parse_expression_with_precedence: error handling {:?}; expected ) at {} for parenthesis open at {}",
+                        "parse_expression_with_precedence: error handling {:?}; expected ) at {:?} for parenthesis open at {:?}",
                         token.kind(),
-                        token.location(),
+                        token.span(),
                         open_loc
                     )
                 }
             }
             _ => todo!(
-                "parse_expression_with_precedence: error handling {:?} at {}",
+                "parse_expression_with_precedence: error handling {:?} at {:?}",
                 token.kind(),
-                token.location()
+                token.span()
             ),
         };
 
@@ -332,20 +297,17 @@ impl<'a> Parser<'a> {
                     }
                 }
                 _ => todo!(
-                    "parse_function_call: error handling {:?} at {}",
+                    "parse_function_call: error handling {:?} at {:?}",
                     token.kind(),
-                    token.location()
+                    token.span()
                 ),
             }
         };
 
         // identifier ( expr , ... ) '
 
-        let location = identifier.location().clone();
-
         Ok(Expression::new(
             ExpressionKind::MethodCall(identifier, arguments),
-            location,
             span,
         ))
     }
@@ -360,12 +322,10 @@ impl<'a> Parser<'a> {
             .expect("there must be an operator, we got a precedence");
         let right = self.parse_expression_with_precedence(precedence)?;
 
-        let location = left.location().clone();
         let span = left.span().extend_to(right.span());
 
         Ok(Expression::new(
             ExpressionKind::Binary(Box::new(left), operator, Box::new(right)),
-            location,
             span,
         ))
     }
@@ -376,28 +336,24 @@ impl<'a> Parser<'a> {
         match token.kind() {
             TokenKind::Plus => Ok(BinaryOperator::new(
                 BinaryOperatorKind::Addition,
-                token.location().clone(),
                 token.span().clone(),
             )),
             TokenKind::Minus => Ok(BinaryOperator::new(
                 BinaryOperatorKind::Subtraction,
-                token.location().clone(),
                 token.span().clone(),
             )),
             TokenKind::Star => Ok(BinaryOperator::new(
                 BinaryOperatorKind::Multiplication,
-                token.location().clone(),
                 token.span().clone(),
             )),
             TokenKind::Slash => Ok(BinaryOperator::new(
                 BinaryOperatorKind::Division,
-                token.location().clone(),
                 token.span().clone(),
             )),
             _ => todo!(
-                "parse_operator: error handling {:?} at {}",
+                "parse_operator: error handling {:?} at {:?}",
                 token.kind(),
-                token.location()
+                token.span()
             ),
         }
     }
@@ -427,7 +383,7 @@ impl From<&TokenKind> for Option<Precedence> {
 mod tests {
     use super::*;
     use crate::ast::Ast;
-    use crate::lexer::{Location, Span};
+    use crate::lexer::Span;
 
     #[test]
     fn expression_literal_number() {
@@ -436,13 +392,8 @@ mod tests {
 
         let actual = parser.parse_expression().unwrap();
         let expected = Expression::new(
-            ExpressionKind::Literal(Literal::new(
-                LiteralKind::Number(42),
-                Location::new(1, 1),
-                Span::new(0, 2),
-            )),
-            Location::new(1, 1),
-            Span::new(0, 2),
+            ExpressionKind::Literal(Literal::new(LiteralKind::Number(42), Span::new(1, 1, 0, 2))),
+            Span::new(1, 1, 0, 2),
         );
 
         assert_eq!(expected, actual);
@@ -457,14 +408,11 @@ mod tests {
             ExpressionKind::Literal(Literal::new(
                 LiteralKind::Identifier(Identifier::new(
                     "forty_two".to_string(),
-                    Location::new(1, 1),
-                    Span::new(0, 9),
+                    Span::new(1, 1, 0, 9),
                 )),
-                Location::new(1, 1),
-                Span::new(0, 9),
+                Span::new(1, 1, 0, 9),
             )),
-            Location::new(1, 1),
-            Span::new(0, 9),
+            Span::new(1, 1, 0, 9),
         );
 
         assert_eq!(actual, expected);
@@ -480,38 +428,28 @@ mod tests {
             ExpressionKind::Binary(
                 Box::new(Expression::from(Literal::new(
                     LiteralKind::Number(2),
-                    Location::new(1, 1),
-                    Span::new(0, 1),
+                    Span::new(1, 1, 0, 1),
                 ))),
-                BinaryOperator::new(
-                    BinaryOperatorKind::Addition,
-                    Location::new(1, 3),
-                    Span::new(2, 1),
-                ),
+                BinaryOperator::new(BinaryOperatorKind::Addition, Span::new(1, 3, 2, 1)),
                 Box::new(Expression::new(
                     ExpressionKind::Binary(
                         Box::new(Expression::from(Literal::new(
                             LiteralKind::Number(20),
-                            Location::new(1, 5),
-                            Span::new(4, 2),
+                            Span::new(1, 5, 4, 2),
                         ))),
                         BinaryOperator::new(
                             BinaryOperatorKind::Multiplication,
-                            Location::new(1, 8),
-                            Span::new(7, 1),
+                            Span::new(1, 8, 7, 1),
                         ),
                         Box::new(Expression::from(Literal::new(
                             LiteralKind::Number(2),
-                            Location::new(1, 10),
-                            Span::new(9, 1),
+                            Span::new(1, 10, 9, 1),
                         ))),
                     ),
-                    Location::new(1, 5),
-                    Span::new(4, 6),
+                    Span::new(1, 5, 4, 6),
                 )),
             ),
-            Location::new(1, 1),
-            Span::new(0, 10),
+            Span::new(1, 1, 0, 10),
         );
 
         assert_eq!(actual, expected);
@@ -527,22 +465,15 @@ mod tests {
             ExpressionKind::Binary(
                 Box::new(Expression::from(Literal::new(
                     LiteralKind::Number(43),
-                    Location::new(1, 1),
-                    Span::new(0, 2),
+                    Span::new(1, 1, 0, 2),
                 ))),
-                BinaryOperator::new(
-                    BinaryOperatorKind::Subtraction,
-                    Location::new(1, 4),
-                    Span::new(3, 1),
-                ),
+                BinaryOperator::new(BinaryOperatorKind::Subtraction, Span::new(1, 4, 3, 1)),
                 Box::new(Expression::from(Literal::new(
                     LiteralKind::Number(1),
-                    Location::new(1, 6),
-                    Span::new(5, 1),
+                    Span::new(1, 6, 5, 1),
                 ))),
             ),
-            Location::new(1, 1),
-            Span::new(0, 6),
+            Span::new(1, 1, 0, 6),
         );
 
         assert_eq!(actual, expected);
@@ -557,41 +488,27 @@ mod tests {
             ExpressionKind::Binary(
                 Box::new(Expression::new(
                     ExpressionKind::Unary(
-                        UnaryOperator::new(
-                            UnaryOperatorKind::Minus,
-                            Location::new(1, 1),
-                            Span::new(0, 1),
-                        ),
+                        UnaryOperator::new(UnaryOperatorKind::Minus, Span::new(1, 1, 0, 1)),
                         Box::new(Expression::new(
                             ExpressionKind::Literal(Literal::new(
                                 LiteralKind::Number(40),
-                                Location::new(1, 3),
-                                Span::new(2, 2),
+                                Span::new(1, 3, 2, 2),
                             )),
-                            Location::new(1, 3),
-                            Span::new(2, 2),
+                            Span::new(1, 3, 2, 2),
                         )),
                     ),
-                    Location::new(1, 1),
-                    Span::new(0, 4),
+                    Span::new(1, 1, 0, 4),
                 )),
-                BinaryOperator::new(
-                    BinaryOperatorKind::Multiplication,
-                    Location::new(1, 6),
-                    Span::new(5, 1),
-                ),
+                BinaryOperator::new(BinaryOperatorKind::Multiplication, Span::new(1, 6, 5, 1)),
                 Box::new(Expression::new(
                     ExpressionKind::Literal(Literal::new(
                         LiteralKind::Number(2),
-                        Location::new(1, 8),
-                        Span::new(7, 1),
+                        Span::new(1, 8, 7, 1),
                     )),
-                    Location::new(1, 8),
-                    Span::new(7, 1),
+                    Span::new(1, 8, 7, 1),
                 )),
             ),
-            Location::new(1, 1),
-            Span::new(0, 8),
+            Span::new(1, 1, 0, 8),
         );
 
         assert_eq!(actual, expected);
@@ -608,30 +525,20 @@ mod tests {
                 ExpressionKind::Binary(
                     Box::new(Expression::from(Literal::new(
                         LiteralKind::Number(40),
-                        Location::new(1, 1),
-                        Span::new(0, 2),
+                        Span::new(1, 1, 0, 2),
                     ))),
-                    BinaryOperator::new(
-                        BinaryOperatorKind::Addition,
-                        Location::new(1, 4),
-                        Span::new(3, 1),
-                    ),
+                    BinaryOperator::new(BinaryOperatorKind::Addition, Span::new(1, 4, 3, 1)),
                     Box::new(Expression::from(Literal::new(
                         LiteralKind::Number(2),
-                        Location::new(1, 6),
-                        Span::new(5, 1),
+                        Span::new(1, 6, 5, 1),
                     ))),
                 ),
-                Location::new(1, 1),
-                Span::new(0, 6),
+                Span::new(1, 1, 0, 6),
             )),
-            Location::new(1, 1),
-            Span::new(0, 7),
+            Span::new(1, 1, 0, 7),
         )]);
 
         assert_eq!(actual, expected);
-        assert_eq!(actual.span().start(), 0);
-        assert_eq!(actual.span().end(), 6);
     }
 
     #[test]
@@ -648,23 +555,16 @@ mod tests {
         let actual = parser.parse_statement().expect("statement is valid");
         let expected = Statement::new(
             StatementKind::Let(
-                Identifier::new(
-                    "forty_two".to_string(),
-                    Location::new(1, 5),
-                    Span::new(4, 9),
-                ),
+                Identifier::new("forty_two".to_string(), Span::new(1, 5, 4, 9)),
                 Expression::new(
                     ExpressionKind::Literal(Literal::new(
                         LiteralKind::Number(42),
-                        Location::new(1, 17),
-                        Span::new(16, 2),
+                        Span::new(1, 17, 16, 2),
                     )),
-                    Location::new(1, 17),
-                    Span::new(16, 2),
+                    Span::new(1, 17, 16, 2),
                 ),
             ),
-            Location::new(1, 1),
-            Span::new(0, 19),
+            Span::new(1, 1, 0, 19),
         );
 
         assert_eq!(actual, expected);
@@ -678,40 +578,29 @@ mod tests {
         let expected = Ast::new(vec![
             Statement::new(
                 StatementKind::Let(
-                    Identifier::new(
-                        "forty_two".to_string(),
-                        Location::new(1, 5),
-                        Span::new(4, 9),
-                    ),
+                    Identifier::new("forty_two".to_string(), Span::new(1, 5, 4, 9)),
                     Expression::new(
                         ExpressionKind::Literal(Literal::new(
                             LiteralKind::Number(42),
-                            Location::new(1, 17),
-                            Span::new(16, 2),
+                            Span::new(1, 17, 16, 2),
                         )),
-                        Location::new(1, 17),
-                        Span::new(16, 2),
+                        Span::new(1, 17, 16, 2),
                     ),
                 ),
-                Location::new(1, 1),
-                Span::new(0, 19),
+                Span::new(1, 1, 0, 19),
             ),
             Statement::new(
                 StatementKind::Expression(Expression::new(
                     ExpressionKind::Literal(Literal::new(
                         LiteralKind::Identifier(Identifier::new(
                             "forty_two".to_string(),
-                            Location::new(1, 21),
-                            Span::new(20, 9),
+                            Span::new(1, 21, 20, 9),
                         )),
-                        Location::new(1, 21),
-                        Span::new(20, 9),
+                        Span::new(1, 21, 20, 9),
                     )),
-                    Location::new(1, 21),
-                    Span::new(20, 9),
+                    Span::new(1, 21, 20, 9),
                 )),
-                Location::new(1, 21),
-                Span::new(20, 10),
+                Span::new(1, 21, 20, 10),
             ),
         ]);
 
@@ -728,52 +617,36 @@ mod tests {
         let actual = parser.parse().expect("source is valid");
         let expected = Ast::new(vec![Statement::new(
             StatementKind::LetFn(
-                Identifier::new(
-                    "times_two".to_string(),
-                    Location::new(1, 5),
-                    Span::new(4, 9),
-                ),
-                vec![Identifier::new(
-                    "a".to_string(),
-                    Location::new(1, 18),
-                    Span::new(17, 1),
-                )],
+                Identifier::new("times_two".to_string(), Span::new(1, 5, 4, 9)),
+                vec![Identifier::new("a".to_string(), Span::new(1, 18, 17, 1))],
                 Expression::new(
                     ExpressionKind::Binary(
                         Box::new(Expression::new(
                             ExpressionKind::Literal(Literal::new(
                                 LiteralKind::Identifier(Identifier::new(
                                     "a".to_string(),
-                                    Location::new(1, 24),
-                                    Span::new(23, 1),
+                                    Span::new(1, 24, 23, 1),
                                 )),
-                                Location::new(1, 24),
-                                Span::new(23, 1),
+                                Span::new(1, 24, 23, 1),
                             )),
-                            Location::new(1, 24),
-                            Span::new(23, 1),
+                            Span::new(1, 24, 23, 1),
                         )),
                         BinaryOperator::new(
                             BinaryOperatorKind::Multiplication,
-                            Location::new(1, 26),
-                            Span::new(25, 1),
+                            Span::new(1, 26, 25, 1),
                         ),
                         Box::new(Expression::new(
                             ExpressionKind::Literal(Literal::new(
                                 LiteralKind::Number(2),
-                                Location::new(1, 28),
-                                Span::new(27, 1),
+                                Span::new(1, 28, 27, 1),
                             )),
-                            Location::new(1, 28),
-                            Span::new(27, 1),
+                            Span::new(1, 28, 27, 1),
                         )),
                     ),
-                    Location::new(1, 24),
-                    Span::new(23, 5),
+                    Span::new(1, 24, 23, 5),
                 ),
             ),
-            Location::new(1, 1),
-            Span::new(0, 29),
+            Span::new(1, 1, 0, 29),
         )]);
 
         assert_eq!(actual, expected);
@@ -785,23 +658,16 @@ mod tests {
         let actual = parser.parse_expression().expect("expression is valid");
         let expected = Expression::new(
             ExpressionKind::MethodCall(
-                Identifier::new(
-                    "times_two".to_string(),
-                    Location::new(1, 1),
-                    Span::new(0, 9),
-                ),
+                Identifier::new("times_two".to_string(), Span::new(1, 1, 0, 9)),
                 vec![Expression::new(
                     ExpressionKind::Literal(Literal::new(
                         LiteralKind::Number(21),
-                        Location::new(1, 11),
-                        Span::new(10, 2),
+                        Span::new(1, 11, 10, 2),
                     )),
-                    Location::new(1, 11),
-                    Span::new(10, 2),
+                    Span::new(1, 11, 10, 2),
                 )],
             ),
-            Location::new(1, 1),
-            Span::new(0, 13),
+            Span::new(1, 1, 0, 13),
         );
 
         assert_eq!(actual, expected);

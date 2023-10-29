@@ -29,83 +29,78 @@ impl<'a> Lexer<'a> {
             None => {
                 return Ok(Token {
                     kind: TokenKind::Eof,
-                    location: self.location.clone(),
-                    span: Span::new(self.pos, 0),
+                    span: Span::new(self.location.line, self.location.column, self.pos, 0),
                 })
             }
         }?;
 
-        let location = self.location.clone();
-        let span = Span::new(self.pos, next.len_utf8());
+        let span = Span::new(
+            self.location.line,
+            self.location.column,
+            self.pos,
+            next.len_utf8(),
+        );
         let (kind, span) = match next {
             '+' => {
                 self.advance_column();
-                self.advance_span(&span);
+                self.advance_consumed(span.len);
                 Ok((TokenKind::Plus, span))
             }
             '-' => match chars.next().unwrap_or_default() {
                 '>' => {
                     self.advance_columns(2);
                     let span = span.extend('>'.len_utf8());
-                    self.advance_span(&span);
+                    self.advance_consumed(span.len);
                     Ok((TokenKind::Arrow, span))
                 }
                 '0'..='9' => Ok(self.number()?), // todo is that really useful?
                 _ => {
                     self.advance_column();
-                    self.advance_span(&span);
+                    self.advance_consumed(span.len);
                     Ok((TokenKind::Minus, span))
                 }
             },
             '*' => {
                 self.advance_column();
-                self.advance_span(&span);
+                self.advance_consumed(span.len);
                 Ok((TokenKind::Star, span))
             }
             '/' => {
                 self.advance_column();
-                self.advance_span(&span);
+                self.advance_consumed(span.len);
                 Ok((TokenKind::Slash, span))
             }
             '=' => {
                 self.advance_column();
-                self.advance_span(&span);
+                self.advance_consumed(span.len);
                 Ok((TokenKind::Equal, span))
             }
             '(' => {
                 self.advance_column();
-                self.advance_span(&span);
+                self.advance_consumed(span.len);
                 Ok((TokenKind::OpenParenthesis, span))
             }
             ')' => {
                 self.advance_column();
-                self.advance_span(&span);
+                self.advance_consumed(span.len);
                 Ok((TokenKind::CloseParenthesis, span))
             }
             ',' => {
                 self.advance_column();
-                self.advance_span(&span);
+                self.advance_consumed(span.len);
                 Ok((TokenKind::Comma, span))
             }
             ';' => {
                 self.advance_column();
-                self.advance_span(&span);
+                self.advance_consumed(span.len);
                 Ok((TokenKind::Semicolon, span))
             }
             c if c.is_ascii_digit() => Ok(self.number()?),
             c if c.is_ascii_alphabetic() || c == '_' => Ok(self.identifier()?),
-            c => Err(Error::UnexpectedChar(
-                c,
-                self.location.clone(),
-                Span::new(self.pos, c.len_utf8()),
-            )),
+            c => Err(Error::UnexpectedChar(c, span)),
         }?;
 
-        let token = Token {
-            kind,
-            location,
-            span,
-        };
+        let token = Token { kind, span };
 
         Ok(token)
     }
@@ -116,10 +111,6 @@ impl<'a> Lexer<'a> {
 
     fn advance_columns(&mut self, count: usize) {
         self.location.column += count;
-    }
-
-    fn advance_span(&mut self, span: &Span) {
-        self.advance_consumed(span.len())
     }
 
     fn advance_consumed(&mut self, len: usize) {
@@ -135,8 +126,13 @@ impl<'a> Lexer<'a> {
             .expect("we have at least one char")
         {
             '-' => {
-                let span = Span::new(self.pos, '-'.len_utf8());
-                self.advance_span(&span);
+                let span = Span::new(
+                    self.location.line,
+                    self.location.column,
+                    self.pos,
+                    '-'.len_utf8(),
+                );
+                self.advance_consumed(span.len);
 
                 (true, Some(span))
             }
@@ -170,19 +166,19 @@ impl<'a> Lexer<'a> {
     fn identifier(&mut self) -> Result<(TokenKind, Span), Error> {
         let mut chars = self.remaining.chars();
 
-        let mut bytes_read = 0usize;
+        let mut span = Span::new(self.location.line, self.location.column, self.pos, 0);
         let keyword_token = match chars.next().expect("there is at least one char") {
             'l' => {
                 self.advance_column();
-                bytes_read += 'l'.len_utf8();
+                span = span.extend('l'.len_utf8());
                 match chars.next() {
                     Some('e') => {
                         self.advance_column();
-                        bytes_read += 'e'.len_utf8();
+                        span = span.extend('e'.len_utf8());
                         match chars.next() {
                             Some('t') => {
                                 self.advance_column();
-                                bytes_read += 't'.len_utf8();
+                                span = span.extend('t'.len_utf8());
                                 match chars.next() {
                                     Some(c) if is_identifier(&c) => None,
                                     _ => Some(TokenKind::Let),
@@ -198,14 +194,17 @@ impl<'a> Lexer<'a> {
         };
 
         let (token, span) = match keyword_token {
-            Some(token) => (token, Span::new(self.pos, bytes_read)),
+            Some(token) => (token, span),
             None => {
-                let (ident, span) = self.take_while(|c| is_identifier(&c))?;
-                (TokenKind::Identifier(ident.to_string()), span)
+                let (ident, new_span) = self.take_while(|c| is_identifier(&c))?;
+                (
+                    TokenKind::Identifier(ident.to_string()),
+                    span.extend_to(&new_span),
+                )
             }
         };
 
-        self.advance_span(&span);
+        self.advance_consumed(span.len);
 
         Ok((token, span))
     }
@@ -214,6 +213,8 @@ impl<'a> Lexer<'a> {
     where
         F: Fn(char) -> bool,
     {
+        let line = self.location.line;
+        let column = self.location.column;
         let mut len = 0;
 
         for ch in self.remaining.chars() {
@@ -234,7 +235,10 @@ impl<'a> Lexer<'a> {
         if len == 0 {
             Err(Error::NoMatch)
         } else {
-            Ok((&self.remaining[..len], Span::new(self.pos, len)))
+            Ok((
+                &self.remaining[..len],
+                Span::new(line, column, self.pos, len),
+            ))
         }
     }
 }
@@ -300,17 +304,12 @@ impl<'a> PeekableLexer<'a> {
 #[derive(Debug, PartialEq)]
 pub struct Token {
     kind: TokenKind,
-    location: Location,
     span: Span,
 }
 
 impl Token {
     pub fn kind(&self) -> &TokenKind {
         &self.kind
-    }
-
-    pub fn location(&self) -> &Location {
-        &self.location
     }
 
     pub fn span(&self) -> &Span {
@@ -343,7 +342,7 @@ impl From<i64> for TokenKind {
 }
 
 #[derive(Clone, PartialEq)]
-pub struct Location {
+struct Location {
     /// 1-based line
     line: usize,
     /// 1-based column on line
@@ -351,7 +350,7 @@ pub struct Location {
 }
 
 impl Location {
-    pub fn new(line: usize, column: usize) -> Self {
+    fn new(line: usize, column: usize) -> Self {
         Self { line, column }
     }
 }
@@ -370,51 +369,60 @@ impl Display for Location {
 
 #[derive(Clone, PartialEq)]
 pub struct Span {
-    // todo merge with location
-    /// start position
+    line: usize,
+    column: usize,
     start: usize,
-    /// length
-    end: usize,
+    len: usize,
 }
 
 impl Span {
-    pub fn new(start: usize, len: usize) -> Self {
+    pub fn new(line: usize, column: usize, start: usize, len: usize) -> Self {
+        assert!(line >= 1);
+        assert!(column >= 1);
         Self {
+            line,
+            column,
             start,
-            end: start + len - 1,
+            len,
         }
     }
 
-    pub fn start(&self) -> usize {
-        self.start
-    }
-
-    pub fn end(&self) -> usize {
-        self.end
-    }
-
     pub fn extend_to(&self, other: &Span) -> Self {
+        let self_end = self.start + self.len;
+        let other_end = other.start + other.len;
+        let diff = other_end - self_end;
         Self {
+            line: self.line,
+            column: self.column,
             start: self.start,
-            end: other.end,
+            len: self.len + diff,
         }
     }
 
     pub fn extend(&self, len: usize) -> Self {
         Self {
+            line: self.line,
+            column: self.column,
             start: self.start,
-            end: self.end + len,
+            len: self.len + len,
         }
     }
 
     pub fn len(&self) -> usize {
-        self.end - self.start + 1
+        self.len
     }
 }
 
 impl Debug for Span {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}->{}", self.start, self.end)
+        write!(
+            f,
+            "{}:{}; [{}, {}]",
+            self.line,
+            self.column,
+            self.start,
+            self.start + self.len
+        )
     }
 }
 
@@ -423,14 +431,13 @@ mod tests {
     use super::*;
 
     macro_rules! lexer_test_next {
-        ($name:ident, $src:expr => $expected:expr; loc: $l:expr,$c:expr; span: $start:expr,$len:expr) => {
+        ($name:ident, $src:expr => $expected:expr; loc: $line:expr,$column:expr; span: $start:expr,$len:expr) => {
             #[test]
             fn $name() {
                 let mut lexer = Lexer::new($src);
                 let expected = Token {
                     kind: TokenKind::from($expected),
-                    location: Location::new($l, $c),
-                    span: Span::new($start, $len),
+                    span: Span::new($line, $column, $start, $len),
                 };
                 let actual = lexer.next().unwrap();
                 assert_eq!(actual, expected)
@@ -456,8 +463,7 @@ mod tests {
         let mut lexer = Lexer::new("ident");
         let expected = Token {
             kind: TokenKind::Identifier("ident".to_string()),
-            location: Location::new(1, 1),
-            span: Span::new(0, 5),
+            span: Span::new(1, 1, 0, 5),
         };
         let actual = lexer.next().unwrap();
         assert_eq!(actual, expected);
@@ -465,8 +471,7 @@ mod tests {
         let mut lexer = Lexer::new(" ident ");
         let expected = Token {
             kind: TokenKind::Identifier("ident".to_string()),
-            location: Location::new(1, 2),
-            span: Span::new(1, 5),
+            span: Span::new(1, 2, 1, 5),
         };
         let actual = lexer.next().unwrap();
         assert_eq!(actual, expected);
@@ -477,8 +482,7 @@ mod tests {
         let mut lexer = Lexer::new("let123");
         let expected = Token {
             kind: TokenKind::Identifier("let123".to_string()),
-            location: Location::new(1, 1),
-            span: Span::new(0, 6),
+            span: Span::new(1, 1, 0, 6),
         };
         let actual = lexer.next().unwrap();
         assert_eq!(actual, expected);
@@ -491,8 +495,7 @@ mod tests {
                 let mut lexer = Lexer::new($src);
                 let expected = Token {
                     kind: TokenKind::$keyword,
-                    location: Location::new(1, 1),
-                    span: Span::new(0, $src.len()),
+                    span: Span::new(1, 1, 0, $src.len()),
                 };
                 let actual = lexer.next().unwrap();
                 assert_eq!(actual, expected);
@@ -527,8 +530,7 @@ mod tests {
             token,
             &Token {
                 kind: TokenKind::Number(1),
-                location: Location::new(1, 1),
-                span: Span::new(0, 1),
+                span: Span::new(1, 1, 0, 1),
             }
         );
 
@@ -537,8 +539,7 @@ mod tests {
             token,
             Token {
                 kind: TokenKind::Number(1),
-                location: Location::new(1, 1),
-                span: Span::new(0, 1),
+                span: Span::new(1, 1, 0, 1),
             }
         );
 
@@ -547,8 +548,7 @@ mod tests {
             token,
             &Token {
                 kind: TokenKind::Number(2),
-                location: Location::new(1, 3),
-                span: Span::new(2, 1),
+                span: Span::new(1, 3, 2, 1),
             }
         );
 
@@ -557,8 +557,7 @@ mod tests {
             token,
             Token {
                 kind: TokenKind::Number(2),
-                location: Location::new(1, 3),
-                span: Span::new(2, 1),
+                span: Span::new(1, 3, 2, 1),
             }
         );
     }
@@ -572,8 +571,7 @@ mod tests {
             token,
             &Token {
                 kind: TokenKind::Number(1),
-                location: Location::new(1, 1),
-                span: Span::new(0, 1),
+                span: Span::new(1, 1, 0, 1),
             }
         );
 
@@ -582,8 +580,7 @@ mod tests {
             token,
             &Token {
                 kind: TokenKind::Number(1),
-                location: Location::new(1, 1),
-                span: Span::new(0, 1),
+                span: Span::new(1, 1, 0, 1),
             }
         );
 
@@ -592,8 +589,7 @@ mod tests {
             token,
             Token {
                 kind: TokenKind::Number(1),
-                location: Location::new(1, 1),
-                span: Span::new(0, 1),
+                span: Span::new(1, 1, 0, 1),
             }
         );
 
@@ -602,8 +598,7 @@ mod tests {
             token,
             Token {
                 kind: TokenKind::Number(2),
-                location: Location::new(1, 3),
-                span: Span::new(2, 1),
+                span: Span::new(1, 3, 2, 1),
             }
         );
     }
@@ -631,8 +626,7 @@ mod tests {
             token,
             Token {
                 kind: TokenKind::Number(1),
-                location: Location::new(1, 1),
-                span: Span::new(0, 1),
+                span: Span::new(1, 1, 0, 1),
             }
         );
     }
@@ -640,16 +634,16 @@ mod tests {
     #[test]
     fn peek_until() {
         let mut lexer = PeekableLexer::new(Lexer::new("1 2 + -"), 16);
-        let position = lexer
+        let span = lexer
             .peek_until(TokenKind::Plus)
             .expect("+ exists in the token stream");
 
-        assert_eq!(position, 2);
+        assert_eq!(span, 2);
 
-        let token_kind = lexer.peek_nth(position).expect("token exists").kind();
+        let token_kind = lexer.peek_nth(span).expect("token exists").kind();
         assert_eq!(token_kind, &TokenKind::Plus);
 
-        let token_kind = lexer.peek_nth(position + 1).expect("token exists").kind();
+        let token_kind = lexer.peek_nth(span + 1).expect("token exists").kind();
         assert_eq!(token_kind, &TokenKind::Minus);
     }
 }

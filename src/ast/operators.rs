@@ -1,19 +1,14 @@
-use crate::lexer::{Location, Span};
+use crate::lexer::Span;
 
 #[derive(Debug, PartialEq)]
 pub struct BinaryOperator {
     kind: BinaryOperatorKind,
-    location: Location,
     span: Span,
 }
 
 impl BinaryOperator {
-    pub fn new(kind: BinaryOperatorKind, location: Location, span: Span) -> Self {
-        Self {
-            kind,
-            location,
-            span,
-        }
+    pub fn new(kind: BinaryOperatorKind, span: Span) -> Self {
+        Self { kind, span }
     }
 
     pub fn kind(&self) -> &BinaryOperatorKind {
@@ -32,29 +27,16 @@ pub enum BinaryOperatorKind {
 #[derive(Debug, PartialEq)]
 pub struct UnaryOperator {
     kind: UnaryOperatorKind,
-    location: Location,
     span: Span,
 }
 
 impl UnaryOperator {
-    pub fn new(kind: UnaryOperatorKind, location: Location, span: Span) -> Self {
-        Self {
-            kind,
-            location,
-            span,
-        }
+    pub fn new(kind: UnaryOperatorKind, span: Span) -> Self {
+        Self { kind, span }
     }
 
     pub fn kind(&self) -> &UnaryOperatorKind {
         &self.kind
-    }
-
-    pub fn location(&self) -> &Location {
-        &self.location
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
     }
 }
 

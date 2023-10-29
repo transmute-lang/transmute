@@ -7,7 +7,6 @@ pub mod statement;
 use crate::ast::expression::Expression;
 use crate::ast::literal::Literal;
 use crate::ast::statement::Statement;
-use crate::lexer::Span;
 
 pub trait Visitor<'a, R> {
     fn visit_statement(&mut self, stmt: &'a Statement) -> R;
@@ -26,12 +25,6 @@ impl Ast {
     pub fn new(root: Vec<Statement>) -> Self {
         assert!(!root.is_empty());
         Self { root }
-    }
-
-    pub fn span(&self) -> Span {
-        let start_span = self.root.first().unwrap().span();
-        let stop_span = self.root.last().unwrap().span();
-        start_span.extend_to(stop_span)
     }
 
     pub fn accept<'a, V, R>(&'a self, visitor: &mut V) -> R

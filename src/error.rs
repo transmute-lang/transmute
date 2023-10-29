@@ -1,8 +1,8 @@
-use crate::lexer::{Location, Span};
+use crate::lexer::Span;
 
 #[derive(Debug)]
 pub enum Error {
     UnexpectedEof,
     NoMatch,
-    UnexpectedChar(char, Location, Span),
+    UnexpectedChar(char, Span),
 }

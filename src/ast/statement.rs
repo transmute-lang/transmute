@@ -1,33 +1,20 @@
 use crate::ast::expression::Expression;
 use crate::ast::identifier::Identifier;
-use crate::lexer::{Location, Span};
+use crate::lexer::Span;
 
 #[derive(Debug, PartialEq)]
 pub struct Statement {
     kind: StatementKind,
-    location: Location,
     span: Span,
 }
 
 impl Statement {
-    pub fn new(kind: StatementKind, location: Location, span: Span) -> Self {
-        Self {
-            kind,
-            location,
-            span,
-        }
+    pub fn new(kind: StatementKind, span: Span) -> Self {
+        Self { kind, span }
     }
 
     pub fn kind(&self) -> &StatementKind {
         &self.kind
-    }
-
-    pub fn location(&self) -> &Location {
-        &self.location
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
     }
 }
 

@@ -33,7 +33,10 @@ impl<'a> Visitor<'a, i64> for Interpreter<'a> {
             StatementKind::Expression(e) => e.accept(self),
             StatementKind::Let(ident, expr) => {
                 let val = expr.accept(self);
-                self.variables.last_mut().expect("there is an env").insert(ident.name(), val);
+                self.variables
+                    .last_mut()
+                    .expect("there is an env")
+                    .insert(ident.name(), val);
                 0 // todo this is wrong
             }
             StatementKind::LetFn(ident, params, expr) => {
@@ -65,7 +68,7 @@ impl<'a> Visitor<'a, i64> for Interpreter<'a> {
             ExpressionKind::MethodCall(ident, arguments) => {
                 let (parameters, expr) = match self.functions.get(ident.name()) {
                     Some(f) => *f,
-                    None => panic!("{ident} not in scope")
+                    None => panic!("{ident} not in scope"),
                 };
 
                 if parameters.len() != arguments.len() {
@@ -75,8 +78,10 @@ impl<'a> Visitor<'a, i64> for Interpreter<'a> {
                     )
                 }
 
-                let env = parameters.iter().zip(arguments.iter())
-                    .map(|(ident, expr)| (ident.name(), expr.accept(self)) )
+                let env = parameters
+                    .iter()
+                    .zip(arguments.iter())
+                    .map(|(ident, expr)| (ident.name(), expr.accept(self)))
                     .collect::<HashMap<&str, i64>>();
 
                 self.variables.push(env);
@@ -95,7 +100,12 @@ impl<'a> Visitor<'a, i64> for Interpreter<'a> {
             LiteralKind::Number(n) => *n,
             LiteralKind::Identifier(ident) => {
                 // todo this is incorrect, no default value allowed
-                match self.variables.last_mut().expect("there is an env").get(ident.name()) {
+                match self
+                    .variables
+                    .last_mut()
+                    .expect("there is an env")
+                    .get(ident.name())
+                {
                     None => panic!("{ident} not in scope"),
                     Some(v) => *v,
                 }
