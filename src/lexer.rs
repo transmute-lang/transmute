@@ -75,6 +75,11 @@ impl<'a> Lexer<'a> {
                 self.advance_span(&span);
                 Ok((TokenKind::CloseParenthesis, span))
             }
+            ';' => {
+                self.advance_column();
+                self.advance_span(&span);
+                Ok((TokenKind::Semicolon, span))
+            }
             c if c.is_ascii_digit() => Ok(self.number()?),
             c if c.is_ascii_alphabetic() || c == '_' => Ok(self.identifier()?),
             c => Err(Error::UnexpectedChar(
@@ -283,6 +288,7 @@ pub enum TokenKind {
     Number(i64),
     OpenParenthesis,
     Plus,
+    Semicolon,
     Slash,
     Star,
     Eof,
@@ -391,6 +397,7 @@ mod tests {
     lexer_test_next!(next_equal, "=" => TokenKind::Equal; loc: 1,1; span: 0,1);
     lexer_test_next!(next_open_parenthesis, "(" => TokenKind::OpenParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_parenthesis, ")" => TokenKind::CloseParenthesis; loc: 1,1; span: 0,1);
+    lexer_test_next!(semicolon, ";" => TokenKind::Semicolon; loc: 1,1; span: 0,1);
 
     #[test]
     fn next_identifier() {

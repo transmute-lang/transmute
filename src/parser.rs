@@ -67,7 +67,17 @@ impl<'a> Parser<'a> {
                 }
 
                 let expression = self.parse_expression()?;
-                let span = token.span().extend_to(&expression.span());
+
+                let semicolon = self.lexer.next()?;
+                if semicolon.kind() != &TokenKind::Semicolon {
+                    todo!(
+                        "parse_statement: error handling {:?}; expected = at {}",
+                        token.kind(),
+                        token.location()
+                    )
+                }
+
+                let span = token.span().extend_to(&semicolon.span());
                 Ok(Statement::new(
                     StatementKind::Let(identifier, expression),
                     token.location().clone(),
@@ -357,7 +367,7 @@ mod tests {
 
     #[test]
     fn let_statement() {
-        let mut parser = Parser::new(Lexer::new("let forty_two = 42"));
+        let mut parser = Parser::new(Lexer::new("let forty_two = 42;"));
 
         let actual = parser.parse_statement().expect("statement is valid");
         let expected = Statement::new(
@@ -374,7 +384,7 @@ mod tests {
                 ))),
             ),
             Location::new(1, 1),
-            Span::new(0, 18),
+            Span::new(0, 19),
         );
 
         assert_eq!(actual, expected);

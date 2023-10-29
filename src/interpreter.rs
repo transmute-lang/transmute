@@ -71,5 +71,5 @@ mod tests {
     eval!(unary_operator_minus_negative_number, "--42" => 42);
     eval!(division, "85 / 2" => 42);
 
-    eval!(let_stmt, "let forty_two = 42" => 0); // fixme should be a 'none' value
+    eval!(let_stmt, "let forty_two = 42;" => 0); // fixme should be a 'none' value
 }
