@@ -39,5 +39,6 @@ impl Literal {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum LiteralKind {
+    Identifier(String),
     Number(i64),
 }

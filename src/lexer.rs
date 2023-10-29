@@ -169,11 +169,9 @@ impl<'a> Lexer<'a> {
                                 bytes_read += 't'.len_utf8();
                                 match chars.next() {
                                     Some(c) if is_identifier(&c) => None,
-                                    _ => {
-                                        Some(TokenKind::Let)
-                                    }
+                                    _ => Some(TokenKind::Let),
                                 }
-                            },
+                            }
                             _ => None,
                         }
                     }
@@ -187,10 +185,7 @@ impl<'a> Lexer<'a> {
             Some(token) => (token, Span::new(self.pos, bytes_read)),
             None => {
                 let (ident, span) = self.take_while(|c| is_identifier(&c))?;
-                (
-                    TokenKind::Identifier(ident.to_string()),
-                    span,
-                )
+                (TokenKind::Identifier(ident.to_string()), span)
             }
         };
 

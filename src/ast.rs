@@ -31,7 +31,7 @@ impl Ast {
     pub fn span(&self) -> Span {
         let start_span = self.root.first().unwrap().span();
         let stop_span = self.root.last().unwrap().span();
-        start_span.extend_to(&stop_span)
+        start_span.extend_to(stop_span)
     }
 
     pub fn accept<V, R>(&self, visitor: &mut V) -> R

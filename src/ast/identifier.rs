@@ -23,4 +23,8 @@ impl Identifier {
     pub fn span(&self) -> &Span {
         &self.span
     }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }

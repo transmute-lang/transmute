@@ -3,14 +3,29 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
 use crate::ast::statement::{Statement, StatementKind};
 use crate::ast::Visitor;
+use std::collections::HashMap;
 
-pub struct Interpreter;
+pub struct Interpreter {
+    env: HashMap<String, i64>,
+}
+
+impl Interpreter {
+    pub fn new() -> Self {
+        Self {
+            env: HashMap::new(),
+        }
+    }
+}
 
 impl Visitor<i64> for Interpreter {
     fn visit_statement(&mut self, stmt: &Statement) -> i64 {
         match stmt.kind() {
             StatementKind::Expression(e) => e.accept(self),
-            StatementKind::Let(_, _) => 0, // todo this is wrong
+            StatementKind::Let(ident, expr) => {
+                let val = expr.accept(self);
+                self.env.insert(ident.name().to_string(), val);
+                0 // todo this is wrong}
+            }
         }
     }
 
@@ -39,6 +54,13 @@ impl Visitor<i64> for Interpreter {
     fn visit_literal(&mut self, literal: &Literal) -> i64 {
         match literal.kind() {
             LiteralKind::Number(n) => *n,
+            LiteralKind::Identifier(ident) => {
+                // todo this is incorrect, no default value allowed
+                match self.env.get(ident) {
+                    None => panic!("{ident} not in scope"),
+                    Some(v) => *v,
+                }
+            }
         }
     }
 }
@@ -56,7 +78,7 @@ mod tests {
                 let mut parser = Parser::new(Lexer::new($src));
                 let ast = parser.parse().expect("source is valid");
 
-                let mut interpreter = Interpreter;
+                let mut interpreter = Interpreter::new();
                 let actual = ast.accept(&mut interpreter);
 
                 assert_eq!($expected, actual)
@@ -74,4 +96,6 @@ mod tests {
     eval!(division, "85 / 2;" => 42);
 
     eval!(let_stmt, "let forty_two = 42;" => 0); // fixme should be a 'none' value
+
+    eval!(let_stmt_then_expression, "let forty = 2 * 20; forty + 2;" => 42);
 }

@@ -74,14 +74,17 @@ impl<'a> Parser<'a> {
                     )
                 }
 
-                let span = let_token.span().extend_to(&semicolon_token.span());
+                let span = let_token.span().extend_to(semicolon_token.span());
                 Ok(Statement::new(
                     StatementKind::Let(identifier, expression),
                     let_token.location().clone(),
                     span,
                 ))
             }
-            TokenKind::Minus | TokenKind::Number(_) | TokenKind::OpenParenthesis => {
+            TokenKind::Minus
+            | TokenKind::Number(_)
+            | TokenKind::OpenParenthesis
+            | TokenKind::Identifier(_) => {
                 let expression = self.parse_expression()?;
                 let semicolon_token = self.lexer.next()?;
                 if semicolon_token.kind() != &TokenKind::Semicolon {
@@ -92,7 +95,7 @@ impl<'a> Parser<'a> {
                     )
                 }
                 let location = expression.location().clone();
-                let span = expression.span().extend_to(&semicolon_token.span());
+                let span = expression.span().extend_to(semicolon_token.span());
                 Ok(Statement::new(
                     StatementKind::Expression(expression),
                     location,
@@ -118,6 +121,11 @@ impl<'a> Parser<'a> {
         let token = self.lexer.next()?;
 
         let mut expression = match token.kind() {
+            TokenKind::Identifier(ident) => Expression::from(Literal::new(
+                LiteralKind::Identifier(ident.clone()),
+                token.location().clone(),
+                token.span().clone(),
+            )),
             TokenKind::Number(n) => Expression::from(Literal::new(
                 LiteralKind::Number(*n),
                 token.location().clone(),
@@ -188,23 +196,6 @@ impl<'a> Parser<'a> {
         )))
     }
 
-    fn parse_literal(&mut self) -> Result<Literal, Error> {
-        let token = self.lexer.next()?;
-
-        match token.kind() {
-            TokenKind::Number(n) => Ok(Literal::new(
-                LiteralKind::Number(*n),
-                token.location().clone(),
-                token.span().clone(),
-            )),
-            _ => todo!(
-                "parse_literal: error handling {:?} at {}",
-                token.kind(),
-                token.location()
-            ),
-        }
-    }
-
     fn parse_operator(&mut self) -> Result<BinaryOperator, Error> {
         let token = self.lexer.next()?;
 
@@ -264,15 +255,37 @@ mod tests {
     use crate::lexer::{Location, Span};
 
     #[test]
-    pub fn literal() {
+    pub fn expression_literal_number() {
         let lexer = Lexer::new("42");
         let mut parser = Parser::new(lexer);
 
         let location = Location::new(1, 1);
         let span = Span::new(0, 2);
 
-        let actual = parser.parse_literal().unwrap();
-        let expected = Literal::new(LiteralKind::Number(42), location, span);
+        let actual = parser.parse_expression().unwrap();
+        let expected = Expression::new(ExpressionKind::Literal(Literal::new(
+            LiteralKind::Number(42),
+            location,
+            span,
+        )));
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    pub fn expression_literal_identifier() {
+        let lexer = Lexer::new("forty_two");
+        let mut parser = Parser::new(lexer);
+
+        let location = Location::new(1, 1);
+        let span = Span::new(0, 9);
+
+        let actual = parser.parse_expression().unwrap();
+        let expected = Expression::new(ExpressionKind::Literal(Literal::new(
+            LiteralKind::Identifier("forty_two".to_string()),
+            location,
+            span,
+        )));
 
         assert_eq!(expected, actual);
     }
@@ -294,7 +307,7 @@ mod tests {
                 Location::new(1, 3),
                 Span::new(2, 1),
             ),
-            Box::new(Expression::from(ExpressionKind::Binary(
+            Box::new(Expression::new(ExpressionKind::Binary(
                 Box::new(Expression::from(Literal::new(
                     LiteralKind::Number(20),
                     Location::new(1, 5),
@@ -322,7 +335,7 @@ mod tests {
         let mut parser = Parser::new(lexer);
 
         let actual = parser.parse_expression().unwrap();
-        let expecged = Expression::from(ExpressionKind::Binary(
+        let expecged = Expression::new(ExpressionKind::Binary(
             Box::new(Expression::from(Literal::new(
                 LiteralKind::Number(43),
                 Location::new(1, 1),
@@ -350,7 +363,7 @@ mod tests {
 
         let actual = parser.parse().unwrap();
         let expected = Ast::new(vec![Statement::new(
-            StatementKind::Expression(Expression::from(ExpressionKind::Binary(
+            StatementKind::Expression(Expression::new(ExpressionKind::Binary(
                 Box::new(Expression::from(Literal::new(
                     LiteralKind::Number(40),
                     Location::new(1, 1),
@@ -404,6 +417,42 @@ mod tests {
             Location::new(1, 1),
             Span::new(0, 19),
         );
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn two_statements() {
+        let mut parser = Parser::new(Lexer::new("let forty_two = 42; forty_two;"));
+
+        let actual = parser.parse().expect("source is valid");
+        let expected = Ast::new(vec![
+            Statement::new(
+                StatementKind::Let(
+                    Identifier::new(
+                        "forty_two".to_string(),
+                        Location::new(1, 5),
+                        Span::new(4, 9),
+                    ),
+                    Expression::new(ExpressionKind::Literal(Literal::new(
+                        LiteralKind::Number(42),
+                        Location::new(1, 17),
+                        Span::new(16, 2),
+                    ))),
+                ),
+                Location::new(1, 1),
+                Span::new(0, 19),
+            ),
+            Statement::new(
+                StatementKind::Expression(Expression::new(ExpressionKind::Literal(Literal::new(
+                    LiteralKind::Identifier("forty_two".to_string()),
+                    Location::new(1, 21),
+                    Span::new(20, 9),
+                )))),
+                Location::new(1, 21),
+                Span::new(20, 10),
+            ),
+        ]);
 
         assert_eq!(actual, expected);
     }

@@ -41,12 +41,6 @@ impl Expression {
     }
 }
 
-impl From<ExpressionKind> for Expression {
-    fn from(kind: ExpressionKind) -> Self {
-        Self { kind }
-    }
-}
-
 impl From<Literal> for Expression {
     fn from(literal: Literal) -> Self {
         Self {
