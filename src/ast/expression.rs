@@ -1,7 +1,6 @@
 use crate::ast::identifier::Identifier;
 use crate::ast::literal::Literal;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
-use crate::ast::Visitor;
 use crate::lexer::Span;
 
 #[derive(Debug, PartialEq)]
@@ -22,13 +21,6 @@ impl Expression {
     pub fn span(&self) -> &Span {
         &self.span
     }
-
-    pub fn accept<'a, V, R>(&self, visitor: &mut V) -> R
-    where
-        V: Visitor<'a, R>,
-    {
-        visitor.visit_expression(self)
-    }
 }
 
 impl From<Literal> for Expression {
@@ -42,6 +34,7 @@ impl From<Literal> for Expression {
 pub enum ExpressionKind {
     Literal(Literal),
     Binary(Box<Expression>, BinaryOperator, Box<Expression>),
+    // todo vec does not hold span and position as it should
     MethodCall(Identifier, Vec<Expression>),
     Unary(UnaryOperator, Box<Expression>),
 }

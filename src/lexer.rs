@@ -90,6 +90,16 @@ impl<'a> Lexer<'a> {
                 self.advance_consumed(span.len);
                 Ok((TokenKind::Comma, span))
             }
+            '{' => {
+                self.advance_column();
+                self.advance_consumed(span.len);
+                Ok((TokenKind::OpenCurlyBracket, span))
+            }
+            '}' => {
+                self.advance_column();
+                self.advance_consumed(span.len);
+                Ok((TokenKind::CloseCurlyBracket, span))
+            }
             ';' => {
                 self.advance_column();
                 self.advance_consumed(span.len);
@@ -320,6 +330,7 @@ impl Token {
 #[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
     Arrow,
+    CloseCurlyBracket,
     CloseParenthesis,
     Comma,
     Equal,
@@ -327,6 +338,7 @@ pub enum TokenKind {
     Let,
     Minus,
     Number(i64),
+    OpenCurlyBracket,
     OpenParenthesis,
     Plus,
     Semicolon,
@@ -455,6 +467,8 @@ mod tests {
     lexer_test_next!(next_open_parenthesis, "(" => TokenKind::OpenParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_parenthesis, ")" => TokenKind::CloseParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_comma, "," => TokenKind::Comma; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_open_curly_bracket, "{" => TokenKind::OpenCurlyBracket; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_close_curly_bracket, "}" => TokenKind::CloseCurlyBracket; loc: 1,1; span: 0,1);
     lexer_test_next!(next_arrow, "->" => TokenKind::Arrow; loc: 1,1; span: 0,2);
     lexer_test_next!(semicolon, ";" => TokenKind::Semicolon; loc: 1,1; span: 0,1);
 

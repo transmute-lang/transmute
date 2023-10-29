@@ -12,6 +12,6 @@ fn main() {
     let ast = Parser::new(Lexer::new("let forty = 2 * 20; forty + 2;"))
         .parse()
         .unwrap();
-    let result = Interpreter::default().start(&ast);
+    let result = Interpreter::new(&ast).start();
     println!("Result: {}", result);
 }

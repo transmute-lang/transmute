@@ -7,51 +7,58 @@ use crate::ast::{Ast, Visitor};
 use std::collections::HashMap;
 
 pub struct Interpreter<'a> {
+    ast: &'a Ast,
     // todo merge functions and variables (needs ValueKind)
-    functions: HashMap<&'a str, (&'a Vec<Identifier>, &'a Expression)>,
+    functions: HashMap<&'a str, (&'a Vec<Identifier>, &'a Vec<Statement>)>,
     variables: Vec<HashMap<&'a str, i64>>,
 }
 
 impl<'a> Interpreter<'a> {
-    pub fn start(mut self, ast: &'a Ast) -> i64 {
-        ast.accept(&mut self)
-    }
-}
-
-impl Default for Interpreter<'_> {
-    fn default() -> Self {
+    pub fn new(ast: &'a Ast) -> Self {
         Self {
+            ast,
             functions: Default::default(),
             variables: vec![HashMap::default()],
         }
     }
+    pub fn start(&mut self) -> i64 {
+        self.visit_ast(self.ast)
+    }
 }
 
 impl<'a> Visitor<'a, i64> for Interpreter<'a> {
+    fn visit_ast(&mut self, ast: &'a Ast) -> i64 {
+        ast.statements()
+            .iter()
+            .map(|s| self.visit_statement(s))
+            .last()
+            .unwrap_or_default()
+    }
+
     fn visit_statement(&mut self, stmt: &'a Statement) -> i64 {
         match stmt.kind() {
-            StatementKind::Expression(e) => e.accept(self),
+            StatementKind::Expression(e) => self.visit_expression(e),
             StatementKind::Let(ident, expr) => {
-                let val = expr.accept(self);
+                let val = self.visit_expression(expr);
                 self.variables
                     .last_mut()
                     .expect("there is an env")
                     .insert(ident.name(), val);
                 0 // todo this is wrong
             }
-            StatementKind::LetFn(ident, params, expr) => {
-                self.functions.insert(ident.name(), (params, expr));
+            StatementKind::LetFn(ident, params, statements) => {
+                self.functions.insert(ident.name(), (params, statements));
                 0 // todo this is wrong
             }
         }
     }
 
-    fn visit_expression(&mut self, expr: &Expression) -> i64 {
+    fn visit_expression(&mut self, expr: &'a Expression) -> i64 {
         match expr.kind() {
-            ExpressionKind::Literal(n) => n.accept(self),
+            ExpressionKind::Literal(n) => self.visit_literal(n),
             ExpressionKind::Binary(l, o, r) => {
-                let l = l.accept(self);
-                let r = r.accept(self);
+                let l = self.visit_expression(l);
+                let r = self.visit_expression(r);
                 match o.kind() {
                     BinaryOperatorKind::Addition => l + r,
                     BinaryOperatorKind::Subtraction => l - r,
@@ -60,13 +67,13 @@ impl<'a> Visitor<'a, i64> for Interpreter<'a> {
                 }
             }
             ExpressionKind::Unary(o, e) => {
-                let e = e.accept(self);
+                let e = self.visit_expression(e);
                 match o.kind() {
                     UnaryOperatorKind::Minus => -e,
                 }
             }
             ExpressionKind::MethodCall(ident, arguments) => {
-                let (parameters, expr) = match self.functions.get(ident.name()) {
+                let (parameters, statements) = match self.functions.get(ident.name()) {
                     Some(f) => *f,
                     None => panic!("{ident} not in scope"),
                 };
@@ -81,12 +88,16 @@ impl<'a> Visitor<'a, i64> for Interpreter<'a> {
                 let env = parameters
                     .iter()
                     .zip(arguments.iter())
-                    .map(|(ident, expr)| (ident.name(), expr.accept(self)))
+                    .map(|(ident, expr)| (ident.name(), self.visit_expression(expr)))
                     .collect::<HashMap<&str, i64>>();
 
                 self.variables.push(env);
 
-                let ret = expr.accept(self);
+                let ret = statements
+                    .iter()
+                    .map(|s| self.visit_statement(s))
+                    .last()
+                    .unwrap_or_default();
 
                 let _ = self.variables.pop();
 
@@ -95,7 +106,7 @@ impl<'a> Visitor<'a, i64> for Interpreter<'a> {
         }
     }
 
-    fn visit_literal(&mut self, literal: &Literal) -> i64 {
+    fn visit_literal(&mut self, literal: &'a Literal) -> i64 {
         match literal.kind() {
             LiteralKind::Number(n) => *n,
             LiteralKind::Identifier(ident) => {
@@ -127,7 +138,7 @@ mod tests {
                 let mut parser = Parser::new(Lexer::new($src));
                 let ast = parser.parse().expect("source is valid");
 
-                let actual = Interpreter::default().start(&ast);
+                let actual = Interpreter::new(&ast).start();
 
                 assert_eq!($expected, actual)
             }
@@ -146,4 +157,5 @@ mod tests {
     eval!(let_stmt_then_expression, "let forty = 2 * 20; forty + 2;" => 42);
     eval!(function, "let times_two = (v) -> v * 2;" => 0); // fixme should be a 'none' or a 'function' value value
     eval!(function_call, "let times_two = (v) -> v * 2; times_two(21);" => 42);
+    eval!(complex_function_call, "let plus_one_times_two = (v) -> { let res = v + 1; res * 2; } plus_one_times_two(20);" => 42);
 }

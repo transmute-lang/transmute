@@ -1,5 +1,4 @@
 use crate::ast::identifier::Identifier;
-use crate::ast::Visitor;
 use crate::lexer::Span;
 
 #[derive(Debug, PartialEq)]
@@ -19,13 +18,6 @@ impl Literal {
 
     pub fn span(&self) -> &Span {
         &self.span
-    }
-
-    pub fn accept<'a, V, R>(&self, visitor: &mut V) -> R
-    where
-        V: Visitor<'a, R>,
-    {
-        visitor.visit_literal(self)
     }
 }
 
