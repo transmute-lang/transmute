@@ -152,7 +152,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn identifier(&mut self) -> Result<(TokenKind, Span), Error> {
-        let mut chars = self.remaining.chars().peekable();
+        let mut chars = self.remaining.chars();
 
         let mut bytes_read = 0usize;
         let keyword_token = match chars.next().expect("there is at least one char") {
@@ -164,12 +164,14 @@ impl<'a> Lexer<'a> {
                         self.advance_column();
                         bytes_read += 'e'.len_utf8();
                         match chars.next() {
-                            Some('t') => match chars.peek() {
-                                Some(c) if is_identifier(c) => None,
-                                _ => {
-                                    self.advance_column();
-                                    bytes_read += 't'.len_utf8();
-                                    Some(TokenKind::Let)
+                            Some('t') => {
+                                self.advance_column();
+                                bytes_read += 't'.len_utf8();
+                                match chars.next() {
+                                    Some(c) if is_identifier(&c) => None,
+                                    _ => {
+                                        Some(TokenKind::Let)
+                                    }
                                 }
                             },
                             _ => None,
@@ -184,11 +186,10 @@ impl<'a> Lexer<'a> {
         let (token, span) = match keyword_token {
             Some(token) => (token, Span::new(self.pos, bytes_read)),
             None => {
-                let (_, span) = self.take_while(|c| is_identifier(&c))?;
-                let bytes_read = bytes_read + span.len();
+                let (ident, span) = self.take_while(|c| is_identifier(&c))?;
                 (
-                    TokenKind::Identifier(self.remaining[..bytes_read].to_string()),
-                    Span::new(self.pos, bytes_read),
+                    TokenKind::Identifier(ident.to_string()),
+                    span,
                 )
             }
         };
@@ -420,6 +421,7 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
+    #[test]
     fn next_identifier_with_keyword_prefix() {
         let mut lexer = Lexer::new("let123");
         let expected = Token {
