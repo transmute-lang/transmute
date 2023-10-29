@@ -200,6 +200,28 @@ impl<'a> Lexer<'a> {
                     _ => None,
                 }
             }
+            'r' => {
+                self.advance_column();
+                span = span.extend('r'.len_utf8());
+                match chars.next() {
+                    Some('e') => {
+                        self.advance_column();
+                        span = span.extend('e'.len_utf8());
+                        match chars.next() {
+                            Some('t') => {
+                                self.advance_column();
+                                span = span.extend('t'.len_utf8());
+                                match chars.next() {
+                                    Some(c) if is_identifier(&c) => None,
+                                    _ => Some(TokenKind::Ret),
+                                }
+                            }
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                }
+            }
             _ => None,
         };
 
@@ -341,6 +363,7 @@ pub enum TokenKind {
     OpenCurlyBracket,
     OpenParenthesis,
     Plus,
+    Ret,
     Semicolon,
     Slash,
     Star,
@@ -518,7 +541,7 @@ mod tests {
     }
 
     lexer_test_keyword!(keyword_let, "let" => Let);
-    // lexer_test_keyword!(keyword_ret, "ret" => Ret);
+    lexer_test_keyword!(keyword_ret, "ret" => Ret);
 
     macro_rules! lexer_test_fn {
         ($name:ident, $f:ident, $src:expr => $expected:expr) => {

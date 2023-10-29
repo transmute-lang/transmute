@@ -22,6 +22,7 @@ impl Statement {
 pub enum StatementKind {
     Expression(Expression),
     Let(Identifier, Expression),
+    Ret(Expression),
     // todo vec does not hold span and position as it should
     LetFn(Identifier, Vec<Identifier>, Vec<Statement>),
 }

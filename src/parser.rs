@@ -37,8 +37,10 @@ impl<'a> Parser<'a> {
     /// 'let ident = ( expr , ... ) -> expr ;
     /// 'let ident = ( expr , ... ) -> { expr ; ... }
     /// 'expr ;
+    /// 'ret expr ;
     /// ```
     fn parse_statement(&mut self) -> Result<Statement, Error> {
+        // fixme: duplicated several times
         let token = match self.lexer.peek() {
             Ok(token) => token,
             Err(_) => Err(self.lexer.next().unwrap_err())?,
@@ -46,7 +48,7 @@ impl<'a> Parser<'a> {
 
         match token.kind() {
             TokenKind::Let => {
-                let let_token = self.lexer.next()?;
+                let let_token = self.lexer.next().expect("we just peeked it");
                 let identifier_token = self.lexer.next()?;
                 let identifier = match identifier_token.kind() {
                     TokenKind::Identifier(ident) => {
@@ -59,6 +61,7 @@ impl<'a> Parser<'a> {
                     ),
                 };
 
+                // fimxe: pattern duplicated several times
                 let equal_token = self.lexer.next()?;
                 if equal_token.kind() != &TokenKind::Equal {
                     todo!(
@@ -86,10 +89,11 @@ impl<'a> Parser<'a> {
 
                 let expression = self.parse_expression()?;
 
+                // fixme: duplicated several times
                 let semicolon_token = self.lexer.next()?;
                 if semicolon_token.kind() != &TokenKind::Semicolon {
                     todo!(
-                        "parse_statement: error handling {:?}; expected = at {:?}",
+                        "parse_statement: error handling {:?}; expected ; at {:?}",
                         semicolon_token.kind(),
                         semicolon_token.span()
                     )
@@ -101,6 +105,23 @@ impl<'a> Parser<'a> {
                     span,
                 ))
             }
+            TokenKind::Ret => {
+                let ret_token = self.lexer.next().expect("we just peeked it");
+                let expression = self.parse_expression()?;
+                let semicolon_token = self.lexer.next()?;
+                if semicolon_token.kind() != &TokenKind::Semicolon {
+                    todo!(
+                        "parse_statement: error handling {:?}; expected ; at {:?}",
+                        semicolon_token.kind(),
+                        semicolon_token.span()
+                    )
+                }
+
+                Ok(Statement::new(
+                    StatementKind::Ret(expression),
+                    ret_token.span().extend_to(semicolon_token.span()),
+                ))
+            }
             TokenKind::Minus
             | TokenKind::Number(_)
             | TokenKind::OpenParenthesis
@@ -109,7 +130,7 @@ impl<'a> Parser<'a> {
                 let semicolon_token = self.lexer.next()?;
                 if semicolon_token.kind() != &TokenKind::Semicolon {
                     todo!(
-                        "parse_statement: error handling {:?}; expected = at {:?}",
+                        "parse_statement: error handling {:?}; expected ; at {:?}",
                         semicolon_token.kind(),
                         semicolon_token.span()
                     )
@@ -709,9 +730,6 @@ mod tests {
     fn function_statements() {
         let mut parser = Parser::new(Lexer::new("let times_two = (a) -> { a * 2; }"));
 
-        // let c = (a, b) -> { ret 0; }
-        // let c = (a, b) -> 0;
-
         let actual = parser.parse().expect("source is valid");
         let expected = Ast::new(vec![Statement::new(
             StatementKind::LetFn(
@@ -770,7 +788,23 @@ mod tests {
             ),
             Span::new(1, 1, 0, 13),
         );
+        assert_eq!(actual, expected);
+    }
 
+    #[test]
+    fn ret() {
+        let mut parser = Parser::new(Lexer::new("ret 42;"));
+        let actual = parser.parse_statement().expect("statement is valid");
+        let expected = Statement::new(
+            StatementKind::Ret(Expression::new(
+                ExpressionKind::Literal(Literal::new(
+                    LiteralKind::Number(42),
+                    Span::new(1, 5, 4, 2),
+                )),
+                Span::new(1, 5, 4, 2),
+            )),
+            Span::new(1, 1, 0, 7),
+        );
         assert_eq!(actual, expected);
     }
 }

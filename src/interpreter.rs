@@ -4,6 +4,7 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
 use crate::ast::statement::{Statement, StatementKind};
 use crate::ast::{Ast, Visitor};
+use itertools::Itertools;
 use std::collections::HashMap;
 
 pub struct Interpreter<'a> {
@@ -30,6 +31,7 @@ impl<'a> Visitor<'a, i64> for Interpreter<'a> {
     fn visit_ast(&mut self, ast: &'a Ast) -> i64 {
         ast.statements()
             .iter()
+            .take_while_inclusive(|s| !is_ret(s))
             .map(|s| self.visit_statement(s))
             .last()
             .unwrap_or_default()
@@ -50,6 +52,7 @@ impl<'a> Visitor<'a, i64> for Interpreter<'a> {
                 self.functions.insert(ident.name(), (params, statements));
                 0 // todo this is wrong
             }
+            StatementKind::Ret(e) => self.visit_expression(e),
         }
     }
 
@@ -95,6 +98,7 @@ impl<'a> Visitor<'a, i64> for Interpreter<'a> {
 
                 let ret = statements
                     .iter()
+                    .take_while_inclusive(|s| !is_ret(s))
                     .map(|s| self.visit_statement(s))
                     .last()
                     .unwrap_or_default();
@@ -125,6 +129,10 @@ impl<'a> Visitor<'a, i64> for Interpreter<'a> {
     }
 }
 
+fn is_ret(s: &Statement) -> bool {
+    matches!(s.kind(), &StatementKind::Ret(_))
+}
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;
@@ -140,7 +148,7 @@ mod tests {
 
                 let actual = Interpreter::new(&ast).start();
 
-                assert_eq!($expected, actual)
+                assert_eq!(actual, $expected)
             }
         };
     }
@@ -158,4 +166,5 @@ mod tests {
     eval!(function, "let times_two = (v) -> v * 2;" => 0); // fixme should be a 'none' or a 'function' value value
     eval!(function_call, "let times_two = (v) -> v * 2; times_two(21);" => 42);
     eval!(complex_function_call, "let plus_one_times_two = (v) -> { let res = v + 1; res * 2; } plus_one_times_two(20);" => 42);
+    eval!(ret_function_call, "let times_two = (v) -> { 41; ret v * 2; 42; } times_two(21);" => 42);
 }
