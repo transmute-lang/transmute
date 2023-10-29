@@ -1,3 +1,4 @@
+use crate::ast::identifier::Identifier;
 use crate::ast::literal::Literal;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::Visitor;
@@ -6,11 +7,17 @@ use crate::lexer::{Location, Span};
 #[derive(Debug, PartialEq)]
 pub struct Expression {
     kind: ExpressionKind,
+    location: Location,
+    span: Span,
 }
 
 impl Expression {
-    pub fn new(kind: ExpressionKind) -> Self {
-        Self { kind }
+    pub fn new(kind: ExpressionKind, location: Location, span: Span) -> Self {
+        Self {
+            kind,
+            location,
+            span,
+        }
     }
 
     pub fn kind(&self) -> &ExpressionKind {
@@ -18,19 +25,11 @@ impl Expression {
     }
 
     pub fn location(&self) -> &Location {
-        match &self.kind {
-            ExpressionKind::Literal(l) => l.location(),
-            ExpressionKind::Binary(e, _, _) => e.location(),
-            ExpressionKind::Unary(o, _) => o.location(),
-        }
+        &self.location
     }
 
-    pub fn span(&self) -> Span {
-        match &self.kind {
-            ExpressionKind::Literal(l) => l.span().clone(),
-            ExpressionKind::Binary(l, _, r) => l.span().extend_to(&r.span()),
-            ExpressionKind::Unary(o, e) => o.span().extend_to(&e.span()),
-        }
+    pub fn span(&self) -> &Span {
+        &self.span
     }
 
     pub fn accept<V, R>(&self, visitor: &mut V) -> R
@@ -43,9 +42,9 @@ impl Expression {
 
 impl From<Literal> for Expression {
     fn from(literal: Literal) -> Self {
-        Self {
-            kind: ExpressionKind::Literal(literal),
-        }
+        let location = literal.location().clone();
+        let span = literal.span().clone();
+        Self::new(ExpressionKind::Literal(literal), location, span)
     }
 }
 
@@ -53,5 +52,6 @@ impl From<Literal> for Expression {
 pub enum ExpressionKind {
     Literal(Literal),
     Binary(Box<Expression>, BinaryOperator, Box<Expression>),
+    MethodCall(Identifier, Vec<Expression>),
     Unary(UnaryOperator, Box<Expression>),
 }

@@ -1,3 +1,4 @@
+use crate::ast::identifier::Identifier;
 use crate::ast::Visitor;
 use crate::lexer::{Location, Span};
 
@@ -37,8 +38,8 @@ impl Literal {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub enum LiteralKind {
-    Identifier(String),
+    Identifier(Identifier),
     Number(i64),
 }

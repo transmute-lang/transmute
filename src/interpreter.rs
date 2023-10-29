@@ -51,6 +51,9 @@ impl Visitor<i64> for Interpreter {
                     UnaryOperatorKind::Minus => -e,
                 }
             }
+            ExpressionKind::MethodCall(_, _) => {
+                todo!("eval method call")
+            }
         }
     }
 
@@ -59,7 +62,7 @@ impl Visitor<i64> for Interpreter {
             LiteralKind::Number(n) => *n,
             LiteralKind::Identifier(ident) => {
                 // todo this is incorrect, no default value allowed
-                match self.env.get(ident) {
+                match self.env.get(ident.name()) {
                     None => panic!("{ident} not in scope"),
                     Some(v) => *v,
                 }

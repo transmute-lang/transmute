@@ -1,4 +1,5 @@
 use crate::lexer::{Location, Span};
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq)]
 pub struct Identifier {
@@ -26,5 +27,11 @@ impl Identifier {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+}
+
+impl Display for Identifier {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }
