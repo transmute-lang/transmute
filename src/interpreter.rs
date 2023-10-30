@@ -163,8 +163,8 @@ mod tests {
     eval!(division, "85 / 2;" => 42);
     eval!(let_stmt, "let forty_two = 42;" => 0); // fixme should be a 'none' value
     eval!(let_stmt_then_expression, "let forty = 2 * 20; forty + 2;" => 42);
-    eval!(function, "let times_two = (v) -> v * 2;" => 0); // fixme should be a 'none' or a 'function' value value
-    eval!(function_call, "let times_two = (v) -> v * 2; times_two(21);" => 42);
-    eval!(complex_function_call, "let plus_one_times_two = (v) -> { let res = v + 1; res * 2; } plus_one_times_two(20);" => 42);
-    eval!(ret_function_call, "let times_two = (v) -> { 41; ret v * 2; 42; } times_two(21);" => 42);
+    eval!(function, "let times_two(v) = v * 2;" => 0); // fixme should be a 'none' or a 'function' value value
+    eval!(function_call, "let times_two(v) = v * 2; times_two(21);" => 42);
+    eval!(complex_function_call, "let plus_one_times_two(v) = { let res = v + 1; res * 2; } plus_one_times_two(20);" => 42);
+    eval!(ret_function_call, "let times_two(v) = { 41; ret v * 2; 42; } times_two(21);" => 42);
 }

@@ -47,12 +47,6 @@ impl<'a> Lexer<'a> {
                 Ok((TokenKind::Plus, span))
             }
             '-' => match chars.next().unwrap_or_default() {
-                '>' => {
-                    self.advance_columns(2);
-                    let span = span.extend('>'.len_utf8());
-                    self.advance_consumed(span.len);
-                    Ok((TokenKind::Arrow, span))
-                }
                 '0'..='9' => Ok(self.number()?), // todo is that really useful?
                 _ => {
                     self.advance_column();
@@ -282,6 +276,7 @@ fn is_identifier(c: &char) -> bool {
 #[derive(Debug)]
 pub struct PeekableLexer<'a> {
     lexer: Lexer<'a>,
+    lookahead: usize,
     peeked: VecDeque<Result<Token, Error>>,
 }
 
@@ -290,6 +285,7 @@ impl<'a> PeekableLexer<'a> {
         assert!(lookahead >= 1);
         Self {
             lexer,
+            lookahead,
             peeked: VecDeque::with_capacity(lookahead),
         }
     }
@@ -303,6 +299,7 @@ impl<'a> PeekableLexer<'a> {
     }
 
     pub fn peek_nth(&mut self, n: usize) -> Result<&Token, &Error> {
+        assert!(n <= self.lookahead);
         if self.peeked.len() > n {
             return self
                 .peeked
@@ -317,19 +314,6 @@ impl<'a> PeekableLexer<'a> {
         assert_eq!(self.peeked.len(), n + 1);
 
         self.peeked.back().expect("we just pushed it").as_ref()
-    }
-
-    pub fn peek_until(&mut self, kind: TokenKind) -> Option<usize> {
-        for n in 0usize.. {
-            let token = self.peek_nth(n).ok()?;
-            if token.kind == TokenKind::Eof {
-                return None;
-            }
-            if token.kind == kind {
-                return Some(n);
-            }
-        }
-        unreachable!()
     }
 }
 
@@ -351,7 +335,6 @@ impl Token {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
-    Arrow,
     CloseCurlyBracket,
     CloseParenthesis,
     Comma,
@@ -492,7 +475,6 @@ mod tests {
     lexer_test_next!(next_comma, "," => TokenKind::Comma; loc: 1,1; span: 0,1);
     lexer_test_next!(next_open_curly_bracket, "{" => TokenKind::OpenCurlyBracket; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_curly_bracket, "}" => TokenKind::CloseCurlyBracket; loc: 1,1; span: 0,1);
-    lexer_test_next!(next_arrow, "->" => TokenKind::Arrow; loc: 1,1; span: 0,2);
     lexer_test_next!(semicolon, ";" => TokenKind::Semicolon; loc: 1,1; span: 0,1);
 
     #[test]
@@ -666,21 +648,5 @@ mod tests {
                 span: Span::new(1, 1, 0, 1),
             }
         );
-    }
-
-    #[test]
-    fn peek_until() {
-        let mut lexer = PeekableLexer::new(Lexer::new("1 2 + -"), 16);
-        let span = lexer
-            .peek_until(TokenKind::Plus)
-            .expect("+ exists in the token stream");
-
-        assert_eq!(span, 2);
-
-        let token_kind = lexer.peek_nth(span).expect("token exists").kind();
-        assert_eq!(token_kind, &TokenKind::Plus);
-
-        let token_kind = lexer.peek_nth(span + 1).expect("token exists").kind();
-        assert_eq!(token_kind, &TokenKind::Minus);
     }
 }
