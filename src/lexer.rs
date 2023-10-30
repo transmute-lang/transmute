@@ -1,6 +1,7 @@
 use crate::error::Error;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
+use std::str::Chars;
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
@@ -64,11 +65,19 @@ impl<'a> Lexer<'a> {
                 self.advance_consumed(span.len);
                 Ok((TokenKind::Slash, span))
             }
-            '=' => {
-                self.advance_column();
-                self.advance_consumed(span.len);
-                Ok((TokenKind::Equal, span))
-            }
+            '=' => match chars.next().unwrap_or_default() {
+                '=' => {
+                    self.advance_columns(2);
+                    let span = span.extend('='.len_utf8());
+                    self.advance_consumed(span.len);
+                    Ok((TokenKind::EqualEqual, span))
+                }
+                _ => {
+                    self.advance_column();
+                    self.advance_consumed(span.len);
+                    Ok((TokenKind::Equal, span))
+                }
+            },
             '(' => {
                 self.advance_column();
                 self.advance_consumed(span.len);
@@ -104,9 +113,7 @@ impl<'a> Lexer<'a> {
             c => Err(Error::UnexpectedChar(c, span)),
         }?;
 
-        let token = Token { kind, span };
-
-        Ok(token)
+        Ok(Token { kind, span })
     }
 
     fn advance_column(&mut self) {
@@ -168,65 +175,80 @@ impl<'a> Lexer<'a> {
     }
 
     fn identifier(&mut self) -> Result<(TokenKind, Span), Error> {
-        let mut chars = self.remaining.chars();
+        fn make_keyword(
+            lexer: &mut Lexer,
+            chars: Chars,
+            suffix: &str,
+            token_kind: TokenKind,
+            cols: usize,
+            span: Span,
+        ) -> Option<(TokenKind, Span)> {
+            let mut span = span;
+            let mut cols = cols;
 
-        let mut span = Span::new(self.location.line, self.location.column, self.pos, 0);
-        let keyword_token = match chars.next().expect("there is at least one char") {
-            'l' => {
-                self.advance_column();
-                span = span.extend('l'.len_utf8());
-                match chars.next() {
-                    Some('e') => {
-                        self.advance_column();
-                        span = span.extend('e'.len_utf8());
-                        match chars.next() {
-                            Some('t') => {
-                                self.advance_column();
-                                span = span.extend('t'.len_utf8());
-                                match chars.next() {
-                                    Some(c) if is_identifier(&c) => None,
-                                    _ => Some(TokenKind::Let),
-                                }
-                            }
-                            _ => None,
-                        }
+            let mut suffix_chars = suffix.chars();
+
+            for input_char in chars {
+                if let Some(suffix_char) = suffix_chars.next() {
+                    if suffix_char != input_char {
+                        return None;
                     }
-                    _ => None,
+                    cols += 1;
+                    span = span.extend(input_char.len_utf8());
+                } else if is_identifier(&input_char) {
+                    return None;
+                } else {
+                    break;
                 }
             }
-            'r' => {
-                self.advance_column();
-                span = span.extend('r'.len_utf8());
-                match chars.next() {
-                    Some('e') => {
-                        self.advance_column();
-                        span = span.extend('e'.len_utf8());
-                        match chars.next() {
-                            Some('t') => {
-                                self.advance_column();
-                                span = span.extend('t'.len_utf8());
-                                match chars.next() {
-                                    Some(c) if is_identifier(&c) => None,
-                                    _ => Some(TokenKind::Ret),
-                                }
-                            }
-                            _ => None,
-                        }
-                    }
-                    _ => None,
-                }
-            }
+
+            lexer.advance_columns(cols);
+            Some((token_kind, span))
+        }
+
+        let span = Span::new(self.location.line, self.location.column, self.pos, 0);
+        let mut chars = self.remaining.chars();
+        let keyword = match chars.next().expect("there is at least one char") {
+            'f' => make_keyword(
+                self,
+                chars,
+                "alse",
+                TokenKind::False,
+                1,
+                span.extend('f'.len_utf8()),
+            ),
+            'l' => make_keyword(
+                self,
+                chars,
+                "et",
+                TokenKind::Let,
+                1,
+                span.extend('l'.len_utf8()),
+            ),
+            'r' => make_keyword(
+                self,
+                chars,
+                "et",
+                TokenKind::Ret,
+                1,
+                span.extend('r'.len_utf8()),
+            ),
+            't' => make_keyword(
+                self,
+                chars,
+                "rue",
+                TokenKind::True,
+                1,
+                span.extend('t'.len_utf8()),
+            ),
             _ => None,
         };
 
-        let (token, span) = match keyword_token {
-            Some(token) => (token, span),
+        let (token, span) = match keyword {
+            Some(keyword) => keyword,
             None => {
-                let (ident, new_span) = self.take_while(|c| is_identifier(&c))?;
-                (
-                    TokenKind::Identifier(ident.to_string()),
-                    span.extend_to(&new_span),
-                )
+                let (ident, ident_span) = self.take_while(|c| is_identifier(&c))?;
+                (TokenKind::Identifier(ident.to_string()), ident_span)
             }
         };
 
@@ -339,6 +361,8 @@ pub enum TokenKind {
     CloseParenthesis,
     Comma,
     Equal,
+    EqualEqual,
+    False,
     Identifier(String),
     Let,
     Minus,
@@ -350,6 +374,7 @@ pub enum TokenKind {
     Semicolon,
     Slash,
     Star,
+    True,
     Eof,
 }
 
@@ -470,6 +495,7 @@ mod tests {
     lexer_test_next!(next_star, "*" => TokenKind::Star; loc: 1,1; span: 0,1);
     lexer_test_next!(next_slash, "/" => TokenKind::Slash; loc: 1,1; span: 0,1);
     lexer_test_next!(next_equal, "=" => TokenKind::Equal; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_equal_equal, "==" => TokenKind::EqualEqual; loc: 1,1; span: 0,2);
     lexer_test_next!(next_open_parenthesis, "(" => TokenKind::OpenParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_parenthesis, ")" => TokenKind::CloseParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_comma, "," => TokenKind::Comma; loc: 1,1; span: 0,1);
@@ -524,6 +550,8 @@ mod tests {
 
     lexer_test_keyword!(keyword_let, "let" => Let);
     lexer_test_keyword!(keyword_ret, "ret" => Ret);
+    lexer_test_keyword!(keyword_true, "true" => True);
+    lexer_test_keyword!(keyword_false, "false" => False);
 
     macro_rules! lexer_test_fn {
         ($name:ident, $f:ident, $src:expr => $expected:expr) => {
@@ -624,12 +652,12 @@ mod tests {
 
     #[test]
     fn peek_nth() {
-        let mut lexer = PeekableLexer::new(Lexer::new("1 2 3 4"), 16);
+        let mut lexer = PeekableLexer::new(Lexer::new("1 2 3 4"), 1);
         let span1 = lexer.peek().unwrap().span().clone();
         let span2 = lexer.peek_nth(0).unwrap().span().clone();
         assert_eq!(span1, span2);
 
-        let mut lexer = PeekableLexer::new(Lexer::new("1 2 3 4"), 16);
+        let mut lexer = PeekableLexer::new(Lexer::new("1 2 3 4"), 2);
         let span1 = lexer.peek_nth(2).unwrap().span().clone();
         let span2 = lexer.peek_nth(2).unwrap().span().clone();
         assert_eq!(span1, span2);
@@ -637,7 +665,7 @@ mod tests {
 
     #[test]
     fn peek_nth_next() {
-        let mut lexer = PeekableLexer::new(Lexer::new("1 2 3 4"), 16);
+        let mut lexer = PeekableLexer::new(Lexer::new("1 2 3 4"), 2);
         let _ = lexer.peek_nth(2).expect("token exists");
 
         let token = lexer.next().expect("a token");
@@ -648,5 +676,50 @@ mod tests {
                 span: Span::new(1, 1, 0, 1),
             }
         );
+    }
+
+    #[test]
+    fn span_let_let() {
+        let mut lexer = PeekableLexer::new(Lexer::new("let let"), 1);
+        let token = lexer.next().expect("token exists");
+        assert_eq!(token.span.column, 1);
+        let token = lexer.next().expect("token exists");
+        assert_eq!(token.span.column, 5);
+    }
+
+    #[test]
+    fn span_ident_ident() {
+        let mut lexer = PeekableLexer::new(Lexer::new("ident ident"), 1);
+        let token = lexer.next().expect("token exists");
+        assert_eq!(token.span.column, 1);
+        let token = lexer.next().expect("token exists");
+        assert_eq!(token.span.column, 7);
+    }
+
+    #[test]
+    fn span_let_ident() {
+        let mut lexer = PeekableLexer::new(Lexer::new("let ident"), 1);
+        let token = lexer.next().expect("token exists");
+        assert_eq!(token.span.column, 1);
+        let token = lexer.next().expect("token exists");
+        assert_eq!(token.span.column, 5);
+    }
+
+    #[test]
+    fn span_ident_let() {
+        let mut lexer = PeekableLexer::new(Lexer::new("ident let"), 1);
+        let token = lexer.next().expect("token exists");
+        assert_eq!(token.span.column, 1);
+        let token = lexer.next().expect("token exists");
+        assert_eq!(token.span.column, 7);
+    }
+
+    #[test]
+    fn span_ident_with_keyword_prefix_ident() {
+        let mut lexer = PeekableLexer::new(Lexer::new("let123 let"), 1);
+        let token = lexer.next().expect("token exists");
+        assert_eq!(token.span.column, 1);
+        let token = lexer.next().expect("token exists");
+        assert_eq!(token.span.column, 8);
     }
 }

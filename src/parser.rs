@@ -117,6 +117,8 @@ impl<'a> Parser<'a> {
                 ))
             }
             TokenKind::Minus
+            | TokenKind::True
+            | TokenKind::False
             | TokenKind::Number(_)
             | TokenKind::OpenParenthesis
             | TokenKind::Identifier(_) => {
@@ -287,6 +289,20 @@ impl<'a> Parser<'a> {
                     span,
                 )
             }
+            TokenKind::True => Expression::new(
+                ExpressionKind::Literal(Literal::new(
+                    LiteralKind::Boolean(true),
+                    token.span().clone(),
+                )),
+                token.span().clone(),
+            ),
+            TokenKind::False => Expression::new(
+                ExpressionKind::Literal(Literal::new(
+                    LiteralKind::Boolean(false),
+                    token.span().clone(),
+                )),
+                token.span().clone(),
+            ),
             TokenKind::OpenParenthesis => {
                 let open_loc = token.span();
 
@@ -402,20 +418,24 @@ impl<'a> Parser<'a> {
         let token = self.lexer.next()?;
 
         match token.kind() {
-            TokenKind::Plus => Ok(BinaryOperator::new(
-                BinaryOperatorKind::Addition,
+            TokenKind::EqualEqual => Ok(BinaryOperator::new(
+                BinaryOperatorKind::Equality,
                 token.span().clone(),
             )),
             TokenKind::Minus => Ok(BinaryOperator::new(
                 BinaryOperatorKind::Subtraction,
                 token.span().clone(),
             )),
-            TokenKind::Star => Ok(BinaryOperator::new(
-                BinaryOperatorKind::Multiplication,
+            TokenKind::Plus => Ok(BinaryOperator::new(
+                BinaryOperatorKind::Addition,
                 token.span().clone(),
             )),
             TokenKind::Slash => Ok(BinaryOperator::new(
                 BinaryOperatorKind::Division,
+                token.span().clone(),
+            )),
+            TokenKind::Star => Ok(BinaryOperator::new(
+                BinaryOperatorKind::Multiplication,
                 token.span().clone(),
             )),
             _ => todo!(
@@ -428,8 +448,10 @@ impl<'a> Parser<'a> {
 }
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
+// do not reorder!
 enum Precedence {
     Lowest,
+    Comparison,
     Sum,
     Product,
     Prefix,
@@ -438,10 +460,11 @@ enum Precedence {
 impl From<&TokenKind> for Option<Precedence> {
     fn from(kind: &TokenKind) -> Self {
         match kind {
-            TokenKind::Plus => Some(Precedence::Sum),
+            TokenKind::EqualEqual => Some(Precedence::Comparison),
             TokenKind::Minus => Some(Precedence::Sum),
-            TokenKind::Star => Some(Precedence::Product),
+            TokenKind::Plus => Some(Precedence::Sum),
             TokenKind::Slash => Some(Precedence::Product),
+            TokenKind::Star => Some(Precedence::Product),
             _ => None,
         }
     }
@@ -481,6 +504,22 @@ mod tests {
                 Span::new(1, 1, 0, 9),
             )),
             Span::new(1, 1, 0, 9),
+        );
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn expression_literal_boolean() {
+        let mut parser = Parser::new(Lexer::new("true"));
+
+        let actual = parser.parse_expression().unwrap();
+        let expected = Expression::new(
+            ExpressionKind::Literal(Literal::new(
+                LiteralKind::Boolean(true),
+                Span::new(1, 1, 0, 4),
+            )),
+            Span::new(1, 1, 0, 4),
         );
 
         assert_eq!(actual, expected);
@@ -800,5 +839,11 @@ mod tests {
             Span::new(1, 1, 0, 7),
         );
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn equality() {
+        let mut parser = Parser::new(Lexer::new("a == b"));
+        let actual = parser.parse_expression().expect("statement is valid");
     }
 }

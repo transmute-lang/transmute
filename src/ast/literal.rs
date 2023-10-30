@@ -23,6 +23,7 @@ impl Literal {
 
 #[derive(Debug, PartialEq)]
 pub enum LiteralKind {
+    Boolean(bool),
     Identifier(Identifier),
     Number(i64),
 }

@@ -20,6 +20,7 @@ impl BinaryOperator {
 pub enum BinaryOperatorKind {
     Addition,
     Division,
+    Equality,
     Multiplication,
     Subtraction,
 }
