@@ -78,6 +78,41 @@ impl<'a> Lexer<'a> {
                     Ok((TokenKind::Equal, span))
                 }
             },
+            '!' => match chars.next().unwrap_or_default() {
+                '=' => {
+                    self.advance_columns(2);
+                    let span = span.extend('='.len_utf8());
+                    self.advance_consumed(span.len);
+                    Ok((TokenKind::ExclaimEqual, span))
+                }
+                _ => todo!(),
+            },
+            '>' => match chars.next().unwrap_or_default() {
+                '=' => {
+                    self.advance_columns(2);
+                    let span = span.extend('='.len_utf8());
+                    self.advance_consumed(span.len);
+                    Ok((TokenKind::GreaterEqual, span))
+                }
+                _ => {
+                    self.advance_column();
+                    self.advance_consumed(span.len);
+                    Ok((TokenKind::Greater, span))
+                }
+            },
+            '<' => match chars.next().unwrap_or_default() {
+                '=' => {
+                    self.advance_columns(2);
+                    let span = span.extend('='.len_utf8());
+                    self.advance_consumed(span.len);
+                    Ok((TokenKind::SmallerEqual, span))
+                }
+                _ => {
+                    self.advance_column();
+                    self.advance_consumed(span.len);
+                    Ok((TokenKind::Smaller, span))
+                }
+            },
             '(' => {
                 self.advance_column();
                 self.advance_consumed(span.len);
@@ -362,7 +397,10 @@ pub enum TokenKind {
     Comma,
     Equal,
     EqualEqual,
+    ExclaimEqual,
     False,
+    Greater,
+    GreaterEqual,
     Identifier(String),
     Let,
     Minus,
@@ -373,6 +411,8 @@ pub enum TokenKind {
     Ret,
     Semicolon,
     Slash,
+    Smaller,
+    SmallerEqual,
     Star,
     True,
     Eof,
@@ -496,6 +536,11 @@ mod tests {
     lexer_test_next!(next_slash, "/" => TokenKind::Slash; loc: 1,1; span: 0,1);
     lexer_test_next!(next_equal, "=" => TokenKind::Equal; loc: 1,1; span: 0,1);
     lexer_test_next!(next_equal_equal, "==" => TokenKind::EqualEqual; loc: 1,1; span: 0,2);
+    lexer_test_next!(next_exclam_equal, "!=" => TokenKind::ExclaimEqual; loc: 1,1; span: 0,2);
+    lexer_test_next!(next_greater, ">" => TokenKind::Greater; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_smller, "<" => TokenKind::Smaller; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_greater_equal, ">=" => TokenKind::GreaterEqual; loc: 1,1; span: 0,2);
+    lexer_test_next!(next_smaller_equal, "<=" => TokenKind::SmallerEqual; loc: 1,1; span: 0,2);
     lexer_test_next!(next_open_parenthesis, "(" => TokenKind::OpenParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_parenthesis, ")" => TokenKind::CloseParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_comma, "," => TokenKind::Comma; loc: 1,1; span: 0,1);

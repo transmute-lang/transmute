@@ -422,6 +422,26 @@ impl<'a> Parser<'a> {
                 BinaryOperatorKind::Equality,
                 token.span().clone(),
             )),
+            TokenKind::ExclaimEqual => Ok(BinaryOperator::new(
+                BinaryOperatorKind::NonEquality,
+                token.span().clone(),
+            )),
+            TokenKind::Greater => Ok(BinaryOperator::new(
+                BinaryOperatorKind::GreaterThan,
+                token.span().clone(),
+            )),
+            TokenKind::GreaterEqual => Ok(BinaryOperator::new(
+                BinaryOperatorKind::GreaterThanOrEqualTo,
+                token.span().clone(),
+            )),
+            TokenKind::Smaller => Ok(BinaryOperator::new(
+                BinaryOperatorKind::SmallerThan,
+                token.span().clone(),
+            )),
+            TokenKind::SmallerEqual => Ok(BinaryOperator::new(
+                BinaryOperatorKind::SmallerThanOrEqualTo,
+                token.span().clone(),
+            )),
             TokenKind::Minus => Ok(BinaryOperator::new(
                 BinaryOperatorKind::Subtraction,
                 token.span().clone(),
@@ -461,9 +481,14 @@ impl From<&TokenKind> for Option<Precedence> {
     fn from(kind: &TokenKind) -> Self {
         match kind {
             TokenKind::EqualEqual => Some(Precedence::Comparison),
+            TokenKind::ExclaimEqual => Some(Precedence::Comparison),
+            TokenKind::Greater => Some(Precedence::Comparison),
+            TokenKind::GreaterEqual => Some(Precedence::Comparison),
             TokenKind::Minus => Some(Precedence::Sum),
             TokenKind::Plus => Some(Precedence::Sum),
             TokenKind::Slash => Some(Precedence::Product),
+            TokenKind::Smaller => Some(Precedence::Comparison),
+            TokenKind::SmallerEqual => Some(Precedence::Comparison),
             TokenKind::Star => Some(Precedence::Product),
             _ => None,
         }
@@ -839,11 +864,5 @@ mod tests {
             Span::new(1, 1, 0, 7),
         );
         assert_eq!(actual, expected);
-    }
-
-    #[test]
-    fn equality() {
-        let mut parser = Parser::new(Lexer::new("a == b"));
-        let actual = parser.parse_expression().expect("statement is valid");
     }
 }

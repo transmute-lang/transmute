@@ -73,6 +73,27 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
                         (Value::Boolean(l), Value::Boolean(r)) => Value::Boolean(l == r),
                         _ => panic!("- not supported on {}, {}", l, r),
                     },
+                    BinaryOperatorKind::NonEquality => match (&l, &r) {
+                        (Value::Number(l), Value::Number(r)) => Value::Boolean(l != r),
+                        (Value::Boolean(l), Value::Boolean(r)) => Value::Boolean(l != r),
+                        _ => panic!("/ not supported on {}, {}", l, r),
+                    },
+                    BinaryOperatorKind::GreaterThan => match (&l, &r) {
+                        (Value::Number(l), Value::Number(r)) => Value::Boolean(l > r),
+                        _ => panic!("/ not supported on {}, {}", l, r),
+                    },
+                    BinaryOperatorKind::GreaterThanOrEqualTo => match (&l, &r) {
+                        (Value::Number(l), Value::Number(r)) => Value::Boolean(l >= r),
+                        _ => panic!("/ not supported on {}, {}", l, r),
+                    },
+                    BinaryOperatorKind::SmallerThan => match (&l, &r) {
+                        (Value::Number(l), Value::Number(r)) => Value::Boolean(l < r),
+                        _ => panic!("/ not supported on {}, {}", l, r),
+                    },
+                    BinaryOperatorKind::SmallerThanOrEqualTo => match (&l, &r) {
+                        (Value::Number(l), Value::Number(r)) => Value::Boolean(l <= r),
+                        _ => panic!("/ not supported on {}, {}", l, r),
+                    },
                     BinaryOperatorKind::Subtraction => match (&l, &r) {
                         (Value::Number(l), Value::Number(r)) => Value::Number(l - r),
                         _ => panic!("- not supported on {}, {}", l, r),
@@ -225,10 +246,22 @@ mod tests {
     eval!(ret_function_call, "let times_two(v) = { 41; ret v * 2; 42; } times_two(21);" => Number(42));
     eval!(bool_true, "true;" => Boolean(true));
     eval!(bool_false, "false;" => Boolean(false));
-    eval!(equality_numbers_eq, "42 == 42;" => Boolean(true));
-    eval!(equality_numbers_neq, "42 == 41;" => Boolean(false));
+    eval!(equality_numbers_eq_true, "42 == 42;" => Boolean(true));
+    eval!(equality_numbers_eq_false, "42 == 41;" => Boolean(false));
+    eval!(equality_numbers_neq_true, "42 != 42;" => Boolean(false));
+    eval!(equality_numbers_neq_false, "42 != 42;" => Boolean(false));
+    eval!(equality_booleans_eq_true, "true == true;" => Boolean(true));
+    eval!(equality_booleans_eq_false, "true == false;" => Boolean(false));
+    eval!(equality_booleans_neq_true, "true != true;" => Boolean(false));
+    eval!(equality_booleans_neq_false, "true != false;" => Boolean(true));
+    eval!(comaprison_1, "(42 > 42) != (42 >= 42);" => Boolean(true));
+    eval!(comaprison_2, "(42 > 42) != (42 <= 42);" => Boolean(true));
+    eval!(comaprison_3, "(42 == 42) == (42 >= 42);" => Boolean(true));
+    eval!(comaprison_4, "(42 == 42) == (42 <= 42);" => Boolean(true));
+    eval!(comaprison_5, "(42 > 42) == (42 < 42);" => Boolean(true));
     eval!(equality_bool_eq1, "true == true;" => Boolean(true));
     eval!(equality_bool_eq2, "false == false;" => Boolean(true));
     eval!(equality_bool_neq1, "true == false;" => Boolean(false));
     eval!(equality_bool_neq2, "false == true;" => Boolean(false));
+    // eval!(if_without_else, "let times_two_if_odd(v) = { if { v * 2; } v; } ; times_two_if_odd(21);" => 42);
 }

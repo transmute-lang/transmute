@@ -21,7 +21,12 @@ pub enum BinaryOperatorKind {
     Addition,
     Division,
     Equality,
+    GreaterThan,
+    GreaterThanOrEqualTo,
     Multiplication,
+    NonEquality,
+    SmallerThan,
+    SmallerThanOrEqualTo,
     Subtraction,
 }
 
