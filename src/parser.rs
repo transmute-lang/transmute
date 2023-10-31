@@ -35,10 +35,11 @@ impl<'a> Parser<'a> {
     /// ```
     /// 'let ident = expr ;
     /// 'let ident ( expr , ... ) = expr ;
-    /// 'let ident ( expr , ... ) = { expr ; ... }
+    /// 'let ident ( expr , ... ) = { expr ; ... } ;
     /// 'expr ;
     /// 'ret expr ;
     /// ```
+    // fixme remove the need for ; after } (we can 'inject' some fake ; token when parsing)
     fn parse_statement(&mut self) -> Result<Statement, Error> {
         // fixme: duplicated several times
         let token = match self.lexer.peek() {
@@ -121,6 +122,7 @@ impl<'a> Parser<'a> {
             | TokenKind::False
             | TokenKind::Number(_)
             | TokenKind::OpenParenthesis
+            | TokenKind::If
             | TokenKind::Identifier(_) => {
                 let expression = self.parse_expression()?;
                 let semicolon_token = self.lexer.next()?;
@@ -145,7 +147,7 @@ impl<'a> Parser<'a> {
     /// Parses the following:
     /// ```
     /// let ident '( expr , ... ) = expr ;
-    /// let ident '( expr , ... ) = { expr ; ... }
+    /// let ident '( expr , ... ) = { expr ; ... } ;
     /// ```
     fn parse_function(&mut self, span: &Span, identifier: Identifier) -> Result<Statement, Error> {
         // let name '( expr , ... ) = expr ;
@@ -213,6 +215,15 @@ impl<'a> Parser<'a> {
                 }
             };
 
+            let semicolon_token = self.lexer.next()?;
+            if semicolon_token.kind() != &TokenKind::Semicolon {
+                todo!(
+                    "function: error handling {:?}; expected = at {:?}",
+                    semicolon_token.kind(),
+                    semicolon_token.span()
+                )
+            }
+
             (statements, span)
         } else {
             // let name ( expr , ... ) = 'expr ;
@@ -259,6 +270,7 @@ impl<'a> Parser<'a> {
         let token = self.lexer.next()?;
 
         let mut expression = match token.kind() {
+            TokenKind::If => self.parse_if_expression(token.span().clone())?,
             TokenKind::Identifier(ident) => {
                 let identifier = Identifier::new(ident.clone(), token.span().clone());
 
@@ -343,6 +355,84 @@ impl<'a> Parser<'a> {
         Ok(expression)
     }
 
+    /// Parses the following (the if keyword is already consumed):
+    /// ```
+    /// if expr { expr ; ... } else if expr { expr ; } else { expr ; ... }
+    /// ```
+    fn parse_if_expression(&mut self, span: Span) -> Result<Expression, Error> {
+        fn parse_statements(parser: &mut Parser) -> Result<(Vec<Statement>, Span), Error> {
+            let mut statements = Vec::new();
+            loop {
+                let token = match parser.lexer.peek() {
+                    Ok(token) => token,
+                    Err(_) => Err(parser.lexer.next().unwrap_err())?,
+                };
+                match token.kind() {
+                    TokenKind::CloseCurlyBracket => {
+                        let token = parser.lexer.next().expect("we just peeked it");
+                        // not the whole span, the last token's span, which is good enough as we
+                        // only want to know where the statements end
+                        return Ok((statements, token.span().clone()));
+                    }
+                    _ => {
+                        let statement = parser.parse_statement()?;
+                        statements.push(statement);
+                    }
+                }
+            }
+        }
+
+        // if 'expr { expr ; ... } else if expr { expr ; ... } else { expr ; ... }
+        let condition = self.parse_expression()?;
+        let _open_curly_bracket = self.lexer.next()?;
+        let (statements, statements_span) = parse_statements(self)?;
+
+        // if expr { expr ; ... } 'else if expr { expr ; ... } else { expr ; ... }
+        let else_branch = if self
+            .lexer
+            .peek()
+            .map(|t| t.kind() == &TokenKind::Else)
+            .unwrap_or_default()
+        {
+            let _else_token = self.lexer.next()?; // we consume the else
+            let token = self.lexer.next()?;
+            match token.kind() {
+                TokenKind::If => {
+                    // if expr { expr ; ... } else if 'expr { expr ; ... } else { expr ; ... }
+                    let expression = self.parse_if_expression(token.span().clone())?;
+                    let span = expression.span().clone();
+                    Some((
+                        vec![Statement::new(
+                            StatementKind::Expression(expression),
+                            span.clone(),
+                        )],
+                        span,
+                    ))
+                }
+                // if expr { expr ; ... } 'else { expr ; ... }
+                TokenKind::OpenCurlyBracket => Some(parse_statements(self)?),
+                _ => todo!(
+                    "parse_if_expression: error handling {:?} at {:?}",
+                    token.kind(),
+                    token.span()
+                ),
+            }
+        } else {
+            // if expr { expr ; ... } '
+            None
+        };
+
+        let span = match &else_branch {
+            None => span.extend_to(&statements_span),
+            Some((_, else_span)) => span.extend_to(else_span),
+        };
+
+        Ok(Expression::new(
+            ExpressionKind::If(Box::new(condition), statements, else_branch.map(|e| e.0)),
+            span,
+        ))
+    }
+
     /// Parses the following:
     /// ```
     /// identifier ( expr , ... )
@@ -391,7 +481,7 @@ impl<'a> Parser<'a> {
         // identifier ( expr , ... ) '
 
         Ok(Expression::new(
-            ExpressionKind::MethodCall(identifier, arguments),
+            ExpressionKind::FunctionCall(identifier, arguments),
             span,
         ))
     }
@@ -786,7 +876,7 @@ mod tests {
 
     #[test]
     fn function_statements() {
-        let mut parser = Parser::new(Lexer::new("let times_two(a) = { a * 2; }"));
+        let mut parser = Parser::new(Lexer::new("let times_two(a) = { a * 2; };"));
 
         let actual = parser.parse().expect("source is valid");
         let expected = Ast::new(vec![Statement::new(
@@ -834,7 +924,7 @@ mod tests {
         let mut parser = Parser::new(Lexer::new("times_two(21)"));
         let actual = parser.parse_expression().expect("expression is valid");
         let expected = Expression::new(
-            ExpressionKind::MethodCall(
+            ExpressionKind::FunctionCall(
                 Identifier::new("times_two".to_string(), Span::new(1, 1, 0, 9)),
                 vec![Expression::new(
                     ExpressionKind::Literal(Literal::new(
@@ -863,6 +953,144 @@ mod tests {
             )),
             Span::new(1, 1, 0, 7),
         );
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn if_simple() {
+        let mut parser = Parser::new(Lexer::new("if true { 42; }"));
+        let actual = parser.parse_expression().expect("valid expression");
+        let expected = Expression::new(
+            ExpressionKind::If(
+                Box::new(Expression::new(
+                    ExpressionKind::Literal(Literal::new(
+                        LiteralKind::Boolean(true),
+                        Span::new(1, 4, 3, 4),
+                    )),
+                    Span::new(1, 4, 3, 4),
+                )),
+                vec![Statement::new(
+                    StatementKind::Expression(Expression::new(
+                        ExpressionKind::Literal(Literal::new(
+                            LiteralKind::Number(42),
+                            Span::new(1, 11, 10, 2),
+                        )),
+                        Span::new(1, 11, 10, 2),
+                    )),
+                    Span::new(1, 11, 10, 3),
+                )],
+                None,
+            ),
+            Span::new(1, 1, 0, 15),
+        );
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn if_else() {
+        let mut parser = Parser::new(Lexer::new("if true { 42; } else { 43; }"));
+        let actual = parser.parse_expression().expect("valid expression");
+        let expected = Expression::new(
+            ExpressionKind::If(
+                Box::new(Expression::new(
+                    ExpressionKind::Literal(Literal::new(
+                        LiteralKind::Boolean(true),
+                        Span::new(1, 4, 3, 4),
+                    )),
+                    Span::new(1, 4, 3, 4),
+                )),
+                vec![Statement::new(
+                    StatementKind::Expression(Expression::new(
+                        ExpressionKind::Literal(Literal::new(
+                            LiteralKind::Number(42),
+                            Span::new(1, 11, 10, 2),
+                        )),
+                        Span::new(1, 11, 10, 2),
+                    )),
+                    Span::new(1, 11, 10, 3),
+                )],
+                Some(vec![Statement::new(
+                    StatementKind::Expression(Expression::new(
+                        ExpressionKind::Literal(Literal::new(
+                            LiteralKind::Number(43),
+                            Span::new(1, 24, 23, 2),
+                        )),
+                        Span::new(1, 24, 23, 2),
+                    )),
+                    Span::new(1, 24, 23, 3),
+                )]),
+            ),
+            Span::new(1, 1, 0, 28),
+        );
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn if_else_if_else() {
+        let mut parser = Parser::new(Lexer::new(
+            "if true { 42; } else if false { 43; } else { 44; }",
+        ));
+        let actual = parser.parse_expression().expect("valid expression");
+        let expected = Expression::new(
+            ExpressionKind::If(
+                Box::new(Expression::new(
+                    ExpressionKind::Literal(Literal::new(
+                        LiteralKind::Boolean(true),
+                        Span::new(1, 4, 3, 4),
+                    )),
+                    Span::new(1, 4, 3, 4),
+                )),
+                vec![Statement::new(
+                    StatementKind::Expression(Expression::new(
+                        ExpressionKind::Literal(Literal::new(
+                            LiteralKind::Number(42),
+                            Span::new(1, 11, 10, 2),
+                        )),
+                        Span::new(1, 11, 10, 2),
+                    )),
+                    Span::new(1, 11, 10, 3),
+                )],
+                Some(vec![Statement::new(
+                    StatementKind::Expression(Expression::new(
+                        ExpressionKind::If(
+                            Box::new(Expression::new(
+                                ExpressionKind::Literal(Literal::new(
+                                    LiteralKind::Boolean(false),
+                                    Span::new(1, 25, 24, 5),
+                                )),
+                                Span::new(1, 25, 24, 5),
+                            )),
+                            vec![Statement::new(
+                                StatementKind::Expression(Expression::new(
+                                    ExpressionKind::Literal(Literal::new(
+                                        LiteralKind::Number(43),
+                                        Span::new(1, 33, 32, 2),
+                                    )),
+                                    Span::new(1, 33, 32, 2),
+                                )),
+                                Span::new(1, 33, 32, 3),
+                            )],
+                            Some(vec![Statement::new(
+                                StatementKind::Expression(Expression::new(
+                                    ExpressionKind::Literal(Literal::new(
+                                        LiteralKind::Number(44),
+                                        Span::new(1, 46, 45, 2),
+                                    )),
+                                    Span::new(1, 46, 45, 2),
+                                )),
+                                Span::new(1, 46, 45, 3),
+                            )]),
+                        ),
+                        Span::new(1, 22, 21, 29),
+                    )),
+                    Span::new(1, 22, 21, 29),
+                )]),
+            ),
+            Span::new(1, 1, 0, 50),
+        );
+
         assert_eq!(actual, expected);
     }
 }

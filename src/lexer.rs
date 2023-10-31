@@ -244,11 +244,27 @@ impl<'a> Lexer<'a> {
         let span = Span::new(self.location.line, self.location.column, self.pos, 0);
         let mut chars = self.remaining.chars();
         let keyword = match chars.next().expect("there is at least one char") {
+            'e' => make_keyword(
+                self,
+                chars,
+                "lse",
+                TokenKind::Else,
+                1,
+                span.extend('e'.len_utf8()),
+            ),
             'f' => make_keyword(
                 self,
                 chars,
                 "alse",
                 TokenKind::False,
+                1,
+                span.extend('f'.len_utf8()),
+            ),
+            'i' => make_keyword(
+                self,
+                chars,
+                "f",
+                TokenKind::If,
                 1,
                 span.extend('f'.len_utf8()),
             ),
@@ -395,6 +411,7 @@ pub enum TokenKind {
     CloseCurlyBracket,
     CloseParenthesis,
     Comma,
+    Else,
     Equal,
     EqualEqual,
     ExclaimEqual,
@@ -402,6 +419,7 @@ pub enum TokenKind {
     Greater,
     GreaterEqual,
     Identifier(String),
+    If,
     Let,
     Minus,
     Number(i64),
@@ -595,6 +613,8 @@ mod tests {
 
     lexer_test_keyword!(keyword_let, "let" => Let);
     lexer_test_keyword!(keyword_ret, "ret" => Ret);
+    lexer_test_keyword!(keyword_if, "if" => If);
+    lexer_test_keyword!(keyword_else, "else" => Else);
     lexer_test_keyword!(keyword_true, "true" => True);
     lexer_test_keyword!(keyword_false, "false" => False);
 

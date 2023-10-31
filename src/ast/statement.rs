@@ -4,6 +4,7 @@ use crate::lexer::Span;
 
 #[derive(Debug, PartialEq)]
 pub struct Statement {
+    // todo should be merged with Expression, maybe?
     kind: StatementKind,
     span: Span,
 }
@@ -23,6 +24,6 @@ pub enum StatementKind {
     Expression(Expression),
     Let(Identifier, Expression),
     Ret(Expression),
-    // todo vec does not hold span and position as it should
+    // todo vec does not hold span and position as it should (search for "Vec<Statement>, Span")
     LetFn(Identifier, Vec<Identifier>, Vec<Statement>),
 }

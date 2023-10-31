@@ -1,6 +1,7 @@
 use crate::ast::identifier::Identifier;
 use crate::ast::literal::Literal;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
+use crate::ast::statement::Statement;
 use crate::lexer::Span;
 
 #[derive(Debug, PartialEq)]
@@ -32,9 +33,10 @@ impl From<Literal> for Expression {
 
 #[derive(Debug, PartialEq)]
 pub enum ExpressionKind {
+    If(Box<Expression>, Vec<Statement>, Option<Vec<Statement>>),
     Literal(Literal),
     Binary(Box<Expression>, BinaryOperator, Box<Expression>),
     // todo vec does not hold span and position as it should
-    MethodCall(Identifier, Vec<Expression>),
+    FunctionCall(Identifier, Vec<Expression>),
     Unary(UnaryOperator, Box<Expression>),
 }
