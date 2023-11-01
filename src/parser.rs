@@ -5,10 +5,19 @@ use crate::ast::operators::{BinaryOperator, BinaryOperatorKind, UnaryOperator, U
 use crate::ast::statement::{Statement, StatementKind};
 use crate::ast::Ast;
 use crate::error::Error;
-use crate::lexer::{Lexer, PeekableLexer, Span, TokenKind};
+use crate::lexer::{Lexer, PeekableLexer, Span, Token, TokenKind};
 
 pub struct Parser<'a> {
     lexer: PeekableLexer<'a>,
+}
+
+macro_rules! peek {
+    ($parser:ident) => {
+        match $parser.lexer.peek() {
+            Ok(token) => token,
+            Err(_) => Err($parser.lexer.next().unwrap_err())?,
+        }
+    };
 }
 
 impl<'a> Parser<'a> {
@@ -35,17 +44,12 @@ impl<'a> Parser<'a> {
     /// ```
     /// 'let ident = expr ;
     /// 'let ident ( expr , ... ) = expr ;
-    /// 'let ident ( expr , ... ) = { expr ; ... } ;
+    /// 'let ident ( expr , ... ) = { expr ; ... }
     /// 'expr ;
     /// 'ret expr ;
     /// ```
-    // fixme remove the need for ; after } (we can 'inject' some fake ; token when parsing)
     fn parse_statement(&mut self) -> Result<Statement, Error> {
-        // fixme: duplicated several times
-        let token = match self.lexer.peek() {
-            Ok(token) => token,
-            Err(_) => Err(self.lexer.next().unwrap_err())?,
-        };
+        let token = peek!(self);
 
         match token.kind() {
             TokenKind::Let => {
@@ -62,10 +66,7 @@ impl<'a> Parser<'a> {
                     ),
                 };
 
-                let token = match self.lexer.peek() {
-                    Ok(token) => token,
-                    Err(_) => Err(self.lexer.next().unwrap_err())?,
-                };
+                let token = peek!(self);
 
                 if token.kind() == &TokenKind::OpenParenthesis {
                     // let ident '( expr , ... ) = expr ;
@@ -85,18 +86,8 @@ impl<'a> Parser<'a> {
                 }
 
                 let expression = self.parse_expression()?;
-
-                // fixme: duplicated several times
-                let semicolon_token = self.lexer.next()?;
-                if semicolon_token.kind() != &TokenKind::Semicolon {
-                    todo!(
-                        "parse_statement: error handling {:?}; expected ; at {:?}",
-                        semicolon_token.kind(),
-                        semicolon_token.span()
-                    )
-                }
-
-                let span = let_token.span().extend_to(semicolon_token.span());
+                let semicolon = self.parse_semicolon()?;
+                let span = let_token.span().extend_to(semicolon.span());
                 Ok(Statement::new(
                     StatementKind::Let(identifier, expression),
                     span,
@@ -105,39 +96,27 @@ impl<'a> Parser<'a> {
             TokenKind::Ret => {
                 let ret_token = self.lexer.next().expect("we just peeked it");
                 let expression = self.parse_expression()?;
-                let semicolon_token = self.lexer.next()?;
-                if semicolon_token.kind() != &TokenKind::Semicolon {
-                    todo!(
-                        "parse_statement: error handling {:?}; expected ; at {:?}",
-                        semicolon_token.kind(),
-                        semicolon_token.span()
-                    )
-                }
+                let semicolon = self.parse_semicolon()?;
 
                 Ok(Statement::new(
                     StatementKind::Ret(expression),
-                    ret_token.span().extend_to(semicolon_token.span()),
+                    ret_token.span().extend_to(semicolon.span()),
                 ))
             }
-            TokenKind::Minus
-            | TokenKind::True
-            | TokenKind::False
+            TokenKind::If | TokenKind::While => {
+                let expression = self.parse_expression()?;
+                let span = expression.span().extend_to(expression.span());
+                Ok(Statement::new(StatementKind::Expression(expression), span))
+            }
+            TokenKind::False
+            | TokenKind::Identifier(_)
+            | TokenKind::Minus
             | TokenKind::Number(_)
             | TokenKind::OpenParenthesis
-            | TokenKind::If
-            | TokenKind::While
-            | TokenKind::Identifier(_) => {
+            | TokenKind::True => {
                 let expression = self.parse_expression()?;
-                // todo semicolon not needed for if and while
-                let semicolon_token = self.lexer.next()?;
-                if semicolon_token.kind() != &TokenKind::Semicolon {
-                    todo!(
-                        "parse_statement: error handling {:?}; expected ; at {:?}",
-                        semicolon_token.kind(),
-                        semicolon_token.span()
-                    )
-                }
-                let span = expression.span().extend_to(semicolon_token.span());
+                let semicolon = self.parse_semicolon()?;
+                let span = expression.span().extend_to(semicolon.span());
                 Ok(Statement::new(StatementKind::Expression(expression), span))
             }
             _ => todo!(
@@ -192,41 +171,19 @@ impl<'a> Parser<'a> {
             )
         }
 
-        let token = match self.lexer.peek() {
-            Ok(token) => token,
-            Err(_) => Err(self.lexer.next().unwrap_err())?,
-        };
+        let token = peek!(self);
 
         let (statements, end_span) = if token.kind() == &TokenKind::OpenCurlyBracket {
             // let name ( expr , ... ) = '{ expr ; ... }
-            let _open_curly_bracket_token = self.lexer.next().expect("we just peeked it");
+            self.lexer.next().expect("we just peeked {");
 
             let (statements, span) = self.parse_statements()?;
-
-            // todo remove semicolon after function def when enclosed by { }
-            let semicolon_token = self.lexer.next()?;
-            if semicolon_token.kind() != &TokenKind::Semicolon {
-                todo!(
-                    "function: error handling {:?}; expected = at {:?}",
-                    semicolon_token.kind(),
-                    semicolon_token.span()
-                )
-            }
 
             (statements, span)
         } else {
             // let name ( expr , ... ) = 'expr ;
             let expression = self.parse_expression()?;
-
-            let semicolon_token = self.lexer.next()?;
-            if semicolon_token.kind() != &TokenKind::Semicolon {
-                todo!(
-                    "parse_statement: error handling {:?}; expected = at {:?}",
-                    semicolon_token.kind(),
-                    semicolon_token.span()
-                )
-            }
-
+            let semicolon_token = self.parse_semicolon()?;
             let end_span = expression.span().extend_to(semicolon_token.span());
 
             (
@@ -264,15 +221,12 @@ impl<'a> Parser<'a> {
             TokenKind::Identifier(ident) => {
                 let identifier = Identifier::new(ident.clone(), token.span().clone());
 
-                let token = match self.lexer.peek() {
-                    Ok(token) => token,
-                    Err(_) => Err(self.lexer.next().unwrap_err())?,
-                };
+                let token = peek!(self);
 
                 match *token.kind() {
                     TokenKind::OpenParenthesis => self.parse_function_call(identifier)?,
                     TokenKind::Equal => {
-                        self.lexer.next().expect("we just peeked it");
+                        self.lexer.next().expect("we just peeked =");
                         let expression = self.parse_expression()?;
                         let span = identifier.span().extend_to(expression.span());
                         return Ok(Expression::new(
@@ -435,17 +389,14 @@ impl<'a> Parser<'a> {
         let mut comma_seen = true;
 
         let span = loop {
-            let token = match self.lexer.peek() {
-                Ok(token) => token,
-                Err(_) => Err(self.lexer.next().unwrap_err())?,
-            };
+            let token = peek!(self);
             match *token.kind() {
                 TokenKind::CloseParenthesis => {
                     let token = self.lexer.next().expect("we just peeked it");
                     break identifier.span().extend_to(token.span());
                 }
                 TokenKind::Comma if !comma_seen => {
-                    self.lexer.next().expect("we just peeked it");
+                    self.lexer.next().expect("we just peeked ,");
                     comma_seen = true;
                 }
                 TokenKind::Comma if comma_seen => {
@@ -547,13 +498,19 @@ impl<'a> Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    fn parse_semicolon(&mut self) -> Result<Token, Error> {
+        let token = self.lexer.next()?;
+        if token.kind() == &TokenKind::Semicolon {
+            Ok(token)
+        } else {
+            Err(Error::ExpectedSemicolon(token))
+        }
+    }
+
     fn parse_statements(&mut self) -> Result<(Vec<Statement>, Span), Error> {
         let mut statements = Vec::new();
         loop {
-            let token = match self.lexer.peek() {
-                Ok(token) => token,
-                Err(_) => Err(self.lexer.next().unwrap_err())?,
-            };
+            let token = peek!(self);
             match token.kind() {
                 TokenKind::CloseCurlyBracket => {
                     let token = self.lexer.next().expect("we just peeked it");
@@ -883,7 +840,7 @@ mod tests {
 
     #[test]
     fn function_statements() {
-        let mut parser = Parser::new(Lexer::new("let times_two(a) = { a * 2; };"));
+        let mut parser = Parser::new(Lexer::new("let times_two(a) = { a * 2; }"));
 
         let actual = parser.parse().expect("source is valid");
         let expected = Ast::new(vec![Statement::new(

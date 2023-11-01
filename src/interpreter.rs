@@ -313,8 +313,8 @@ mod tests {
     eval!(let_stmt_then_expression, "let forty = 2 * 20; forty + 2;" => Number(42));
     eval!(function, "let times_two(v) = v * 2;" => Void);
     eval!(function_call, "let times_two(v) = v * 2; times_two(21);" => Number(42));
-    eval!(complex_function_call, "let plus_one_times_two(v) = { let res = v + 1; res * 2; }; plus_one_times_two(20);" => Number(42));
-    eval!(ret_function_call, "let times_two(v) = { 41; ret v * 2; 42; }; times_two(21);" => Number(42));
+    eval!(complex_function_call, "let plus_one_times_two(v) = { let res = v + 1; res * 2; } plus_one_times_two(20);" => Number(42));
+    eval!(ret_function_call, "let times_two(v) = { 41; ret v * 2; 42; } times_two(21);" => Number(42));
     eval!(bool_true, "true;" => Boolean(true));
     eval!(bool_false, "false;" => Boolean(false));
     eval!(equality_numbers_eq_true, "42 == 42;" => Boolean(true));
@@ -338,9 +338,9 @@ mod tests {
         let f(n) = {
             if n <= 1 {
                 ret n;
-            };
+            }
             f(n - 1) + f(n - 2);
-        };
+        }
         f(9) + 8;
     "# => Number(42));
     eval!(wtf, r#"
@@ -352,7 +352,7 @@ mod tests {
             } else {
                 j;
             };
-        };
+        }
 
         let seven = wtf(5, 2);
         let tree = wtf(2, 3);
@@ -366,9 +366,9 @@ mod tests {
             while n > 0 {
                 product = product * n;
                 n = n - 1;
-            };
+            }
             product;
-        };
+        }
         fact(3);
     "# => Number(6));
 }
