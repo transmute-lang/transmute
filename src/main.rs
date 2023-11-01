@@ -1,3 +1,5 @@
+extern crate core;
+
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
 use crate::parser::Parser;

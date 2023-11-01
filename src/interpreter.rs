@@ -4,7 +4,6 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
 use crate::ast::statement::{Statement, StatementKind};
 use crate::ast::{Ast, Visitor};
-use crate::interpreter::Value::Void;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
@@ -58,58 +57,40 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
             ExpressionKind::Binary(l, o, r) => {
                 let l = self.visit_expression(l);
                 let r = self.visit_expression(r);
-                match o.kind() {
-                    BinaryOperatorKind::Addition => match (&l, &r) {
-                        (Value::Number(l), Value::Number(r)) => Value::Number(l + r),
-                        _ => panic!("+ not supported on {}, {}", l, r),
+
+                match l {
+                    Value::Boolean(b) => Value::Boolean(match o.kind() {
+                        BinaryOperatorKind::Equality => b == r.try_to_bool(),
+                        BinaryOperatorKind::NonEquality => b != r.try_to_bool(),
+                        _ => panic!("{} not supported on bool", o.kind()),
+                    }),
+                    Value::Number(n) => match o.kind() {
+                        BinaryOperatorKind::Addition => Value::Number(n + r.try_to_i64()),
+                        BinaryOperatorKind::Division => Value::Number(n / r.try_to_i64()),
+                        BinaryOperatorKind::Equality => Value::Boolean(n == r.try_to_i64()),
+                        BinaryOperatorKind::GreaterThan => Value::Boolean(n > r.try_to_i64()),
+                        BinaryOperatorKind::GreaterThanOrEqualTo => {
+                            Value::Boolean(n >= r.try_to_i64())
+                        }
+                        BinaryOperatorKind::Multiplication => Value::Number(n * r.try_to_i64()),
+                        BinaryOperatorKind::NonEquality => Value::Boolean(n != r.try_to_i64()),
+                        BinaryOperatorKind::SmallerThan => Value::Boolean(n < r.try_to_i64()),
+                        BinaryOperatorKind::SmallerThanOrEqualTo => {
+                            Value::Boolean(n <= r.try_to_i64())
+                        }
+                        BinaryOperatorKind::Subtraction => Value::Number(n - r.try_to_i64()),
                     },
-                    BinaryOperatorKind::Equality => match (&l, &r) {
-                        (Value::Number(l), Value::Number(r)) => Value::Boolean(l == r),
-                        (Value::Boolean(l), Value::Boolean(r)) => Value::Boolean(l == r),
-                        _ => panic!("- not supported on {}, {}", l, r),
-                    },
-                    BinaryOperatorKind::NonEquality => match (&l, &r) {
-                        (Value::Number(l), Value::Number(r)) => Value::Boolean(l != r),
-                        (Value::Boolean(l), Value::Boolean(r)) => Value::Boolean(l != r),
-                        _ => panic!("/ not supported on {}, {}", l, r),
-                    },
-                    BinaryOperatorKind::GreaterThan => match (&l, &r) {
-                        (Value::Number(l), Value::Number(r)) => Value::Boolean(l > r),
-                        _ => panic!("/ not supported on {}, {}", l, r),
-                    },
-                    BinaryOperatorKind::GreaterThanOrEqualTo => match (&l, &r) {
-                        (Value::Number(l), Value::Number(r)) => Value::Boolean(l >= r),
-                        _ => panic!("/ not supported on {}, {}", l, r),
-                    },
-                    BinaryOperatorKind::SmallerThan => match (&l, &r) {
-                        (Value::Number(l), Value::Number(r)) => Value::Boolean(l < r),
-                        _ => panic!("/ not supported on {}, {}", l, r),
-                    },
-                    BinaryOperatorKind::SmallerThanOrEqualTo => match (&l, &r) {
-                        (Value::Number(l), Value::Number(r)) => Value::Boolean(l <= r),
-                        _ => panic!("/ not supported on {}, {}", l, r),
-                    },
-                    BinaryOperatorKind::Subtraction => match (&l, &r) {
-                        (Value::Number(l), Value::Number(r)) => Value::Number(l - r),
-                        _ => panic!("- not supported on {}, {}", l, r),
-                    },
-                    BinaryOperatorKind::Multiplication => match (&l, &r) {
-                        (Value::Number(l), Value::Number(r)) => Value::Number(l * r),
-                        _ => panic!("* not supported on {}, {}", l, r),
-                    },
-                    BinaryOperatorKind::Division => match (&l, &r) {
-                        (Value::Number(l), Value::Number(r)) => Value::Number(l / r),
-                        _ => panic!("/ not supported on {}, {}", l, r),
-                    },
+                    _ => panic!("{} not supported on {}", o.kind(), l),
                 }
             }
             ExpressionKind::Unary(o, e) => {
                 let e = self.visit_expression(e);
-                match o.kind() {
-                    UnaryOperatorKind::Minus => match e {
-                        Value::Number(e) => Value::Number(-e),
-                        v => panic!("- not supported on {}", v),
-                    },
+
+                match e {
+                    Value::Number(n) => Value::Number(match o.kind() {
+                        UnaryOperatorKind::Minus => -n,
+                    }),
+                    _ => panic!("{} not supported on {}", o.kind(), e),
                 }
             }
             ExpressionKind::FunctionCall(ident, arguments) => {
@@ -176,7 +157,7 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
                 self.visit_statements(statements)
             }
             ExpressionKind::While(cond, statements) => {
-                let mut ret = Void;
+                let mut ret = Value::Void;
                 loop {
                     match self.visit_expression(cond) {
                         Value::Boolean(false) => return ret,
@@ -243,6 +224,22 @@ impl Value {
         match self {
             Value::RetVal(v) => v.unwrap(),
             v => v,
+        }
+    }
+}
+
+impl Value {
+    fn try_to_i64(self) -> i64 {
+        match self {
+            Value::Number(n) => n,
+            _ => panic!("{} is not a number", self),
+        }
+    }
+
+    fn try_to_bool(self) -> bool {
+        match self {
+            Value::Boolean(b) => b,
+            _ => panic!("{} is not a bool", self),
         }
     }
 }
