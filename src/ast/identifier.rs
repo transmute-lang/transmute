@@ -2,13 +2,13 @@ use crate::lexer::Span;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq)]
-pub struct Identifier {
-    name: String,
+pub struct Identifier<'s> {
+    name: &'s str,
     span: Span,
 }
 
-impl Identifier {
-    pub fn new(name: String, span: Span) -> Self {
+impl<'s> Identifier<'s> {
+    pub fn new(name: &'s str, span: Span) -> Self {
         Self { name, span }
     }
 
@@ -17,11 +17,11 @@ impl Identifier {
     }
 
     pub fn name(&self) -> &str {
-        &self.name
+        self.name
     }
 }
 
-impl Display for Identifier {
+impl Display for Identifier<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
     }

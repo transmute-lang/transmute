@@ -1,9 +1,9 @@
-use crate::lexer::{Span, Token};
+use crate::lexer::Span;
 
 #[derive(Debug)]
 pub enum Error {
     UnexpectedEof,
     NoMatch,
     UnexpectedChar(char, Span),
-    ExpectedSemicolon(Token),
+    ExpectedSemicolon(String, Span),
 }

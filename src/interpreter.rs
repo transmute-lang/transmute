@@ -8,9 +8,9 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 pub struct Interpreter<'a> {
-    ast: &'a Ast,
+    ast: &'a Ast<'a>,
     // todo merge functions and variables (needs ValueKind)
-    functions: HashMap<&'a str, (&'a Vec<Identifier>, &'a Vec<Statement>)>,
+    functions: HashMap<&'a str, (&'a Vec<Identifier<'a>>, &'a Vec<Statement<'a>>)>,
     variables: Vec<HashMap<&'a str, Value>>,
 }
 
@@ -277,7 +277,7 @@ mod tests {
         ($name:ident, $src:expr => $kind:ident($value:expr)) => {
             #[test]
             fn $name() {
-                let mut parser = Parser::new(Lexer::new($src));
+                let parser = Parser::new(Lexer::new($src));
                 let ast = parser.parse().expect("source is valid");
 
                 let actual = Interpreter::new(&ast).start();
@@ -288,7 +288,7 @@ mod tests {
         ($name:ident, $src:expr => $kind:ident) => {
             #[test]
             fn $name() {
-                let mut parser = Parser::new(Lexer::new($src));
+                let parser = Parser::new(Lexer::new($src));
                 let ast = parser.parse().expect("source is valid");
 
                 let actual = Interpreter::new(&ast).start();

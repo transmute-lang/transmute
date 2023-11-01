@@ -19,17 +19,17 @@ pub trait Visitor<'a, R> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Ast {
-    root: Vec<Statement>,
+pub struct Ast<'s> {
+    root: Vec<Statement<'s>>,
 }
 
-impl Ast {
-    pub fn new(root: Vec<Statement>) -> Self {
+impl<'s> Ast<'s> {
+    pub fn new(root: Vec<Statement<'s>>) -> Self {
         assert!(!root.is_empty());
         Self { root }
     }
 
-    pub fn statements(&self) -> &Vec<Statement> {
+    pub fn statements(&self) -> &Vec<Statement<'s>> {
         &self.root
     }
 }

@@ -4,14 +4,14 @@ use std::fmt::{Debug, Display, Formatter};
 use std::str::Chars;
 
 #[derive(Debug)]
-pub struct Lexer<'a> {
-    remaining: &'a str,
+pub struct Lexer<'s> {
+    remaining: &'s str,
     pos: usize,
     location: Location,
 }
 
-impl<'a> Lexer<'a> {
-    pub fn new(source: &'a str) -> Self {
+impl<'s> Lexer<'s> {
+    pub fn new(source: &'s str) -> Self {
         Self {
             remaining: source,
             pos: 0,
@@ -19,7 +19,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn next(&mut self) -> Result<Token, Error> {
+    pub fn next(&mut self) -> Result<Token<'s>, Error> {
         if let Ok((_, span)) = self.take_while(|c| c.is_whitespace()) {
             self.advance_consumed(span.len());
         }
@@ -164,7 +164,7 @@ impl<'a> Lexer<'a> {
         self.pos += len;
     }
 
-    fn number(&mut self) -> Result<(TokenKind, Span), Error> {
+    fn number(&mut self) -> Result<(TokenKind<'s>, Span), Error> {
         let (negative, span) = match self
             .remaining
             .chars()
@@ -209,15 +209,15 @@ impl<'a> Lexer<'a> {
         ))
     }
 
-    fn identifier(&mut self) -> Result<(TokenKind, Span), Error> {
-        fn make_keyword(
+    fn identifier(&mut self) -> Result<(TokenKind<'s>, Span), Error> {
+        fn make_keyword<'s>(
             lexer: &mut Lexer,
             chars: Chars,
             suffix: &str,
-            token_kind: TokenKind,
+            token_kind: TokenKind<'s>,
             cols: usize,
             span: Span,
-        ) -> Option<(TokenKind, Span)> {
+        ) -> Option<(TokenKind<'s>, Span)> {
             let mut span = span;
             let mut cols = cols;
 
@@ -307,7 +307,7 @@ impl<'a> Lexer<'a> {
             Some(keyword) => keyword,
             None => {
                 let (ident, ident_span) = self.take_while(|c| is_identifier(&c))?;
-                (TokenKind::Identifier(ident.to_string()), ident_span)
+                (TokenKind::Identifier(ident), ident_span)
             }
         };
 
@@ -316,7 +316,7 @@ impl<'a> Lexer<'a> {
         Ok((token, span))
     }
 
-    fn take_while<F>(&mut self, pred: F) -> Result<(&str, Span), Error>
+    fn take_while<F>(&mut self, pred: F) -> Result<(&'s str, Span), Error>
     where
         F: Fn(char) -> bool,
     {
@@ -355,14 +355,14 @@ fn is_identifier(c: &char) -> bool {
 }
 
 #[derive(Debug)]
-pub struct PeekableLexer<'a> {
-    lexer: Lexer<'a>,
+pub struct PeekableLexer<'s> {
+    lexer: Lexer<'s>,
     lookahead: usize,
-    peeked: VecDeque<Result<Token, Error>>,
+    peeked: VecDeque<Result<Token<'s>, Error>>,
 }
 
-impl<'a> PeekableLexer<'a> {
-    pub fn new(lexer: Lexer<'a>, lookahead: usize) -> Self {
+impl<'s> PeekableLexer<'s> {
+    pub fn new(lexer: Lexer<'s>, lookahead: usize) -> Self {
         assert!(lookahead >= 1);
         Self {
             lexer,
@@ -371,7 +371,7 @@ impl<'a> PeekableLexer<'a> {
         }
     }
 
-    pub fn next(&mut self) -> Result<Token, Error> {
+    pub fn next(&mut self) -> Result<Token<'s>, Error> {
         self.peeked.pop_front().unwrap_or_else(|| self.lexer.next())
     }
 
@@ -399,13 +399,13 @@ impl<'a> PeekableLexer<'a> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Token {
-    kind: TokenKind,
+pub struct Token<'s> {
+    kind: TokenKind<'s>,
     span: Span,
 }
 
-impl Token {
-    pub fn kind(&self) -> &TokenKind {
+impl<'s> Token<'s> {
+    pub fn kind(&self) -> &TokenKind<'s> {
         &self.kind
     }
 
@@ -415,7 +415,7 @@ impl Token {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum TokenKind {
+pub enum TokenKind<'s> {
     CloseCurlyBracket,
     CloseParenthesis,
     Comma,
@@ -426,7 +426,7 @@ pub enum TokenKind {
     False,
     Greater,
     GreaterEqual,
-    Identifier(String),
+    Identifier(&'s str),
     If,
     Let,
     Minus,
@@ -445,13 +445,18 @@ pub enum TokenKind {
     Eof,
 }
 
-impl From<i64> for TokenKind {
+impl Display for TokenKind<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "error")
+    }
+}
+
+impl From<i64> for TokenKind<'_> {
     fn from(value: i64) -> Self {
         Self::Number(value)
     }
 }
 
-#[derive(Clone, PartialEq)]
 struct Location {
     /// 1-based line
     line: usize,
@@ -579,7 +584,7 @@ mod tests {
     fn next_identifier() {
         let mut lexer = Lexer::new("ident");
         let expected = Token {
-            kind: TokenKind::Identifier("ident".to_string()),
+            kind: TokenKind::Identifier("ident"),
             span: Span::new(1, 1, 0, 5),
         };
         let actual = lexer.next().unwrap();
@@ -587,7 +592,7 @@ mod tests {
 
         let mut lexer = Lexer::new(" ident ");
         let expected = Token {
-            kind: TokenKind::Identifier("ident".to_string()),
+            kind: TokenKind::Identifier("ident"),
             span: Span::new(1, 2, 1, 5),
         };
         let actual = lexer.next().unwrap();
@@ -598,7 +603,7 @@ mod tests {
     fn next_identifier_with_keyword_prefix() {
         let mut lexer = Lexer::new("let123");
         let expected = Token {
-            kind: TokenKind::Identifier("let123".to_string()),
+            kind: TokenKind::Identifier("let123"),
             span: Span::new(1, 1, 0, 6),
         };
         let actual = lexer.next().unwrap();

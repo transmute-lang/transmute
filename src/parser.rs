@@ -7,8 +7,8 @@ use crate::ast::Ast;
 use crate::error::Error;
 use crate::lexer::{Lexer, PeekableLexer, Span, Token, TokenKind};
 
-pub struct Parser<'a> {
-    lexer: PeekableLexer<'a>,
+pub struct Parser<'s> {
+    lexer: PeekableLexer<'s>,
 }
 
 macro_rules! peek {
@@ -20,14 +20,14 @@ macro_rules! peek {
     };
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(lexer: Lexer<'a>) -> Self {
+impl<'s> Parser<'s> {
+    pub fn new(lexer: Lexer<'s>) -> Self {
         Self {
             lexer: PeekableLexer::new(lexer, 1),
         }
     }
 
-    pub fn parse(&mut self) -> Result<Ast, Error> {
+    pub fn parse(mut self) -> Result<Ast<'s>, Error> {
         let mut statements = Vec::new();
         while let Ok(token) = self.lexer.peek() {
             if token.kind() == &TokenKind::Eof {
@@ -48,7 +48,7 @@ impl<'a> Parser<'a> {
     /// 'expr ;
     /// 'ret expr ;
     /// ```
-    fn parse_statement(&mut self) -> Result<Statement, Error> {
+    fn parse_statement(&mut self) -> Result<Statement<'s>, Error> {
         let token = peek!(self);
 
         match token.kind() {
@@ -57,7 +57,7 @@ impl<'a> Parser<'a> {
                 let identifier_token = self.lexer.next()?;
                 let identifier = match identifier_token.kind() {
                     TokenKind::Identifier(ident) => {
-                        Identifier::new(ident.to_string(), identifier_token.span().clone())
+                        Identifier::new(ident, identifier_token.span().clone())
                     }
                     _ => todo!(
                         "parse_statement: error handling {:?} at {:?}",
@@ -132,7 +132,11 @@ impl<'a> Parser<'a> {
     /// let ident '( expr , ... ) = expr ;
     /// let ident '( expr , ... ) = { expr ; ... } ;
     /// ```
-    fn parse_function(&mut self, span: &Span, identifier: Identifier) -> Result<Statement, Error> {
+    fn parse_function(
+        &mut self,
+        span: &Span,
+        identifier: Identifier<'s>,
+    ) -> Result<Statement<'s>, Error> {
         // let name '( expr , ... ) = expr ;
         let open_parenthesis_token = self.lexer.next().expect("present, as we peeked it already");
         assert_eq!(open_parenthesis_token.kind(), &TokenKind::OpenParenthesis);
@@ -150,7 +154,7 @@ impl<'a> Parser<'a> {
                     comma_seen = true;
                 }
                 TokenKind::Identifier(ident) if comma_seen => {
-                    parameters.push(Identifier::new(ident.to_string(), token.span().clone()));
+                    parameters.push(Identifier::new(ident, token.span().clone()));
                     comma_seen = false;
                 }
                 _ => todo!(
@@ -205,21 +209,21 @@ impl<'a> Parser<'a> {
     /// ```
     /// 'expr
     /// ```
-    fn parse_expression(&mut self) -> Result<Expression, Error> {
+    fn parse_expression(&mut self) -> Result<Expression<'s>, Error> {
         self.parse_expression_with_precedence(Precedence::Lowest)
     }
 
     fn parse_expression_with_precedence(
         &mut self,
         precedence: Precedence,
-    ) -> Result<Expression, Error> {
+    ) -> Result<Expression<'s>, Error> {
         let token = self.lexer.next()?;
 
         let mut expression = match token.kind() {
             TokenKind::If => self.parse_if_expression(token.span().clone())?,
             TokenKind::While => self.parse_while_expression(token.span().clone())?,
             TokenKind::Identifier(ident) => {
-                let identifier = Identifier::new(ident.clone(), token.span().clone());
+                let identifier = Identifier::new(ident, token.span().clone());
 
                 let token = peek!(self);
 
@@ -312,7 +316,7 @@ impl<'a> Parser<'a> {
     /// ```
     /// if expr { expr ; ... } else if expr { expr ; } else { expr ; ... }
     /// ```
-    fn parse_if_expression(&mut self, span: Span) -> Result<Expression, Error> {
+    fn parse_if_expression(&mut self, span: Span) -> Result<Expression<'s>, Error> {
         // if 'expr { expr ; ... } else if expr { expr ; ... } else { expr ; ... }
         let condition = self.parse_expression()?;
         let _open_curly_bracket = self.lexer.next()?;
@@ -364,7 +368,7 @@ impl<'a> Parser<'a> {
         ))
     }
 
-    fn parse_while_expression(&mut self, span: Span) -> Result<Expression, Error> {
+    fn parse_while_expression(&mut self, span: Span) -> Result<Expression<'s>, Error> {
         // while 'expr { expr ; ... }
         let condition = self.parse_expression()?;
         let _open_curly_bracket = self.lexer.next()?;
@@ -380,7 +384,7 @@ impl<'a> Parser<'a> {
     /// ```
     /// identifier ( expr , ... )
     /// ```
-    fn parse_function_call(&mut self, identifier: Identifier) -> Result<Expression, Error> {
+    fn parse_function_call(&mut self, identifier: Identifier<'s>) -> Result<Expression<'s>, Error> {
         // identifier '( expr , ... )
         let open_parenthesis_token = self.lexer.next()?;
         assert_eq!(open_parenthesis_token.kind(), &TokenKind::OpenParenthesis);
@@ -428,9 +432,9 @@ impl<'a> Parser<'a> {
 
     fn parse_infix_expression(
         &mut self,
-        left: Expression,
+        left: Expression<'s>,
         precedence: Precedence,
-    ) -> Result<Expression, Error> {
+    ) -> Result<Expression<'s>, Error> {
         let operator = self
             .parse_operator()
             .expect("there must be an operator, we got a precedence");
@@ -497,17 +501,20 @@ impl<'a> Parser<'a> {
     }
 }
 
-impl<'a> Parser<'a> {
+impl<'s> Parser<'s> {
     fn parse_semicolon(&mut self) -> Result<Token, Error> {
         let token = self.lexer.next()?;
         if token.kind() == &TokenKind::Semicolon {
             Ok(token)
         } else {
-            Err(Error::ExpectedSemicolon(token))
+            Err(Error::ExpectedSemicolon(
+                token.kind().to_string(),
+                token.span().clone(),
+            ))
         }
     }
 
-    fn parse_statements(&mut self) -> Result<(Vec<Statement>, Span), Error> {
+    fn parse_statements(&mut self) -> Result<(Vec<Statement<'s>>, Span), Error> {
         let mut statements = Vec::new();
         loop {
             let token = peek!(self);
@@ -537,7 +544,7 @@ enum Precedence {
     Prefix,
 }
 
-impl From<&TokenKind> for Option<Precedence> {
+impl From<&TokenKind<'_>> for Option<Precedence> {
     fn from(kind: &TokenKind) -> Self {
         match kind {
             TokenKind::EqualEqual => Some(Precedence::Comparison),
@@ -582,10 +589,7 @@ mod tests {
         let actual = parser.parse_expression().unwrap();
         let expected = Expression::new(
             ExpressionKind::Literal(Literal::new(
-                LiteralKind::Identifier(Identifier::new(
-                    "forty_two".to_string(),
-                    Span::new(1, 1, 0, 9),
-                )),
+                LiteralKind::Identifier(Identifier::new("forty_two", Span::new(1, 1, 0, 9))),
                 Span::new(1, 1, 0, 9),
             )),
             Span::new(1, 1, 0, 9),
@@ -709,8 +713,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn missing_right_parenthesis() {
-        let mut parser = Parser::new(Lexer::new("(42"));
-        let _ = parser.parse();
+        let _ = Parser::new(Lexer::new("(42")).parse();
     }
 
     #[test]
@@ -720,7 +723,7 @@ mod tests {
         let actual = parser.parse_statement().expect("statement is valid");
         let expected = Statement::new(
             StatementKind::Let(
-                Identifier::new("forty_two".to_string(), Span::new(1, 5, 4, 9)),
+                Identifier::new("forty_two", Span::new(1, 5, 4, 9)),
                 Expression::new(
                     ExpressionKind::Literal(Literal::new(
                         LiteralKind::Number(42),
@@ -741,7 +744,7 @@ mod tests {
         let actual = parser.parse_expression().expect("valid expression");
         let expected = Expression::new(
             ExpressionKind::Assignment(
-                Identifier::new("forty_two".to_string(), Span::new(1, 1, 0, 9)),
+                Identifier::new("forty_two", Span::new(1, 1, 0, 9)),
                 Box::new(Expression::new(
                     ExpressionKind::Literal(Literal::new(
                         LiteralKind::Number(42),
@@ -758,13 +761,13 @@ mod tests {
 
     #[test]
     fn two_statements() {
-        let mut parser = Parser::new(Lexer::new("let forty_two = 42; forty_two;"));
+        let parser = Parser::new(Lexer::new("let forty_two = 42; forty_two;"));
 
         let actual = parser.parse().expect("source is valid");
         let expected = Ast::new(vec![
             Statement::new(
                 StatementKind::Let(
-                    Identifier::new("forty_two".to_string(), Span::new(1, 5, 4, 9)),
+                    Identifier::new("forty_two", Span::new(1, 5, 4, 9)),
                     Expression::new(
                         ExpressionKind::Literal(Literal::new(
                             LiteralKind::Number(42),
@@ -779,7 +782,7 @@ mod tests {
                 StatementKind::Expression(Expression::new(
                     ExpressionKind::Literal(Literal::new(
                         LiteralKind::Identifier(Identifier::new(
-                            "forty_two".to_string(),
+                            "forty_two",
                             Span::new(1, 21, 20, 9),
                         )),
                         Span::new(1, 21, 20, 9),
@@ -795,20 +798,20 @@ mod tests {
 
     #[test]
     fn function_statement() {
-        let mut parser = Parser::new(Lexer::new("let times_two(a) = a * 2;"));
+        let parser = Parser::new(Lexer::new("let times_two(a) = a * 2;"));
 
         let actual = parser.parse().expect("source is valid");
         let expected = Ast::new(vec![Statement::new(
             StatementKind::LetFn(
-                Identifier::new("times_two".to_string(), Span::new(1, 5, 4, 9)),
-                vec![Identifier::new("a".to_string(), Span::new(1, 15, 14, 1))],
+                Identifier::new("times_two", Span::new(1, 5, 4, 9)),
+                vec![Identifier::new("a", Span::new(1, 15, 14, 1))],
                 vec![Statement::new(
                     StatementKind::Expression(Expression::new(
                         ExpressionKind::Binary(
                             Box::new(Expression::new(
                                 ExpressionKind::Literal(Literal::new(
                                     LiteralKind::Identifier(Identifier::new(
-                                        "a".to_string(),
+                                        "a",
                                         Span::new(1, 20, 19, 1),
                                     )),
                                     Span::new(1, 20, 19, 1),
@@ -840,20 +843,20 @@ mod tests {
 
     #[test]
     fn function_statements() {
-        let mut parser = Parser::new(Lexer::new("let times_two(a) = { a * 2; }"));
+        let parser = Parser::new(Lexer::new("let times_two(a) = { a * 2; }"));
 
         let actual = parser.parse().expect("source is valid");
         let expected = Ast::new(vec![Statement::new(
             StatementKind::LetFn(
-                Identifier::new("times_two".to_string(), Span::new(1, 5, 4, 9)),
-                vec![Identifier::new("a".to_string(), Span::new(1, 15, 14, 1))],
+                Identifier::new("times_two", Span::new(1, 5, 4, 9)),
+                vec![Identifier::new("a", Span::new(1, 15, 14, 1))],
                 vec![Statement::new(
                     StatementKind::Expression(Expression::new(
                         ExpressionKind::Binary(
                             Box::new(Expression::new(
                                 ExpressionKind::Literal(Literal::new(
                                     LiteralKind::Identifier(Identifier::new(
-                                        "a".to_string(),
+                                        "a",
                                         Span::new(1, 22, 21, 1),
                                     )),
                                     Span::new(1, 22, 21, 1),
@@ -889,7 +892,7 @@ mod tests {
         let actual = parser.parse_expression().expect("expression is valid");
         let expected = Expression::new(
             ExpressionKind::FunctionCall(
-                Identifier::new("times_two".to_string(), Span::new(1, 1, 0, 9)),
+                Identifier::new("times_two", Span::new(1, 1, 0, 9)),
                 vec![Expression::new(
                     ExpressionKind::Literal(Literal::new(
                         LiteralKind::Number(21),
