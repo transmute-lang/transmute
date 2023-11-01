@@ -292,6 +292,14 @@ impl<'a> Lexer<'a> {
                 1,
                 span.extend('t'.len_utf8()),
             ),
+            'w' => make_keyword(
+                self,
+                chars,
+                "hile",
+                TokenKind::While,
+                1,
+                span.extend('w'.len_utf8()),
+            ),
             _ => None,
         };
 
@@ -433,6 +441,7 @@ pub enum TokenKind {
     SmallerEqual,
     Star,
     True,
+    While,
     Eof,
 }
 
@@ -615,6 +624,7 @@ mod tests {
     lexer_test_keyword!(keyword_ret, "ret" => Ret);
     lexer_test_keyword!(keyword_if, "if" => If);
     lexer_test_keyword!(keyword_else, "else" => Else);
+    lexer_test_keyword!(keyword_while, "while" => While);
     lexer_test_keyword!(keyword_true, "true" => True);
     lexer_test_keyword!(keyword_false, "false" => False);
 

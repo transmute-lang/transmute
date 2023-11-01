@@ -31,12 +31,14 @@ impl From<Literal> for Expression {
     }
 }
 
+// todo vec does not hold span and position as it should
 #[derive(Debug, PartialEq)]
 pub enum ExpressionKind {
+    Assignment(Identifier, Box<Expression>),
     If(Box<Expression>, Vec<Statement>, Option<Vec<Statement>>),
     Literal(Literal),
     Binary(Box<Expression>, BinaryOperator, Box<Expression>),
-    // todo vec does not hold span and position as it should
     FunctionCall(Identifier, Vec<Expression>),
     Unary(UnaryOperator, Box<Expression>),
+    While(Box<Expression>, Vec<Statement>),
 }

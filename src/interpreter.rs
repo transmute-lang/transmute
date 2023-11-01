@@ -4,6 +4,7 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
 use crate::ast::statement::{Statement, StatementKind};
 use crate::ast::{Ast, Visitor};
+use crate::interpreter::Value::Void;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
@@ -138,6 +139,25 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
 
                 ret
             }
+            ExpressionKind::Assignment(ident, expr) => {
+                if !self
+                    .variables
+                    .last()
+                    .expect("there is an env")
+                    .contains_key(ident.name())
+                {
+                    panic!("{ident} not in scope")
+                }
+
+                let val = self.visit_expression(expr);
+
+                self.variables
+                    .last_mut()
+                    .expect("there is an env")
+                    .insert(ident.name(), val.clone());
+
+                val
+            }
             ExpressionKind::If(cond, true_branch, false_branch) => {
                 let cond = self.visit_expression(cond);
                 let cond = match cond {
@@ -154,6 +174,18 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
                 };
 
                 self.visit_statements(statements)
+            }
+            ExpressionKind::While(cond, statements) => {
+                let mut ret = Void;
+                loop {
+                    match self.visit_expression(cond) {
+                        Value::Boolean(false) => return ret,
+                        Value::Boolean(true) => {}
+                        _ => panic!("condition is not a boolean"),
+                    };
+
+                    ret = self.visit_statements(statements)
+                }
             }
         }
     }
@@ -328,4 +360,15 @@ mod tests {
 
         seven * tree + twenty_one;
     "# => Number(42));
+    eval!(fact, r#"
+        let fact(n) = {
+            let product = 1;
+            while n > 0 {
+                product = product * n;
+                n = n - 1;
+            };
+            product;
+        };
+        fact(3);
+    "# => Number(6));
 }
