@@ -4,6 +4,6 @@ use crate::lexer::Span;
 pub enum Error {
     UnexpectedEof,
     NoMatch,
-    UnexpectedChar(char, Span),
-    ExpectedSemicolon(String, Span),
+    UnexpectedChar(Span),
+    ExpectedSemicolon(Span),
 }

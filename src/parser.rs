@@ -507,10 +507,7 @@ impl<'s> Parser<'s> {
         if token.kind() == &TokenKind::Semicolon {
             Ok(token)
         } else {
-            Err(Error::ExpectedSemicolon(
-                token.kind().to_string(),
-                token.span().clone(),
-            ))
+            Err(Error::ExpectedSemicolon(token.span().clone()))
         }
     }
 

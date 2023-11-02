@@ -145,7 +145,7 @@ impl<'s> Lexer<'s> {
             }
             c if c.is_ascii_digit() => Ok(self.number()?),
             c if c.is_ascii_alphabetic() || c == '_' => Ok(self.identifier()?),
-            c => Err(Error::UnexpectedChar(c, span)),
+            _ => Err(Error::UnexpectedChar(span)),
         }?;
 
         Ok(Token { kind, span })
