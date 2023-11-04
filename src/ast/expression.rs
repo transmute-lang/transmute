@@ -57,7 +57,7 @@ impl From<usize> for ExprId {
 #[derive(Debug, PartialEq)]
 pub enum ExpressionKind<'s> {
     Assignment(Identifier<'s>, ExprId),
-    If(ExprId, Vec<StmtId>, Option<Vec<StmtId>>),
+    If(ExprId, Vec<StmtId>, Vec<StmtId>),
     Literal(Literal<'s>),
     Binary(ExprId, BinaryOperator, ExprId),
     FunctionCall(Identifier<'s>, Vec<ExprId>),

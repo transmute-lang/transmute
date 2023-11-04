@@ -153,10 +153,8 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
 
                 let statements = if cond {
                     true_branch
-                } else if let Some(false_branch) = false_branch {
-                    false_branch
                 } else {
-                    return Value::Void;
+                    false_branch
                 };
 
                 self.visit_statements(statements)

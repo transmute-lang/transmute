@@ -352,7 +352,7 @@ impl<'s> Parser<'s> {
         let (statements, statements_span) = self.parse_statements()?;
 
         // if expr { expr ; ... } 'else if expr { expr ; ... } else { expr ; ... }
-        let else_branch = if self
+        let (else_branch, else_branch_span) = if self
             .lexer
             .peek()
             .map(|t| t.kind() == &TokenKind::Else)
@@ -366,13 +366,13 @@ impl<'s> Parser<'s> {
                     let expression = self.parse_if_expression(token.span().clone())?;
                     let span = expression.span().clone();
                     let id = expression.id();
-                    Some((
+                    (
                         vec![self.push_statement(StatementKind::Expression(id), span.clone())],
                         span,
-                    ))
+                    )
                 }
                 // if expr { expr ; ... } 'else { expr ; ... }
-                TokenKind::OpenCurlyBracket => Some(self.parse_statements()?),
+                TokenKind::OpenCurlyBracket => self.parse_statements()?,
                 _ => todo!(
                     "parse_if_expression: error handling {:?} at {:?}",
                     token.kind(),
@@ -381,16 +381,13 @@ impl<'s> Parser<'s> {
             }
         } else {
             // if expr { expr ; ... } '
-            None
+            (vec![], statements_span)
         };
 
-        let span = match &else_branch {
-            None => span.extend_to(&statements_span),
-            Some((_, else_span)) => span.extend_to(else_span),
-        };
+        let span = span.extend_to(&else_branch_span);
 
         let id = self.push_expression(
-            ExpressionKind::If(condition, statements, else_branch.map(|e| e.0)),
+            ExpressionKind::If(condition, statements, else_branch),
             span,
         );
         Ok(&self.expressions[id.id()])
@@ -1105,7 +1102,7 @@ mod tests {
             ),
             Expression::new(
                 ExprId::from(2),
-                ExpressionKind::If(ExprId::from(0), vec![StmtId::from(0)], None),
+                ExpressionKind::If(ExprId::from(0), vec![StmtId::from(0)], vec![]),
                 Span::new(1, 1, 0, 15),
             ),
         ];
@@ -1157,7 +1154,7 @@ mod tests {
                 ExpressionKind::If(
                     ExprId::from(0),
                     vec![StmtId::from(0)],
-                    Some(vec![StmtId::from(1)]),
+                    vec![StmtId::from(1)],
                 ),
                 Span::new(1, 1, 0, 28),
             ),
@@ -1235,7 +1232,7 @@ mod tests {
                 ExpressionKind::If(
                     ExprId::from(2),
                     vec![StmtId::from(1)],
-                    Some(vec![StmtId::from(2)]),
+                    vec![StmtId::from(2)],
                 ),
                 Span::new(1, 22, 21, 29),
             ),
@@ -1244,7 +1241,7 @@ mod tests {
                 ExpressionKind::If(
                     ExprId::from(0),
                     vec![StmtId::from(0)],
-                    Some(vec![StmtId::from(3)]),
+                    vec![StmtId::from(3)],
                 ),
                 Span::new(1, 1, 0, 50),
             ),
