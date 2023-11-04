@@ -2,7 +2,7 @@ use crate::ast::expression::{Expression, ExpressionKind};
 use crate::ast::identifier::Identifier;
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
-use crate::ast::statement::{Statement, StatementKind};
+use crate::ast::statement::{Statement, StatementKind, StmtId};
 use crate::ast::{Ast, Visitor};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -10,7 +10,7 @@ use std::fmt::{Display, Formatter};
 pub struct Interpreter<'a> {
     ast: &'a Ast<'a>,
     // todo merge functions and variables (needs ValueKind)
-    functions: HashMap<&'a str, (&'a Vec<Identifier<'a>>, &'a Vec<Statement<'a>>)>,
+    functions: HashMap<&'a str, (&'a Vec<Identifier<'a>>, &'a Vec<StmtId>)>,
     variables: Vec<HashMap<&'a str, Value>>,
 }
 
@@ -34,9 +34,9 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
 
     fn visit_statement(&mut self, stmt: &'a Statement) -> Value {
         match stmt.kind() {
-            StatementKind::Expression(e) => self.visit_expression(e),
+            StatementKind::Expression(e) => self.visit_expression(self.ast.expression(e)),
             StatementKind::Let(ident, expr) => {
-                let val = self.visit_expression(expr);
+                let val = self.visit_expression(self.ast.expression(expr));
                 self.variables
                     .last_mut()
                     .expect("there is an env")
@@ -47,7 +47,7 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
                 self.functions.insert(ident.name(), (params, statements));
                 Value::Void // todo this is wrong
             }
-            StatementKind::Ret(e) => self.visit_expression(e),
+            StatementKind::Ret(e) => self.visit_expression(self.ast.expression(e)),
         }
     }
 
@@ -55,8 +55,8 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
         match expr.kind() {
             ExpressionKind::Literal(n) => self.visit_literal(n),
             ExpressionKind::Binary(l, o, r) => {
-                let l = self.visit_expression(l);
-                let r = self.visit_expression(r);
+                let l = self.visit_expression(self.ast.expression(l));
+                let r = self.visit_expression(self.ast.expression(r));
 
                 match l {
                     Value::Boolean(b) => Value::Boolean(match o.kind() {
@@ -84,7 +84,7 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
                 }
             }
             ExpressionKind::Unary(o, e) => {
-                let e = self.visit_expression(e);
+                let e = self.visit_expression(self.ast.expression(e));
 
                 match e {
                     Value::Number(n) => Value::Number(match o.kind() {
@@ -109,7 +109,12 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
                 let env = parameters
                     .iter()
                     .zip(arguments.iter())
-                    .map(|(ident, expr)| (ident.name(), self.visit_expression(expr)))
+                    .map(|(ident, expr)| {
+                        (
+                            ident.name(),
+                            self.visit_expression(self.ast.expression(expr)),
+                        )
+                    })
                     .collect::<HashMap<&str, Value>>();
 
                 self.variables.push(env);
@@ -130,7 +135,7 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
                     panic!("{ident} not in scope")
                 }
 
-                let val = self.visit_expression(expr);
+                let val = self.visit_expression(self.ast.expression(expr));
 
                 self.variables
                     .last_mut()
@@ -140,7 +145,7 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
                 val
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
-                let cond = self.visit_expression(cond);
+                let cond = self.visit_expression(self.ast.expression(cond));
                 let cond = match cond {
                     Value::Boolean(b) => b,
                     _ => panic!("condition is not a boolean"),
@@ -159,7 +164,7 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
             ExpressionKind::While(cond, statements) => {
                 let mut ret = Value::Void;
                 loop {
-                    match self.visit_expression(cond) {
+                    match self.visit_expression(self.ast.expression(cond)) {
                         Value::Boolean(false) => return ret,
                         Value::Boolean(true) => {}
                         _ => panic!("condition is not a boolean"),
@@ -191,10 +196,11 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
 }
 
 impl<'a> Interpreter<'a> {
-    fn visit_statements(&mut self, statements: &'a Vec<Statement>) -> Value {
+    fn visit_statements(&mut self, statements: &'a Vec<StmtId>) -> Value {
         let mut value = Value::Void;
 
         for statement in statements {
+            let statement = self.ast.statement(statement);
             if is_ret(statement) {
                 return Value::RetVal(Box::new(self.visit_statement(statement)));
             }

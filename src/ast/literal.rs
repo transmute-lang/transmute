@@ -15,10 +15,6 @@ impl<'s> Literal<'s> {
     pub fn kind(&self) -> &LiteralKind<'s> {
         &self.kind
     }
-
-    pub fn span(&self) -> &Span {
-        &self.span
-    }
 }
 
 #[derive(Debug, PartialEq)]
