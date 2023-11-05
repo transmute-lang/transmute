@@ -1,5 +1,5 @@
-use crate::ast::expression::{Expression, ExpressionKind};
-use crate::ast::identifier::Identifier;
+use crate::ast::expression::{ExprId, ExpressionKind};
+use crate::ast::identifier::{IdentId, Identifier};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
 use crate::ast::statement::{Statement, StatementKind, StmtId};
@@ -8,10 +8,10 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 pub struct Interpreter<'a> {
-    ast: &'a Ast<'a>,
+    ast: &'a Ast,
     // todo merge functions and variables (needs ValueKind)
-    functions: HashMap<&'a str, (&'a Vec<Identifier<'a>>, &'a Vec<StmtId>)>,
-    variables: Vec<HashMap<&'a str, Value>>,
+    functions: HashMap<IdentId, (&'a Vec<Identifier>, &'a Vec<StmtId>)>,
+    variables: Vec<HashMap<IdentId, Value>>,
 }
 
 impl<'a> Interpreter<'a> {
@@ -27,36 +27,38 @@ impl<'a> Interpreter<'a> {
     }
 }
 
-impl<'a> Visitor<'a, Value> for Interpreter<'a> {
-    fn visit_ast(&mut self, ast: &'a Ast) -> Value {
+impl<'a> Visitor<Value> for Interpreter<'a> {
+    fn visit_ast(&mut self, ast: &Ast) -> Value {
         self.visit_statements(ast.statements())
     }
 
-    fn visit_statement(&mut self, stmt: &'a Statement) -> Value {
+    fn visit_statement(&mut self, stmt: StmtId) -> Value {
+        let stmt = self.ast.statement(&stmt);
         match stmt.kind() {
-            StatementKind::Expression(e) => self.visit_expression(self.ast.expression(e)),
+            StatementKind::Expression(e) => self.visit_expression(*e),
             StatementKind::Let(ident, expr) => {
-                let val = self.visit_expression(self.ast.expression(expr));
+                let val = self.visit_expression(*expr);
                 self.variables
                     .last_mut()
                     .expect("there is an env")
-                    .insert(ident.name(), val);
+                    .insert(ident.id(), val);
                 Value::Void
             }
             StatementKind::LetFn(ident, params, statements) => {
-                self.functions.insert(ident.name(), (params, statements));
+                self.functions.insert(ident.id(), (params, statements));
                 Value::Void // todo this is wrong
             }
-            StatementKind::Ret(e) => self.visit_expression(self.ast.expression(e)),
+            StatementKind::Ret(e) => self.visit_expression(*e),
         }
     }
 
-    fn visit_expression(&mut self, expr: &'a Expression) -> Value {
+    fn visit_expression(&mut self, expr: ExprId) -> Value {
+        let expr = self.ast.expression(&expr);
         match expr.kind() {
             ExpressionKind::Literal(n) => self.visit_literal(n),
             ExpressionKind::Binary(l, o, r) => {
-                let l = self.visit_expression(self.ast.expression(l));
-                let r = self.visit_expression(self.ast.expression(r));
+                let l = self.visit_expression(*l);
+                let r = self.visit_expression(*r);
 
                 match l {
                     Value::Boolean(b) => Value::Boolean(match o.kind() {
@@ -84,7 +86,7 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
                 }
             }
             ExpressionKind::Unary(o, e) => {
-                let e = self.visit_expression(self.ast.expression(e));
+                let e = self.visit_expression(*e);
 
                 match e {
                     Value::Number(n) => Value::Number(match o.kind() {
@@ -94,28 +96,26 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
                 }
             }
             ExpressionKind::FunctionCall(ident, arguments) => {
-                let (parameters, statements) = match self.functions.get(ident.name()) {
+                let (parameters, statements) = match self.functions.get(&ident.id()) {
                     Some(f) => *f,
-                    None => panic!("{ident} not in scope"),
+                    None => {
+                        panic!("{} not in scope", self.ast.identifier(&ident.id()))
+                    }
                 };
 
                 if parameters.len() != arguments.len() {
-                    panic!("Parameters and provided arguments for {ident} differ in length: expected {}, provided {}",
-                        parameters.len(),
-                        arguments.len()
+                    panic!("Parameters and provided arguments for {} differ in length: expected {}, provided {}",
+                           self.ast.identifier(&ident.id()),
+                           parameters.len(),
+                           arguments.len()
                     )
                 }
 
                 let env = parameters
                     .iter()
                     .zip(arguments.iter())
-                    .map(|(ident, expr)| {
-                        (
-                            ident.name(),
-                            self.visit_expression(self.ast.expression(expr)),
-                        )
-                    })
-                    .collect::<HashMap<&str, Value>>();
+                    .map(|(ident, expr)| (ident.id(), self.visit_expression(*expr)))
+                    .collect::<HashMap<IdentId, Value>>();
 
                 self.variables.push(env);
 
@@ -126,43 +126,41 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
                 ret
             }
             ExpressionKind::Assignment(ident, expr) => {
+                // todo!()
                 if !self
                     .variables
                     .last()
                     .expect("there is an env")
-                    .contains_key(ident.name())
+                    .contains_key(&ident.id())
                 {
+                    let ident = self.ast.identifier(&ident.id());
                     panic!("{ident} not in scope")
                 }
 
-                let val = self.visit_expression(self.ast.expression(expr));
+                let val = self.visit_expression(*expr);
 
                 self.variables
                     .last_mut()
                     .expect("there is an env")
-                    .insert(ident.name(), val.clone());
+                    .insert(ident.id(), val.clone());
 
                 val
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
-                let cond = self.visit_expression(self.ast.expression(cond));
+                let cond = self.visit_expression(*cond);
                 let cond = match cond {
                     Value::Boolean(b) => b,
                     _ => panic!("condition is not a boolean"),
                 };
 
-                let statements = if cond {
-                    true_branch
-                } else {
-                    false_branch
-                };
+                let statements = if cond { true_branch } else { false_branch };
 
                 self.visit_statements(statements)
             }
             ExpressionKind::While(cond, statements) => {
                 let mut ret = Value::Void;
                 loop {
-                    match self.visit_expression(self.ast.expression(cond)) {
+                    match self.visit_expression(*cond) {
                         Value::Boolean(false) => return ret,
                         Value::Boolean(true) => {}
                         _ => panic!("condition is not a boolean"),
@@ -174,7 +172,7 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
         }
     }
 
-    fn visit_literal(&mut self, literal: &'a Literal) -> Value {
+    fn visit_literal(&mut self, literal: &Literal) -> Value {
         match literal.kind() {
             LiteralKind::Number(n) => Value::Number(*n),
             LiteralKind::Identifier(ident) => {
@@ -182,9 +180,11 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
                     .variables
                     .last_mut()
                     .expect("there is an env")
-                    .get(ident.name())
+                    .get(&ident.id())
                 {
-                    None => panic!("{ident} not in scope"),
+                    None => {
+                        panic!("{} not in scope", self.ast.identifier(&ident.id()))
+                    }
                     Some(v) => v.clone(),
                 }
             }
@@ -194,16 +194,16 @@ impl<'a> Visitor<'a, Value> for Interpreter<'a> {
 }
 
 impl<'a> Interpreter<'a> {
-    fn visit_statements(&mut self, statements: &'a Vec<StmtId>) -> Value {
+    fn visit_statements(&mut self, statements: &Vec<StmtId>) -> Value {
         let mut value = Value::Void;
 
         for statement in statements {
             let statement = self.ast.statement(statement);
             if is_ret(statement) {
-                return Value::RetVal(Box::new(self.visit_statement(statement)));
+                return Value::RetVal(Box::new(self.visit_statement(statement.id())));
             }
 
-            value = match self.visit_statement(statement) {
+            value = match self.visit_statement(statement.id()) {
                 ret @ Value::RetVal(_) => return ret,
                 v => v,
             }

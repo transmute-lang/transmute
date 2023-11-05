@@ -2,24 +2,24 @@ use crate::ast::identifier::Identifier;
 use crate::lexer::Span;
 
 #[derive(Debug, PartialEq)]
-pub struct Literal<'s> {
-    kind: LiteralKind<'s>,
+pub struct Literal {
+    kind: LiteralKind,
     span: Span,
 }
 
-impl<'s> Literal<'s> {
-    pub fn new(kind: LiteralKind<'s>, span: Span) -> Self {
+impl Literal {
+    pub fn new(kind: LiteralKind, span: Span) -> Self {
         Self { kind, span }
     }
 
-    pub fn kind(&self) -> &LiteralKind<'s> {
+    pub fn kind(&self) -> &LiteralKind {
         &self.kind
     }
 }
 
 #[derive(Debug, PartialEq)]
-pub enum LiteralKind<'s> {
+pub enum LiteralKind {
     Boolean(bool),
-    Identifier(Identifier<'s>),
+    Identifier(Identifier),
     Number(i64),
 }

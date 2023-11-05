@@ -5,6 +5,7 @@ use std::str::Chars;
 
 #[derive(Debug)]
 pub struct Lexer<'s> {
+    source: &'s str,
     remaining: &'s str,
     pos: usize,
     location: Location,
@@ -13,13 +14,14 @@ pub struct Lexer<'s> {
 impl<'s> Lexer<'s> {
     pub fn new(source: &'s str) -> Self {
         Self {
+            source,
             remaining: source,
             pos: 0,
             location: Location::new(1, 1),
         }
     }
 
-    pub fn next(&mut self) -> Result<Token<'s>, Error> {
+    pub fn next(&mut self) -> Result<Token, Error> {
         if let Ok((_, span)) = self.take_while(|c| c.is_whitespace()) {
             self.advance_consumed(span.len());
         }
@@ -164,7 +166,7 @@ impl<'s> Lexer<'s> {
         self.pos += len;
     }
 
-    fn number(&mut self) -> Result<(TokenKind<'s>, Span), Error> {
+    fn number(&mut self) -> Result<(TokenKind, Span), Error> {
         let (negative, span) = match self
             .remaining
             .chars()
@@ -209,15 +211,15 @@ impl<'s> Lexer<'s> {
         ))
     }
 
-    fn identifier(&mut self) -> Result<(TokenKind<'s>, Span), Error> {
-        fn make_keyword<'s>(
+    fn identifier(&mut self) -> Result<(TokenKind, Span), Error> {
+        fn make_keyword(
             lexer: &mut Lexer,
             chars: Chars,
             suffix: &str,
-            token_kind: TokenKind<'s>,
+            token_kind: TokenKind,
             cols: usize,
             span: Span,
-        ) -> Option<(TokenKind<'s>, Span)> {
+        ) -> Option<(TokenKind, Span)> {
             let mut span = span;
             let mut cols = cols;
 
@@ -306,8 +308,8 @@ impl<'s> Lexer<'s> {
         let (token, span) = match keyword {
             Some(keyword) => keyword,
             None => {
-                let (ident, ident_span) = self.take_while(|c| is_identifier(&c))?;
-                (TokenKind::Identifier(ident), ident_span)
+                let (_, ident_span) = self.take_while(|c| is_identifier(&c))?;
+                (TokenKind::Identifier, ident_span)
             }
         };
 
@@ -316,7 +318,7 @@ impl<'s> Lexer<'s> {
         Ok((token, span))
     }
 
-    fn take_while<F>(&mut self, pred: F) -> Result<(&'s str, Span), Error>
+    fn take_while<F>(&mut self, pred: F) -> Result<(&str, Span), Error>
     where
         F: Fn(char) -> bool,
     {
@@ -348,6 +350,10 @@ impl<'s> Lexer<'s> {
             ))
         }
     }
+
+    pub fn span(&self, span: &Span) -> &str {
+        &self.source[span.start..span.end()]
+    }
 }
 
 fn is_identifier(c: &char) -> bool {
@@ -358,7 +364,7 @@ fn is_identifier(c: &char) -> bool {
 pub struct PeekableLexer<'s> {
     lexer: Lexer<'s>,
     lookahead: usize,
-    peeked: VecDeque<Result<Token<'s>, Error>>,
+    peeked: VecDeque<Result<Token, Error>>,
 }
 
 impl<'s> PeekableLexer<'s> {
@@ -371,7 +377,7 @@ impl<'s> PeekableLexer<'s> {
         }
     }
 
-    pub fn next(&mut self) -> Result<Token<'s>, Error> {
+    pub fn next(&mut self) -> Result<Token, Error> {
         self.peeked.pop_front().unwrap_or_else(|| self.lexer.next())
     }
 
@@ -396,16 +402,20 @@ impl<'s> PeekableLexer<'s> {
 
         self.peeked.back().expect("we just pushed it").as_ref()
     }
+
+    pub fn span(&self, span: &Span) -> &str {
+        self.lexer.span(span)
+    }
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Token<'s> {
-    kind: TokenKind<'s>,
+pub struct Token {
+    kind: TokenKind,
     span: Span,
 }
 
-impl<'s> Token<'s> {
-    pub fn kind(&self) -> &TokenKind<'s> {
+impl Token {
+    pub fn kind(&self) -> &TokenKind {
         &self.kind
     }
 
@@ -415,7 +425,7 @@ impl<'s> Token<'s> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum TokenKind<'s> {
+pub enum TokenKind {
     CloseCurlyBracket,
     CloseParenthesis,
     Comma,
@@ -426,7 +436,7 @@ pub enum TokenKind<'s> {
     False,
     Greater,
     GreaterEqual,
-    Identifier(&'s str),
+    Identifier,
     If,
     Let,
     Minus,
@@ -445,13 +455,13 @@ pub enum TokenKind<'s> {
     Eof,
 }
 
-impl Display for TokenKind<'_> {
+impl Display for TokenKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "error")
     }
 }
 
-impl From<i64> for TokenKind<'_> {
+impl From<i64> for TokenKind {
     fn from(value: i64) -> Self {
         Self::Number(value)
     }
@@ -526,6 +536,10 @@ impl Span {
     pub fn len(&self) -> usize {
         self.len
     }
+
+    fn end(&self) -> usize {
+        self.start + self.len
+    }
 }
 
 impl Debug for Span {
@@ -584,7 +598,7 @@ mod tests {
     fn next_identifier() {
         let mut lexer = Lexer::new("ident");
         let expected = Token {
-            kind: TokenKind::Identifier("ident"),
+            kind: TokenKind::Identifier,
             span: Span::new(1, 1, 0, 5),
         };
         let actual = lexer.next().unwrap();
@@ -592,7 +606,7 @@ mod tests {
 
         let mut lexer = Lexer::new(" ident ");
         let expected = Token {
-            kind: TokenKind::Identifier("ident"),
+            kind: TokenKind::Identifier,
             span: Span::new(1, 2, 1, 5),
         };
         let actual = lexer.next().unwrap();
@@ -603,7 +617,7 @@ mod tests {
     fn next_identifier_with_keyword_prefix() {
         let mut lexer = Lexer::new("let123");
         let expected = Token {
-            kind: TokenKind::Identifier("let123"),
+            kind: TokenKind::Identifier,
             span: Span::new(1, 1, 0, 6),
         };
         let actual = lexer.next().unwrap();

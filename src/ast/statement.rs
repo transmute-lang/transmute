@@ -4,15 +4,15 @@ use crate::lexer::Span;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq)]
-pub struct Statement<'s> {
+pub struct Statement {
     id: StmtId,
     // todo should be merged with Expression, maybe?
-    kind: StatementKind<'s>,
+    kind: StatementKind,
     span: Span,
 }
 
-impl<'s> Statement<'s> {
-    pub fn new(id: StmtId, kind: StatementKind<'s>, span: Span) -> Self {
+impl Statement {
+    pub fn new(id: StmtId, kind: StatementKind, span: Span) -> Self {
         Self { id, kind, span }
     }
 
@@ -20,7 +20,7 @@ impl<'s> Statement<'s> {
         self.id
     }
 
-    pub fn kind(&self) -> &StatementKind<'s> {
+    pub fn kind(&self) -> &StatementKind {
         &self.kind
     }
 }
@@ -49,10 +49,10 @@ impl From<usize> for StmtId {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum StatementKind<'s> {
+pub enum StatementKind {
     Expression(ExprId),
-    Let(Identifier<'s>, ExprId),
+    Let(Identifier, ExprId),
     Ret(ExprId),
     // todo vec does not hold span and position as it should (search for "Vec<Statement>, Span")
-    LetFn(Identifier<'s>, Vec<Identifier<'s>>, Vec<StmtId>),
+    LetFn(Identifier, Vec<Identifier>, Vec<StmtId>),
 }

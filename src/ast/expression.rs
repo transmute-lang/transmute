@@ -6,14 +6,14 @@ use crate::lexer::Span;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq)]
-pub struct Expression<'s> {
+pub struct Expression {
     id: ExprId,
-    kind: ExpressionKind<'s>,
+    kind: ExpressionKind,
     span: Span,
 }
 
-impl<'s> Expression<'s> {
-    pub fn new(id: ExprId, kind: ExpressionKind<'s>, span: Span) -> Self {
+impl Expression {
+    pub fn new(id: ExprId, kind: ExpressionKind, span: Span) -> Self {
         Self { id, kind, span }
     }
 
@@ -21,7 +21,7 @@ impl<'s> Expression<'s> {
         self.id
     }
 
-    pub fn kind(&self) -> &ExpressionKind<'s> {
+    pub fn kind(&self) -> &ExpressionKind {
         &self.kind
     }
 
@@ -55,12 +55,12 @@ impl From<usize> for ExprId {
 
 // todo vec does not hold span and position as it should
 #[derive(Debug, PartialEq)]
-pub enum ExpressionKind<'s> {
-    Assignment(Identifier<'s>, ExprId),
+pub enum ExpressionKind {
+    Assignment(Identifier, ExprId),
     If(ExprId, Vec<StmtId>, Vec<StmtId>),
-    Literal(Literal<'s>),
+    Literal(Literal),
     Binary(ExprId, BinaryOperator, ExprId),
-    FunctionCall(Identifier<'s>, Vec<ExprId>),
+    FunctionCall(Identifier, Vec<ExprId>),
     Unary(UnaryOperator, ExprId),
     While(ExprId, Vec<StmtId>),
 }

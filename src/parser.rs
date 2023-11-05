@@ -1,11 +1,12 @@
 use crate::ast::expression::{ExprId, Expression, ExpressionKind};
-use crate::ast::identifier::Identifier;
+use crate::ast::identifier::{IdentId, Identifier};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, BinaryOperatorKind, UnaryOperator, UnaryOperatorKind};
 use crate::ast::statement::{Statement, StatementKind, StmtId};
 use crate::ast::Ast;
 use crate::error::Error;
 use crate::lexer::{Lexer, PeekableLexer, Span, Token, TokenKind};
+use std::collections::HashMap;
 
 macro_rules! peek {
     ($parser:ident) => {
@@ -18,20 +19,22 @@ macro_rules! peek {
 
 pub struct Parser<'s> {
     lexer: PeekableLexer<'s>,
-    statements: Vec<Statement<'s>>,
-    expressions: Vec<Expression<'s>>,
+    identifiers: HashMap<String, IdentId>,
+    expressions: Vec<Expression>,
+    statements: Vec<Statement>,
 }
 
 impl<'s> Parser<'s> {
     pub fn new(lexer: Lexer<'s>) -> Self {
         Self {
             lexer: PeekableLexer::new(lexer, 1),
-            statements: Vec::new(),
-            expressions: Vec::new(),
+            identifiers: Default::default(),
+            expressions: Default::default(),
+            statements: Default::default(),
         }
     }
 
-    pub fn parse(mut self) -> Result<Ast<'s>, Error> {
+    pub fn parse(mut self) -> Result<Ast, Error> {
         let mut statements = Vec::new();
         while let Ok(token) = self.lexer.peek() {
             if token.kind() == &TokenKind::Eof {
@@ -41,7 +44,22 @@ impl<'s> Parser<'s> {
             statements.push(self.parse_statement()?.id());
         }
 
-        Ok(Ast::new(self.expressions, self.statements, statements))
+        let mut identifiers = self
+            .identifiers
+            .into_iter()
+            .collect::<Vec<(String, IdentId)>>();
+        identifiers.sort_by(|(_, id1), (_, id2)| id1.id().cmp(&id2.id()));
+        let identifiers = identifiers
+            .into_iter()
+            .map(|(ident, _)| ident)
+            .collect::<Vec<String>>();
+
+        Ok(Ast::new(
+            identifiers,
+            self.expressions,
+            self.statements,
+            statements,
+        ))
     }
 
     /// Parses the following:
@@ -52,7 +70,7 @@ impl<'s> Parser<'s> {
     /// 'expr ;
     /// 'ret expr ;
     /// ```
-    fn parse_statement(&mut self) -> Result<&Statement<'s>, Error> {
+    fn parse_statement(&mut self) -> Result<&Statement, Error> {
         let token = peek!(self);
 
         match token.kind() {
@@ -60,9 +78,10 @@ impl<'s> Parser<'s> {
                 let let_token = self.lexer.next().expect("we just peeked it");
                 let identifier_token = self.lexer.next()?;
                 let identifier = match identifier_token.kind() {
-                    TokenKind::Identifier(ident) => {
-                        Identifier::new(ident, identifier_token.span().clone())
-                    }
+                    TokenKind::Identifier => Identifier::new(
+                        self.push_identifier(identifier_token.span()),
+                        identifier_token.span().clone(),
+                    ),
                     _ => todo!(
                         "parse_statement: error handling {:?} at {:?}",
                         identifier_token.kind(),
@@ -113,7 +132,7 @@ impl<'s> Parser<'s> {
                 Ok(&self.statements[id.id()])
             }
             TokenKind::False
-            | TokenKind::Identifier(_)
+            | TokenKind::Identifier
             | TokenKind::Minus
             | TokenKind::Number(_)
             | TokenKind::OpenParenthesis
@@ -136,13 +155,24 @@ impl<'s> Parser<'s> {
         }
     }
 
-    fn push_expression(&mut self, kind: ExpressionKind<'s>, span: Span) -> ExprId {
+    fn push_identifier(&mut self, span: &Span) -> IdentId {
+        let ident = self.lexer.span(span);
+        if let Some(id) = self.identifiers.get(ident) {
+            *id
+        } else {
+            let id = IdentId::from(self.identifiers.len());
+            self.identifiers.insert(ident.to_string(), id);
+            id
+        }
+    }
+
+    fn push_expression(&mut self, kind: ExpressionKind, span: Span) -> ExprId {
         let id = ExprId::from(self.expressions.len());
         self.expressions.push(Expression::new(id, kind, span));
         id
     }
 
-    fn push_statement(&mut self, kind: StatementKind<'s>, span: Span) -> StmtId {
+    fn push_statement(&mut self, kind: StatementKind, span: Span) -> StmtId {
         let id = StmtId::from(self.statements.len());
         self.statements.push(Statement::new(id, kind, span));
         id
@@ -153,11 +183,7 @@ impl<'s> Parser<'s> {
     /// let ident '( expr , ... ) = expr ;
     /// let ident '( expr , ... ) = { expr ; ... } ;
     /// ```
-    fn parse_function(
-        &mut self,
-        span: &Span,
-        identifier: Identifier<'s>,
-    ) -> Result<&Statement<'s>, Error> {
+    fn parse_function(&mut self, span: &Span, identifier: Identifier) -> Result<&Statement, Error> {
         // let name '( expr , ... ) = expr ;
         let open_parenthesis_token = self.lexer.next().expect("present, as we peeked it already");
         assert_eq!(open_parenthesis_token.kind(), &TokenKind::OpenParenthesis);
@@ -174,8 +200,11 @@ impl<'s> Parser<'s> {
                 TokenKind::Comma if !comma_seen => {
                     comma_seen = true;
                 }
-                TokenKind::Identifier(ident) if comma_seen => {
-                    parameters.push(Identifier::new(ident, token.span().clone()));
+                TokenKind::Identifier if comma_seen => {
+                    parameters.push(Identifier::new(
+                        self.push_identifier(token.span()),
+                        token.span().clone(),
+                    ));
                     comma_seen = false;
                 }
                 _ => todo!(
@@ -229,21 +258,22 @@ impl<'s> Parser<'s> {
     /// ```
     /// 'expr
     /// ```
-    fn parse_expression(&mut self) -> Result<&Expression<'s>, Error> {
+    fn parse_expression(&mut self) -> Result<&Expression, Error> {
         self.parse_expression_with_precedence(Precedence::Lowest)
     }
 
     fn parse_expression_with_precedence(
         &mut self,
         precedence: Precedence,
-    ) -> Result<&Expression<'s>, Error> {
+    ) -> Result<&Expression, Error> {
         let token = self.lexer.next()?;
 
         let mut expression = match token.kind() {
             TokenKind::If => self.parse_if_expression(token.span().clone())?.id(),
             TokenKind::While => self.parse_while_expression(token.span().clone())?.id(),
-            TokenKind::Identifier(ident) => {
-                let identifier = Identifier::new(ident, token.span().clone());
+            TokenKind::Identifier => {
+                let identifier =
+                    Identifier::new(self.push_identifier(token.span()), token.span().clone());
 
                 let token = peek!(self);
 
@@ -345,7 +375,7 @@ impl<'s> Parser<'s> {
     /// ```
     /// if expr { expr ; ... } else if expr { expr ; } else { expr ; ... }
     /// ```
-    fn parse_if_expression(&mut self, span: Span) -> Result<&Expression<'s>, Error> {
+    fn parse_if_expression(&mut self, span: Span) -> Result<&Expression, Error> {
         // if 'expr { expr ; ... } else if expr { expr ; ... } else { expr ; ... }
         let condition = self.parse_expression()?.id();
         let _open_curly_bracket = self.lexer.next()?;
@@ -386,14 +416,11 @@ impl<'s> Parser<'s> {
 
         let span = span.extend_to(&else_branch_span);
 
-        let id = self.push_expression(
-            ExpressionKind::If(condition, statements, else_branch),
-            span,
-        );
+        let id = self.push_expression(ExpressionKind::If(condition, statements, else_branch), span);
         Ok(&self.expressions[id.id()])
     }
 
-    fn parse_while_expression(&mut self, span: Span) -> Result<&Expression<'s>, Error> {
+    fn parse_while_expression(&mut self, span: Span) -> Result<&Expression, Error> {
         // while 'expr { expr ; ... }
         let condition = self.parse_expression()?.id();
         let _open_curly_bracket = self.lexer.next()?;
@@ -410,10 +437,7 @@ impl<'s> Parser<'s> {
     /// ```
     /// identifier ( expr , ... )
     /// ```
-    fn parse_function_call(
-        &mut self,
-        identifier: Identifier<'s>,
-    ) -> Result<&Expression<'s>, Error> {
+    fn parse_function_call(&mut self, identifier: Identifier) -> Result<&Expression, Error> {
         // identifier '( expr , ... )
         let open_parenthesis_token = self.lexer.next()?;
         assert_eq!(open_parenthesis_token.kind(), &TokenKind::OpenParenthesis);
@@ -461,7 +485,7 @@ impl<'s> Parser<'s> {
         &mut self,
         left: ExprId,
         precedence: Precedence,
-    ) -> Result<&Expression<'s>, Error> {
+    ) -> Result<&Expression, Error> {
         let operator = self
             .parse_operator()
             .expect("there must be an operator, we got a precedence");
@@ -528,9 +552,7 @@ impl<'s> Parser<'s> {
             ),
         }
     }
-}
 
-impl<'s> Parser<'s> {
     fn parse_semicolon(&mut self) -> Result<Token, Error> {
         let token = self.lexer.next()?;
         if token.kind() == &TokenKind::Semicolon {
@@ -569,7 +591,7 @@ enum Precedence {
     Prefix,
 }
 
-impl From<&TokenKind<'_>> for Option<Precedence> {
+impl From<&TokenKind> for Option<Precedence> {
     fn from(kind: &TokenKind) -> Self {
         match kind {
             TokenKind::EqualEqual => Some(Precedence::Comparison),
@@ -616,16 +638,23 @@ mod tests {
 
         let actual = parser.parse_expression().unwrap().id();
 
+        let identifiers = vec!["forty_two".to_string()]
+            .into_iter()
+            .enumerate()
+            .map(|(k, v)| (v, IdentId::from(k)))
+            .collect::<HashMap<String, IdentId>>();
+
         let expressions = vec![Expression::new(
             ExprId::from(0),
             ExpressionKind::Literal(Literal::new(
-                LiteralKind::Identifier(Identifier::new("forty_two", Span::new(1, 1, 0, 9))),
+                LiteralKind::Identifier(Identifier::new(IdentId::from(0), Span::new(1, 1, 0, 9))),
                 Span::new(1, 1, 0, 9),
             )),
             Span::new(1, 1, 0, 9),
         )];
 
         assert_eq!(actual, ExprId::from(0));
+        assert_eq!(parser.identifiers, identifiers);
         assert_eq!(parser.expressions, expressions);
         assert_eq!(parser.statements, vec![]);
     }
@@ -804,6 +833,12 @@ mod tests {
 
         let actual = parser.parse_statement().expect("statement is valid").id();
 
+        let identifiers = vec!["forty_two".to_string()]
+            .into_iter()
+            .enumerate()
+            .map(|(k, v)| (v, IdentId::from(k)))
+            .collect::<HashMap<String, IdentId>>();
+
         let expressions = vec![Expression::new(
             ExprId::from(0),
             ExpressionKind::Literal(Literal::new(
@@ -816,13 +851,14 @@ mod tests {
         let statements = vec![Statement::new(
             StmtId::from(0),
             StatementKind::Let(
-                Identifier::new("forty_two", Span::new(1, 5, 4, 9)),
+                Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 9)),
                 ExprId::from(0),
             ),
             Span::new(1, 1, 0, 19),
         )];
 
         assert_eq!(actual, StmtId::from(0));
+        assert_eq!(parser.identifiers, identifiers);
         assert_eq!(parser.expressions, expressions);
         assert_eq!(parser.statements, statements);
     }
@@ -832,6 +868,12 @@ mod tests {
         let mut parser = Parser::new(Lexer::new("forty_two = 42"));
 
         let actual = parser.parse_expression().expect("valid expression").id();
+
+        let identifiers = vec!["forty_two".to_string()]
+            .into_iter()
+            .enumerate()
+            .map(|(k, v)| (v, IdentId::from(k)))
+            .collect::<HashMap<String, IdentId>>();
 
         let expressions = vec![
             Expression::new(
@@ -845,7 +887,7 @@ mod tests {
             Expression::new(
                 ExprId::from(1),
                 ExpressionKind::Assignment(
-                    Identifier::new("forty_two", Span::new(1, 1, 0, 9)),
+                    Identifier::new(IdentId::from(0), Span::new(1, 1, 0, 9)),
                     ExprId::from(0),
                 ),
                 Span::new(1, 1, 0, 14),
@@ -853,6 +895,7 @@ mod tests {
         ];
 
         assert_eq!(actual, ExprId::from(1));
+        assert_eq!(parser.identifiers, identifiers);
         assert_eq!(parser.expressions, expressions);
         assert_eq!(parser.statements, vec![]);
     }
@@ -862,6 +905,8 @@ mod tests {
         let parser = Parser::new(Lexer::new("let forty_two = 42; forty_two;"));
 
         let actual = parser.parse().expect("source is valid");
+
+        let identifiers = vec!["forty_two".to_string()];
 
         let expressions = vec![
             Expression::new(
@@ -875,7 +920,10 @@ mod tests {
             Expression::new(
                 ExprId::from(1),
                 ExpressionKind::Literal(Literal::new(
-                    LiteralKind::Identifier(Identifier::new("forty_two", Span::new(1, 21, 20, 9))),
+                    LiteralKind::Identifier(Identifier::new(
+                        IdentId::from(0),
+                        Span::new(1, 21, 20, 9),
+                    )),
                     Span::new(1, 21, 20, 9),
                 )),
                 Span::new(1, 21, 20, 9),
@@ -886,7 +934,7 @@ mod tests {
             Statement::new(
                 StmtId::from(0),
                 StatementKind::Let(
-                    Identifier::new("forty_two", Span::new(1, 5, 4, 9)),
+                    Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 9)),
                     ExprId::from(0),
                 ),
                 Span::new(1, 1, 0, 19),
@@ -899,6 +947,7 @@ mod tests {
         ];
 
         let expected = Ast::new(
+            identifiers,
             expressions,
             statements,
             vec![StmtId::from(0), StmtId::from(1)],
@@ -913,11 +962,16 @@ mod tests {
 
         let actual = parser.parse().expect("source is valid");
 
+        let identifiers = vec!["times_two".to_string(), "a".to_string()];
+
         let expressions = vec![
             Expression::new(
                 ExprId::from(0),
                 ExpressionKind::Literal(Literal::new(
-                    LiteralKind::Identifier(Identifier::new("a", Span::new(1, 20, 19, 1))),
+                    LiteralKind::Identifier(Identifier::new(
+                        IdentId::from(1),
+                        Span::new(1, 20, 19, 1),
+                    )),
                     Span::new(1, 20, 19, 1),
                 )),
                 Span::new(1, 20, 19, 1),
@@ -953,15 +1007,15 @@ mod tests {
             Statement::new(
                 StmtId::from(1),
                 StatementKind::LetFn(
-                    Identifier::new("times_two", Span::new(1, 5, 4, 9)),
-                    vec![Identifier::new("a", Span::new(1, 15, 14, 1))],
+                    Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 9)),
+                    vec![Identifier::new(IdentId::from(1), Span::new(1, 15, 14, 1))],
                     vec![StmtId::from(0)],
                 ),
                 Span::new(1, 1, 0, 25),
             ),
         ];
 
-        let expected = Ast::new(expressions, statements, vec![StmtId::from(1)]);
+        let expected = Ast::new(identifiers, expressions, statements, vec![StmtId::from(1)]);
 
         assert_eq!(actual, expected);
     }
@@ -972,11 +1026,16 @@ mod tests {
 
         let actual = parser.parse().expect("source is valid");
 
+        let identifiers = vec!["times_two".to_string(), "a".to_string()];
+
         let expressions = vec![
             Expression::new(
                 ExprId::from(0),
                 ExpressionKind::Literal(Literal::new(
-                    LiteralKind::Identifier(Identifier::new("a", Span::new(1, 22, 21, 1))),
+                    LiteralKind::Identifier(Identifier::new(
+                        IdentId::from(1),
+                        Span::new(1, 22, 21, 1),
+                    )),
                     Span::new(1, 22, 21, 1),
                 )),
                 Span::new(1, 22, 21, 1),
@@ -1012,14 +1071,14 @@ mod tests {
             Statement::new(
                 StmtId::from(1),
                 StatementKind::LetFn(
-                    Identifier::new("times_two", Span::new(1, 5, 4, 9)),
-                    vec![Identifier::new("a", Span::new(1, 15, 14, 1))],
+                    Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 9)),
+                    vec![Identifier::new(IdentId::from(1), Span::new(1, 15, 14, 1))],
                     vec![StmtId::from(0)],
                 ),
                 Span::new(1, 1, 0, 29),
             ),
         ];
-        let expected = Ast::new(expressions, statements, vec![StmtId::from(1)]);
+        let expected = Ast::new(identifiers, expressions, statements, vec![StmtId::from(1)]);
 
         assert_eq!(actual, expected);
     }
@@ -1029,6 +1088,12 @@ mod tests {
         let mut parser = Parser::new(Lexer::new("times_two(21)"));
 
         let actual = parser.parse_expression().expect("expression is valid").id();
+
+        let identifiers = vec!["times_two".to_string()]
+            .into_iter()
+            .enumerate()
+            .map(|(k, v)| (v, IdentId::from(k)))
+            .collect::<HashMap<String, IdentId>>();
 
         let expressions = vec![
             Expression::new(
@@ -1042,7 +1107,7 @@ mod tests {
             Expression::new(
                 ExprId::from(1),
                 ExpressionKind::FunctionCall(
-                    Identifier::new("times_two", Span::new(1, 1, 0, 9)),
+                    Identifier::new(IdentId::from(0), Span::new(1, 1, 0, 9)),
                     vec![ExprId::from(0)],
                 ),
                 Span::new(1, 1, 0, 13),
@@ -1050,6 +1115,7 @@ mod tests {
         ];
 
         assert_eq!(actual, ExprId::from(1));
+        assert_eq!(parser.identifiers, identifiers);
         assert_eq!(parser.expressions, expressions);
         assert_eq!(parser.statements, vec![]);
     }
@@ -1310,7 +1376,7 @@ mod tests {
             Span::new(1, 14, 13, 3),
         )];
 
-        assert_eq!(actual,ExprId::from(2));
+        assert_eq!(actual, ExprId::from(2));
         assert_eq!(parser.expressions, expressions);
         assert_eq!(parser.statements, statements);
     }
