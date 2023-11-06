@@ -22,6 +22,7 @@ impl<'a> Interpreter<'a> {
             variables: vec![HashMap::default()],
         }
     }
+
     pub fn start(&mut self) -> Value {
         self.visit_ast(self.ast)
     }
@@ -33,7 +34,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
     }
 
     fn visit_statement(&mut self, stmt: StmtId) -> Value {
-        let stmt = self.ast.statement(&stmt);
+        let stmt = self.ast.statement(stmt);
         match stmt.kind() {
             StatementKind::Expression(e) => self.visit_expression(*e),
             StatementKind::Let(ident, expr) => {
@@ -53,7 +54,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
     }
 
     fn visit_expression(&mut self, expr: ExprId) -> Value {
-        let expr = self.ast.expression(&expr);
+        let expr = self.ast.expression(expr);
         match expr.kind() {
             ExpressionKind::Literal(n) => self.visit_literal(n),
             ExpressionKind::Binary(l, o, r) => {
@@ -99,13 +100,13 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                 let (parameters, statements) = match self.functions.get(&ident.id()) {
                     Some(f) => *f,
                     None => {
-                        panic!("{} not in scope", self.ast.identifier(&ident.id()))
+                        panic!("{} not in scope", self.ast.identifier(ident.id()))
                     }
                 };
 
                 if parameters.len() != arguments.len() {
                     panic!("Parameters and provided arguments for {} differ in length: expected {}, provided {}",
-                           self.ast.identifier(&ident.id()),
+                           self.ast.identifier(ident.id()),
                            parameters.len(),
                            arguments.len()
                     )
@@ -133,7 +134,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                     .expect("there is an env")
                     .contains_key(&ident.id())
                 {
-                    let ident = self.ast.identifier(&ident.id());
+                    let ident = self.ast.identifier(ident.id());
                     panic!("{ident} not in scope")
                 }
 
@@ -183,7 +184,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                     .get(&ident.id())
                 {
                     None => {
-                        panic!("{} not in scope", self.ast.identifier(&ident.id()))
+                        panic!("{} not in scope", self.ast.identifier(ident.id()))
                     }
                     Some(v) => v.clone(),
                 }
@@ -198,7 +199,7 @@ impl<'a> Interpreter<'a> {
         let mut value = Value::Void;
 
         for statement in statements {
-            let statement = self.ast.statement(statement);
+            let statement = self.ast.statement(*statement);
             if is_ret(statement) {
                 return Value::RetVal(Box::new(self.visit_statement(statement.id())));
             }
