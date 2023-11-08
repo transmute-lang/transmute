@@ -53,6 +53,16 @@ impl Ast {
         &self.identifiers[id.id()]
     }
 
+    #[cfg(test)]
+    pub fn identifier_id(&self, name: &str) -> IdentId {
+        for (id, ident) in self.identifiers.iter().enumerate() {
+            if ident == name {
+                return IdentId::from(id);
+            }
+        }
+        panic!("Identifier {} not found", name)
+    }
+
     pub fn expression(&self, id: ExprId) -> &Expression {
         &self.expressions[id.id()]
     }
@@ -60,15 +70,30 @@ impl Ast {
     pub fn statement(&self, id: StmtId) -> &Statement {
         &self.statements[id.id()]
     }
+
+    #[cfg(test)]
+    pub fn statement_id(&self, start: usize) -> StmtId {
+        for stmt in &self.statements {
+            if stmt.span().start() == start {
+                return stmt.id();
+            }
+        }
+        panic!("No statement found at {}", start)
+    }
+
+    pub fn replace_statement(&mut self, statement: Statement) {
+        let id = statement.id().id();
+        self.statements[id] = statement
+    }
 }
 
-pub struct PrettyPrint<'a, T> {
+pub struct AstNodePrettyPrint<'a, T> {
     indent: usize,
     ast: &'a Ast,
     id: T,
 }
 
-impl<'a, T> PrettyPrint<'a, T> {
+impl<'a, T> AstNodePrettyPrint<'a, T> {
     pub fn new(ast: &'a Ast, id: T) -> Self {
         Self { indent: 0, ast, id }
     }
@@ -82,36 +107,44 @@ impl<'a, T> PrettyPrint<'a, T> {
     }
 }
 
-impl Display for PrettyPrint<'_, StmtId> {
+impl Display for AstNodePrettyPrint<'_, StmtId> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let indent = "  ".repeat(self.indent);
         match self.ast.statement(self.id).kind() {
             StatementKind::Expression(expr) => {
                 let semi = match self.ast.expression(*expr).kind() {
-                    ExpressionKind::If(_, _, _) | ExpressionKind::While(_, _)=> "",
+                    ExpressionKind::If(_, _, _) | ExpressionKind::While(_, _) => "",
                     _ => ";",
                 };
                 writeln!(
                     f,
                     "{indent}{}{semi}",
-                    PrettyPrint::new_with_ident(self.ast, *expr, self.indent)
+                    AstNodePrettyPrint::new_with_ident(self.ast, *expr, self.indent)
                 )
             }
             StatementKind::Let(ident, expr) => {
                 writeln!(
                     f,
                     "{indent}let {} = {};",
-                    PrettyPrint::new(self.ast, ident.id()),
-                    PrettyPrint::new(self.ast, *expr),
+                    AstNodePrettyPrint::new(self.ast, ident.id()),
+                    AstNodePrettyPrint::new(self.ast, *expr),
                 )
             }
             StatementKind::Ret(expr) => {
-                writeln!(f, "{indent}ret {};", PrettyPrint::new(self.ast, *expr))
+                writeln!(
+                    f,
+                    "{indent}ret {};",
+                    AstNodePrettyPrint::new(self.ast, *expr)
+                )
             }
             StatementKind::LetFn(ident, params, stmts) => {
-                write!(f, "{indent}let {}(", PrettyPrint::new(self.ast, ident.id()))?;
+                write!(
+                    f,
+                    "{indent}let {}(",
+                    AstNodePrettyPrint::new(self.ast, ident.id())
+                )?;
                 for (i, param) in params.iter().enumerate() {
-                    write!(f, "{}", PrettyPrint::new(self.ast, param.id()))?;
+                    write!(f, "{}", AstNodePrettyPrint::new(self.ast, param.id()))?;
                     if i < params.len() - 1 {
                         write!(f, ", ")?;
                     }
@@ -121,7 +154,7 @@ impl Display for PrettyPrint<'_, StmtId> {
                     write!(
                         f,
                         "{indent}{}",
-                        PrettyPrint::new_with_ident(self.ast, *stmt, self.indent + 1)
+                        AstNodePrettyPrint::new_with_ident(self.ast, *stmt, self.indent + 1)
                     )?;
                 }
                 writeln!(f, "{indent}}}")
@@ -130,7 +163,7 @@ impl Display for PrettyPrint<'_, StmtId> {
     }
 }
 
-impl Display for PrettyPrint<'_, ExprId> {
+impl Display for AstNodePrettyPrint<'_, ExprId> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let indent = "  ".repeat(self.indent);
         match self.ast.expression(self.id).kind() {
@@ -138,17 +171,17 @@ impl Display for PrettyPrint<'_, ExprId> {
                 write!(
                     f,
                     "{} = {}",
-                    PrettyPrint::new(self.ast, ident.id()),
-                    PrettyPrint::new(self.ast, *expr)
+                    AstNodePrettyPrint::new(self.ast, ident.id()),
+                    AstNodePrettyPrint::new(self.ast, *expr)
                 )
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
-                writeln!(f, "if {} {{", PrettyPrint::new(self.ast, *cond))?;
+                writeln!(f, "if {} {{", AstNodePrettyPrint::new(self.ast, *cond))?;
                 for stmt in true_branch {
                     write!(
                         f,
                         "{}",
-                        PrettyPrint::new_with_ident(self.ast, *stmt, self.indent + 1)
+                        AstNodePrettyPrint::new_with_ident(self.ast, *stmt, self.indent + 1)
                     )?;
                 }
                 if !false_branch.is_empty() {
@@ -158,7 +191,7 @@ impl Display for PrettyPrint<'_, ExprId> {
                         write!(
                             f,
                             "{}",
-                            PrettyPrint::new_with_ident(self.ast, *stmt, self.indent + 1)
+                            AstNodePrettyPrint::new_with_ident(self.ast, *stmt, self.indent + 1)
                         )?;
                     }
                 }
@@ -167,7 +200,7 @@ impl Display for PrettyPrint<'_, ExprId> {
             ExpressionKind::Literal(lit) => match lit.kind() {
                 LiteralKind::Boolean(b) => write!(f, "{b}"),
                 LiteralKind::Identifier(ident) => {
-                    write!(f, "{}", PrettyPrint::new(self.ast, ident.id()))
+                    write!(f, "{}", AstNodePrettyPrint::new(self.ast, ident.id()))
                 }
                 LiteralKind::Number(n) => write!(f, "{n}"),
             },
@@ -175,15 +208,15 @@ impl Display for PrettyPrint<'_, ExprId> {
                 write!(
                     f,
                     "{} {} {}",
-                    PrettyPrint::new(self.ast, *left),
+                    AstNodePrettyPrint::new(self.ast, *left),
                     op.kind(),
-                    PrettyPrint::new(self.ast, *right)
+                    AstNodePrettyPrint::new(self.ast, *right)
                 )
             }
             ExpressionKind::FunctionCall(ident, params) => {
-                write!(f, "{}(", PrettyPrint::new(self.ast, ident.id()))?;
+                write!(f, "{}(", AstNodePrettyPrint::new(self.ast, ident.id()))?;
                 for (i, expr) in params.iter().enumerate() {
-                    write!(f, "{}", PrettyPrint::new(self.ast, *expr))?;
+                    write!(f, "{}", AstNodePrettyPrint::new(self.ast, *expr))?;
                     if i < params.len() - 1 {
                         write!(f, ", ")?;
                     }
@@ -191,15 +224,20 @@ impl Display for PrettyPrint<'_, ExprId> {
                 write!(f, ")")
             }
             ExpressionKind::Unary(op, expr) => {
-                write!(f, "{} {}", op.kind(), PrettyPrint::new(self.ast, *expr))
+                write!(
+                    f,
+                    "{} {}",
+                    op.kind(),
+                    AstNodePrettyPrint::new(self.ast, *expr)
+                )
             }
             ExpressionKind::While(cond, stmts) => {
-                writeln!(f, "while {} {{", PrettyPrint::new(self.ast, *cond))?;
+                writeln!(f, "while {} {{", AstNodePrettyPrint::new(self.ast, *cond))?;
                 for stmt in stmts {
                     write!(
                         f,
                         "{}",
-                        PrettyPrint::new_with_ident(self.ast, *stmt, self.indent + 1)
+                        AstNodePrettyPrint::new_with_ident(self.ast, *stmt, self.indent + 1)
                     )?;
                 }
                 writeln!(f, "}}")
@@ -208,7 +246,7 @@ impl Display for PrettyPrint<'_, ExprId> {
     }
 }
 
-impl Display for PrettyPrint<'_, IdentId> {
+impl Display for AstNodePrettyPrint<'_, IdentId> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let indent = "  ".repeat(self.indent);
         write!(f, "{indent}{}", self.ast.identifier(self.id))

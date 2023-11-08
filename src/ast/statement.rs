@@ -1,19 +1,26 @@
 use crate::ast::expression::ExprId;
 use crate::ast::identifier::Identifier;
 use crate::lexer::Span;
+use crate::symbol_table::ScopeId;
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Statement {
     id: StmtId,
     // todo should be merged with Expression, maybe?
     kind: StatementKind,
     span: Span,
+    scope: Option<ScopeId>,
 }
 
 impl Statement {
     pub fn new(id: StmtId, kind: StatementKind, span: Span) -> Self {
-        Self { id, kind, span }
+        Self {
+            id,
+            kind,
+            span,
+            scope: None,
+        }
     }
 
     pub fn id(&self) -> StmtId {
@@ -22,6 +29,18 @@ impl Statement {
 
     pub fn kind(&self) -> &StatementKind {
         &self.kind
+    }
+
+    pub fn span(&self) -> &Span {
+        &self.span
+    }
+
+    pub fn set_scope(&mut self, symbols: ScopeId) {
+        self.scope = Some(symbols);
+    }
+
+    pub fn scope(&self) -> Option<ScopeId> {
+        self.scope
     }
 }
 
@@ -48,7 +67,7 @@ impl From<usize> for StmtId {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum StatementKind {
     Expression(ExprId),
     Let(Identifier, ExprId),

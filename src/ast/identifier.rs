@@ -1,7 +1,7 @@
 use crate::lexer::Span;
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Identifier {
     id: IdentId,
     span: Span,
