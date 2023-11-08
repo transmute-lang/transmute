@@ -53,14 +53,15 @@ impl From<usize> for ExprId {
     }
 }
 
-// todo vec does not hold span and position as it should
 #[derive(Debug, PartialEq)]
 pub enum ExpressionKind {
     Assignment(Identifier, ExprId),
-    If(ExprId, Vec<StmtId>, Vec<StmtId>),
+    If(ExprId, ExprId, Option<ExprId>),
     Literal(Literal),
     Binary(ExprId, BinaryOperator, ExprId),
     FunctionCall(Identifier, Vec<ExprId>),
     Unary(UnaryOperator, ExprId),
-    While(ExprId, Vec<StmtId>),
+    While(ExprId, ExprId),
+    // todo: should it be it's own struct and use it like While(ExprId, Block)?
+    Block(Vec<StmtId>),
 }

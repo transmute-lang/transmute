@@ -2,7 +2,7 @@ use crate::ast::expression::{ExprId, ExpressionKind};
 use crate::ast::identifier::{IdentId, Identifier};
 use crate::ast::literal::Literal;
 use crate::ast::statement::{StatementKind, StmtId};
-use crate::ast::{Ast,  Visitor};
+use crate::ast::{Ast, Visitor};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -87,7 +87,7 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
                 self.push_sub_scope();
                 self.insert(ident.id(), Node::Statement(stmt));
             }
-            StatementKind::LetFn(ident, params, statements) => {
+            StatementKind::LetFn(ident, params, expr) => {
                 self.insert(ident.id(), Node::Statement(stmt));
 
                 {
@@ -96,8 +96,12 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
                         self.insert(param.id(), Node::Identifier(param.clone()));
                     }
 
+                    let statements = match self.ast.expression(*expr).kind() {
+                        ExpressionKind::Block(stmts) => stmts.to_vec(),
+                        _ => panic!("block expected"),
+                    };
                     for statement in statements {
-                        self.visit_statement(*statement);
+                        self.visit_statement(statement);
                     }
 
                     self.pop_scope();
@@ -116,8 +120,18 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
                 self.visit_expression(*expr);
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
-                let true_branch = true_branch.to_vec();
-                let false_branch = false_branch.to_vec();
+                let true_branch = match self.ast.expression(*true_branch).kind() {
+                    ExpressionKind::Block(stmts) => stmts.to_vec(),
+                    _ => panic!("block expected"),
+                };
+                let false_branch = if let Some(false_branch) = false_branch {
+                    match self.ast.expression(*false_branch).kind() {
+                        ExpressionKind::Block(stmts) => stmts.to_vec(),
+                        _ => panic!("block expected"),
+                    }
+                } else {
+                    vec![]
+                };
 
                 self.visit_expression(*cond);
                 if !true_branch.is_empty() {
@@ -154,8 +168,11 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
             ExpressionKind::Unary(_, expr) => {
                 self.visit_expression(*expr);
             }
-            ExpressionKind::While(cond, stmts) => {
-                let stmts = stmts.to_vec();
+            ExpressionKind::While(cond, expr) => {
+                let stmts = match self.ast.expression(*expr).kind() {
+                    ExpressionKind::Block(stmts) => stmts.to_vec(),
+                    _ => panic!("block expected"),
+                };
                 self.visit_expression(*cond);
                 if !stmts.is_empty() {
                     self.push_scope();
@@ -164,6 +181,9 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
                     }
                     self.pop_scope();
                 }
+            }
+            ExpressionKind::Block(_) => {
+                todo!("implement block expressions")
             }
         }
     }
@@ -249,7 +269,6 @@ pub struct Symbol {
 enum Node {
     // only a Let or a LetFn
     Statement(StmtId),
-    Expression(ExprId),
     Identifier(Identifier),
 }
 
@@ -316,7 +335,6 @@ impl Display for ScopePrettyPrint<'_> {
         for (ident, symbol) in self.table.scopes[self.id.id()].symbols.iter() {
             let symbol_span = match &symbol.node {
                 Node::Statement(s) => self.ast.statement(*s).span(),
-                Node::Expression(e) => self.ast.expression(*e).span(),
                 Node::Identifier(i) => i.span(),
             };
             writeln!(

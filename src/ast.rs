@@ -137,7 +137,7 @@ impl Display for AstNodePrettyPrint<'_, StmtId> {
                     AstNodePrettyPrint::new(self.ast, *expr)
                 )
             }
-            StatementKind::LetFn(ident, params, stmts) => {
+            StatementKind::LetFn(ident, params, expr) => {
                 write!(
                     f,
                     "{indent}let {}(",
@@ -150,6 +150,12 @@ impl Display for AstNodePrettyPrint<'_, StmtId> {
                     }
                 }
                 writeln!(f, ") = {{")?;
+
+                let stmts = match self.ast.expression(*expr).kind() {
+                    ExpressionKind::Block(stmts) => stmts,
+                    _ => panic!("block expected"),
+                };
+
                 for stmt in stmts {
                     write!(
                         f,
@@ -177,6 +183,12 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
                 writeln!(f, "if {} {{", AstNodePrettyPrint::new(self.ast, *cond))?;
+
+                let true_branch = match self.ast.expression(*true_branch).kind() {
+                    ExpressionKind::Block(true_branch) => true_branch,
+                    _ => panic!("block expected"),
+                };
+
                 for stmt in true_branch {
                     write!(
                         f,
@@ -184,9 +196,15 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                         AstNodePrettyPrint::new_with_ident(self.ast, *stmt, self.indent + 1)
                     )?;
                 }
-                if !false_branch.is_empty() {
+                if let Some(false_branch) = false_branch {
                     writeln!(f, "}}")?;
                     writeln!(f, "else {{")?;
+
+                    let false_branch = match self.ast.expression(*false_branch).kind() {
+                        ExpressionKind::Block(true_branch) => true_branch,
+                        _ => panic!("block expected"),
+                    };
+
                     for stmt in false_branch {
                         write!(
                             f,
@@ -231,8 +249,14 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                     AstNodePrettyPrint::new(self.ast, *expr)
                 )
             }
-            ExpressionKind::While(cond, stmts) => {
+            ExpressionKind::While(cond, expr) => {
                 writeln!(f, "while {} {{", AstNodePrettyPrint::new(self.ast, *cond))?;
+
+                let stmts = match self.ast.expression(*expr).kind() {
+                    ExpressionKind::Block(stmts) => stmts,
+                    _ => panic!("block expected"),
+                };
+
                 for stmt in stmts {
                     write!(
                         f,
@@ -241,6 +265,9 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                     )?;
                 }
                 writeln!(f, "}}")
+            }
+            ExpressionKind::Block(_) => {
+                todo!("implement block expressions")
             }
         }
     }

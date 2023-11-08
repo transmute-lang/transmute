@@ -45,8 +45,13 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                     .insert(ident.id(), val);
                 Value::Void
             }
-            StatementKind::LetFn(ident, params, statements) => {
-                self.functions.insert(ident.id(), (params, statements));
+            StatementKind::LetFn(ident, params, expr) => {
+                match self.ast.expression(*expr).kind() {
+                    ExpressionKind::Block(statements) => {
+                        self.functions.insert(ident.id(), (params, statements))
+                    }
+                    _ => panic!("block expected"),
+                };
                 Value::Void // todo this is wrong
             }
             StatementKind::Ret(e) => self.visit_expression(*e),
@@ -105,7 +110,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                 };
 
                 if parameters.len() != arguments.len() {
-                    panic!("Parameters and provided arguments for {} differ in length: expected {}, provided {}",
+                    panic!("parameters and provided arguments for {} differ in length: expected {}, provided {}",
                            self.ast.identifier(ident.id()),
                            parameters.len(),
                            arguments.len()
@@ -154,11 +159,28 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                     _ => panic!("condition is not a boolean"),
                 };
 
-                let statements = if cond { true_branch } else { false_branch };
+                let statements = if cond {
+                    Some(true_branch)
+                } else {
+                    false_branch.as_ref()
+                }
+                .map(|expr| match self.ast.expression(*expr).kind() {
+                    ExpressionKind::Block(statements) => statements,
+                    _ => panic!("block expected"),
+                });
 
-                self.visit_statements(statements)
+                if let Some(statements) = statements {
+                    self.visit_statements(statements)
+                } else {
+                    Value::Void
+                }
             }
-            ExpressionKind::While(cond, statements) => {
+            ExpressionKind::While(cond, expr) => {
+                let statements = match self.ast.expression(*expr).kind() {
+                    ExpressionKind::Block(statements) => statements,
+                    _ => panic!("block expected"),
+                };
+
                 let mut ret = Value::Void;
                 loop {
                     match self.visit_expression(*cond) {
@@ -167,8 +189,11 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                         _ => panic!("condition is not a boolean"),
                     };
 
-                    ret = self.visit_statements(statements)
+                    ret = self.visit_statements(statements);
                 }
+            }
+            ExpressionKind::Block(_) => {
+                todo!("implement block expression")
             }
         }
     }

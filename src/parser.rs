@@ -225,32 +225,41 @@ impl<'s> Parser<'s> {
             )
         }
 
-        let token = peek!(self);
-
-        let (statements, end_span) = if token.kind() == &TokenKind::OpenCurlyBracket {
+        let (expr_id, end_span) = if peek!(self).kind() == &TokenKind::OpenCurlyBracket {
             // let name ( expr , ... ) = '{ expr ; ... }
-            self.lexer.next().expect("we just peeked {");
+            let open_curly_bracket = self.lexer.next().expect("we just peeked it");
 
-            let (statements, span) = self.parse_statements()?;
+            let (statements, statements_span) = self.parse_statements()?;
 
-            (statements, span)
+            (
+                self.push_expression(
+                    ExpressionKind::Block(statements),
+                    open_curly_bracket.span().extend_to(&statements_span),
+                ),
+                statements_span,
+            )
         } else {
             // let name ( expr , ... ) = 'expr ;
             let expression = self.parse_expression()?;
-            let span = expression.span().clone();
-            let expression = expression.id();
+            let expr_id = expression.id();
+            let expr_span = expression.span().clone();
 
             let semicolon_token = self.parse_semicolon()?;
-            let end_span = span.extend_to(semicolon_token.span());
+            let end_span = expr_span.extend_to(semicolon_token.span());
 
-            let id = self.push_statement(StatementKind::Expression(expression), end_span.clone());
-            (vec![id], end_span)
+            let stmt_id = self.push_statement(StatementKind::Expression(expr_id), end_span.clone());
+
+            (
+                self.push_expression(ExpressionKind::Block(vec![stmt_id]), end_span.clone()),
+                end_span,
+            )
         };
 
         let id = self.push_statement(
-            StatementKind::LetFn(identifier, parameters, statements),
+            StatementKind::LetFn(identifier, parameters, expr_id),
             span.extend_to(&end_span),
         );
+
         Ok(&self.statements[id.id()])
     }
 
@@ -376,13 +385,23 @@ impl<'s> Parser<'s> {
     /// if expr { expr ; ... } else if expr { expr ; } else { expr ; ... }
     /// ```
     fn parse_if_expression(&mut self, span: Span) -> Result<&Expression, Error> {
-        // if 'expr { expr ; ... } else if expr { expr ; ... } else { expr ; ... }
-        let condition = self.parse_expression()?.id();
-        let _open_curly_bracket = self.lexer.next()?;
-        let (statements, statements_span) = self.parse_statements()?;
+        let mut full_span = span;
 
-        // if expr { expr ; ... } 'else if expr { expr ; ... } else { expr ; ... }
-        let (else_branch, else_branch_span) = if self
+        // if 'expr { expr ; ... } ...
+        let condition = self.parse_expression()?.id();
+
+        // if expr '{ expr ; ... } ...
+        let open_curly_bracket = self.lexer.next()?;
+        let (true_statements, true_statements_span) = self.parse_statements()?;
+
+        let true_expression_span = open_curly_bracket.span().extend_to(&true_statements_span);
+        full_span = full_span.extend_to(&true_expression_span);
+
+        let true_expr_id =
+            self.push_expression(ExpressionKind::Block(true_statements), true_expression_span);
+
+        // ... 'else if expr { expr ; ... } else { expr ; ... }
+        let false_expr_id = if self
             .lexer
             .peek()
             .map(|t| t.kind() == &TokenKind::Else)
@@ -390,44 +409,59 @@ impl<'s> Parser<'s> {
         {
             let _else_token = self.lexer.next()?; // we consume the else
             let token = self.lexer.next()?;
-            match token.kind() {
+            let (false_statements, false_statements_span) = match token.kind() {
                 TokenKind::If => {
-                    // if expr { expr ; ... } else if 'expr { expr ; ... } else { expr ; ... }
+                    // ... else 'if expr { expr ; ... } ...
                     let expression = self.parse_if_expression(token.span().clone())?;
-                    let span = expression.span().clone();
                     let id = expression.id();
+                    let span = expression.span().clone();
                     (
                         vec![self.push_statement(StatementKind::Expression(id), span.clone())],
                         span,
                     )
                 }
-                // if expr { expr ; ... } 'else { expr ; ... }
-                TokenKind::OpenCurlyBracket => self.parse_statements()?,
+                // else '{ expr ; ... }
+                TokenKind::OpenCurlyBracket => {
+                    let (statements, statements_span) = self.parse_statements()?;
+                    (statements, token.span().extend_to(&statements_span))
+                }
                 _ => todo!(
                     "parse_if_expression: error handling {:?} at {:?}",
                     token.kind(),
                     token.span()
                 ),
-            }
+            };
+
+            full_span = full_span.extend_to(&false_statements_span);
+            Some(self.push_expression(
+                ExpressionKind::Block(false_statements),
+                false_statements_span,
+            ))
         } else {
             // if expr { expr ; ... } '
-            (vec![], statements_span)
+            None
         };
 
-        let span = span.extend_to(&else_branch_span);
+        let id = self.push_expression(
+            ExpressionKind::If(condition, true_expr_id, false_expr_id),
+            full_span,
+        );
 
-        let id = self.push_expression(ExpressionKind::If(condition, statements, else_branch), span);
         Ok(&self.expressions[id.id()])
     }
 
     fn parse_while_expression(&mut self, span: Span) -> Result<&Expression, Error> {
         // while 'expr { expr ; ... }
         let condition = self.parse_expression()?.id();
-        let _open_curly_bracket = self.lexer.next()?;
+        let open_curly_bracket = self.lexer.next()?;
         let (statements, statements_span) = self.parse_statements()?;
 
+        let block_span = open_curly_bracket.span().extend_to(&statements_span);
+
+        let expr_id = self.push_expression(ExpressionKind::Block(statements), block_span);
+
         let id = self.push_expression(
-            ExpressionKind::While(condition, statements),
+            ExpressionKind::While(condition, expr_id),
             span.extend_to(&statements_span),
         );
         Ok(&self.expressions[id.id()])
@@ -562,6 +596,7 @@ impl<'s> Parser<'s> {
         }
     }
 
+    /// the returned span includes the closing }
     fn parse_statements(&mut self) -> Result<(Vec<StmtId>, Span), Error> {
         let mut statements = Vec::new();
         loop {
@@ -612,8 +647,6 @@ impl From<&TokenKind> for Option<Precedence> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::Ast;
-    use crate::lexer::Span;
 
     #[test]
     fn expression_literal_number() {
@@ -996,6 +1029,11 @@ mod tests {
                 ),
                 Span::new(1, 20, 19, 5),
             ),
+            Expression::new(
+                ExprId::from(3),
+                ExpressionKind::Block(vec![StmtId::from(0)]),
+                Span::new(1, 20, 19, 6),
+            ),
         ];
 
         let statements = vec![
@@ -1009,7 +1047,7 @@ mod tests {
                 StatementKind::LetFn(
                     Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 9)),
                     vec![Identifier::new(IdentId::from(1), Span::new(1, 15, 14, 1))],
-                    vec![StmtId::from(0)],
+                    ExprId::from(3),
                 ),
                 Span::new(1, 1, 0, 25),
             ),
@@ -1060,6 +1098,11 @@ mod tests {
                 ),
                 Span::new(1, 22, 21, 5),
             ),
+            Expression::new(
+                ExprId::from(3),
+                ExpressionKind::Block(vec![StmtId::from(0)]),
+                Span::new(1, 20, 19, 10),
+            ),
         ];
 
         let statements = vec![
@@ -1073,7 +1116,7 @@ mod tests {
                 StatementKind::LetFn(
                     Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 9)),
                     vec![Identifier::new(IdentId::from(1), Span::new(1, 15, 14, 1))],
-                    vec![StmtId::from(0)],
+                    ExprId::from(3),
                 ),
                 Span::new(1, 1, 0, 29),
             ),
@@ -1168,7 +1211,12 @@ mod tests {
             ),
             Expression::new(
                 ExprId::from(2),
-                ExpressionKind::If(ExprId::from(0), vec![StmtId::from(0)], vec![]),
+                ExpressionKind::Block(vec![StmtId::from(0)]),
+                Span::new(1, 9, 8, 7),
+            ),
+            Expression::new(
+                ExprId::from(3),
+                ExpressionKind::If(ExprId::from(0), ExprId::from(2), None),
                 Span::new(1, 1, 0, 15),
             ),
         ];
@@ -1179,7 +1227,7 @@ mod tests {
             Span::new(1, 11, 10, 3),
         )];
 
-        assert_eq!(actual, ExprId::from(2));
+        assert_eq!(actual, ExprId::from(3));
         assert_eq!(parser.expressions, expressions);
         assert_eq!(parser.statements, statements);
     }
@@ -1209,6 +1257,11 @@ mod tests {
             ),
             Expression::new(
                 ExprId::from(2),
+                ExpressionKind::Block(vec![StmtId::from(0)]),
+                Span::new(1, 9, 8, 7),
+            ),
+            Expression::new(
+                ExprId::from(3),
                 ExpressionKind::Literal(Literal::new(
                     LiteralKind::Number(43),
                     Span::new(1, 24, 23, 2),
@@ -1216,12 +1269,13 @@ mod tests {
                 Span::new(1, 24, 23, 2),
             ),
             Expression::new(
-                ExprId::from(3),
-                ExpressionKind::If(
-                    ExprId::from(0),
-                    vec![StmtId::from(0)],
-                    vec![StmtId::from(1)],
-                ),
+                ExprId::from(4),
+                ExpressionKind::Block(vec![StmtId::from(1)]),
+                Span::new(1, 22, 21, 7),
+            ),
+            Expression::new(
+                ExprId::from(5),
+                ExpressionKind::If(ExprId::from(0), ExprId::from(2), Some(ExprId::from(4))),
                 Span::new(1, 1, 0, 28),
             ),
         ];
@@ -1234,12 +1288,12 @@ mod tests {
             ),
             Statement::new(
                 StmtId::from(1),
-                StatementKind::Expression(ExprId::from(2)),
+                StatementKind::Expression(ExprId::from(3)),
                 Span::new(1, 24, 23, 3),
             ),
         ];
 
-        assert_eq!(actual, ExprId::from(3));
+        assert_eq!(actual, ExprId::from(5));
         assert_eq!(parser.expressions, expressions);
         assert_eq!(parser.statements, statements);
     }
@@ -1271,6 +1325,11 @@ mod tests {
             ),
             Expression::new(
                 ExprId::from(2),
+                ExpressionKind::Block(vec![StmtId::from(0)]),
+                Span::new(1, 9, 8, 7),
+            ),
+            Expression::new(
+                ExprId::from(3),
                 ExpressionKind::Literal(Literal::new(
                     LiteralKind::Boolean(false),
                     Span::new(1, 25, 24, 5),
@@ -1278,7 +1337,7 @@ mod tests {
                 Span::new(1, 25, 24, 5),
             ),
             Expression::new(
-                ExprId::from(3),
+                ExprId::from(4),
                 ExpressionKind::Literal(Literal::new(
                     LiteralKind::Number(43),
                     Span::new(1, 33, 32, 2),
@@ -1286,7 +1345,12 @@ mod tests {
                 Span::new(1, 33, 32, 2),
             ),
             Expression::new(
-                ExprId::from(4),
+                ExprId::from(5),
+                ExpressionKind::Block(vec![StmtId::from(1)]),
+                Span::new(1, 31, 30, 7),
+            ),
+            Expression::new(
+                ExprId::from(6),
                 ExpressionKind::Literal(Literal::new(
                     LiteralKind::Number(44),
                     Span::new(1, 46, 45, 2),
@@ -1294,49 +1358,55 @@ mod tests {
                 Span::new(1, 46, 45, 2),
             ),
             Expression::new(
-                ExprId::from(5),
-                ExpressionKind::If(
-                    ExprId::from(2),
-                    vec![StmtId::from(1)],
-                    vec![StmtId::from(2)],
-                ),
+                ExprId::from(7),
+                ExpressionKind::Block(vec![StmtId::from(2)]),
+                Span::new(1, 44, 43, 7),
+            ),
+            Expression::new(
+                ExprId::from(8),
+                ExpressionKind::If(ExprId::from(3), ExprId::from(5), Some(ExprId::from(7))),
                 Span::new(1, 22, 21, 29),
             ),
             Expression::new(
-                ExprId::from(6),
-                ExpressionKind::If(
-                    ExprId::from(0),
-                    vec![StmtId::from(0)],
-                    vec![StmtId::from(3)],
-                ),
+                ExprId::from(9),
+                ExpressionKind::Block(vec![StmtId::from(3)]),
+                Span::new(1, 22, 21, 29),
+            ),
+            Expression::new(
+                ExprId::from(10),
+                ExpressionKind::If(ExprId::from(0), ExprId::from(2), Some(ExprId::from(9))),
                 Span::new(1, 1, 0, 50),
             ),
         ];
 
         let statements = vec![
+            // 42;
             Statement::new(
                 StmtId::from(0),
                 StatementKind::Expression(ExprId::from(1)),
                 Span::new(1, 11, 10, 3),
             ),
+            // 43;
             Statement::new(
                 StmtId::from(1),
-                StatementKind::Expression(ExprId::from(3)),
+                StatementKind::Expression(ExprId::from(4)),
                 Span::new(1, 33, 32, 3),
             ),
+            // 44;
             Statement::new(
                 StmtId::from(2),
-                StatementKind::Expression(ExprId::from(4)),
+                StatementKind::Expression(ExprId::from(6)),
                 Span::new(1, 46, 45, 3),
             ),
+            // if false ...
             Statement::new(
                 StmtId::from(3),
-                StatementKind::Expression(ExprId::from(5)),
+                StatementKind::Expression(ExprId::from(8)),
                 Span::new(1, 22, 21, 29),
             ),
         ];
 
-        assert_eq!(actual, ExprId::from(6));
+        assert_eq!(actual, ExprId::from(10));
         assert_eq!(parser.expressions, expressions);
         assert_eq!(parser.statements, statements);
     }
@@ -1365,7 +1435,12 @@ mod tests {
             ),
             Expression::new(
                 ExprId::from(2),
-                ExpressionKind::While(ExprId::from(0), vec![StmtId::from(0)]),
+                ExpressionKind::Block(vec![StmtId::from(0)]),
+                Span::new(1, 12, 11, 7),
+            ),
+            Expression::new(
+                ExprId::from(3),
+                ExpressionKind::While(ExprId::from(0), ExprId::from(2)),
                 Span::new(1, 1, 0, 18),
             ),
         ];
@@ -1376,7 +1451,7 @@ mod tests {
             Span::new(1, 14, 13, 3),
         )];
 
-        assert_eq!(actual, ExprId::from(2));
+        assert_eq!(actual, ExprId::from(3));
         assert_eq!(parser.expressions, expressions);
         assert_eq!(parser.statements, statements);
     }

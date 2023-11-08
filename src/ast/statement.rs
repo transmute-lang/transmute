@@ -73,5 +73,5 @@ pub enum StatementKind {
     Let(Identifier, ExprId),
     Ret(ExprId),
     // todo vec does not hold span and position as it should (search for "Vec<Statement>, Span")
-    LetFn(Identifier, Vec<Identifier>, Vec<StmtId>),
+    LetFn(Identifier, Vec<Identifier>, ExprId),
 }
