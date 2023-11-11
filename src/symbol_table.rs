@@ -1,13 +1,15 @@
-use crate::ast::expression::{ExprId, ExpressionKind};
-use crate::ast::identifier::{IdentId, Identifier};
+use crate::ast::expression::ExpressionKind;
+use crate::ast::identifier::Identifier;
+use crate::ast::ids::{ExprId, IdentId, ScopeId, StmtId, SymbolId};
 use crate::ast::literal::Literal;
-use crate::ast::statement::{StatementKind, StmtId};
+use crate::ast::statement::StatementKind;
 use crate::ast::{Ast, Visitor};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 
 pub struct SymbolTableGen<'a> {
     ast: &'a mut Ast,
+    symbols: Vec<Symbol>,
     scopes: Vec<Scope>,
     scopes_stack: Vec<ScopeId>,
 }
@@ -17,6 +19,7 @@ impl<'a> SymbolTableGen<'a> {
         let scope = ScopeId::from(0);
         Self {
             ast,
+            symbols: vec![],
             scopes: vec![Scope::root(scope)],
             scopes_stack: vec![scope],
         }
@@ -29,7 +32,7 @@ impl<'a> SymbolTableGen<'a> {
             self.visit_statement(stmt);
         }
 
-        SymbolTable::new(self.scopes)
+        SymbolTable::new(self.symbols, self.scopes)
     }
 
     fn push_scope(&mut self) {
@@ -62,17 +65,20 @@ impl<'a> SymbolTableGen<'a> {
     fn insert(&mut self, ident: IdentId, node: Node) {
         let scope_id = self.scopes_stack.last().expect("there is a current scope");
         let scope = self.scopes.get_mut(scope_id.id()).expect("scope exists");
-        scope.insert(*scope_id, ident, node);
+        let symbol_id = SymbolId::from(self.symbols.len());
+        let symbol = Symbol {
+            id: symbol_id,
+            scope_id: *scope_id,
+            node,
+        };
+        self.symbols.push(symbol);
+        scope.insert(ident, symbol_id);
     }
 }
 
 impl<'a> Visitor<()> for SymbolTableGen<'a> {
-    fn visit_ast(&mut self, _ast: &Ast) {
-        unimplemented!("useless")
-    }
-
     fn visit_statement(&mut self, stmt: StmtId) {
-        let scope_id = *self.scopes_stack.last().expect("scope exists");
+        let scope_id = *self.scopes_stack.last().expect("current scope exists");
 
         let statement = {
             let mut statement = self.ast.statement(stmt).clone();
@@ -85,24 +91,18 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
             StatementKind::Let(ident, expr) => {
                 self.visit_expression(*expr);
                 self.push_sub_scope();
-                self.insert(ident.id(), Node::Statement(stmt));
+                self.insert(ident.id(), Node::LetStatement(stmt));
             }
             StatementKind::LetFn(ident, params, expr) => {
-                self.insert(ident.id(), Node::Statement(stmt));
+                self.insert(ident.id(), Node::LetFnStatement(stmt));
 
                 {
                     self.push_scope();
                     for param in params {
-                        self.insert(param.id(), Node::Identifier(param.clone()));
+                        self.insert(param.id(), Node::Parameter(param.clone()));
                     }
 
-                    let statements = match self.ast.expression(*expr).kind() {
-                        ExpressionKind::Block(stmts) => stmts.to_vec(),
-                        _ => panic!("block expected"),
-                    };
-                    for statement in statements {
-                        self.visit_statement(statement);
-                    }
+                    self.visit_expression(*expr);
 
                     self.pop_scope();
                 }
@@ -110,44 +110,32 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
             StatementKind::Expression(expr) => {
                 self.visit_expression(*expr);
             }
-            _ => {}
+            StatementKind::Ret(expr) => {
+                self.visit_expression(*expr);
+            }
         };
     }
 
     fn visit_expression(&mut self, expr: ExprId) {
-        match self.ast.expression(expr).kind() {
+        let scope_id = *self.scopes_stack.last().expect("current scope exists");
+
+        let expression = {
+            let mut expression = self.ast.expression(expr).clone();
+            expression.set_scope(scope_id);
+            self.ast.replace_expression(expression.clone());
+            expression
+        };
+
+        match expression.kind() {
             ExpressionKind::Assignment(_, expr) => {
                 self.visit_expression(*expr);
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
-                let true_branch = match self.ast.expression(*true_branch).kind() {
-                    ExpressionKind::Block(stmts) => stmts.to_vec(),
-                    _ => panic!("block expected"),
-                };
-                let false_branch = if let Some(false_branch) = false_branch {
-                    match self.ast.expression(*false_branch).kind() {
-                        ExpressionKind::Block(stmts) => stmts.to_vec(),
-                        _ => panic!("block expected"),
-                    }
-                } else {
-                    vec![]
-                };
-
                 self.visit_expression(*cond);
-                if !true_branch.is_empty() {
-                    self.push_scope();
-                    for stmt in true_branch {
-                        self.visit_statement(stmt);
-                    }
-                    self.pop_scope();
-                }
+                self.visit_expression(*true_branch);
 
-                if !false_branch.is_empty() {
-                    self.push_scope();
-                    for stmt in false_branch {
-                        self.visit_statement(stmt);
-                    }
-                    self.pop_scope();
+                if let Some(false_branch) = false_branch {
+                    self.visit_expression(*false_branch);
                 }
             }
             ExpressionKind::Literal(_lit) => {
@@ -169,21 +157,15 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
                 self.visit_expression(*expr);
             }
             ExpressionKind::While(cond, expr) => {
-                let stmts = match self.ast.expression(*expr).kind() {
-                    ExpressionKind::Block(stmts) => stmts.to_vec(),
-                    _ => panic!("block expected"),
-                };
                 self.visit_expression(*cond);
-                if !stmts.is_empty() {
-                    self.push_scope();
-                    for stmt in stmts {
-                        self.visit_statement(stmt);
-                    }
-                    self.pop_scope();
-                }
+                self.visit_expression(*expr);
             }
-            ExpressionKind::Block(_) => {
-                todo!("implement block expressions")
+            ExpressionKind::Block(stmts) => {
+                self.push_scope();
+                for stmt in stmts {
+                    self.visit_statement(*stmt);
+                }
+                self.pop_scope();
             }
         }
     }
@@ -198,7 +180,7 @@ pub struct Scope {
     id: ScopeId,
     parent: Option<ScopeId>,
     children: Vec<ScopeId>,
-    symbols: HashMap<IdentId, Symbol>,
+    symbols: HashMap<IdentId, SymbolId>,
 }
 
 impl Scope {
@@ -221,11 +203,11 @@ impl Scope {
         }
     }
 
-    fn insert(&mut self, scope_id: ScopeId, identifier: IdentId, node: Node) {
-        self.symbols.insert(identifier, Symbol { scope_id, node });
+    fn insert(&mut self, identifier: IdentId, symbol_id: SymbolId) {
+        self.symbols.insert(identifier, symbol_id);
     }
 
-    pub fn get(&self, identifier: IdentId) -> Option<Symbol> {
+    pub fn get(&self, identifier: IdentId) -> Option<SymbolId> {
         self.symbols.get(&identifier).cloned()
     }
 }
@@ -240,57 +222,56 @@ impl Debug for Scope {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub struct ScopeId {
-    id: usize,
-}
-
-impl ScopeId {
-    fn id(&self) -> usize {
-        self.id
-    }
-}
-
-impl From<usize> for ScopeId {
-    fn from(id: usize) -> Self {
-        Self { id }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Symbol {
-    /// points to the symbol table of that symbol
+    id: SymbolId,
+    /// points to the scope where this symbol is defined
     scope_id: ScopeId,
     /// the AST node that defines that symbol
     node: Node,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-enum Node {
-    // only a Let or a LetFn
-    Statement(StmtId),
-    Identifier(Identifier),
+impl Symbol {
+    pub fn id(&self) -> SymbolId {
+        self.id
+    }
+
+    pub fn node(&self) -> &Node {
+        &self.node
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum Node {
+    LetStatement(StmtId),
+    LetFnStatement(StmtId),
+    Parameter(Identifier),
+}
+
+#[derive(Debug, PartialEq)]
 pub struct SymbolTable {
+    symbols: Vec<Symbol>,
     scopes: Vec<Scope>,
 }
 
 impl SymbolTable {
-    fn new(scopes: Vec<Scope>) -> Self {
-        Self { scopes }
+    fn new(symbols: Vec<Symbol>, scopes: Vec<Scope>) -> Self {
+        Self { symbols, scopes }
     }
 
     pub fn find(&self, identifier: IdentId, scope: ScopeId) -> Option<Symbol> {
         let scope = &self.scopes[scope.id()];
         if let Some(symbol) = scope.get(identifier) {
-            Some(symbol)
+            Some(self.symbols[symbol.id()].clone())
         } else if let Some(parent) = scope.parent {
             self.find(identifier, parent)
         } else {
             None
         }
+    }
+
+    pub fn symbol(&self, id: SymbolId) -> &Symbol {
+        &self.symbols[id.id()]
     }
 }
 
@@ -333,9 +314,11 @@ impl Display for ScopePrettyPrint<'_> {
         let indent = "|  ".repeat(self.indent);
         writeln!(f, "{indent}Table {}:", self.id.id())?;
         for (ident, symbol) in self.table.scopes[self.id.id()].symbols.iter() {
+            let symbol = &self.table.symbols[symbol.id()];
             let symbol_span = match &symbol.node {
-                Node::Statement(s) => self.ast.statement(*s).span(),
-                Node::Identifier(i) => i.span(),
+                Node::LetStatement(s) => self.ast.statement(*s).span(),
+                Node::LetFnStatement(s) => self.ast.statement(*s).span(),
+                Node::Parameter(i) => i.span(),
             };
             writeln!(
                 f,
@@ -359,6 +342,7 @@ impl Display for ScopePrettyPrint<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::ids::{IdentId, ScopeId, StmtId, SymbolId};
     use crate::lexer::{Lexer, Span};
     use crate::parser::Parser;
 
@@ -370,41 +354,49 @@ mod tests {
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 
-        let expected = vec![
-            Scope {
-                id: ScopeId::from(0),
-                parent: None,
-                children: vec![ScopeId::from(1)],
-                symbols: vec![(
-                    ast.identifier_id("f"),
-                    Symbol {
-                        scope_id: ScopeId::from(0),
-                        node: Node::Statement(StmtId::from(0)),
-                    },
-                )]
-                .into_iter()
-                .collect::<HashMap<IdentId, Symbol>>(),
-            },
-            Scope {
-                id: ScopeId::from(1),
-                parent: Some(ScopeId::from(0)),
-                children: vec![],
-                symbols: vec![(
-                    ast.identifier_id("n"),
-                    Symbol {
-                        scope_id: ScopeId::from(1),
-                        node: Node::Identifier(Identifier::new(
-                            ast.identifier_id("n"),
-                            Span::new(1, 7, 6, 1),
-                        )),
-                    },
-                )]
-                .into_iter()
-                .collect::<HashMap<IdentId, Symbol>>(),
-            },
-        ];
+        let expected = SymbolTable {
+            symbols: vec![
+                Symbol {
+                    id: SymbolId::from(0),
+                    scope_id: ScopeId::from(0),
+                    node: Node::LetFnStatement(StmtId::from(0)),
+                },
+                Symbol {
+                    id: SymbolId::from(1),
+                    scope_id: ScopeId::from(1),
+                    node: Node::Parameter(Identifier::new(
+                        ast.identifier_id("n"),
+                        Span::new(1, 7, 6, 1),
+                    )),
+                },
+            ],
+            scopes: vec![
+                Scope {
+                    id: ScopeId::from(0),
+                    parent: None,
+                    children: vec![ScopeId::from(1)],
+                    symbols: vec![(ast.identifier_id("f"), SymbolId::from(0))]
+                        .into_iter()
+                        .collect::<HashMap<IdentId, SymbolId>>(),
+                },
+                Scope {
+                    id: ScopeId::from(1),
+                    parent: Some(ScopeId::from(0)),
+                    children: vec![ScopeId::from(2)],
+                    symbols: vec![(ast.identifier_id("n"), SymbolId::from(1))]
+                        .into_iter()
+                        .collect::<HashMap<IdentId, SymbolId>>(),
+                },
+                Scope {
+                    id: ScopeId::from(2),
+                    parent: Some(ScopeId::from(1)),
+                    children: vec![],
+                    symbols: Default::default(),
+                },
+            ],
+        };
 
-        assert_eq!(table.scopes, expected);
+        assert_eq!(table, expected);
     }
 
     #[test]
@@ -415,41 +407,49 @@ mod tests {
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 
-        let expected = vec![
-            Scope {
-                id: ScopeId::from(0),
-                parent: None,
-                children: vec![ScopeId::from(1)],
-                symbols: vec![(
-                    ast.identifier_id("f"),
-                    Symbol {
-                        scope_id: ScopeId::from(0),
-                        node: Node::Statement(StmtId::from(1)),
-                    },
-                )]
-                .into_iter()
-                .collect::<HashMap<IdentId, Symbol>>(),
-            },
-            Scope {
-                id: ScopeId::from(1),
-                parent: Some(ScopeId::from(0)),
-                children: vec![],
-                symbols: vec![(
-                    ast.identifier_id("n"),
-                    Symbol {
-                        scope_id: ScopeId::from(1),
-                        node: Node::Identifier(Identifier::new(
-                            ast.identifier_id("n"),
-                            Span::new(1, 7, 6, 1),
-                        )),
-                    },
-                )]
-                .into_iter()
-                .collect::<HashMap<IdentId, Symbol>>(),
-            },
-        ];
+        let expected = SymbolTable {
+            symbols: vec![
+                Symbol {
+                    id: SymbolId::from(0),
+                    scope_id: ScopeId::from(0),
+                    node: Node::LetFnStatement(StmtId::from(1)),
+                },
+                Symbol {
+                    id: SymbolId::from(1),
+                    scope_id: ScopeId::from(1),
+                    node: Node::Parameter(Identifier::new(
+                        ast.identifier_id("n"),
+                        Span::new(1, 7, 6, 1),
+                    )),
+                },
+            ],
+            scopes: vec![
+                Scope {
+                    id: ScopeId::from(0),
+                    parent: None,
+                    children: vec![ScopeId::from(1)],
+                    symbols: vec![(ast.identifier_id("f"), SymbolId::from(0))]
+                        .into_iter()
+                        .collect::<HashMap<IdentId, SymbolId>>(),
+                },
+                Scope {
+                    id: ScopeId::from(1),
+                    parent: Some(ScopeId::from(0)),
+                    children: vec![ScopeId::from(2)],
+                    symbols: vec![(ast.identifier_id("n"), SymbolId::from(1))]
+                        .into_iter()
+                        .collect::<HashMap<IdentId, SymbolId>>(),
+                },
+                Scope {
+                    id: ScopeId::from(2),
+                    parent: Some(ScopeId::from(1)),
+                    children: vec![],
+                    symbols: HashMap::default(),
+                },
+            ],
+        };
 
-        assert_eq!(table.scopes, expected);
+        assert_eq!(table, expected);
     }
 
     #[test]
@@ -460,55 +460,62 @@ mod tests {
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 
-        let expected = vec![
-            Scope {
-                id: ScopeId::from(0),
-                parent: None,
-                children: vec![ScopeId::from(1)],
-                symbols: vec![(
-                    ast.identifier_id("f"),
-                    Symbol {
-                        scope_id: ScopeId::from(0),
-                        node: Node::Statement(StmtId::from(1)),
-                    },
-                )]
-                .into_iter()
-                .collect::<HashMap<IdentId, Symbol>>(),
-            },
-            Scope {
-                id: ScopeId::from(1),
-                parent: Some(ScopeId::from(0)),
-                children: vec![ScopeId::from(2)],
-                symbols: vec![(
-                    ast.identifier_id("n"),
-                    Symbol {
-                        scope_id: ScopeId::from(1),
-                        node: Node::Identifier(Identifier::new(
-                            ast.identifier_id("n"),
-                            Span::new(1, 7, 6, 1),
-                        )),
-                    },
-                )]
-                .into_iter()
-                .collect::<HashMap<IdentId, Symbol>>(),
-            },
-            Scope {
-                id: ScopeId::from(2),
-                parent: Some(ScopeId::from(1)),
-                children: vec![],
-                symbols: vec![(
-                    ast.identifier_id("m"),
-                    Symbol {
-                        scope_id: ScopeId::from(2),
-                        node: Node::Statement(StmtId::from(0)),
-                    },
-                )]
-                .into_iter()
-                .collect::<HashMap<IdentId, Symbol>>(),
-            },
-        ];
+        let expected = SymbolTable {
+            symbols: vec![
+                Symbol {
+                    id: SymbolId::from(0),
+                    scope_id: ScopeId::from(0),
+                    node: Node::LetFnStatement(StmtId::from(1)),
+                },
+                Symbol {
+                    id: SymbolId::from(1),
+                    scope_id: ScopeId::from(1),
+                    node: Node::Parameter(Identifier::new(
+                        ast.identifier_id("n"),
+                        Span::new(1, 7, 6, 1),
+                    )),
+                },
+                Symbol {
+                    id: SymbolId::from(2),
+                    scope_id: ScopeId::from(3),
+                    node: Node::LetStatement(StmtId::from(0)),
+                },
+            ],
+            scopes: vec![
+                Scope {
+                    id: ScopeId::from(0),
+                    parent: None,
+                    children: vec![ScopeId::from(1)],
+                    symbols: vec![(ast.identifier_id("f"), SymbolId::from(0))]
+                        .into_iter()
+                        .collect::<HashMap<IdentId, SymbolId>>(),
+                },
+                Scope {
+                    id: ScopeId::from(1),
+                    parent: Some(ScopeId::from(0)),
+                    children: vec![ScopeId::from(2)],
+                    symbols: vec![(ast.identifier_id("n"), SymbolId::from(1))]
+                        .into_iter()
+                        .collect::<HashMap<IdentId, SymbolId>>(),
+                },
+                Scope {
+                    id: ScopeId::from(2),
+                    parent: Some(ScopeId::from(1)),
+                    children: vec![ScopeId::from(3)],
+                    symbols: HashMap::default(),
+                },
+                Scope {
+                    id: ScopeId::from(3),
+                    parent: Some(ScopeId::from(2)),
+                    children: vec![],
+                    symbols: vec![(ast.identifier_id("m"), SymbolId::from(2))]
+                        .into_iter()
+                        .collect::<HashMap<IdentId, SymbolId>>(),
+                },
+            ],
+        };
 
-        assert_eq!(table.scopes, expected);
+        assert_eq!(table, expected);
     }
 
     #[test]
@@ -519,55 +526,62 @@ mod tests {
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 
-        let expected = vec![
-            Scope {
-                id: ScopeId::from(0),
-                parent: None,
-                children: vec![ScopeId::from(1)],
-                symbols: vec![(
-                    ast.identifier_id("f"),
-                    Symbol {
-                        scope_id: ScopeId::from(0),
-                        node: Node::Statement(StmtId::from(1)),
-                    },
-                )]
-                .into_iter()
-                .collect::<HashMap<IdentId, Symbol>>(),
-            },
-            Scope {
-                id: ScopeId::from(1),
-                parent: Some(ScopeId::from(0)),
-                children: vec![ScopeId::from(2)],
-                symbols: vec![(
-                    ast.identifier_id("n"),
-                    Symbol {
-                        scope_id: ScopeId::from(1),
-                        node: Node::Identifier(Identifier::new(
-                            ast.identifier_id("n"),
-                            Span::new(1, 7, 6, 1),
-                        )),
-                    },
-                )]
-                .into_iter()
-                .collect::<HashMap<IdentId, Symbol>>(),
-            },
-            Scope {
-                id: ScopeId::from(2),
-                parent: Some(ScopeId::from(1)),
-                children: vec![],
-                symbols: vec![(
-                    ast.identifier_id("n"),
-                    Symbol {
-                        scope_id: ScopeId::from(2),
-                        node: Node::Statement(StmtId::from(0)),
-                    },
-                )]
-                .into_iter()
-                .collect::<HashMap<IdentId, Symbol>>(),
-            },
-        ];
+        let expected = SymbolTable {
+            symbols: vec![
+                Symbol {
+                    id: SymbolId::from(0),
+                    scope_id: ScopeId::from(0),
+                    node: Node::LetFnStatement(StmtId::from(1)),
+                },
+                Symbol {
+                    id: SymbolId::from(1),
+                    scope_id: ScopeId::from(1),
+                    node: Node::Parameter(Identifier::new(
+                        ast.identifier_id("n"),
+                        Span::new(1, 7, 6, 1),
+                    )),
+                },
+                Symbol {
+                    id: SymbolId::from(2),
+                    scope_id: ScopeId::from(3),
+                    node: Node::LetStatement(StmtId::from(0)),
+                },
+            ],
+            scopes: vec![
+                Scope {
+                    id: ScopeId::from(0),
+                    parent: None,
+                    children: vec![ScopeId::from(1)],
+                    symbols: vec![(ast.identifier_id("f"), SymbolId::from(0))]
+                        .into_iter()
+                        .collect::<HashMap<IdentId, SymbolId>>(),
+                },
+                Scope {
+                    id: ScopeId::from(1),
+                    parent: Some(ScopeId::from(0)),
+                    children: vec![ScopeId::from(2)],
+                    symbols: vec![(ast.identifier_id("n"), SymbolId::from(1))]
+                        .into_iter()
+                        .collect::<HashMap<IdentId, SymbolId>>(),
+                },
+                Scope {
+                    id: ScopeId::from(2),
+                    parent: Some(ScopeId::from(1)),
+                    children: vec![ScopeId::from(3)],
+                    symbols: HashMap::default(),
+                },
+                Scope {
+                    id: ScopeId::from(3),
+                    parent: Some(ScopeId::from(2)),
+                    children: vec![],
+                    symbols: vec![(ast.identifier_id("n"), SymbolId::from(2))]
+                        .into_iter()
+                        .collect::<HashMap<IdentId, SymbolId>>(),
+                },
+            ],
+        };
 
-        assert_eq!(table.scopes, expected);
+        assert_eq!(table, expected);
     }
 
     #[test]
@@ -590,7 +604,7 @@ mod tests {
             .expect("p is in scope")
             .node
         {
-            Node::Statement(stmt) => {
+            Node::LetStatement(stmt) => {
                 assert_eq!(ast.statement(stmt).span().start(), 24);
             }
             _ => panic!("statement expected"),
@@ -604,7 +618,7 @@ mod tests {
             .expect("n is in scope")
             .node
         {
-            Node::Identifier(ident) => {
+            Node::Parameter(ident) => {
                 assert_eq!(ident.span().start(), 6);
             }
             _ => panic!("statement expected"),
@@ -618,7 +632,7 @@ mod tests {
             .expect("m is in scope")
             .node
         {
-            Node::Statement(stmt) => {
+            Node::LetStatement(stmt) => {
                 assert_eq!(ast.statement(stmt).span().start(), 13);
             }
             _ => panic!("statement expected"),
@@ -634,7 +648,7 @@ mod tests {
             .expect("p is in scope")
             .node
         {
-            Node::Statement(stmt) => {
+            Node::LetStatement(stmt) => {
                 assert_eq!(ast.statement(stmt).span().start(), 35);
             }
             _ => panic!("statement expected"),
@@ -685,7 +699,7 @@ mod tests {
                 .find(ast.identifier_id("a"), scope_id)
                 .expect("a is in scope");
             match symbol.node {
-                Node::Statement(stmt) => {
+                Node::LetStatement(stmt) => {
                     assert_eq!(ast.statement(stmt).span().start(), 41);
                 }
                 _ => panic!("statement expected"),
@@ -694,7 +708,7 @@ mod tests {
                 .find(ast.identifier_id("b"), scope_id)
                 .expect("a is in scope");
             match symbol.node {
-                Node::Statement(stmt) => {
+                Node::LetStatement(stmt) => {
                     assert_eq!(ast.statement(stmt).span().start(), 98);
                 }
                 _ => panic!("statement expected"),
@@ -711,7 +725,7 @@ mod tests {
                 .find(ast.identifier_id("c"), scope_id)
                 .expect("c is in scope");
             match symbol.node {
-                Node::Statement(stmt) => {
+                Node::LetStatement(stmt) => {
                     assert_eq!(ast.statement(stmt).span().start(), 203);
                 }
                 _ => panic!("statement expected"),
@@ -728,7 +742,7 @@ mod tests {
                 .find(ast.identifier_id("d"), scope_id)
                 .expect("d is in scope");
             match symbol.node {
-                Node::Statement(stmt) => {
+                Node::LetStatement(stmt) => {
                     assert_eq!(ast.statement(stmt).span().start(), 299);
                 }
                 _ => panic!("statement expected"),
@@ -766,7 +780,7 @@ mod tests {
                 .find(ast.identifier_id("a"), scope_id)
                 .expect("a is in scope");
             match symbol.node {
-                Node::Statement(stmt) => {
+                Node::LetStatement(stmt) => {
                     assert_eq!(ast.statement(stmt).span().start(), 25);
                 }
                 _ => panic!("statement expected"),

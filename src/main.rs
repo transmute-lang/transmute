@@ -1,16 +1,18 @@
+#![allow(dead_code)] // fixme eventually remove
 extern crate core;
 
-use crate::ast::AstNodePrettyPrint;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
-use crate::symbol_table::{ScopeId, ScopePrettyPrint, SymbolTableGen};
+use crate::resolver::Resolver;
+use crate::symbol_table::SymbolTableGen;
 
 mod ast;
 mod error;
 mod interpreter;
 mod lexer;
 mod parser;
+mod resolver;
 mod symbol_table;
 
 fn main() {
@@ -20,19 +22,14 @@ fn main() {
     .parse()
     .expect("source is valid");
 
-    for stmt in ast.statements() {
-        println!("{}", AstNodePrettyPrint::new(&ast, *stmt));
-    }
-
     let (symbols, ast) = {
         let mut ast = ast;
         (SymbolTableGen::new(&mut ast).build_table(), ast)
     };
 
-    println!(
-        "{}",
-        ScopePrettyPrint::new(&symbols, &ast, ScopeId::from(2))
-    );
+    let ast = Resolver::new(ast, &symbols)
+        .resolve_symbols()
+        .expect("source is valid");
 
     let result = Interpreter::new(&ast).start();
     println!("Result: {}", result);

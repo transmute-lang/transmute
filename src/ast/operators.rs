@@ -1,7 +1,7 @@
 use crate::lexer::Span;
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BinaryOperator {
     kind: BinaryOperatorKind,
     span: Span,
@@ -17,7 +17,7 @@ impl BinaryOperator {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BinaryOperatorKind {
     Addition,
     Division,
@@ -48,7 +48,7 @@ impl Display for BinaryOperatorKind {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct UnaryOperator {
     kind: UnaryOperatorKind,
     span: Span,
@@ -64,7 +64,7 @@ impl UnaryOperator {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOperatorKind {
     Minus,
 }

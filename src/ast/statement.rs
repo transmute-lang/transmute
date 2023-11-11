@@ -1,8 +1,6 @@
-use crate::ast::expression::ExprId;
 use crate::ast::identifier::Identifier;
+use crate::ast::ids::{ExprId, ScopeId, StmtId};
 use crate::lexer::Span;
-use crate::symbol_table::ScopeId;
-use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Statement {
@@ -36,6 +34,7 @@ impl Statement {
     }
 
     pub fn set_scope(&mut self, symbols: ScopeId) {
+        // todo should take a self and return a new self?
         self.scope = Some(symbols);
     }
 
@@ -44,34 +43,10 @@ impl Statement {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub struct StmtId {
-    id: usize,
-}
-
-impl StmtId {
-    pub fn id(&self) -> usize {
-        self.id
-    }
-}
-
-impl Display for StmtId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.id)
-    }
-}
-
-impl From<usize> for StmtId {
-    fn from(id: usize) -> Self {
-        Self { id }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum StatementKind {
     Expression(ExprId),
     Let(Identifier, ExprId),
     Ret(ExprId),
-    // todo vec does not hold span and position as it should (search for "Vec<Statement>, Span")
     LetFn(Identifier, Vec<Identifier>, ExprId),
 }

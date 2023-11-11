@@ -1,20 +1,24 @@
-use crate::ast::identifier::Identifier;
+use crate::ast::ids::{ExprId, IdentRefId, ScopeId, StmtId};
 use crate::ast::literal::Literal;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
-use crate::ast::statement::StmtId;
 use crate::lexer::Span;
-use std::fmt::{Display, Formatter};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Expression {
     id: ExprId,
     kind: ExpressionKind,
     span: Span,
+    scope: Option<ScopeId>,
 }
 
 impl Expression {
     pub fn new(id: ExprId, kind: ExpressionKind, span: Span) -> Self {
-        Self { id, kind, span }
+        Self {
+            id,
+            kind,
+            span,
+            scope: None,
+        }
     }
 
     pub fn id(&self) -> ExprId {
@@ -28,38 +32,24 @@ impl Expression {
     pub fn span(&self) -> &Span {
         &self.span
     }
-}
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub struct ExprId {
-    id: usize,
-}
+    pub fn set_scope(&mut self, symbols: ScopeId) {
+        // todo should take a self and return a new self?
+        self.scope = Some(symbols);
+    }
 
-impl ExprId {
-    pub fn id(&self) -> usize {
-        self.id
+    pub fn scope(&self) -> Option<ScopeId> {
+        self.scope
     }
 }
 
-impl Display for ExprId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.id)
-    }
-}
-
-impl From<usize> for ExprId {
-    fn from(id: usize) -> Self {
-        Self { id }
-    }
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionKind {
-    Assignment(Identifier, ExprId),
+    Assignment(IdentRefId, ExprId),
     If(ExprId, ExprId, Option<ExprId>),
     Literal(Literal),
     Binary(ExprId, BinaryOperator, ExprId),
-    FunctionCall(Identifier, Vec<ExprId>),
+    FunctionCall(IdentRefId, Vec<ExprId>),
     Unary(UnaryOperator, ExprId),
     While(ExprId, ExprId),
     // todo: should it be it's own struct and use it like While(ExprId, Block)?

@@ -1,5 +1,5 @@
+use crate::ast::ids::{IdentId, IdentRefId, SymbolId};
 use crate::lexer::Span;
-use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Identifier {
@@ -21,25 +21,37 @@ impl Identifier {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct IdentId {
-    id: usize,
+/// Represents an identifier when used as a reference
+#[derive(Debug, Clone, PartialEq)]
+pub struct IdentifierRef {
+    id: IdentRefId,
+    ident: Identifier,
+    /// The referenced symbol id
+    symbol_id: Option<SymbolId>,
 }
 
-impl IdentId {
-    pub fn id(&self) -> usize {
+impl IdentifierRef {
+    pub fn new(id: IdentRefId, ident: Identifier) -> Self {
+        Self {
+            id,
+            ident,
+            symbol_id: None,
+        }
+    }
+
+    pub fn id(&self) -> IdentRefId {
         self.id
     }
-}
 
-impl Display for IdentId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.id)
+    pub fn ident(&self) -> &Identifier {
+        &self.ident
     }
-}
 
-impl From<usize> for IdentId {
-    fn from(id: usize) -> Self {
-        Self { id }
+    pub fn set_symbol_id(&mut self, symbol_id: SymbolId) {
+        self.symbol_id = Some(symbol_id);
+    }
+
+    pub fn symbol_id(&self) -> Option<SymbolId> {
+        self.symbol_id
     }
 }

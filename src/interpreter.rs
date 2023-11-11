@@ -1,8 +1,9 @@
-use crate::ast::expression::{ExprId, ExpressionKind};
-use crate::ast::identifier::{IdentId, Identifier};
+use crate::ast::expression::ExpressionKind;
+use crate::ast::identifier::Identifier;
+use crate::ast::ids::{ExprId, IdentId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
-use crate::ast::statement::{Statement, StatementKind, StmtId};
+use crate::ast::statement::{Statement, StatementKind};
 use crate::ast::{Ast, Visitor};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -10,7 +11,9 @@ use std::fmt::{Display, Formatter};
 pub struct Interpreter<'a> {
     ast: &'a Ast,
     // todo merge functions and variables (needs ValueKind)
+    // todo IdentId should be SymbolId
     functions: HashMap<IdentId, (&'a Vec<Identifier>, &'a Vec<StmtId>)>,
+    // todo IdentId should be SymbolId
     variables: Vec<HashMap<IdentId, Value>>,
 }
 
@@ -24,15 +27,11 @@ impl<'a> Interpreter<'a> {
     }
 
     pub fn start(&mut self) -> Value {
-        self.visit_ast(self.ast)
+        self.visit_statements(self.ast.statements())
     }
 }
 
 impl<'a> Visitor<Value> for Interpreter<'a> {
-    fn visit_ast(&mut self, ast: &Ast) -> Value {
-        self.visit_statements(ast.statements())
-    }
-
     fn visit_statement(&mut self, stmt: StmtId) -> Value {
         let stmt = self.ast.statement(stmt);
         match stmt.kind() {
@@ -102,6 +101,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                 }
             }
             ExpressionKind::FunctionCall(ident, arguments) => {
+                let ident = self.ast.identifier_ref(*ident).ident();
                 let (parameters, statements) = match self.functions.get(&ident.id()) {
                     Some(f) => *f,
                     None => {
@@ -132,7 +132,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                 ret
             }
             ExpressionKind::Assignment(ident, expr) => {
-                // todo!()
+                let ident = self.ast.identifier_ref(*ident).ident();
                 if !self
                     .variables
                     .last()
@@ -202,6 +202,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
         match literal.kind() {
             LiteralKind::Number(n) => Value::Number(*n),
             LiteralKind::Identifier(ident) => {
+                let ident = self.ast.identifier_ref(*ident).ident();
                 match self
                     .variables
                     .last_mut()

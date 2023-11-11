@@ -1,8 +1,9 @@
-use crate::ast::expression::{ExprId, Expression, ExpressionKind};
-use crate::ast::identifier::{IdentId, Identifier};
+use crate::ast::expression::{Expression, ExpressionKind};
+use crate::ast::identifier::{Identifier, IdentifierRef};
+use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, BinaryOperatorKind, UnaryOperator, UnaryOperatorKind};
-use crate::ast::statement::{Statement, StatementKind, StmtId};
+use crate::ast::statement::{Statement, StatementKind};
 use crate::ast::Ast;
 use crate::error::Error;
 use crate::lexer::{Lexer, PeekableLexer, Span, Token, TokenKind};
@@ -20,6 +21,7 @@ macro_rules! peek {
 pub struct Parser<'s> {
     lexer: PeekableLexer<'s>,
     identifiers: HashMap<String, IdentId>,
+    identifier_refs: Vec<IdentifierRef>,
     expressions: Vec<Expression>,
     statements: Vec<Statement>,
 }
@@ -29,6 +31,7 @@ impl<'s> Parser<'s> {
         Self {
             lexer: PeekableLexer::new(lexer, 1),
             identifiers: Default::default(),
+            identifier_refs: Default::default(),
             expressions: Default::default(),
             statements: Default::default(),
         }
@@ -56,6 +59,7 @@ impl<'s> Parser<'s> {
 
         Ok(Ast::new(
             identifiers,
+            self.identifier_refs,
             self.expressions,
             self.statements,
             statements,
@@ -164,6 +168,12 @@ impl<'s> Parser<'s> {
             self.identifiers.insert(ident.to_string(), id);
             id
         }
+    }
+
+    fn push_identifier_ref(&mut self, ident: Identifier) -> IdentRefId {
+        let id = IdentRefId::from(self.identifier_refs.len());
+        self.identifier_refs.push(IdentifierRef::new(id, ident));
+        id
     }
 
     fn push_expression(&mut self, kind: ExpressionKind, span: Span) -> ExprId {
@@ -293,16 +303,18 @@ impl<'s> Parser<'s> {
                         let expression = self.parse_expression()?;
                         let span = identifier.span().extend_to(expression.span());
                         let expression = expression.id();
+                        let ident_ref = self.push_identifier_ref(identifier);
                         self.push_expression(
-                            ExpressionKind::Assignment(identifier, expression),
+                            ExpressionKind::Assignment(ident_ref, expression),
                             span,
                         )
                     }
                     _ => {
                         let span = identifier.span().clone();
 
+                        let ident_ref = self.push_identifier_ref(identifier);
                         let literal =
-                            Literal::new(LiteralKind::Identifier(identifier), span.clone());
+                            Literal::new(LiteralKind::Identifier(ident_ref), span.clone());
 
                         self.push_expression(ExpressionKind::Literal(literal), span)
                     }
@@ -510,8 +522,8 @@ impl<'s> Parser<'s> {
         };
 
         // identifier ( expr , ... ) '
-
-        let id = self.push_expression(ExpressionKind::FunctionCall(identifier, arguments), span);
+        let ident_ref = self.push_identifier_ref(identifier);
+        let id = self.push_expression(ExpressionKind::FunctionCall(ident_ref, arguments), span);
         Ok(&self.expressions[id.id()])
     }
 
@@ -647,6 +659,7 @@ impl From<&TokenKind> for Option<Precedence> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::ids::{ExprId, IdentId, StmtId};
 
     #[test]
     fn expression_literal_number() {
@@ -677,10 +690,15 @@ mod tests {
             .map(|(k, v)| (v, IdentId::from(k)))
             .collect::<HashMap<String, IdentId>>();
 
+        let identifier_refs = vec![IdentifierRef::new(
+            IdentRefId::from(0),
+            Identifier::new(IdentId::from(0), Span::new(1, 1, 0, 9)),
+        )];
+
         let expressions = vec![Expression::new(
             ExprId::from(0),
             ExpressionKind::Literal(Literal::new(
-                LiteralKind::Identifier(Identifier::new(IdentId::from(0), Span::new(1, 1, 0, 9))),
+                LiteralKind::Identifier(IdentRefId::from(0)),
                 Span::new(1, 1, 0, 9),
             )),
             Span::new(1, 1, 0, 9),
@@ -688,6 +706,7 @@ mod tests {
 
         assert_eq!(actual, ExprId::from(0));
         assert_eq!(parser.identifiers, identifiers);
+        assert_eq!(parser.identifier_refs, identifier_refs);
         assert_eq!(parser.expressions, expressions);
         assert_eq!(parser.statements, vec![]);
     }
@@ -908,6 +927,11 @@ mod tests {
             .map(|(k, v)| (v, IdentId::from(k)))
             .collect::<HashMap<String, IdentId>>();
 
+        let identifier_refs = vec![IdentifierRef::new(
+            IdentRefId::from(0),
+            Identifier::new(IdentId::from(0), Span::new(1, 1, 0, 9)),
+        )];
+
         let expressions = vec![
             Expression::new(
                 ExprId::from(0),
@@ -919,16 +943,14 @@ mod tests {
             ),
             Expression::new(
                 ExprId::from(1),
-                ExpressionKind::Assignment(
-                    Identifier::new(IdentId::from(0), Span::new(1, 1, 0, 9)),
-                    ExprId::from(0),
-                ),
+                ExpressionKind::Assignment(IdentRefId::from(0), ExprId::from(0)),
                 Span::new(1, 1, 0, 14),
             ),
         ];
 
         assert_eq!(actual, ExprId::from(1));
         assert_eq!(parser.identifiers, identifiers);
+        assert_eq!(parser.identifier_refs, identifier_refs);
         assert_eq!(parser.expressions, expressions);
         assert_eq!(parser.statements, vec![]);
     }
@@ -940,6 +962,11 @@ mod tests {
         let actual = parser.parse().expect("source is valid");
 
         let identifiers = vec!["forty_two".to_string()];
+
+        let identifier_refs = vec![IdentifierRef::new(
+            IdentRefId::from(0),
+            Identifier::new(IdentId::from(0), Span::new(1, 21, 20, 9)),
+        )];
 
         let expressions = vec![
             Expression::new(
@@ -953,10 +980,7 @@ mod tests {
             Expression::new(
                 ExprId::from(1),
                 ExpressionKind::Literal(Literal::new(
-                    LiteralKind::Identifier(Identifier::new(
-                        IdentId::from(0),
-                        Span::new(1, 21, 20, 9),
-                    )),
+                    LiteralKind::Identifier(IdentRefId::from(0)),
                     Span::new(1, 21, 20, 9),
                 )),
                 Span::new(1, 21, 20, 9),
@@ -981,6 +1005,7 @@ mod tests {
 
         let expected = Ast::new(
             identifiers,
+            identifier_refs,
             expressions,
             statements,
             vec![StmtId::from(0), StmtId::from(1)],
@@ -997,14 +1022,16 @@ mod tests {
 
         let identifiers = vec!["times_two".to_string(), "a".to_string()];
 
+        let identifier_refs = vec![IdentifierRef::new(
+            IdentRefId::from(0),
+            Identifier::new(IdentId::from(1), Span::new(1, 20, 19, 1)),
+        )];
+
         let expressions = vec![
             Expression::new(
                 ExprId::from(0),
                 ExpressionKind::Literal(Literal::new(
-                    LiteralKind::Identifier(Identifier::new(
-                        IdentId::from(1),
-                        Span::new(1, 20, 19, 1),
-                    )),
+                    LiteralKind::Identifier(IdentRefId::from(0)),
                     Span::new(1, 20, 19, 1),
                 )),
                 Span::new(1, 20, 19, 1),
@@ -1053,7 +1080,13 @@ mod tests {
             ),
         ];
 
-        let expected = Ast::new(identifiers, expressions, statements, vec![StmtId::from(1)]);
+        let expected = Ast::new(
+            identifiers,
+            identifier_refs,
+            expressions,
+            statements,
+            vec![StmtId::from(1)],
+        );
 
         assert_eq!(actual, expected);
     }
@@ -1066,14 +1099,16 @@ mod tests {
 
         let identifiers = vec!["times_two".to_string(), "a".to_string()];
 
+        let identifier_refs = vec![IdentifierRef::new(
+            IdentRefId::from(0),
+            Identifier::new(IdentId::from(1), Span::new(1, 22, 21, 1)),
+        )];
+
         let expressions = vec![
             Expression::new(
                 ExprId::from(0),
                 ExpressionKind::Literal(Literal::new(
-                    LiteralKind::Identifier(Identifier::new(
-                        IdentId::from(1),
-                        Span::new(1, 22, 21, 1),
-                    )),
+                    LiteralKind::Identifier(IdentRefId::from(0)),
                     Span::new(1, 22, 21, 1),
                 )),
                 Span::new(1, 22, 21, 1),
@@ -1121,7 +1156,14 @@ mod tests {
                 Span::new(1, 1, 0, 29),
             ),
         ];
-        let expected = Ast::new(identifiers, expressions, statements, vec![StmtId::from(1)]);
+
+        let expected = Ast::new(
+            identifiers,
+            identifier_refs,
+            expressions,
+            statements,
+            vec![StmtId::from(1)],
+        );
 
         assert_eq!(actual, expected);
     }
@@ -1138,6 +1180,11 @@ mod tests {
             .map(|(k, v)| (v, IdentId::from(k)))
             .collect::<HashMap<String, IdentId>>();
 
+        let identifier_refs = vec![IdentifierRef::new(
+            IdentRefId::from(0),
+            Identifier::new(IdentId::from(0), Span::new(1, 1, 0, 9)),
+        )];
+
         let expressions = vec![
             Expression::new(
                 ExprId::from(0),
@@ -1149,16 +1196,14 @@ mod tests {
             ),
             Expression::new(
                 ExprId::from(1),
-                ExpressionKind::FunctionCall(
-                    Identifier::new(IdentId::from(0), Span::new(1, 1, 0, 9)),
-                    vec![ExprId::from(0)],
-                ),
+                ExpressionKind::FunctionCall(IdentRefId::from(0), vec![ExprId::from(0)]),
                 Span::new(1, 1, 0, 13),
             ),
         ];
 
         assert_eq!(actual, ExprId::from(1));
         assert_eq!(parser.identifiers, identifiers);
+        assert_eq!(parser.identifier_refs, identifier_refs);
         assert_eq!(parser.expressions, expressions);
         assert_eq!(parser.statements, vec![]);
     }

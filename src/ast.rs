@@ -1,18 +1,18 @@
 pub mod expression;
 pub mod identifier;
+pub mod ids;
 pub mod literal;
 pub mod operators;
 pub mod statement;
 
-use crate::ast::expression::{ExprId, Expression, ExpressionKind};
-use crate::ast::identifier::IdentId;
+use crate::ast::expression::{Expression, ExpressionKind};
+use crate::ast::identifier::IdentifierRef;
+use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::statement::{Statement, StatementKind, StmtId};
+use crate::ast::statement::{Statement, StatementKind};
 use std::fmt::{Display, Formatter};
 
 pub trait Visitor<R> {
-    fn visit_ast(&mut self, ast: &Ast) -> R;
-
     fn visit_statement(&mut self, stmt: StmtId) -> R;
 
     fn visit_expression(&mut self, expr: ExprId) -> R;
@@ -22,9 +22,15 @@ pub trait Visitor<R> {
 
 #[derive(Debug, PartialEq)]
 pub struct Ast {
+    /// Unique identifiers names
     identifiers: Vec<String>,
+    /// Identifier refs
+    identifier_refs: Vec<IdentifierRef>,
+    /// All expressions
     expressions: Vec<Expression>,
+    /// All statements
     statements: Vec<Statement>,
+    /// Root statements
     // todo replace with Statements
     root: Vec<StmtId>,
 }
@@ -32,6 +38,7 @@ pub struct Ast {
 impl Ast {
     pub fn new(
         identifiers: Vec<String>,
+        identifier_refs: Vec<IdentifierRef>,
         expressions: Vec<Expression>,
         statements: Vec<Statement>,
         root: Vec<StmtId>,
@@ -39,6 +46,7 @@ impl Ast {
         assert!(!root.is_empty());
         Self {
             identifiers,
+            identifier_refs,
             expressions,
             statements,
             root,
@@ -63,6 +71,20 @@ impl Ast {
         panic!("Identifier {} not found", name)
     }
 
+    pub fn identifier_ref(&self, id: IdentRefId) -> &IdentifierRef {
+        &self.identifier_refs[id.id()]
+    }
+
+    #[cfg(test)]
+    pub fn identifier_ref_id(&self, start: usize) -> IdentRefId {
+        for ident_ref in &self.identifier_refs {
+            if ident_ref.ident().span().start() == start {
+                return ident_ref.id();
+            }
+        }
+        panic!("No identifier ref found at {}", start)
+    }
+
     pub fn expression(&self, id: ExprId) -> &Expression {
         &self.expressions[id.id()]
     }
@@ -79,6 +101,16 @@ impl Ast {
             }
         }
         panic!("No statement found at {}", start)
+    }
+
+    pub fn replace_identifier_ref(&mut self, ident_ref: IdentifierRef) {
+        let id = ident_ref.id().id();
+        self.identifier_refs[id] = ident_ref;
+    }
+
+    pub fn replace_expression(&mut self, expression: Expression) {
+        let id = expression.id().id();
+        self.expressions[id] = expression
     }
 
     pub fn replace_statement(&mut self, statement: Statement) {
@@ -174,6 +206,7 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
         let indent = "  ".repeat(self.indent);
         match self.ast.expression(self.id).kind() {
             ExpressionKind::Assignment(ident, expr) => {
+                let ident = self.ast.identifier_ref(*ident).ident();
                 write!(
                     f,
                     "{} = {}",
@@ -218,6 +251,7 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
             ExpressionKind::Literal(lit) => match lit.kind() {
                 LiteralKind::Boolean(b) => write!(f, "{b}"),
                 LiteralKind::Identifier(ident) => {
+                    let ident = self.ast.identifier_ref(*ident).ident();
                     write!(f, "{}", AstNodePrettyPrint::new(self.ast, ident.id()))
                 }
                 LiteralKind::Number(n) => write!(f, "{n}"),
@@ -232,6 +266,7 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                 )
             }
             ExpressionKind::FunctionCall(ident, params) => {
+                let ident = self.ast.identifier_ref(*ident).ident();
                 write!(f, "{}(", AstNodePrettyPrint::new(self.ast, ident.id()))?;
                 for (i, expr) in params.iter().enumerate() {
                     write!(f, "{}", AstNodePrettyPrint::new(self.ast, *expr))?;
@@ -264,7 +299,7 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                         AstNodePrettyPrint::new_with_ident(self.ast, *stmt, self.indent + 1)
                     )?;
                 }
-                writeln!(f, "}}")
+                writeln!(f, "{indent}}}")
             }
             ExpressionKind::Block(_) => {
                 todo!("implement block expressions")

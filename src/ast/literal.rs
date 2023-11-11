@@ -1,7 +1,7 @@
-use crate::ast::identifier::Identifier;
+use crate::ast::ids::IdentRefId;
 use crate::lexer::Span;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Literal {
     kind: LiteralKind,
     span: Span,
@@ -17,9 +17,9 @@ impl Literal {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum LiteralKind {
     Boolean(bool),
-    Identifier(Identifier),
+    Identifier(IdentRefId),
     Number(i64),
 }
