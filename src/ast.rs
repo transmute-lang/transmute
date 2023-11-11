@@ -308,6 +308,53 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::ast::AstNodePrettyPrint;
+    use crate::lexer::Lexer;
+    use crate::parser::Parser;
+
+    #[test]
+    fn pretty_print() {
+        let ast = Parser::new(Lexer::new(
+            r#"
+        let fact(n) = {
+            if n < 0 {
+                ret 0;
+            }
+            let product = 1;
+            while n > 0 {
+                product = product * n;
+                n = n - 1;
+            }
+            product;
+        }
+    "#,
+        ))
+        .parse()
+        .expect("source is valid");
+
+        let actual = format!(
+            "{}",
+            AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
+        );
+        let expected = r#"let fact(n) = {
+  if n < 0 {
+    ret 0;
+  }
+  let product = 1;
+  while n > 0 {
+    product = product * n;
+    n = n - 1;
+  }
+
+  product;
+}
+"#;
+        assert_eq!(actual, expected);
+    }
+}
+
 impl Display for AstNodePrettyPrint<'_, IdentId> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let indent = "  ".repeat(self.indent);
