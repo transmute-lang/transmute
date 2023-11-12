@@ -195,6 +195,9 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
             ExpressionKind::Block(_) => {
                 todo!("implement block expression")
             }
+            ExpressionKind::Dummy => {
+                panic!("should not interpret an invalid source code")
+            }
         }
     }
 
@@ -309,7 +312,7 @@ mod tests {
             #[test]
             fn $name() {
                 let parser = Parser::new(Lexer::new($src));
-                let ast = parser.parse().expect("source is valid");
+                let ast = parser.parse().0;
 
                 let actual = Interpreter::new(&ast).start();
 
@@ -320,7 +323,7 @@ mod tests {
             #[test]
             fn $name() {
                 let parser = Parser::new(Lexer::new($src));
-                let ast = parser.parse().expect("source is valid");
+                let ast = parser.parse().0;
 
                 let actual = Interpreter::new(&ast).start();
 

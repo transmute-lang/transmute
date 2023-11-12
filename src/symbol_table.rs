@@ -167,6 +167,9 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
                 }
                 self.pop_scope();
             }
+            ExpressionKind::Dummy => {
+                // nothing to do
+            }
         }
     }
 
@@ -348,9 +351,7 @@ mod tests {
 
     #[test]
     fn top_level_function_with_parameter() {
-        let mut ast = Parser::new(Lexer::new("let f(n) = { }"))
-            .parse()
-            .expect("source is valid");
+        let mut ast = Parser::new(Lexer::new("let f(n) = { }")).parse().0;
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 
@@ -401,9 +402,7 @@ mod tests {
 
     #[test]
     fn top_level_function_with_used_parameter() {
-        let mut ast = Parser::new(Lexer::new("let f(n) = { n; }"))
-            .parse()
-            .expect("source is valid");
+        let mut ast = Parser::new(Lexer::new("let f(n) = { n; }")).parse().0;
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 
@@ -456,7 +455,7 @@ mod tests {
     fn top_level_function_with_variable() {
         let mut ast = Parser::new(Lexer::new("let f(n) = { let m = 0; }"))
             .parse()
-            .expect("source is valid");
+            .0;
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 
@@ -522,7 +521,7 @@ mod tests {
     fn top_level_function_with_redefined_parameter() {
         let mut ast = Parser::new(Lexer::new("let f(n) = { let n = 0; }"))
             .parse()
-            .expect("source is valid");
+            .0;
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 
@@ -590,7 +589,7 @@ mod tests {
             "let f(n) = { let m = 0; let p = 0; let p = n + m; let q = p; }",
         ))
         .parse()
-        .expect("source is valid");
+        .0;
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 
@@ -678,7 +677,7 @@ mod tests {
             }"#,
         ))
         .parse()
-        .expect("source is valid");
+        .0;
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 
@@ -769,7 +768,7 @@ mod tests {
             "let x() = { while true { let a = 42; a; } let b = 42; }",
         ))
         .parse()
-        .expect("source is valid");
+        .0;
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 

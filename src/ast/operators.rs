@@ -31,6 +31,23 @@ pub enum BinaryOperatorKind {
     Subtraction,
 }
 
+impl BinaryOperatorKind {
+    pub fn precedence(&self) -> Precedence {
+        match self {
+            BinaryOperatorKind::Addition => Precedence::Sum,
+            BinaryOperatorKind::Division => Precedence::Product,
+            BinaryOperatorKind::Equality => Precedence::Comparison,
+            BinaryOperatorKind::GreaterThan => Precedence::Comparison,
+            BinaryOperatorKind::GreaterThanOrEqualTo => Precedence::Comparison,
+            BinaryOperatorKind::Multiplication => Precedence::Product,
+            BinaryOperatorKind::NonEquality => Precedence::Comparison,
+            BinaryOperatorKind::SmallerThan => Precedence::Comparison,
+            BinaryOperatorKind::SmallerThanOrEqualTo => Precedence::Comparison,
+            BinaryOperatorKind::Subtraction => Precedence::Sum,
+        }
+    }
+}
+
 impl Display for BinaryOperatorKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -46,6 +63,16 @@ impl Display for BinaryOperatorKind {
             BinaryOperatorKind::Subtraction => write!(f, "-"),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
+// do not reorder!
+pub enum Precedence {
+    Lowest,
+    Comparison,
+    Sum,
+    Product,
+    Prefix,
 }
 
 #[derive(Debug, Clone, PartialEq)]

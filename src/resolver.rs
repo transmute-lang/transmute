@@ -21,17 +21,13 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    pub fn resolve_symbols(mut self) -> Result<Ast, Diagnostics> {
+    pub fn resolve_symbols(mut self) -> (Ast, Diagnostics) {
         #[allow(clippy::unnecessary_to_owned)]
         for stmt in self.ast.statements().to_vec() {
             self.visit_statement(stmt);
         }
 
-        if self.diagnostics.is_empty() {
-            Ok(self.ast)
-        } else {
-            Err(self.diagnostics)
-        }
+        (self.ast, self.diagnostics)
     }
 }
 
@@ -44,6 +40,7 @@ impl<'a> Resolver<'a> {
             None => self.diagnostics.report_err(
                 format!("'{}' not in scope", self.ast.identifier(ident),),
                 ident_ref.ident().span().clone(),
+                (file!(), line!()),
             ),
             Some(symbol) => {
                 let mut ident_ref = ident_ref.clone();
@@ -120,6 +117,9 @@ impl<'a> Visitor<()> for Resolver<'a> {
                     self.visit_statement(stmt);
                 }
             }
+            ExpressionKind::Dummy => {
+                // nothing to do
+            }
         }
     }
 
@@ -138,14 +138,12 @@ mod tests {
 
     #[test]
     fn resolve_ref_to_parameter() {
-        let mut ast = Parser::new(Lexer::new("let x(n) = { n; }"))
-            .parse()
-            .expect("source is valid");
+        let mut ast = Parser::new(Lexer::new("let x(n) = { n; }")).parse().0;
         let symbol_table = SymbolTableGen::new(&mut ast).build_table();
 
-        let ast = Resolver::new(ast, &symbol_table)
-            .resolve_symbols()
-            .expect("no errors");
+        let (ast, diagnostics) = Resolver::new(ast, &symbol_table).resolve_symbols();
+
+        assert!(diagnostics.is_empty());
 
         let symbol = ast
             .identifier_ref(ast.identifier_ref_id(13))
@@ -163,12 +161,12 @@ mod tests {
     fn resolve_ref_to_let() {
         let mut ast = Parser::new(Lexer::new("let x() = { let n = 0; n; }"))
             .parse()
-            .expect("source is valid");
+            .0;
         let symbol_table = SymbolTableGen::new(&mut ast).build_table();
 
-        let ast = Resolver::new(ast, &symbol_table)
-            .resolve_symbols()
-            .expect("no errors");
+        let (ast, diagnostics) = Resolver::new(ast, &symbol_table).resolve_symbols();
+
+        assert!(diagnostics.is_empty());
 
         let symbol = ast
             .identifier_ref(ast.identifier_ref_id(23))
@@ -186,12 +184,12 @@ mod tests {
     fn resolve_ref_to_parameter_nested() {
         let mut ast = Parser::new(Lexer::new("let x(n) = { while true { ret n; } }"))
             .parse()
-            .expect("source is valid");
+            .0;
         let symbol_table = SymbolTableGen::new(&mut ast).build_table();
 
-        let ast = Resolver::new(ast, &symbol_table)
-            .resolve_symbols()
-            .expect("no errors");
+        let (ast, diagnostics) = Resolver::new(ast, &symbol_table).resolve_symbols();
+
+        assert!(diagnostics.is_empty());
 
         let symbol = ast
             .identifier_ref(ast.identifier_ref_id(30))
@@ -207,17 +205,13 @@ mod tests {
 
     #[test]
     fn resolve_missing_def() {
-        let mut ast = Parser::new(Lexer::new("let x() = { n; }"))
-            .parse()
-            .expect("source is valid");
+        let mut ast = Parser::new(Lexer::new("let x() = { n; }")).parse().0;
         let symbol_table = SymbolTableGen::new(&mut ast).build_table();
 
-        let actual = Resolver::new(ast, &symbol_table)
-            .resolve_symbols()
-            .expect_err("errors expected");
+        let (_, actual) = Resolver::new(ast, &symbol_table).resolve_symbols();
 
         let mut expected = Diagnostics::default();
-        expected.report_err("'n' not in scope", Span::new(1, 13, 12, 1));
+        expected.report_err("'n' not in scope", Span::new(1, 13, 12, 1), (file!(), 43));
 
         assert_eq!(actual, expected);
     }

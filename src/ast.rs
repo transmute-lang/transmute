@@ -43,7 +43,6 @@ impl Ast {
         statements: Vec<Statement>,
         root: Vec<StmtId>,
     ) -> Self {
-        assert!(!root.is_empty());
         Self {
             identifiers,
             identifier_refs,
@@ -304,6 +303,9 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
             ExpressionKind::Block(_) => {
                 todo!("implement block expressions")
             }
+            ExpressionKind::Dummy => {
+                write!(f, "<<missing expression>>",)
+            }
         }
     }
 }
@@ -332,7 +334,7 @@ mod tests {
     "#,
         ))
         .parse()
-        .expect("source is valid");
+        .0;
 
         let actual = format!(
             "{}",

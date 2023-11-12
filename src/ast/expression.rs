@@ -29,6 +29,10 @@ impl Expression {
         &self.kind
     }
 
+    pub fn set_span(&mut self, span: Span) {
+        self.span = span;
+    }
+
     pub fn span(&self) -> &Span {
         &self.span
     }
@@ -54,4 +58,7 @@ pub enum ExpressionKind {
     While(ExprId, ExprId),
     // todo: should it be it's own struct and use it like While(ExprId, Block)?
     Block(Vec<StmtId>),
+    /// A dummy expression kind, inserted by the parser when the expression could not be parsed
+    // todo probably remove...
+    Dummy,
 }
