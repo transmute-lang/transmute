@@ -56,7 +56,7 @@ impl Ast {
         &self.root
     }
 
-    pub fn identifier(&self, id: IdentId) -> &String {
+    pub fn identifier(&self, id: IdentId) -> &str {
         &self.identifiers[id.id()]
     }
 

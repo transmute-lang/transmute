@@ -1,0 +1,17 @@
+---
+source: src/xml.rs
+expression: "&xml"
+---
+<?xml version="1.0" encoding="utf-8"?>
+<ast>
+  <stmt id="stmt:0" line="1" column="1" start="0" len="7">
+    <binary operator="+" line="1" column="1" start="0" len="6">
+      <left>
+        <number line="1" column="1" start="0" len="2">40</number>
+      </left>
+      <right>
+        <number line="1" column="6" start="5" len="1">2</number>
+      </right>
+    </binary>
+  </stmt>
+</ast>

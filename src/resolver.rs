@@ -94,8 +94,8 @@ impl<'a> Visitor<()> for Resolver<'a> {
                 self.visit_expression(*left);
                 self.visit_expression(right);
             }
-            ExpressionKind::FunctionCall(_, exprs) =>
-            {
+            ExpressionKind::FunctionCall(_, exprs) => {
+                // todo find ident node
                 #[allow(clippy::unnecessary_to_owned)]
                 for expr in exprs.to_vec() {
                     self.visit_expression(expr)

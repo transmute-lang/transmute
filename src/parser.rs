@@ -405,6 +405,7 @@ impl<'s> Parser<'s> {
                     TokenKind::OpenParenthesis => self.parse_function_call(identifier).id(),
                     // ident '= ...
                     TokenKind::Equal => {
+                        self.lexer.next();
                         let expression = self.parse_expression();
                         let span = identifier.span().extend_to(expression.span());
                         let expression = expression.id();

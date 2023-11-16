@@ -1,0 +1,38 @@
+---
+source: src/xml.rs
+expression: "&xml"
+---
+<?xml version="1.0" encoding="utf-8"?>
+<ast>
+  <stmt id="stmt:4" line="1" column="1" start="0" len="48">
+    <if>
+      <condition>
+        <bool line="1" column="4" start="3" len="4">true</bool>
+      </condition>
+      <true line="1" column="9" start="8" len="7">
+        <stmt id="stmt:0" line="1" column="11" start="10" len="3">
+          <number line="1" column="11" start="10" len="2">42</number>
+        </stmt>
+      </true>
+      <false line="1" column="9" start="8" len="7">
+        <stmt id="stmt:3" line="1" column="22" start="21" len="27">
+          <if>
+            <condition>
+              <bool line="1" column="25" start="24" len="5">false</bool>
+            </condition>
+            <true line="1" column="31" start="30" len="6">
+              <stmt id="stmt:1" line="1" column="33" start="32" len="2">
+                <number line="1" column="33" start="32" len="1">0</number>
+              </stmt>
+            </true>
+            <false line="1" column="31" start="30" len="6">
+              <stmt id="stmt:2" line="1" column="45" start="44" len="2">
+                <number line="1" column="45" start="44" len="1">1</number>
+              </stmt>
+            </false>
+          </if>
+        </stmt>
+      </false>
+    </if>
+  </stmt>
+</ast>

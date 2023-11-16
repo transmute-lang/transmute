@@ -7,6 +7,9 @@ use crate::lexer::Lexer;
 use crate::parser::Parser;
 use crate::resolver::Resolver;
 use crate::symbol_table::SymbolTableGen;
+use crate::xml::XmlWriter;
+use std::fs::File;
+use std::io::Write;
 
 mod ast;
 mod error;
@@ -15,6 +18,7 @@ mod lexer;
 mod parser;
 mod resolver;
 mod symbol_table;
+mod xml;
 
 fn main() {
     let (ast, mut diagnostics) = Parser::new(Lexer::new(
@@ -32,7 +36,7 @@ fn main() {
 
     print!(
         "Parsed AST:\n{}",
-        AstNodePrettyPrint::new(&ast, *ast.statements().last().unwrap())
+        AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
     );
     println!();
     print!("Errors:\n{}", diagnostics);

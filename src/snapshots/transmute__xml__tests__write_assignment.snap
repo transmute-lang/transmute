@@ -1,0 +1,23 @@
+---
+source: src/xml.rs
+expression: "&xml"
+---
+<?xml version="1.0" encoding="utf-8"?>
+<ast>
+  <stmt id="stmt:0" line="1" column="1" start="0" len="10">
+    <let>
+      <identifier id="ident:0" line="1" column="5" start="4" len="1">n</identifier>
+      <expression line="1" column="9" start="8" len="1">
+        <number line="1" column="9" start="8" len="1">0</number>
+      </expression>
+    </let>
+  </stmt>
+  <stmt id="stmt:1" line="1" column="12" start="11" len="7">
+    <assign ident-ref="ident:0" target-id="stmt:0">
+      <identifier>n</identifier>
+      <expression>
+        <number line="1" column="16" start="15" len="2">42</number>
+      </expression>
+    </assign>
+  </stmt>
+</ast>
