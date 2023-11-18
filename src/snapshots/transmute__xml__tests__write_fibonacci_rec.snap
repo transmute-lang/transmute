@@ -35,7 +35,7 @@ expression: "&xml"
         <stmt id="stmt:2" line="6" column="17" start="115" len="20">
           <binary operator="+" line="6" column="17" start="115" len="19">
             <left>
-              <call ident-ref="ident:0" name="f" target-id="">
+              <call ident-ref="ident:0" name="f" target-id="stmt:3">
                 <parameters>
                   <parameter>
                     <binary operator="-" line="6" column="19" start="117" len="5">
@@ -51,7 +51,7 @@ expression: "&xml"
               </call>
             </left>
             <right>
-              <call ident-ref="ident:0" name="f" target-id="">
+              <call ident-ref="ident:0" name="f" target-id="stmt:3">
                 <parameters>
                   <parameter>
                     <binary operator="-" line="6" column="30" start="128" len="5">

@@ -94,12 +94,15 @@ impl<'a> Visitor<()> for Resolver<'a> {
                 self.visit_expression(*left);
                 self.visit_expression(right);
             }
-            ExpressionKind::FunctionCall(_, exprs) => {
-                // todo find ident node
+            ExpressionKind::FunctionCall(ident, exprs) => {
+                let ident = *ident;
+
                 #[allow(clippy::unnecessary_to_owned)]
                 for expr in exprs.to_vec() {
                     self.visit_expression(expr)
                 }
+
+                self.resolve(ident, scope);
             }
             ExpressionKind::Unary(_, expr) => {
                 self.visit_expression(*expr);
@@ -175,6 +178,29 @@ mod tests {
         match symbol_table.symbol(symbol).node() {
             Node::LetStatement(stmt) => {
                 assert_eq!(ast.statement(*stmt).span(), &Span::new(1, 13, 12, 10));
+            }
+            _ => panic!("expected let statement node kind"),
+        }
+    }
+
+    #[test]
+    fn resolve_ref_to_let_fn() {
+        let mut ast = Parser::new(Lexer::new("let x() = { } x();"))
+            .parse()
+            .0;
+        let symbol_table = SymbolTableGen::new(&mut ast).build_table();
+
+        let (ast, diagnostics) = Resolver::new(ast, &symbol_table).resolve_symbols();
+
+        assert!(diagnostics.is_empty());
+
+        let symbol = ast
+            .identifier_ref(ast.identifier_ref_id(14))
+            .symbol_id()
+            .expect("symbol 'x' is resolved");
+        match symbol_table.symbol(symbol).node() {
+            Node::LetFnStatement(stmt) => {
+                assert_eq!(ast.statement(*stmt).span(), &Span::new(1, 1, 0, 13));
             }
             _ => panic!("expected let statement node kind"),
         }
