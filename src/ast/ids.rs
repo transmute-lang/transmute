@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 
 macro_rules! make_id {
     ($name:ident) => {
-        #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+        #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
         pub struct $name {
             id: usize,
         }

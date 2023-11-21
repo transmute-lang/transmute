@@ -7,12 +7,10 @@ use crate::lexer::Lexer;
 use crate::parser::Parser;
 use crate::resolver::Resolver;
 use crate::symbol_table::SymbolTableGen;
-use crate::xml::XmlWriter;
-use std::fs::File;
-use std::io::Write;
 
 mod ast;
 mod error;
+mod exit_points;
 mod interpreter;
 mod lexer;
 mod parser;
