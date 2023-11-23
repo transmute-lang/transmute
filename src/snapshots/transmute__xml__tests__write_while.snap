@@ -5,15 +5,25 @@ expression: "&xml"
 <?xml version="1.0" encoding="utf-8"?>
 <ast>
   <stmt id="stmt:1" line="1" column="1" start="0" len="18">
-    <while>
-      <condition line="1" column="7" start="6" len="4">
-        <bool line="1" column="7" start="6" len="4">true</bool>
-      </condition>
-      <body line="1" column="12" start="11" len="7">
-        <stmt id="stmt:0" line="1" column="14" start="13" len="3">
-          <number line="1" column="14" start="13" len="2">42</number>
-        </stmt>
-      </body>
-    </while>
+    <expr id="expr:3" line="1" column="1" start="0" len="18">
+      <while>
+        <condition line="1" column="7" start="6" len="4">
+          <expr id="expr:0" line="1" column="7" start="6" len="4">
+            <bool line="1" column="7" start="6" len="4">true</bool>
+          </expr>
+        </condition>
+        <body>
+          <expr id="expr:2" line="1" column="12" start="11" len="7">
+            <block>
+              <stmt id="stmt:0" line="1" column="14" start="13" len="3">
+                <expr id="expr:1" line="1" column="14" start="13" len="2">
+                  <number line="1" column="14" start="13" len="2">42</number>
+                </expr>
+              </stmt>
+            </block>
+          </expr>
+        </body>
+      </while>
+    </expr>
   </stmt>
 </ast>

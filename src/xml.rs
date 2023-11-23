@@ -7,6 +7,14 @@ use crate::symbol_table::{Node, SymbolTable};
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
 
+#[cfg(test)]
+pub fn eprint_ast(ast: Ast) -> Ast {
+    let mut ast = ast;
+    let table = crate::symbol_table::SymbolTableGen::new(&mut ast).build_table();
+    eprintln!("{}", XmlWriter::new(&ast, &table).serialize());
+    ast
+}
+
 pub struct XmlWriter<'a> {
     ast: &'a Ast,
     table: &'a SymbolTable,
@@ -40,7 +48,7 @@ impl<'a> XmlWriter<'a> {
 }
 
 impl<'a> Visitor<()> for XmlWriter<'a> {
-    fn visit_statement(&mut self, stmt: StmtId) -> () {
+    fn visit_statement(&mut self, stmt: StmtId) {
         let stmt = self.ast.statement(stmt);
         let id = stmt.id().to_string();
 
@@ -67,7 +75,7 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
 
                 self.write(
                     XmlEvent::start_element("identifier")
-                        .attr("id", &format!("ident:{}", ident.id()))
+                        .attr("id", &format!("ident:{}", ident.id())) // todo correct?
                         .attr("line", &ident.span().line().to_string())
                         .attr("column", &ident.span().column().to_string())
                         .attr("start", &ident.span().start().to_string())
@@ -149,8 +157,18 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
         self.write(XmlEvent::end_element());
     }
 
-    fn visit_expression(&mut self, expr: ExprId) -> () {
+    fn visit_expression(&mut self, expr: ExprId) {
         let expr = self.ast.expression(expr);
+
+        self.write(
+            XmlEvent::start_element("expr")
+                .attr("id", &format!("expr:{}", expr.id()))
+                .attr("line", &expr.span().line().to_string())
+                .attr("column", &expr.span().column().to_string())
+                .attr("start", &expr.span().start().to_string())
+                .attr("len", &expr.span().len().to_string()),
+        );
+
         match expr.kind() {
             ExpressionKind::Assignment(ident_ref, expr) => {
                 let ident_ref = self.ast.identifier_ref(*ident_ref);
@@ -197,25 +215,13 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                 self.write(XmlEvent::end_element());
 
                 let true_branch = self.ast.expression(*true_branch);
-                self.write(
-                    XmlEvent::start_element("true")
-                        .attr("line", &true_branch.span().line().to_string())
-                        .attr("column", &true_branch.span().column().to_string())
-                        .attr("start", &true_branch.span().start().to_string())
-                        .attr("len", &true_branch.span().len().to_string()),
-                );
+                self.write(XmlEvent::start_element("true"));
                 self.visit_expression(true_branch.id());
                 self.write(XmlEvent::end_element());
 
                 if let Some(false_branch) = false_branch {
                     let false_branch = self.ast.expression(*false_branch);
-                    self.write(
-                        XmlEvent::start_element("false")
-                            .attr("line", &true_branch.span().line().to_string())
-                            .attr("column", &true_branch.span().column().to_string())
-                            .attr("start", &true_branch.span().start().to_string())
-                            .attr("len", &true_branch.span().len().to_string()),
-                    );
+                    self.write(XmlEvent::start_element("false"));
                     self.visit_expression(false_branch.id());
                     self.write(XmlEvent::end_element());
                 }
@@ -359,30 +365,29 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                 self.write(XmlEvent::end_element());
 
                 let expr = self.ast.expression(*expr);
-                self.write(
-                    XmlEvent::start_element("body")
-                        .attr("line", &expr.span().line().to_string())
-                        .attr("column", &expr.span().column().to_string())
-                        .attr("start", &expr.span().start().to_string())
-                        .attr("len", &expr.span().len().to_string()),
-                );
+                self.write(XmlEvent::start_element("body"));
                 self.visit_expression(expr.id());
                 self.write(XmlEvent::end_element());
 
                 self.write(XmlEvent::end_element());
             }
-            ExpressionKind::Block(stmts) =>
-            {
+            ExpressionKind::Block(stmts) => {
+                self.write(XmlEvent::start_element("block"));
+
                 #[allow(clippy::unnecessary_to_owned)]
                 for stmt in stmts.to_vec() {
                     self.visit_statement(stmt);
                 }
+
+                self.write(XmlEvent::end_element());
             }
             ExpressionKind::Dummy => {}
         }
+
+        self.write(XmlEvent::end_element());
     }
 
-    fn visit_literal(&mut self, _literal: &Literal) -> () {
+    fn visit_literal(&mut self, _literal: &Literal) {
         unimplemented!();
     }
 }

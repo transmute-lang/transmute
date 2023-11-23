@@ -11,63 +11,99 @@ expression: "&xml"
         <parameter id="ident:1" line="2" column="19" start="19" len="1">n</parameter>
       </parameters>
       <body line="2" column="24" start="24" len="125">
-        <stmt id="stmt:1" line="3" column="17" start="42" len="56">
-          <if>
-            <condition>
-              <binary operator="&lt;=" line="3" column="20" start="45" len="6">
-                <left>
-                  <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
-                </left>
-                <right>
-                  <number line="3" column="25" start="50" len="1">1</number>
-                </right>
-              </binary>
-            </condition>
-            <true line="3" column="27" start="52" len="46">
-              <stmt id="stmt:0" line="4" column="21" start="74" len="6">
-                <ret line="4" column="21" start="74" len="6">
-                  <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
-                </ret>
-              </stmt>
-            </true>
-          </if>
-        </stmt>
-        <stmt id="stmt:2" line="6" column="17" start="115" len="20">
-          <binary operator="+" line="6" column="17" start="115" len="19">
-            <left>
-              <call ident-ref="ident:0" name="f" target-id="stmt:3">
-                <parameters>
-                  <parameter>
-                    <binary operator="-" line="6" column="19" start="117" len="5">
-                      <left>
-                        <identifier-ref id="ident-ref:2" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
-                      </left>
-                      <right>
-                        <number line="6" column="23" start="121" len="1">1</number>
-                      </right>
-                    </binary>
-                  </parameter>
-                </parameters>
-              </call>
-            </left>
-            <right>
-              <call ident-ref="ident:0" name="f" target-id="stmt:3">
-                <parameters>
-                  <parameter>
-                    <binary operator="-" line="6" column="30" start="128" len="5">
-                      <left>
-                        <identifier-ref id="ident-ref:4" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
-                      </left>
-                      <right>
-                        <number line="6" column="34" start="132" len="1">2</number>
-                      </right>
-                    </binary>
-                  </parameter>
-                </parameters>
-              </call>
-            </right>
-          </binary>
-        </stmt>
+        <expr id="expr:15" line="2" column="24" start="24" len="125">
+          <block>
+            <stmt id="stmt:1" line="3" column="17" start="42" len="56">
+              <expr id="expr:5" line="3" column="17" start="42" len="56">
+                <if>
+                  <condition>
+                    <expr id="expr:2" line="3" column="20" start="45" len="6">
+                      <binary operator="&lt;=" line="3" column="20" start="45" len="6">
+                        <left>
+                          <expr id="expr:0" line="3" column="20" start="45" len="1">
+                            <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
+                          </expr>
+                        </left>
+                        <right>
+                          <expr id="expr:1" line="3" column="25" start="50" len="1">
+                            <number line="3" column="25" start="50" len="1">1</number>
+                          </expr>
+                        </right>
+                      </binary>
+                    </expr>
+                  </condition>
+                  <true>
+                    <expr id="expr:4" line="3" column="27" start="52" len="46">
+                      <block>
+                        <stmt id="stmt:0" line="4" column="21" start="74" len="6">
+                          <ret line="4" column="21" start="74" len="6">
+                            <expr id="expr:3" line="4" column="25" start="78" len="1">
+                              <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
+                            </expr>
+                          </ret>
+                        </stmt>
+                      </block>
+                    </expr>
+                  </true>
+                </if>
+              </expr>
+            </stmt>
+            <stmt id="stmt:2" line="6" column="17" start="115" len="20">
+              <expr id="expr:14" line="6" column="17" start="115" len="19">
+                <binary operator="+" line="6" column="17" start="115" len="19">
+                  <left>
+                    <expr id="expr:9" line="6" column="17" start="115" len="8">
+                      <call ident-ref="ident:0" name="f" target-id="stmt:3">
+                        <parameters>
+                          <parameter>
+                            <expr id="expr:8" line="6" column="19" start="117" len="5">
+                              <binary operator="-" line="6" column="19" start="117" len="5">
+                                <left>
+                                  <expr id="expr:6" line="6" column="19" start="117" len="1">
+                                    <identifier-ref id="ident-ref:2" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
+                                  </expr>
+                                </left>
+                                <right>
+                                  <expr id="expr:7" line="6" column="23" start="121" len="1">
+                                    <number line="6" column="23" start="121" len="1">1</number>
+                                  </expr>
+                                </right>
+                              </binary>
+                            </expr>
+                          </parameter>
+                        </parameters>
+                      </call>
+                    </expr>
+                  </left>
+                  <right>
+                    <expr id="expr:13" line="6" column="28" start="126" len="8">
+                      <call ident-ref="ident:0" name="f" target-id="stmt:3">
+                        <parameters>
+                          <parameter>
+                            <expr id="expr:12" line="6" column="30" start="128" len="5">
+                              <binary operator="-" line="6" column="30" start="128" len="5">
+                                <left>
+                                  <expr id="expr:10" line="6" column="30" start="128" len="1">
+                                    <identifier-ref id="ident-ref:4" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
+                                  </expr>
+                                </left>
+                                <right>
+                                  <expr id="expr:11" line="6" column="34" start="132" len="1">
+                                    <number line="6" column="34" start="132" len="1">2</number>
+                                  </expr>
+                                </right>
+                              </binary>
+                            </expr>
+                          </parameter>
+                        </parameters>
+                      </call>
+                    </expr>
+                  </right>
+                </binary>
+              </expr>
+            </stmt>
+          </block>
+        </expr>
       </body>
     </fn>
   </stmt>

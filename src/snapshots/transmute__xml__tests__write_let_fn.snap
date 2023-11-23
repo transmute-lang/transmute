@@ -11,16 +11,26 @@ expression: "&xml"
         <parameter id="ident:1" line="1" column="7" start="6" len="1">n</parameter>
       </parameters>
       <body line="1" column="12" start="11" len="6">
-        <stmt id="stmt:0" line="1" column="12" start="11" len="6">
-          <binary operator="*" line="1" column="12" start="11" len="5">
-            <left>
-              <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
-            </left>
-            <right>
-              <number line="1" column="16" start="15" len="1">2</number>
-            </right>
-          </binary>
-        </stmt>
+        <expr id="expr:3" line="1" column="12" start="11" len="6">
+          <block>
+            <stmt id="stmt:0" line="1" column="12" start="11" len="6">
+              <expr id="expr:2" line="1" column="12" start="11" len="5">
+                <binary operator="*" line="1" column="12" start="11" len="5">
+                  <left>
+                    <expr id="expr:0" line="1" column="12" start="11" len="1">
+                      <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
+                    </expr>
+                  </left>
+                  <right>
+                    <expr id="expr:1" line="1" column="16" start="15" len="1">
+                      <number line="1" column="16" start="15" len="1">2</number>
+                    </expr>
+                  </right>
+                </binary>
+              </expr>
+            </stmt>
+          </block>
+        </expr>
       </body>
     </fn>
   </stmt>

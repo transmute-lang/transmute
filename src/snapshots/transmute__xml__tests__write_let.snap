@@ -8,7 +8,9 @@ expression: "&xml"
     <let>
       <identifier id="ident:0" line="1" column="5" start="4" len="5">ident</identifier>
       <expression line="1" column="13" start="12" len="2">
-        <number line="1" column="13" start="12" len="2">42</number>
+        <expr id="expr:0" line="1" column="13" start="12" len="2">
+          <number line="1" column="13" start="12" len="2">42</number>
+        </expr>
       </expression>
     </let>
   </stmt>

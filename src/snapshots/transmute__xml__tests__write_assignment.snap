@@ -8,16 +8,22 @@ expression: "&xml"
     <let>
       <identifier id="ident:0" line="1" column="5" start="4" len="1">n</identifier>
       <expression line="1" column="9" start="8" len="1">
-        <number line="1" column="9" start="8" len="1">0</number>
+        <expr id="expr:0" line="1" column="9" start="8" len="1">
+          <number line="1" column="9" start="8" len="1">0</number>
+        </expr>
       </expression>
     </let>
   </stmt>
   <stmt id="stmt:1" line="1" column="12" start="11" len="7">
-    <assign ident-ref="ident:0" target-id="stmt:0">
-      <identifier>n</identifier>
-      <expression>
-        <number line="1" column="16" start="15" len="2">42</number>
-      </expression>
-    </assign>
+    <expr id="expr:2" line="1" column="12" start="11" len="6">
+      <assign ident-ref="ident:0" target-id="stmt:0">
+        <identifier>n</identifier>
+        <expression>
+          <expr id="expr:1" line="1" column="16" start="15" len="2">
+            <number line="1" column="16" start="15" len="2">42</number>
+          </expr>
+        </expression>
+      </assign>
+    </expr>
   </stmt>
 </ast>

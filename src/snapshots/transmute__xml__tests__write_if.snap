@@ -5,34 +5,64 @@ expression: "&xml"
 <?xml version="1.0" encoding="utf-8"?>
 <ast>
   <stmt id="stmt:4" line="1" column="1" start="0" len="48">
-    <if>
-      <condition>
-        <bool line="1" column="4" start="3" len="4">true</bool>
-      </condition>
-      <true line="1" column="9" start="8" len="7">
-        <stmt id="stmt:0" line="1" column="11" start="10" len="3">
-          <number line="1" column="11" start="10" len="2">42</number>
-        </stmt>
-      </true>
-      <false line="1" column="9" start="8" len="7">
-        <stmt id="stmt:3" line="1" column="22" start="21" len="27">
-          <if>
-            <condition>
-              <bool line="1" column="25" start="24" len="5">false</bool>
-            </condition>
-            <true line="1" column="31" start="30" len="6">
-              <stmt id="stmt:1" line="1" column="33" start="32" len="2">
-                <number line="1" column="33" start="32" len="1">0</number>
+    <expr id="expr:10" line="1" column="1" start="0" len="48">
+      <if>
+        <condition>
+          <expr id="expr:0" line="1" column="4" start="3" len="4">
+            <bool line="1" column="4" start="3" len="4">true</bool>
+          </expr>
+        </condition>
+        <true>
+          <expr id="expr:2" line="1" column="9" start="8" len="7">
+            <block>
+              <stmt id="stmt:0" line="1" column="11" start="10" len="3">
+                <expr id="expr:1" line="1" column="11" start="10" len="2">
+                  <number line="1" column="11" start="10" len="2">42</number>
+                </expr>
               </stmt>
-            </true>
-            <false line="1" column="31" start="30" len="6">
-              <stmt id="stmt:2" line="1" column="45" start="44" len="2">
-                <number line="1" column="45" start="44" len="1">1</number>
+            </block>
+          </expr>
+        </true>
+        <false>
+          <expr id="expr:9" line="1" column="22" start="21" len="27">
+            <block>
+              <stmt id="stmt:3" line="1" column="22" start="21" len="27">
+                <expr id="expr:8" line="1" column="22" start="21" len="27">
+                  <if>
+                    <condition>
+                      <expr id="expr:3" line="1" column="25" start="24" len="5">
+                        <bool line="1" column="25" start="24" len="5">false</bool>
+                      </expr>
+                    </condition>
+                    <true>
+                      <expr id="expr:5" line="1" column="31" start="30" len="6">
+                        <block>
+                          <stmt id="stmt:1" line="1" column="33" start="32" len="2">
+                            <expr id="expr:4" line="1" column="33" start="32" len="1">
+                              <number line="1" column="33" start="32" len="1">0</number>
+                            </expr>
+                          </stmt>
+                        </block>
+                      </expr>
+                    </true>
+                    <false>
+                      <expr id="expr:7" line="1" column="43" start="42" len="6">
+                        <block>
+                          <stmt id="stmt:2" line="1" column="45" start="44" len="2">
+                            <expr id="expr:6" line="1" column="45" start="44" len="1">
+                              <number line="1" column="45" start="44" len="1">1</number>
+                            </expr>
+                          </stmt>
+                        </block>
+                      </expr>
+                    </false>
+                  </if>
+                </expr>
               </stmt>
-            </false>
-          </if>
-        </stmt>
-      </false>
-    </if>
+            </block>
+          </expr>
+        </false>
+      </if>
+    </expr>
   </stmt>
 </ast>

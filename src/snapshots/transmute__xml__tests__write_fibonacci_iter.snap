@@ -11,137 +11,213 @@ expression: "&xml"
         <parameter id="ident:1" line="2" column="19" start="19" len="1">n</parameter>
       </parameters>
       <body line="2" column="24" start="24" len="416">
-        <stmt id="stmt:1" line="3" column="17" start="42" len="20">
-          <if>
-            <condition>
-              <binary operator="==" line="3" column="20" start="45" len="6">
-                <left>
-                  <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
-                </left>
-                <right>
-                  <number line="3" column="25" start="50" len="1">0</number>
-                </right>
-              </binary>
-            </condition>
-            <true line="3" column="27" start="52" len="10">
-              <stmt id="stmt:0" line="3" column="29" start="54" len="6">
-                <ret line="3" column="29" start="54" len="6">
-                  <number line="3" column="33" start="58" len="1">0</number>
-                </ret>
-              </stmt>
-            </true>
-          </if>
-        </stmt>
-        <stmt id="stmt:3" line="4" column="17" start="79" len="20">
-          <if>
-            <condition>
-              <binary operator="==" line="4" column="20" start="82" len="6">
-                <left>
-                  <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
-                </left>
-                <right>
-                  <number line="4" column="25" start="87" len="1">1</number>
-                </right>
-              </binary>
-            </condition>
-            <true line="4" column="27" start="89" len="10">
-              <stmt id="stmt:2" line="4" column="29" start="91" len="6">
-                <ret line="4" column="29" start="91" len="6">
-                  <number line="4" column="33" start="95" len="1">1</number>
-                </ret>
-              </stmt>
-            </true>
-          </if>
-        </stmt>
-        <stmt id="stmt:4" line="6" column="17" start="117" len="18">
-          <let>
-            <identifier id="ident:2" line="6" column="21" start="121" len="9">prev_prev</identifier>
-            <expression line="6" column="33" start="133" len="1">
-              <number line="6" column="33" start="133" len="1">0</number>
-            </expression>
-          </let>
-        </stmt>
-        <stmt id="stmt:5" line="7" column="17" start="152" len="13">
-          <let>
-            <identifier id="ident:3" line="7" column="21" start="156" len="4">prev</identifier>
-            <expression line="7" column="28" start="163" len="1">
-              <number line="7" column="28" start="163" len="1">1</number>
-            </expression>
-          </let>
-        </stmt>
-        <stmt id="stmt:6" line="8" column="17" start="182" len="16">
-          <let>
-            <identifier id="ident:4" line="8" column="21" start="186" len="7">current</identifier>
-            <expression line="8" column="31" start="196" len="1">
-              <number line="8" column="31" start="196" len="1">0</number>
-            </expression>
-          </let>
-        </stmt>
-        <stmt id="stmt:11" line="10" column="17" start="216" len="184">
-          <while>
-            <condition line="10" column="23" start="222" len="5">
-              <binary operator="&gt;" line="10" column="23" start="222" len="5">
-                <left>
-                  <identifier-ref id="ident-ref:2" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
-                </left>
-                <right>
-                  <number line="10" column="27" start="226" len="1">1</number>
-                </right>
-              </binary>
-            </condition>
-            <body line="10" column="29" start="228" len="172">
-              <stmt id="stmt:7" line="11" column="21" start="250" len="27">
-                <assign ident-ref="ident:4" target-id="stmt:6">
-                  <identifier>current</identifier>
-                  <expression>
-                    <binary operator="+" line="11" column="31" start="260" len="16">
-                      <left>
-                        <identifier-ref id="ident-ref:3" ident-ref="ident:2" target-id="stmt:4">prev_prev</identifier-ref>
-                      </left>
-                      <right>
-                        <identifier-ref id="ident-ref:4" ident-ref="ident:3" target-id="stmt:5">prev</identifier-ref>
-                      </right>
-                    </binary>
-                  </expression>
-                </assign>
-              </stmt>
-              <stmt id="stmt:8" line="12" column="21" start="298" len="17">
-                <assign ident-ref="ident:2" target-id="stmt:4">
-                  <identifier>prev_prev</identifier>
-                  <expression>
-                    <identifier-ref id="ident-ref:6" ident-ref="ident:3" target-id="stmt:5">prev</identifier-ref>
-                  </expression>
-                </assign>
-              </stmt>
-              <stmt id="stmt:9" line="13" column="21" start="336" len="15">
-                <assign ident-ref="ident:3" target-id="stmt:5">
-                  <identifier>prev</identifier>
-                  <expression>
-                    <identifier-ref id="ident-ref:8" ident-ref="ident:4" target-id="stmt:6">current</identifier-ref>
-                  </expression>
-                </assign>
-              </stmt>
-              <stmt id="stmt:10" line="14" column="21" start="372" len="10">
-                <assign ident-ref="ident:1" target-id="ident:1">
-                  <identifier>n</identifier>
-                  <expression>
-                    <binary operator="-" line="14" column="25" start="376" len="5">
-                      <left>
-                        <identifier-ref id="ident-ref:10" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
-                      </left>
-                      <right>
-                        <number line="14" column="29" start="380" len="1">1</number>
-                      </right>
-                    </binary>
-                  </expression>
-                </assign>
-              </stmt>
-            </body>
-          </while>
-        </stmt>
-        <stmt id="stmt:12" line="17" column="17" start="418" len="8">
-          <identifier-ref id="ident-ref:12" ident-ref="ident:4" target-id="stmt:6">current</identifier-ref>
-        </stmt>
+        <expr id="expr:33" line="2" column="24" start="24" len="416">
+          <block>
+            <stmt id="stmt:1" line="3" column="17" start="42" len="20">
+              <expr id="expr:5" line="3" column="17" start="42" len="20">
+                <if>
+                  <condition>
+                    <expr id="expr:2" line="3" column="20" start="45" len="6">
+                      <binary operator="==" line="3" column="20" start="45" len="6">
+                        <left>
+                          <expr id="expr:0" line="3" column="20" start="45" len="1">
+                            <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
+                          </expr>
+                        </left>
+                        <right>
+                          <expr id="expr:1" line="3" column="25" start="50" len="1">
+                            <number line="3" column="25" start="50" len="1">0</number>
+                          </expr>
+                        </right>
+                      </binary>
+                    </expr>
+                  </condition>
+                  <true>
+                    <expr id="expr:4" line="3" column="27" start="52" len="10">
+                      <block>
+                        <stmt id="stmt:0" line="3" column="29" start="54" len="6">
+                          <ret line="3" column="29" start="54" len="6">
+                            <expr id="expr:3" line="3" column="33" start="58" len="1">
+                              <number line="3" column="33" start="58" len="1">0</number>
+                            </expr>
+                          </ret>
+                        </stmt>
+                      </block>
+                    </expr>
+                  </true>
+                </if>
+              </expr>
+            </stmt>
+            <stmt id="stmt:3" line="4" column="17" start="79" len="20">
+              <expr id="expr:11" line="4" column="17" start="79" len="20">
+                <if>
+                  <condition>
+                    <expr id="expr:8" line="4" column="20" start="82" len="6">
+                      <binary operator="==" line="4" column="20" start="82" len="6">
+                        <left>
+                          <expr id="expr:6" line="4" column="20" start="82" len="1">
+                            <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
+                          </expr>
+                        </left>
+                        <right>
+                          <expr id="expr:7" line="4" column="25" start="87" len="1">
+                            <number line="4" column="25" start="87" len="1">1</number>
+                          </expr>
+                        </right>
+                      </binary>
+                    </expr>
+                  </condition>
+                  <true>
+                    <expr id="expr:10" line="4" column="27" start="89" len="10">
+                      <block>
+                        <stmt id="stmt:2" line="4" column="29" start="91" len="6">
+                          <ret line="4" column="29" start="91" len="6">
+                            <expr id="expr:9" line="4" column="33" start="95" len="1">
+                              <number line="4" column="33" start="95" len="1">1</number>
+                            </expr>
+                          </ret>
+                        </stmt>
+                      </block>
+                    </expr>
+                  </true>
+                </if>
+              </expr>
+            </stmt>
+            <stmt id="stmt:4" line="6" column="17" start="117" len="18">
+              <let>
+                <identifier id="ident:2" line="6" column="21" start="121" len="9">prev_prev</identifier>
+                <expression line="6" column="33" start="133" len="1">
+                  <expr id="expr:12" line="6" column="33" start="133" len="1">
+                    <number line="6" column="33" start="133" len="1">0</number>
+                  </expr>
+                </expression>
+              </let>
+            </stmt>
+            <stmt id="stmt:5" line="7" column="17" start="152" len="13">
+              <let>
+                <identifier id="ident:3" line="7" column="21" start="156" len="4">prev</identifier>
+                <expression line="7" column="28" start="163" len="1">
+                  <expr id="expr:13" line="7" column="28" start="163" len="1">
+                    <number line="7" column="28" start="163" len="1">1</number>
+                  </expr>
+                </expression>
+              </let>
+            </stmt>
+            <stmt id="stmt:6" line="8" column="17" start="182" len="16">
+              <let>
+                <identifier id="ident:4" line="8" column="21" start="186" len="7">current</identifier>
+                <expression line="8" column="31" start="196" len="1">
+                  <expr id="expr:14" line="8" column="31" start="196" len="1">
+                    <number line="8" column="31" start="196" len="1">0</number>
+                  </expr>
+                </expression>
+              </let>
+            </stmt>
+            <stmt id="stmt:11" line="10" column="17" start="216" len="184">
+              <expr id="expr:31" line="10" column="17" start="216" len="184">
+                <while>
+                  <condition line="10" column="23" start="222" len="5">
+                    <expr id="expr:17" line="10" column="23" start="222" len="5">
+                      <binary operator="&gt;" line="10" column="23" start="222" len="5">
+                        <left>
+                          <expr id="expr:15" line="10" column="23" start="222" len="1">
+                            <identifier-ref id="ident-ref:2" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
+                          </expr>
+                        </left>
+                        <right>
+                          <expr id="expr:16" line="10" column="27" start="226" len="1">
+                            <number line="10" column="27" start="226" len="1">1</number>
+                          </expr>
+                        </right>
+                      </binary>
+                    </expr>
+                  </condition>
+                  <body>
+                    <expr id="expr:30" line="10" column="29" start="228" len="172">
+                      <block>
+                        <stmt id="stmt:7" line="11" column="21" start="250" len="27">
+                          <expr id="expr:21" line="11" column="21" start="250" len="26">
+                            <assign ident-ref="ident:4" target-id="stmt:6">
+                              <identifier>current</identifier>
+                              <expression>
+                                <expr id="expr:20" line="11" column="31" start="260" len="16">
+                                  <binary operator="+" line="11" column="31" start="260" len="16">
+                                    <left>
+                                      <expr id="expr:18" line="11" column="31" start="260" len="9">
+                                        <identifier-ref id="ident-ref:3" ident-ref="ident:2" target-id="stmt:4">prev_prev</identifier-ref>
+                                      </expr>
+                                    </left>
+                                    <right>
+                                      <expr id="expr:19" line="11" column="43" start="272" len="4">
+                                        <identifier-ref id="ident-ref:4" ident-ref="ident:3" target-id="stmt:5">prev</identifier-ref>
+                                      </expr>
+                                    </right>
+                                  </binary>
+                                </expr>
+                              </expression>
+                            </assign>
+                          </expr>
+                        </stmt>
+                        <stmt id="stmt:8" line="12" column="21" start="298" len="17">
+                          <expr id="expr:23" line="12" column="21" start="298" len="16">
+                            <assign ident-ref="ident:2" target-id="stmt:4">
+                              <identifier>prev_prev</identifier>
+                              <expression>
+                                <expr id="expr:22" line="12" column="33" start="310" len="4">
+                                  <identifier-ref id="ident-ref:6" ident-ref="ident:3" target-id="stmt:5">prev</identifier-ref>
+                                </expr>
+                              </expression>
+                            </assign>
+                          </expr>
+                        </stmt>
+                        <stmt id="stmt:9" line="13" column="21" start="336" len="15">
+                          <expr id="expr:25" line="13" column="21" start="336" len="14">
+                            <assign ident-ref="ident:3" target-id="stmt:5">
+                              <identifier>prev</identifier>
+                              <expression>
+                                <expr id="expr:24" line="13" column="28" start="343" len="7">
+                                  <identifier-ref id="ident-ref:8" ident-ref="ident:4" target-id="stmt:6">current</identifier-ref>
+                                </expr>
+                              </expression>
+                            </assign>
+                          </expr>
+                        </stmt>
+                        <stmt id="stmt:10" line="14" column="21" start="372" len="10">
+                          <expr id="expr:29" line="14" column="21" start="372" len="9">
+                            <assign ident-ref="ident:1" target-id="ident:1">
+                              <identifier>n</identifier>
+                              <expression>
+                                <expr id="expr:28" line="14" column="25" start="376" len="5">
+                                  <binary operator="-" line="14" column="25" start="376" len="5">
+                                    <left>
+                                      <expr id="expr:26" line="14" column="25" start="376" len="1">
+                                        <identifier-ref id="ident-ref:10" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
+                                      </expr>
+                                    </left>
+                                    <right>
+                                      <expr id="expr:27" line="14" column="29" start="380" len="1">
+                                        <number line="14" column="29" start="380" len="1">1</number>
+                                      </expr>
+                                    </right>
+                                  </binary>
+                                </expr>
+                              </expression>
+                            </assign>
+                          </expr>
+                        </stmt>
+                      </block>
+                    </expr>
+                  </body>
+                </while>
+              </expr>
+            </stmt>
+            <stmt id="stmt:12" line="17" column="17" start="418" len="8">
+              <expr id="expr:32" line="17" column="17" start="418" len="7">
+                <identifier-ref id="ident-ref:12" ident-ref="ident:4" target-id="stmt:6">current</identifier-ref>
+              </expr>
+            </stmt>
+          </block>
+        </expr>
       </body>
     </fn>
   </stmt>

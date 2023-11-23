@@ -6,7 +6,9 @@ expression: "&xml"
 <ast>
   <stmt id="stmt:0" line="1" column="1" start="0" len="7">
     <ret line="1" column="1" start="0" len="7">
-      <number line="1" column="5" start="4" len="2">42</number>
+      <expr id="expr:0" line="1" column="5" start="4" len="2">
+        <number line="1" column="5" start="4" len="2">42</number>
+      </expr>
     </ret>
   </stmt>
 </ast>
