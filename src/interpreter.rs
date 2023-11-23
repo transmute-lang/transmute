@@ -1,9 +1,8 @@
 use crate::ast::expression::ExpressionKind;
-use crate::ast::identifier::Identifier;
 use crate::ast::ids::{ExprId, IdentId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
-use crate::ast::statement::{Statement, StatementKind};
+use crate::ast::statement::{Parameter, Statement, StatementKind};
 use crate::ast::{Ast, Visitor};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -12,7 +11,7 @@ pub struct Interpreter<'a> {
     ast: &'a Ast,
     // todo merge functions and variables (needs ValueKind)
     // todo IdentId should be SymbolId
-    functions: HashMap<IdentId, (&'a Vec<Identifier>, &'a Vec<StmtId>)>,
+    functions: HashMap<IdentId, (&'a Vec<Parameter>, &'a Vec<StmtId>)>,
     // todo IdentId should be SymbolId
     variables: Vec<HashMap<IdentId, Value>>,
 }
@@ -44,7 +43,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                     .insert(ident.id(), val);
                 Value::Void
             }
-            StatementKind::LetFn(ident, params, expr) => {
+            StatementKind::LetFn(ident, params, _, expr) => {
                 match self.ast.expression(*expr).kind() {
                     ExpressionKind::Block(statements) => {
                         self.functions.insert(ident.id(), (params, statements))
@@ -120,7 +119,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                 let env = parameters
                     .iter()
                     .zip(arguments.iter())
-                    .map(|(ident, expr)| (ident.id(), self.visit_expression(*expr)))
+                    .map(|(param, expr)| (param.identifier().id(), self.visit_expression(*expr)))
                     .collect::<HashMap<IdentId, Value>>();
 
                 self.variables.push(env);
@@ -342,10 +341,10 @@ mod tests {
     eval!(division, "85 / 2;" => Number(42));
     eval!(let_stmt, "let forty_two = 42;" => Void);
     eval!(let_stmt_then_expression, "let forty = 2 * 20; forty + 2;" => Number(42));
-    eval!(function, "let times_two(v) = v * 2;" => Void);
-    eval!(function_call, "let times_two(v) = v * 2; times_two(21);" => Number(42));
-    eval!(complex_function_call, "let plus_one_times_two(v) = { let res = v + 1; res * 2; } plus_one_times_two(20);" => Number(42));
-    eval!(ret_function_call, "let times_two(v) = { 41; ret v * 2; 42; } times_two(21);" => Number(42));
+    eval!(function, "let times_two(v: number) = v * 2;" => Void);
+    eval!(function_call, "let times_two(v: number) = v * 2; times_two(21);" => Number(42));
+    eval!(complex_function_call, "let plus_one_times_two(v: number) = { let res = v + 1; res * 2; } plus_one_times_two(20);" => Number(42));
+    eval!(ret_function_call, "let times_two(v: number) = { 41; ret v * 2; 42; } times_two(21);" => Number(42));
     eval!(bool_true, "true;" => Boolean(true));
     eval!(bool_false, "false;" => Boolean(false));
     eval!(equality_numbers_eq_true, "42 == 42;" => Boolean(true));
@@ -366,7 +365,7 @@ mod tests {
     eval!(equality_bool_neq1, "true == false;" => Boolean(false));
     eval!(equality_bool_neq2, "false == true;" => Boolean(false));
     eval!(fibonacci_rec, r#"
-        let f(n) = {
+        let f(n: number) = {
             if n <= 1 {
                 ret n;
             }
@@ -375,7 +374,7 @@ mod tests {
         f(9) + 8;
     "# => Number(42));
     eval!(fibonacci_iter, r#"
-        let f(n) = {
+        let f(n: number) = {
             if n == 0 { ret 0; }
             if n == 1 { ret 1; }
 
@@ -395,7 +394,7 @@ mod tests {
         f(9) + 8;
     "# => Number(42));
     eval!(wtf, r#"
-        let wtf(i, j) = {
+        let wtf(i: number, j: number) = {
             ret if i > j {
                 i + j;
             } else if i < 10 {
@@ -412,7 +411,7 @@ mod tests {
         seven * tree + twenty_one;
     "# => Number(42));
     eval!(fact, r#"
-        let fact(n) = {
+        let fact(n: number) = {
             let product = 1;
             while n > 0 {
                 product = product * n;

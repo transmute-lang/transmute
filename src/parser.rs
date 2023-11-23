@@ -5,7 +5,7 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{
     BinaryOperator, BinaryOperatorKind, Precedence, UnaryOperator, UnaryOperatorKind,
 };
-use crate::ast::statement::{Statement, StatementKind};
+use crate::ast::statement::{Parameter, Statement, StatementKind};
 use crate::ast::Ast;
 use crate::error::Diagnostics;
 use crate::lexer::{Lexer, PeekableLexer, Span, Token, TokenKind};
@@ -170,6 +170,7 @@ impl<'s> Parser<'s> {
         if token.kind() == &TokenKind::Eof {
             return None;
         }
+        // todo allow empty statement
 
         match token.kind() {
             TokenKind::Let => {
@@ -276,11 +277,11 @@ impl<'s> Parser<'s> {
 
     /// Parses the following:
     /// ```
-    /// let ident '( expr , ... ) = expr ;
-    /// let ident '( expr , ... ) = { expr ; ... } ;
+    /// let ident '( param , ... ): type = expr ;
+    /// let ident '( param , ... ): type = { expr ; ... } ;
     /// ```
     fn parse_function(&mut self, span: &Span, identifier: Identifier) -> Option<&Statement> {
-        // let name '( expr , ... ) = expr ;
+        // let name '( param , ... ): type = expr ;
         let open_parenthesis_token = self.lexer.next();
         assert_eq!(open_parenthesis_token.kind(), &TokenKind::OpenParenthesis);
 
@@ -300,10 +301,30 @@ impl<'s> Parser<'s> {
                 }
                 TokenKind::Identifier if next == TokenKind::Identifier => {
                     // self.expected.clear();
-                    parameters.push(Identifier::new(
-                        self.push_identifier(token.span()),
-                        token.span().clone(),
-                    ));
+                    let ident =
+                        Identifier::new(self.push_identifier(token.span()), token.span().clone());
+
+                    let colon = self.lexer.next();
+                    let mut error = false;
+                    if colon.kind() != &TokenKind::Colon {
+                        report_and_insert_missing_token!(self, colon, TokenKind::Colon);
+                        error = true;
+                        self.lexer.push_next(colon);
+                    }
+
+                    let ty = self.lexer.next();
+                    if ty.kind() != &TokenKind::Identifier {
+                        if !error {
+                            report_unexpected_token!(self, ty, [TokenKind::Identifier,]);
+                        }
+                        self.lexer.push_next(ty);
+                        next = TokenKind::Comma;
+                        continue;
+                    }
+                    let ty = Identifier::new(self.push_identifier(ty.span()), ty.span().clone());
+
+                    let span = ident.span().extend_to(ty.span());
+                    parameters.push(Parameter::new(ident, ty, span));
                     next = TokenKind::Comma;
                 }
                 TokenKind::Eof => {
@@ -328,7 +349,24 @@ impl<'s> Parser<'s> {
             }
         }
 
-        // let name ( expr , ... ) '= expr ;
+        let colon = self.lexer.next();
+        let ty = if colon.kind() == &TokenKind::Colon {
+            let ty = self.lexer.next();
+            if ty.kind() == &TokenKind::Identifier {
+                Some(Identifier::new(
+                    self.push_identifier(ty.span()),
+                    ty.span().clone(),
+                ))
+            } else {
+                self.lexer.push_next(ty);
+                None
+            }
+        } else {
+            self.lexer.push_next(colon);
+            None
+        };
+
+        // let name ( param , ... ): type '= expr ;
         let token = self.lexer.next();
         if token.kind() != &TokenKind::Equal {
             report_and_insert_missing_token!(self, token, TokenKind::Equal);
@@ -336,7 +374,7 @@ impl<'s> Parser<'s> {
         }
 
         let (expr_id, end_span) = if self.lexer.peek().kind() == &TokenKind::OpenCurlyBracket {
-            // let name ( expr , ... ) = '{ expr ; ... }
+            // let name ( param , ... ): type = '{ expr ; ... }
             let open_curly_bracket = self.lexer.next();
 
             let (statements, statements_span) = self.parse_statements(open_curly_bracket.span());
@@ -349,7 +387,7 @@ impl<'s> Parser<'s> {
                 statements_span,
             )
         } else {
-            // let name ( expr , ... ) = 'expr ;
+            // let name ( param , ... ): type = 'expr ;
             let expression = self.parse_expression();
             let expr_id = expression.id();
             let expr_span = expression.span().clone();
@@ -366,7 +404,7 @@ impl<'s> Parser<'s> {
         };
 
         let id = self.push_statement(
-            StatementKind::LetFn(identifier, parameters, expr_id),
+            StatementKind::LetFn(identifier, parameters, ty, expr_id),
             span.extend_to(&end_span),
         );
 
@@ -1343,17 +1381,21 @@ mod tests {
 
     #[test]
     fn function_statement() {
-        let parser = Parser::new(Lexer::new("let times_two(a) = a * 2;"));
+        let parser = Parser::new(Lexer::new("let times_two(a: number) = a * 2;"));
 
         let (actual, diagnostics) = parser.parse();
 
         assert!(diagnostics.is_empty());
 
-        let identifiers = vec!["times_two".to_string(), "a".to_string()];
+        let identifiers = vec![
+            "times_two".to_string(),
+            "a".to_string(),
+            "number".to_string(),
+        ];
 
         let identifier_refs = vec![IdentifierRef::new(
             IdentRefId::from(0),
-            Identifier::new(IdentId::from(1), Span::new(1, 20, 19, 1)),
+            Identifier::new(IdentId::from(1), Span::new(1, 28, 27, 1)),
         )];
 
         let expressions = vec![
@@ -1361,17 +1403,17 @@ mod tests {
                 ExprId::from(0),
                 ExpressionKind::Literal(Literal::new(
                     LiteralKind::Identifier(IdentRefId::from(0)),
-                    Span::new(1, 20, 19, 1),
+                    Span::new(1, 28, 27, 1),
                 )),
-                Span::new(1, 20, 19, 1),
+                Span::new(1, 28, 27, 1),
             ),
             Expression::new(
                 ExprId::from(1),
                 ExpressionKind::Literal(Literal::new(
                     LiteralKind::Number(2),
-                    Span::new(1, 24, 23, 1),
+                    Span::new(1, 32, 31, 1),
                 )),
-                Span::new(1, 24, 23, 1),
+                Span::new(1, 32, 31, 1),
             ),
             Expression::new(
                 ExprId::from(2),
@@ -1379,16 +1421,16 @@ mod tests {
                     ExprId::from(0),
                     BinaryOperator::new(
                         BinaryOperatorKind::Multiplication,
-                        Span::new(1, 22, 21, 1),
+                        Span::new(1, 30, 29, 1),
                     ),
                     ExprId::from(1),
                 ),
-                Span::new(1, 20, 19, 5),
+                Span::new(1, 28, 27, 5),
             ),
             Expression::new(
                 ExprId::from(3),
                 ExpressionKind::Block(vec![StmtId::from(0)]),
-                Span::new(1, 20, 19, 6),
+                Span::new(1, 28, 27, 6),
             ),
         ];
 
@@ -1396,16 +1438,109 @@ mod tests {
             Statement::new(
                 StmtId::from(0),
                 StatementKind::Expression(ExprId::from(2)),
-                Span::new(1, 20, 19, 6),
+                Span::new(1, 28, 27, 6),
             ),
             Statement::new(
                 StmtId::from(1),
                 StatementKind::LetFn(
                     Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 9)),
-                    vec![Identifier::new(IdentId::from(1), Span::new(1, 15, 14, 1))],
+                    vec![Parameter::new(
+                        Identifier::new(IdentId::from(1), Span::new(1, 15, 14, 1)),
+                        Identifier::new(IdentId::from(2), Span::new(1, 18, 17, 6)),
+                        Span::new(1, 15, 14, 9),
+                    )],
+                    None,
                     ExprId::from(3),
                 ),
-                Span::new(1, 1, 0, 25),
+                Span::new(1, 1, 0, 33),
+            ),
+        ];
+
+        let expected = Ast::new(
+            identifiers,
+            identifier_refs,
+            expressions,
+            statements,
+            vec![StmtId::from(1)],
+        );
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn function_statement_with_return_type() {
+        let parser = Parser::new(Lexer::new("let times_two(a: number): number = a * 2;"));
+
+        let (actual, diagnostics) = parser.parse();
+
+        assert!(diagnostics.is_empty());
+
+        let identifiers = vec![
+            "times_two".to_string(),
+            "a".to_string(),
+            "number".to_string(),
+        ];
+
+        let identifier_refs = vec![IdentifierRef::new(
+            IdentRefId::from(0),
+            Identifier::new(IdentId::from(1), Span::new(1, 36, 35, 1)),
+        )];
+
+        let expressions = vec![
+            Expression::new(
+                ExprId::from(0),
+                ExpressionKind::Literal(Literal::new(
+                    LiteralKind::Identifier(IdentRefId::from(0)),
+                    Span::new(1, 36, 35, 1),
+                )),
+                Span::new(1, 36, 35, 1),
+            ),
+            Expression::new(
+                ExprId::from(1),
+                ExpressionKind::Literal(Literal::new(
+                    LiteralKind::Number(2),
+                    Span::new(1, 40, 39, 1),
+                )),
+                Span::new(1, 40, 39, 1),
+            ),
+            Expression::new(
+                ExprId::from(2),
+                ExpressionKind::Binary(
+                    ExprId::from(0),
+                    BinaryOperator::new(
+                        BinaryOperatorKind::Multiplication,
+                        Span::new(1, 38, 37, 1),
+                    ),
+                    ExprId::from(1),
+                ),
+                Span::new(1, 36, 35, 5),
+            ),
+            Expression::new(
+                ExprId::from(3),
+                ExpressionKind::Block(vec![StmtId::from(0)]),
+                Span::new(1, 36, 35, 6),
+            ),
+        ];
+
+        let statements = vec![
+            Statement::new(
+                StmtId::from(0),
+                StatementKind::Expression(ExprId::from(2)),
+                Span::new(1, 36, 35, 6),
+            ),
+            Statement::new(
+                StmtId::from(1),
+                StatementKind::LetFn(
+                    Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 9)),
+                    vec![Parameter::new(
+                        Identifier::new(IdentId::from(1), Span::new(1, 15, 14, 1)),
+                        Identifier::new(IdentId::from(2), Span::new(1, 18, 17, 6)),
+                        Span::new(1, 15, 14, 9),
+                    )],
+                    Some(Identifier::new(IdentId::from(2), Span::new(1, 27, 26, 6))),
+                    ExprId::from(3),
+                ),
+                Span::new(1, 1, 0, 41),
             ),
         ];
 
@@ -1422,17 +1557,21 @@ mod tests {
 
     #[test]
     fn function_statements() {
-        let parser = Parser::new(Lexer::new("let times_two(a) = { a * 2; }"));
+        let parser = Parser::new(Lexer::new("let times_two(a: number) = { a * 2; }"));
 
         let (actual, diagnostics) = parser.parse();
 
         assert!(diagnostics.is_empty());
 
-        let identifiers = vec!["times_two".to_string(), "a".to_string()];
+        let identifiers = vec![
+            "times_two".to_string(),
+            "a".to_string(),
+            "number".to_string(),
+        ];
 
         let identifier_refs = vec![IdentifierRef::new(
             IdentRefId::from(0),
-            Identifier::new(IdentId::from(1), Span::new(1, 22, 21, 1)),
+            Identifier::new(IdentId::from(1), Span::new(1, 30, 29, 1)),
         )];
 
         let expressions = vec![
@@ -1440,17 +1579,17 @@ mod tests {
                 ExprId::from(0),
                 ExpressionKind::Literal(Literal::new(
                     LiteralKind::Identifier(IdentRefId::from(0)),
-                    Span::new(1, 22, 21, 1),
+                    Span::new(1, 30, 29, 1),
                 )),
-                Span::new(1, 22, 21, 1),
+                Span::new(1, 30, 29, 1),
             ),
             Expression::new(
                 ExprId::from(1),
                 ExpressionKind::Literal(Literal::new(
                     LiteralKind::Number(2),
-                    Span::new(1, 26, 25, 1),
+                    Span::new(1, 34, 33, 1),
                 )),
-                Span::new(1, 26, 25, 1),
+                Span::new(1, 34, 33, 1),
             ),
             Expression::new(
                 ExprId::from(2),
@@ -1458,16 +1597,16 @@ mod tests {
                     ExprId::from(0),
                     BinaryOperator::new(
                         BinaryOperatorKind::Multiplication,
-                        Span::new(1, 24, 23, 1),
+                        Span::new(1, 32, 31, 1),
                     ),
                     ExprId::from(1),
                 ),
-                Span::new(1, 22, 21, 5),
+                Span::new(1, 30, 29, 5),
             ),
             Expression::new(
                 ExprId::from(3),
                 ExpressionKind::Block(vec![StmtId::from(0)]),
-                Span::new(1, 20, 19, 10),
+                Span::new(1, 28, 27, 10),
             ),
         ];
 
@@ -1475,16 +1614,21 @@ mod tests {
             Statement::new(
                 StmtId::from(0),
                 StatementKind::Expression(ExprId::from(2)),
-                Span::new(1, 22, 21, 6),
+                Span::new(1, 30, 29, 6),
             ),
             Statement::new(
                 StmtId::from(1),
                 StatementKind::LetFn(
                     Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 9)),
-                    vec![Identifier::new(IdentId::from(1), Span::new(1, 15, 14, 1))],
+                    vec![Parameter::new(
+                        Identifier::new(IdentId::from(1), Span::new(1, 15, 14, 1)),
+                        Identifier::new(IdentId::from(2), Span::new(1, 18, 17, 6)),
+                        Span::new(1, 15, 14, 9),
+                    )],
+                    None,
                     ExprId::from(3),
                 ),
-                Span::new(1, 1, 0, 29),
+                Span::new(1, 1, 0, 37),
             ),
         ];
 
@@ -2214,27 +2358,42 @@ mod tests {
     #[test]
     fn err_let_fn_params_unwanted_comma() {
         let (actual_ast, actual_diagnostics) =
-            Parser::new(Lexer::new("let x(,n,,m,) = { }")).parse();
+            Parser::new(Lexer::new("let x(,n:i,,m:j,) = { }")).parse();
 
         let expected_ast = Ast::new(
-            vec!["x".to_string(), "n".to_string(), "m".to_string()],
+            vec![
+                "x".to_string(),
+                "n".to_string(),
+                "i".to_string(),
+                "m".to_string(),
+                "j".to_string(),
+            ],
             vec![],
             vec![Expression::new(
                 ExprId::from(0),
                 ExpressionKind::Block(vec![]),
-                Span::new(1, 17, 16, 3),
+                Span::new(1, 21, 20, 3),
             )],
             vec![Statement::new(
                 StmtId::from(0),
                 StatementKind::LetFn(
                     Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 1)),
                     vec![
-                        Identifier::new(IdentId::from(1), Span::new(1, 8, 7, 1)),
-                        Identifier::new(IdentId::from(2), Span::new(1, 11, 10, 1)),
+                        Parameter::new(
+                            Identifier::new(IdentId::from(1), Span::new(1, 8, 7, 1)),
+                            Identifier::new(IdentId::from(2), Span::new(1, 10, 9, 1)),
+                            Span::new(1, 8, 7, 3),
+                        ),
+                        Parameter::new(
+                            Identifier::new(IdentId::from(3), Span::new(1, 13, 12, 1)),
+                            Identifier::new(IdentId::from(4), Span::new(1, 15, 14, 1)),
+                            Span::new(1, 13, 12, 3),
+                        ),
                     ],
+                    None,
                     ExprId::from(0),
                 ),
-                Span::new(1, 1, 0, 19),
+                Span::new(1, 1, 0, 23),
             )],
             vec![StmtId::from(0)],
         );
@@ -2254,7 +2413,7 @@ mod tests {
             ),
             (
                 "Unexpected `,`, expected one of identifier, `)`",
-                Span::new(1, 10, 9, 1),
+                Span::new(1, 12, 11, 1),
                 Level::Error,
             ),
         ];
@@ -2279,6 +2438,7 @@ mod tests {
                 StatementKind::LetFn(
                     Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 1)),
                     vec![],
+                    None,
                     ExprId::from(0),
                 ),
                 Span::new(1, 1, 0, 15),
@@ -2298,6 +2458,131 @@ mod tests {
             Span::new(1, 7, 6, 2),
             Level::Error,
         )];
+
+        assert_eq!(actual_diagnostics, expected_diagnostics);
+    }
+
+    #[test]
+    fn err_let_fn_params_missing_colon_before_type() {
+        let (actual_ast, actual_diagnostics) =
+            Parser::new(Lexer::new("let f(n integer) = { }")).parse();
+
+        let expected_ast = Ast::new(
+            vec!["f".to_string(), "n".to_string(), "integer".to_string()],
+            vec![],
+            vec![Expression::new(
+                ExprId::from(0),
+                ExpressionKind::Block(vec![]),
+                Span::new(1, 20, 19, 3),
+            )],
+            vec![Statement::new(
+                StmtId::from(0),
+                StatementKind::LetFn(
+                    Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 1)),
+                    vec![Parameter::new(
+                        Identifier::new(IdentId::from(1), Span::new(1, 7, 6, 1)),
+                        Identifier::new(IdentId::from(2), Span::new(1, 9, 8, 7)),
+                        Span::new(1, 7, 6, 9),
+                    )],
+                    None,
+                    ExprId::from(0),
+                ),
+                Span::new(1, 1, 0, 22),
+            )],
+            vec![StmtId::from(0)],
+        );
+
+        assert_eq!(actual_ast, expected_ast);
+
+        let actual_diagnostics = actual_diagnostics
+            .iter()
+            .map(|d| (d.message(), d.span().clone(), d.level()))
+            .collect::<Vec<(&str, Span, Level)>>();
+
+        let expected_diagnostics = vec![(
+            "Expected `:`, got identifier",
+            Span::new(1, 8, 8, 7),
+            Level::Error,
+        )];
+
+        assert_eq!(actual_diagnostics, expected_diagnostics);
+    }
+
+    #[test]
+    fn err_let_fn_params_missing_type() {
+        let (actual_ast, actual_diagnostics) = Parser::new(Lexer::new("let f(n:) = { }")).parse();
+
+        let expected_ast = Ast::new(
+            vec!["f".to_string(), "n".to_string()],
+            vec![],
+            vec![Expression::new(
+                ExprId::from(0),
+                ExpressionKind::Block(vec![]),
+                Span::new(1, 13, 12, 3),
+            )],
+            vec![Statement::new(
+                StmtId::from(0),
+                StatementKind::LetFn(
+                    Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 1)),
+                    vec![],
+                    None,
+                    ExprId::from(0),
+                ),
+                Span::new(1, 1, 0, 15),
+            )],
+            vec![StmtId::from(0)],
+        );
+
+        assert_eq!(actual_ast, expected_ast);
+
+        let actual_diagnostics = actual_diagnostics
+            .iter()
+            .map(|d| (d.message(), d.span().clone(), d.level()))
+            .collect::<Vec<(&str, Span, Level)>>();
+
+        let expected_diagnostics = vec![(
+            "Unexpected `)`, expected one of identifier",
+            Span::new(1, 9, 8, 1),
+            Level::Error,
+        )];
+
+        assert_eq!(actual_diagnostics, expected_diagnostics);
+    }
+
+    #[test]
+    fn err_let_fn_params_missing_colon_and_type() {
+        let (actual_ast, actual_diagnostics) = Parser::new(Lexer::new("let f(n) = { }")).parse();
+
+        let expected_ast = Ast::new(
+            vec!["f".to_string(), "n".to_string()],
+            vec![],
+            vec![Expression::new(
+                ExprId::from(0),
+                ExpressionKind::Block(vec![]),
+                Span::new(1, 12, 11, 3),
+            )],
+            vec![Statement::new(
+                StmtId::from(0),
+                StatementKind::LetFn(
+                    Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 1)),
+                    vec![],
+                    None,
+                    ExprId::from(0),
+                ),
+                Span::new(1, 1, 0, 14),
+            )],
+            vec![StmtId::from(0)],
+        );
+
+        assert_eq!(actual_ast, expected_ast);
+
+        let actual_diagnostics = actual_diagnostics
+            .iter()
+            .map(|d| (d.message(), d.span().clone(), d.level()))
+            .collect::<Vec<(&str, Span, Level)>>();
+
+        let expected_diagnostics =
+            vec![("Expected `:`, got `)`", Span::new(1, 8, 7, 1), Level::Error)];
 
         assert_eq!(actual_diagnostics, expected_diagnostics);
     }
@@ -2341,6 +2626,7 @@ mod tests {
                 StatementKind::LetFn(
                     Identifier::new(IdentId::from(0), Span::new(1, 5, 4, 1)),
                     vec![],
+                    None,
                     ExprId::from(0),
                 ),
                 Span::new(1, 1, 0, 11),

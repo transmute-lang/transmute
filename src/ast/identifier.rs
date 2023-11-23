@@ -27,6 +27,7 @@ pub struct IdentifierRef {
     id: IdentRefId,
     ident: Identifier,
     /// The referenced symbol id
+    // todo could a Node instead (or as well if we want to keep SymbolId)
     symbol_id: Option<SymbolId>,
 }
 

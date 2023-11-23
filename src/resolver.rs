@@ -58,7 +58,7 @@ impl<'a> Visitor<()> for Resolver<'a> {
             StatementKind::Expression(expr)
             | StatementKind::Let(_, expr)
             | StatementKind::Ret(expr)
-            | StatementKind::LetFn(_, _, expr) => self.visit_expression(*expr),
+            | StatementKind::LetFn(_, _, _, expr) => self.visit_expression(*expr),
         }
     }
 
@@ -141,7 +141,9 @@ mod tests {
 
     #[test]
     fn resolve_ref_to_parameter() {
-        let mut ast = Parser::new(Lexer::new("let x(n) = { n; }")).parse().0;
+        let mut ast = Parser::new(Lexer::new("let x(n: number) = { n; }"))
+            .parse()
+            .0;
         let symbol_table = SymbolTableGen::new(&mut ast).build_table();
 
         let (ast, diagnostics) = Resolver::new(ast, &symbol_table).resolve_symbols();
@@ -149,12 +151,12 @@ mod tests {
         assert!(diagnostics.is_empty());
 
         let symbol = ast
-            .identifier_ref(ast.identifier_ref_id(13))
+            .identifier_ref(ast.identifier_ref_id(21))
             .symbol_id()
             .expect("symbol 'n' is resolved");
         match symbol_table.symbol(symbol).node() {
             Node::Parameter(ident) => {
-                assert_eq!(ident.span(), &Span::new(1, 7, 6, 1));
+                assert_eq!(ident.span(), &Span::new(1, 7, 6, 9));
             }
             _ => panic!("expected parameter node kind"),
         }
@@ -185,9 +187,7 @@ mod tests {
 
     #[test]
     fn resolve_ref_to_let_fn() {
-        let mut ast = Parser::new(Lexer::new("let x() = { } x();"))
-            .parse()
-            .0;
+        let mut ast = Parser::new(Lexer::new("let x() = { } x();")).parse().0;
         let symbol_table = SymbolTableGen::new(&mut ast).build_table();
 
         let (ast, diagnostics) = Resolver::new(ast, &symbol_table).resolve_symbols();
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn resolve_ref_to_parameter_nested() {
-        let mut ast = Parser::new(Lexer::new("let x(n) = { while true { ret n; } }"))
+        let mut ast = Parser::new(Lexer::new("let x(n: number) = { while true { ret n; } }"))
             .parse()
             .0;
         let symbol_table = SymbolTableGen::new(&mut ast).build_table();
@@ -218,12 +218,12 @@ mod tests {
         assert!(diagnostics.is_empty());
 
         let symbol = ast
-            .identifier_ref(ast.identifier_ref_id(30))
+            .identifier_ref(ast.identifier_ref_id(38))
             .symbol_id()
             .expect("symbol 'n' is resolved");
         match symbol_table.symbol(symbol).node() {
             Node::Parameter(ident) => {
-                assert_eq!(ident.span(), &Span::new(1, 7, 6, 1));
+                assert_eq!(ident.span(), &Span::new(1, 7, 6, 9));
             }
             _ => panic!("expected parameter node kind"),
         }

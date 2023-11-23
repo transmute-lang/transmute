@@ -109,7 +109,7 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                 self.visit_expression(*expr);
                 self.write(XmlEvent::end_element());
             }
-            StatementKind::LetFn(ident, params, expr) => {
+            StatementKind::LetFn(ident, params, ty, expr) => {
                 self.write(XmlEvent::start_element("fn"));
 
                 self.write(
@@ -123,18 +123,53 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                 self.write(XmlEvent::characters(self.ast.identifier(ident.id())));
                 self.write(XmlEvent::end_element());
 
+                if let Some(ty) = ty {
+                    self.write(
+                        XmlEvent::start_element("type")
+                            .attr("id", &format!("ident:{}", ty.id()))
+                            .attr("line", &ty.span().line().to_string())
+                            .attr("column", &ty.span().column().to_string())
+                            .attr("start", &ty.span().start().to_string())
+                            .attr("len", &ty.span().len().to_string()),
+                    );
+                    self.write(XmlEvent::characters(self.ast.identifier(ty.id())));
+                    self.write(XmlEvent::end_element());
+                }
+
                 self.write(XmlEvent::start_element("parameters"));
                 for param in params {
-                    // let param = self.ast.identifier(param.id())
                     self.write(
                         XmlEvent::start_element("parameter")
-                            .attr("id", &format!("ident:{}", param.id()))
                             .attr("line", &param.span().line().to_string())
                             .attr("column", &param.span().column().to_string())
                             .attr("start", &param.span().start().to_string())
                             .attr("len", &param.span().len().to_string()),
                     );
-                    self.write(XmlEvent::characters(self.ast.identifier(param.id())));
+
+                    self.write(
+                        XmlEvent::start_element("name")
+                            .attr("id", &format!("ident:{}", param.identifier().id()))
+                            .attr("line", &param.identifier().span().line().to_string())
+                            .attr("column", &param.identifier().span().column().to_string())
+                            .attr("start", &param.identifier().span().start().to_string())
+                            .attr("len", &param.identifier().span().len().to_string()),
+                    );
+                    self.write(XmlEvent::characters(
+                        self.ast.identifier(param.identifier().id()),
+                    ));
+                    self.write(XmlEvent::end_element());
+
+                    self.write(
+                        XmlEvent::start_element("type")
+                            .attr("id", &format!("ident:{}", param.ty().id()))
+                            .attr("line", &param.ty().span().line().to_string())
+                            .attr("column", &param.ty().span().column().to_string())
+                            .attr("start", &param.ty().span().start().to_string())
+                            .attr("len", &param.ty().span().len().to_string()),
+                    );
+                    self.write(XmlEvent::characters(self.ast.identifier(param.ty().id())));
+                    self.write(XmlEvent::end_element());
+
                     self.write(XmlEvent::end_element());
                 }
                 self.write(XmlEvent::end_element());
@@ -183,8 +218,8 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                         Node::LetFnStatement(stmt) => {
                             format!("stmt:{stmt}")
                         }
-                        Node::Parameter(ident) => {
-                            format!("ident:{}", ident.id())
+                        Node::Parameter(param) => {
+                            format!("ident:{}", param.identifier().id())
                         }
                     })
                     .unwrap_or_default();
@@ -253,8 +288,8 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                             Node::LetFnStatement(stmt) => {
                                 format!("stmt:{stmt}")
                             }
-                            Node::Parameter(ident) => {
-                                format!("ident:{}", ident.id())
+                            Node::Parameter(param) => {
+                                format!("ident:{}", param.identifier().id())
                             }
                         })
                         .unwrap_or_default();
@@ -315,8 +350,8 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                         Node::LetFnStatement(stmt) => {
                             format!("stmt:{stmt}")
                         }
-                        Node::Parameter(ident) => {
-                            format!("ident:{}", ident.id())
+                        Node::Parameter(param) => {
+                            format!("ident:{}", param.identifier().id())
                         }
                     })
                     .unwrap_or_default();
@@ -420,7 +455,7 @@ mod tests {
 
     test_xml_write!(write_expr, "40 + 2;");
     test_xml_write!(write_let, "let ident = 42;");
-    test_xml_write!(write_let_fn, "let f(n) = n * 2;");
+    test_xml_write!(write_let_fn, "let f(n: number): number = n * 2;");
     test_xml_write!(write_ret, "ret 42;");
     test_xml_write!(write_booleans, "true; false;");
     test_xml_write!(write_assignment, "let n = 0; n = 42;");
@@ -429,7 +464,7 @@ mod tests {
     test_xml_write!(
         write_fibonacci_rec,
         r#"
-            let f(n) = {
+            let f(n: number): number = {
                 if n <= 1 {
                     ret n;
                 }
@@ -440,7 +475,7 @@ mod tests {
     test_xml_write!(
         write_fibonacci_iter,
         r#"
-            let f(n) = {
+            let f(n: number): number = {
                 if n == 0 { ret 0; }
                 if n == 1 { ret 1; }
 

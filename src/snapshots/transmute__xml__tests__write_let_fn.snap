@@ -4,26 +4,30 @@ expression: "&xml"
 ---
 <?xml version="1.0" encoding="utf-8"?>
 <ast>
-  <stmt id="stmt:1" line="1" column="1" start="0" len="17">
+  <stmt id="stmt:1" line="1" column="1" start="0" len="33">
     <fn>
       <identifier id="ident:0" line="1" column="5" start="4" len="1">f</identifier>
+      <type id="ident:2" line="1" column="19" start="18" len="6">number</type>
       <parameters>
-        <parameter id="ident:1" line="1" column="7" start="6" len="1">n</parameter>
+        <parameter line="1" column="7" start="6" len="9">
+          <name id="ident:1" line="1" column="7" start="6" len="1">n</name>
+          <type id="ident:2" line="1" column="10" start="9" len="6">number</type>
+        </parameter>
       </parameters>
-      <body line="1" column="12" start="11" len="6">
-        <expr id="expr:3" line="1" column="12" start="11" len="6">
+      <body line="1" column="28" start="27" len="6">
+        <expr id="expr:3" line="1" column="28" start="27" len="6">
           <block>
-            <stmt id="stmt:0" line="1" column="12" start="11" len="6">
-              <expr id="expr:2" line="1" column="12" start="11" len="5">
-                <binary operator="*" line="1" column="12" start="11" len="5">
+            <stmt id="stmt:0" line="1" column="28" start="27" len="6">
+              <expr id="expr:2" line="1" column="28" start="27" len="5">
+                <binary operator="*" line="1" column="28" start="27" len="5">
                   <left>
-                    <expr id="expr:0" line="1" column="12" start="11" len="1">
+                    <expr id="expr:0" line="1" column="28" start="27" len="1">
                       <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
                     </expr>
                   </left>
                   <right>
-                    <expr id="expr:1" line="1" column="16" start="15" len="1">
-                      <number line="1" column="16" start="15" len="1">2</number>
+                    <expr id="expr:1" line="1" column="32" start="31" len="1">
+                      <number line="1" column="32" start="31" len="1">2</number>
                     </expr>
                   </right>
                 </binary>

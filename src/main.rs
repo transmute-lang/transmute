@@ -7,6 +7,7 @@ use crate::lexer::Lexer;
 use crate::parser::Parser;
 use crate::resolver::Resolver;
 use crate::symbol_table::SymbolTableGen;
+use crate::type_check::TypeChecker;
 
 mod ast;
 mod error;
@@ -16,11 +17,12 @@ mod lexer;
 mod parser;
 mod resolver;
 mod symbol_table;
+mod type_check;
 mod xml;
 
 fn main() {
     let (ast, mut diagnostics) = Parser::new(Lexer::new(
-        "let f(n) = { if n <= 1 { ret n; } f(n - 1) + f(n - 2); } f(9) + 8;",
+        "let f(n: number): number = { if n <= 1 { ret n; } f(n - 1) + f(n - 2); } f(9) + 8;",
     ))
     .parse();
 
@@ -36,26 +38,13 @@ fn main() {
         "Parsed AST:\n{}",
         AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
     );
-    println!();
-    print!("Errors:\n{}", diagnostics);
+    let type_checker_diagnostics = TypeChecker::new(&ast, &symbols).check();
+    diagnostics.append(type_checker_diagnostics);
 
     if diagnostics.is_empty() {
         let result = Interpreter::new(&ast).start();
         println!("Result: {}", result);
+    } else {
+        print!("Errors:\n{}", diagnostics);
     }
-
-    // second
-
-    let (ast, diagnostics) = Parser::new(Lexer::new(
-        "let f ( n ) = { if n <=  { ret n ; } f ( n - 1 ) + f ( n - 2 ) ; } f ( 9 ) + 8 ;",
-    ))
-    .parse();
-
-    print!(
-        "Parsed AST:\n{}{}",
-        AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap()),
-        AstNodePrettyPrint::new(&ast, *ast.statements().last().unwrap())
-    );
-    println!();
-    print!("Errors:\n{}", diagnostics);
 }

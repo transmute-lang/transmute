@@ -17,7 +17,7 @@ impl BinaryOperator {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BinaryOperatorKind {
     Addition,
     Division,
@@ -91,7 +91,7 @@ impl UnaryOperator {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum UnaryOperatorKind {
     Minus,
 }

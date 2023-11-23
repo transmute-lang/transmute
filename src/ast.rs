@@ -88,6 +88,20 @@ impl Ast {
         &self.expressions[id.id()]
     }
 
+    #[cfg(test)]
+    pub fn expression_id(&self, start: usize) -> ExprId {
+        for expr in &self.expressions {
+            if expr.span().start() == start {
+                return expr.id();
+            }
+        }
+        panic!("No expression found at {}", start)
+    }
+
+    pub fn expressions_count(&self) -> usize {
+        self.expressions.len()
+    }
+
     pub fn statement(&self, id: StmtId) -> &Statement {
         &self.statements[id.id()]
     }
@@ -168,19 +182,31 @@ impl Display for AstNodePrettyPrint<'_, StmtId> {
                     AstNodePrettyPrint::new(self.ast, *expr)
                 )
             }
-            StatementKind::LetFn(ident, params, expr) => {
+            StatementKind::LetFn(ident, params, ty, expr) => {
                 write!(
                     f,
                     "{indent}let {}(",
                     AstNodePrettyPrint::new(self.ast, ident.id())
                 )?;
                 for (i, param) in params.iter().enumerate() {
-                    write!(f, "{}", AstNodePrettyPrint::new(self.ast, param.id()))?;
+                    write!(
+                        f,
+                        "{}",
+                        AstNodePrettyPrint::new(self.ast, param.identifier().id())
+                    )?;
+                    write!(f, ": ")?;
+                    write!(f, "{}", AstNodePrettyPrint::new(self.ast, param.ty().id()))?;
                     if i < params.len() - 1 {
                         write!(f, ", ")?;
                     }
                 }
-                writeln!(f, ") = {{")?;
+
+                let ty = ty
+                    .as_ref()
+                    .map(|ty| format!(": {}", AstNodePrettyPrint::new(self.ast, ty.id())))
+                    .unwrap_or_default();
+
+                writeln!(f, "){ty} = {{",)?;
 
                 let stmts = match self.ast.expression(*expr).kind() {
                     ExpressionKind::Block(stmts) => stmts,
@@ -300,8 +326,18 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                 }
                 writeln!(f, "{indent}}}")
             }
-            ExpressionKind::Block(_) => {
-                todo!("implement block expressions")
+            ExpressionKind::Block(stmts) => {
+                writeln!(f, "{{")?;
+
+                for stmt in stmts {
+                    write!(
+                        f,
+                        "{}",
+                        AstNodePrettyPrint::new_with_ident(self.ast, *stmt, self.indent + 1)
+                    )?;
+                }
+
+                writeln!(f, "{indent}}}")
             }
             ExpressionKind::Dummy => {
                 write!(f, "<<missing expression>>",)
@@ -320,7 +356,7 @@ mod tests {
     fn pretty_print() {
         let ast = Parser::new(Lexer::new(
             r#"
-        let fact(n) = {
+        let fact(n: number): number = {
             if n < 0 {
                 ret 0;
             }
@@ -340,7 +376,7 @@ mod tests {
             "{}",
             AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
         );
-        let expected = r#"let fact(n) = {
+        let expected = r#"let fact(n: number): number = {
   if n < 0 {
     ret 0;
   }

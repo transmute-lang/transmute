@@ -56,15 +56,13 @@ impl<'a> ExitPoints<'a> {
                     unreachable || condition_always_returns,
                 );
 
-                let false_branch_always_return = match false_branch{
+                let false_branch_always_return = match false_branch {
                     None => false,
-                    Some(false_branch) => {
-                        self.visit_expression(
-                                *false_branch,
-                                depth + 1,
-                                unreachable || condition_always_returns,
-                            )
-                    }
+                    Some(false_branch) => self.visit_expression(
+                        *false_branch,
+                        depth + 1,
+                        unreachable || condition_always_returns,
+                    ),
                 };
 
                 condition_always_returns
@@ -94,7 +92,11 @@ impl<'a> ExitPoints<'a> {
             ExpressionKind::Unary(_, expr) => self.visit_expression(*expr, depth + 1, unreachable),
             ExpressionKind::While(cond, expr) => {
                 let condition_always_returns = self.visit_expression(*cond, depth + 1, unreachable);
-                let while_always_returns = self.visit_expression(*expr, depth + 1, unreachable || condition_always_returns);
+                let while_always_returns = self.visit_expression(
+                    *expr,
+                    depth + 1,
+                    unreachable || condition_always_returns,
+                );
                 condition_always_returns || while_always_returns
             }
             ExpressionKind::Block(stmts) => {
@@ -138,7 +140,7 @@ impl<'a> ExitPoints<'a> {
                 self.visit_expression(*expr, depth + 1, unreachable);
                 true
             }
-            StatementKind::LetFn(_, _, expr) => {
+            StatementKind::LetFn(_, _, _, expr) => {
                 self.visit_expression(*expr, depth + 1, unreachable);
                 false
             }
@@ -151,7 +153,6 @@ mod tests {
     use super::*;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
-    use crate::xml::eprint_ast;
 
     #[test]
     fn single_implicit_exit_point_1() {
@@ -278,7 +279,7 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new(
             "let f() = { if if true { ret 42; } else { ret 43; } { ret 44; } ret 45; }",
         ))
-            .parse();
+        .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
         let expr = ExprId::from(10);
@@ -292,10 +293,8 @@ mod tests {
 
     #[test]
     fn always_returns_from_while() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let f() = { while true { ret 42; } ret 43; }",
-        ))
-            .parse();
+        let (ast, diagnostics) =
+            Parser::new(Lexer::new("let f() = { while true { ret 42; } ret 43; }")).parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
         let expr = ExprId::from(5);
@@ -309,10 +308,8 @@ mod tests {
 
     #[test]
     fn while_never_returns() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let f() = { while true { } ret 42; }",
-        ))
-            .parse();
+        let (ast, diagnostics) =
+            Parser::new(Lexer::new("let f() = { while true { } ret 42; }")).parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
         let expr = ExprId::from(4);
@@ -329,13 +326,13 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new(
             "let f() = { while if true { ret 42; } else { ret 43; } { ret 44; } ret 45; }",
         ))
-            .parse();
+        .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
         let expr = ExprId::from(10);
 
         let actual = ExitPoints::new(&ast).exit_points(expr);
-        let mut expected = vec![ExprId::from(1),ExprId::from(3)];
+        let mut expected = vec![ExprId::from(1), ExprId::from(3)];
         expected.sort();
 
         assert_eq!(actual, expected);
@@ -346,7 +343,7 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new(
             "let x() = { let x = 0; x = if true { ret 42; } else { ret 43; }; }",
         ))
-            .parse();
+        .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
         let expr = ExprId::from(8);
@@ -396,7 +393,7 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new(
             "let x() = { let a = 42 + if false { ret 43; } else { ret 44; }; ret 45; }",
         ))
-            .parse();
+        .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
         let expr = ExprId::from(9);
@@ -410,10 +407,8 @@ mod tests {
 
     #[test]
     fn binary_never_returns() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let x() = { let a = 42 + 43; ret 44; }",
-        ))
-            .parse();
+        let (ast, diagnostics) =
+            Parser::new(Lexer::new("let x() = { let a = 42 + 43; ret 44; }")).parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
         let expr = ExprId::from(4);
@@ -430,7 +425,7 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new(
             "let x() = { let a = - if true { ret 42; } else { ret 43; }; ret 44; }",
         ))
-            .parse();
+        .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
         let expr = ExprId::from(8);
@@ -445,9 +440,9 @@ mod tests {
     #[test]
     fn function_call_parameter_always_returns() {
         let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let x(a) = { x(if true { ret 42; } else { ret 43; }); ret 44; }",
+            "let x(a: number) = { x(if true { ret 42; } else { ret 43; }); ret 44; }",
         ))
-            .parse();
+        .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
         let expr = ExprId::from(8);

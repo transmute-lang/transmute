@@ -1,8 +1,7 @@
 use crate::ast::expression::ExpressionKind;
-use crate::ast::identifier::Identifier;
 use crate::ast::ids::{ExprId, IdentId, ScopeId, StmtId, SymbolId};
 use crate::ast::literal::Literal;
-use crate::ast::statement::StatementKind;
+use crate::ast::statement::{Parameter, StatementKind};
 use crate::ast::{Ast, Visitor};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
@@ -93,13 +92,15 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
                 self.push_sub_scope();
                 self.insert(ident.id(), Node::LetStatement(stmt));
             }
-            StatementKind::LetFn(ident, params, expr) => {
+            StatementKind::LetFn(ident, params, _, expr) => {
                 self.insert(ident.id(), Node::LetFnStatement(stmt));
+
+                // todo make sure type exist (or in type checker?)
 
                 {
                     self.push_scope();
                     for param in params {
-                        self.insert(param.id(), Node::Parameter(param.clone()));
+                        self.insert(param.identifier().id(), Node::Parameter(param.clone()));
                     }
 
                     self.visit_expression(*expr);
@@ -248,7 +249,7 @@ impl Symbol {
 pub enum Node {
     LetStatement(StmtId),
     LetFnStatement(StmtId),
-    Parameter(Identifier),
+    Parameter(Parameter),
 }
 
 #[derive(Debug, PartialEq)]
@@ -345,13 +346,14 @@ impl Display for ScopePrettyPrint<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::identifier::Identifier;
     use crate::ast::ids::{IdentId, ScopeId, StmtId, SymbolId};
     use crate::lexer::{Lexer, Span};
     use crate::parser::Parser;
 
     #[test]
     fn top_level_function_with_parameter() {
-        let mut ast = Parser::new(Lexer::new("let f(n) = { }")).parse().0;
+        let mut ast = Parser::new(Lexer::new("let f(n: number) = { }")).parse().0;
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 
@@ -365,9 +367,10 @@ mod tests {
                 Symbol {
                     id: SymbolId::from(1),
                     scope_id: ScopeId::from(1),
-                    node: Node::Parameter(Identifier::new(
-                        ast.identifier_id("n"),
-                        Span::new(1, 7, 6, 1),
+                    node: Node::Parameter(Parameter::new(
+                        Identifier::new(ast.identifier_id("n"), Span::new(1, 7, 6, 1)),
+                        Identifier::new(ast.identifier_id("number"), Span::new(1, 10, 9, 6)),
+                        Span::new(1, 7, 6, 9),
                     )),
                 },
             ],
@@ -402,7 +405,9 @@ mod tests {
 
     #[test]
     fn top_level_function_with_used_parameter() {
-        let mut ast = Parser::new(Lexer::new("let f(n) = { n; }")).parse().0;
+        let mut ast = Parser::new(Lexer::new("let f(n: number) = { n; }"))
+            .parse()
+            .0;
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 
@@ -416,9 +421,10 @@ mod tests {
                 Symbol {
                     id: SymbolId::from(1),
                     scope_id: ScopeId::from(1),
-                    node: Node::Parameter(Identifier::new(
-                        ast.identifier_id("n"),
-                        Span::new(1, 7, 6, 1),
+                    node: Node::Parameter(Parameter::new(
+                        Identifier::new(ast.identifier_id("n"), Span::new(1, 7, 6, 1)),
+                        Identifier::new(ast.identifier_id("number"), Span::new(1, 10, 9, 6)),
+                        Span::new(1, 7, 6, 9),
                     )),
                 },
             ],
@@ -453,7 +459,7 @@ mod tests {
 
     #[test]
     fn top_level_function_with_variable() {
-        let mut ast = Parser::new(Lexer::new("let f(n) = { let m = 0; }"))
+        let mut ast = Parser::new(Lexer::new("let f(n: number) = { let m = 0; }"))
             .parse()
             .0;
 
@@ -469,9 +475,10 @@ mod tests {
                 Symbol {
                     id: SymbolId::from(1),
                     scope_id: ScopeId::from(1),
-                    node: Node::Parameter(Identifier::new(
-                        ast.identifier_id("n"),
-                        Span::new(1, 7, 6, 1),
+                    node: Node::Parameter(Parameter::new(
+                        Identifier::new(ast.identifier_id("n"), Span::new(1, 7, 6, 1)),
+                        Identifier::new(ast.identifier_id("number"), Span::new(1, 10, 9, 6)),
+                        Span::new(1, 7, 6, 9),
                     )),
                 },
                 Symbol {
@@ -519,7 +526,7 @@ mod tests {
 
     #[test]
     fn top_level_function_with_redefined_parameter() {
-        let mut ast = Parser::new(Lexer::new("let f(n) = { let n = 0; }"))
+        let mut ast = Parser::new(Lexer::new("let f(n: number) = { let n = 0; }"))
             .parse()
             .0;
 
@@ -535,9 +542,10 @@ mod tests {
                 Symbol {
                     id: SymbolId::from(1),
                     scope_id: ScopeId::from(1),
-                    node: Node::Parameter(Identifier::new(
-                        ast.identifier_id("n"),
-                        Span::new(1, 7, 6, 1),
+                    node: Node::Parameter(Parameter::new(
+                        Identifier::new(ast.identifier_id("n"), Span::new(1, 7, 6, 1)),
+                        Identifier::new(ast.identifier_id("number"), Span::new(1, 10, 9, 6)),
+                        Span::new(1, 7, 6, 9),
                     )),
                 },
                 Symbol {
@@ -586,14 +594,14 @@ mod tests {
     #[test]
     fn find_in_scope() {
         let mut ast = Parser::new(Lexer::new(
-            "let f(n) = { let m = 0; let p = 0; let p = n + m; let q = p; }",
+            "let f(n: number) = { let m = 0; let p = 0; let p = n + m; let q = p; }",
         ))
         .parse()
         .0;
 
         let table = SymbolTableGen::new(&mut ast).build_table();
 
-        let let_second_p_stmt = ast.statement(ast.statement_id(35));
+        let let_second_p_stmt = ast.statement(ast.statement_id(43));
 
         match table
             .find(
@@ -604,7 +612,7 @@ mod tests {
             .node
         {
             Node::LetStatement(stmt) => {
-                assert_eq!(ast.statement(stmt).span().start(), 24);
+                assert_eq!(ast.statement(stmt).span().start(), 32);
             }
             _ => panic!("statement expected"),
         }
@@ -617,8 +625,8 @@ mod tests {
             .expect("n is in scope")
             .node
         {
-            Node::Parameter(ident) => {
-                assert_eq!(ident.span().start(), 6);
+            Node::Parameter(param) => {
+                assert_eq!(param.span().start(), 6);
             }
             _ => panic!("statement expected"),
         }
@@ -632,12 +640,12 @@ mod tests {
             .node
         {
             Node::LetStatement(stmt) => {
-                assert_eq!(ast.statement(stmt).span().start(), 13);
+                assert_eq!(ast.statement(stmt).span().start(), 21);
             }
             _ => panic!("statement expected"),
         }
 
-        let let_q_stmt = ast.statement(ast.statement_id(50));
+        let let_q_stmt = ast.statement(ast.statement_id(58));
 
         match table
             .find(
@@ -648,7 +656,7 @@ mod tests {
             .node
         {
             Node::LetStatement(stmt) => {
-                assert_eq!(ast.statement(stmt).span().start(), 35);
+                assert_eq!(ast.statement(stmt).span().start(), 43);
             }
             _ => panic!("statement expected"),
         }

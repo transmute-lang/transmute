@@ -140,6 +140,11 @@ impl<'s> Lexer<'s> {
                 self.advance_consumed(span.len);
                 (TokenKind::CloseCurlyBracket, span)
             }
+            ':' => {
+                self.advance_column();
+                self.advance_consumed(span.len);
+                (TokenKind::Colon, span)
+            }
             ';' => {
                 self.advance_column();
                 self.advance_consumed(span.len);
@@ -441,6 +446,7 @@ impl Token {
 pub enum TokenKind {
     CloseCurlyBracket,
     CloseParenthesis,
+    Colon,
     Comma,
     Else,
     Equal,
@@ -485,26 +491,27 @@ impl TokenKind {
 
             TokenKind::Comma => 9,
             TokenKind::Semicolon => 10,
+            TokenKind::Colon => 11,
 
-            TokenKind::CloseCurlyBracket => 11,
-            TokenKind::CloseParenthesis => 12,
-            TokenKind::OpenCurlyBracket => 13,
-            TokenKind::OpenParenthesis => 14,
+            TokenKind::CloseCurlyBracket => 12,
+            TokenKind::CloseParenthesis => 13,
+            TokenKind::OpenCurlyBracket => 14,
+            TokenKind::OpenParenthesis => 15,
 
-            TokenKind::Equal => 15,
+            TokenKind::Equal => 16,
 
-            TokenKind::Star => 16,
-            TokenKind::Slash => 17,
+            TokenKind::Star => 17,
+            TokenKind::Slash => 18,
 
-            TokenKind::Minus => 18,
-            TokenKind::Plus => 19,
+            TokenKind::Minus => 19,
+            TokenKind::Plus => 20,
 
-            TokenKind::EqualEqual => 20,
-            TokenKind::ExclaimEqual => 21,
-            TokenKind::Greater => 22,
-            TokenKind::GreaterEqual => 23,
-            TokenKind::Smaller => 24,
-            TokenKind::SmallerEqual => 25,
+            TokenKind::EqualEqual => 21,
+            TokenKind::ExclaimEqual => 22,
+            TokenKind::Greater => 23,
+            TokenKind::GreaterEqual => 24,
+            TokenKind::Smaller => 25,
+            TokenKind::SmallerEqual => 26,
 
             TokenKind::Eof => 254,
             TokenKind::Bad(_) => 255,
@@ -532,6 +539,9 @@ impl Display for TokenKind {
             }
             TokenKind::CloseParenthesis => {
                 write!(f, "`)`")
+            }
+            TokenKind::Colon => {
+                write!(f, "`:`")
             }
             TokenKind::Comma => {
                 write!(f, "`,`")
@@ -787,6 +797,7 @@ mod tests {
     lexer_test_next!(next_open_curly_bracket, "{" => TokenKind::OpenCurlyBracket; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_curly_bracket, "}" => TokenKind::CloseCurlyBracket; loc: 1,1; span: 0,1);
     lexer_test_next!(semicolon, ";" => TokenKind::Semicolon; loc: 1,1; span: 0,1);
+    lexer_test_next!(colon, ":" => TokenKind::Colon; loc: 1,1; span: 0,1);
     lexer_test_next!(bad, "\\" => TokenKind::Bad("\\".to_string()); loc: 1,1; span: 0,1);
     lexer_test_next!(eof, "" => TokenKind::Eof; loc: 1,1; span: 0,0);
 
