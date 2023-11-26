@@ -1,5 +1,5 @@
 use crate::ast::expression::ExpressionKind;
-use crate::ast::ids::{ExprId, StmtId};
+use crate::ast::ids::{ExprId, IdentRefId, ScopeId, StmtId, SymbolId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::StatementKind;
 use crate::ast::{Ast, Visitor};
@@ -10,7 +10,7 @@ use crate::symbol_table::{Node, SymbolTable};
 use std::fmt::{Display, Formatter};
 
 pub struct TypeChecker<'a> {
-    ast: &'a Ast,
+    ast: Ast,
     table: &'a SymbolTable,
     // todo should maybe be part of the symbol table
     predefined: &'a Predefined,
@@ -19,7 +19,7 @@ pub struct TypeChecker<'a> {
 }
 
 impl<'a> TypeChecker<'a> {
-    pub fn new(ast: &'a Ast, table: &'a SymbolTable, predefined: &'a Predefined) -> Self {
+    pub fn new(ast: Ast, table: &'a SymbolTable, predefined: &'a Predefined) -> Self {
         let mut types = Vec::with_capacity(ast.expressions_count());
         for _ in 0..ast.expressions_count() {
             types.push(None);
@@ -34,29 +34,52 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
-    pub fn check(mut self) -> Diagnostics {
+    pub fn check(mut self) -> (Ast, Diagnostics) {
         #[allow(clippy::unnecessary_to_owned)]
         for stmt in self.ast.statements().to_vec() {
             let _ = self.visit_statement(stmt);
         }
-        self.diagnostics
+        (self.ast, self.diagnostics)
+    }
+
+    fn resolve(&mut self, ident: IdentRefId, scope: ScopeId) -> Option<SymbolId> {
+        let ident_ref = self.ast.identifier_ref(ident);
+        let ident = ident_ref.ident().id();
+        let symbol = self.table.find(ident, scope);
+        match symbol {
+            None => {
+                self.diagnostics.report_err(
+                    format!("'{}' not in scope", self.ast.identifier(ident),),
+                    ident_ref.ident().span().clone(),
+                    (file!(), line!()),
+                );
+                None
+            }
+            Some(symbol) => {
+                let mut ident_ref = ident_ref.clone();
+                ident_ref.set_symbol_id(symbol.id());
+                self.ast.replace_identifier_ref(ident_ref);
+                Some(symbol.id())
+            }
+        }
     }
 }
 
 type Res = Result<Option<Type>, ()>;
 
 impl Visitor<Res> for TypeChecker<'_> {
-    fn visit_statement(&mut self, stmt: StmtId) -> Res {
-        let stmt = self.ast.statement(stmt);
+    fn visit_statement(&mut self, stmt_id: StmtId) -> Res {
+        let stmt = self.ast.statement(stmt_id);
 
         match stmt.kind() {
             StatementKind::Expression(expr) => self.visit_expression(*expr),
             StatementKind::Let(_, expr) => {
+                let expr = *expr;
                 // fixme this is wrong, the let does not have a type, only the expr... but it's an
                 //  acceptable proxy
-                match self.visit_expression(*expr) {
+                match self.visit_expression(expr) {
                     Ok(None) => {
-                        let expr = self.ast.expression(*expr);
+                        let expr = self.ast.expression(expr);
                         self.diagnostics.report_err(
                             "Expected some type, got none",
                             expr.span().clone(),
@@ -67,7 +90,10 @@ impl Visitor<Res> for TypeChecker<'_> {
                     t => t,
                 }
             }
-            StatementKind::Ret(_) => Ok(None),
+            StatementKind::Ret(expr) => {
+                let _ = self.visit_expression(*expr);
+                Ok(None)
+            }
             StatementKind::LetFn(_, _, ty, expr) => {
                 let ret_type = match ty {
                     None => Ok(Type::Void),
@@ -84,11 +110,13 @@ impl Visitor<Res> for TypeChecker<'_> {
                     },
                 }?;
 
-                let _ = self.visit_expression(*expr);
+                let expr = *expr;
+                let _ = self.visit_expression(expr);
 
-                let exit_points = ExitPoints::new(self.ast).exit_points(*expr);
+                let exit_points = ExitPoints::new(&self.ast).exit_points(expr);
                 if exit_points.is_empty() {
                     if ret_type != Type::Void {
+                        let stmt = self.ast.statement(stmt_id);
                         self.diagnostics.report_err(
                             format!("Expected type {ret_type}, got void"),
                             stmt.span().clone(),
@@ -125,53 +153,54 @@ impl Visitor<Res> for TypeChecker<'_> {
         }
 
         let expr = self.ast.expression(expr_id);
+        let scope = expr.scope().expect("expression scope exists");
 
         let t = match expr.kind() {
             ExpressionKind::Assignment(ident, expr) => {
                 let expr = *expr;
+                let ident = *ident;
+                match self.resolve(ident, scope) {
+                    Some(symbol) => {
+                        let symbol = self.table.symbol(symbol);
 
-                let ident = self.ast.identifier_ref(*ident);
-                let symbol = self.table.symbol(ident.symbol_id().unwrap_or_else(|| {
-                    panic!(
-                        "symbol '{}' is resolved",
-                        self.ast.identifier(ident.ident().id())
-                    )
-                }));
-                let target_type = match symbol.node() {
-                    Node::LetStatement(stmt) => self.visit_statement(*stmt),
-                    Node::LetFnStatement(_) => {
-                        panic!("cannot assign to a let fn");
-                    }
-                    Node::Parameter(_) => {
-                        panic!("cannot assign to a parameter");
-                    }
-                }?;
+                        let target_type = match symbol.node() {
+                            Node::LetStatement(stmt) => self.visit_statement(*stmt),
+                            Node::LetFnStatement(_) => {
+                                panic!("cannot assign to a let fn");
+                            }
+                            Node::Parameter(_) => {
+                                panic!("cannot assign to a parameter");
+                            }
+                        }?;
 
-                let expr_type = self.visit_expression(expr)?;
+                        let expr_type = self.visit_expression(expr)?;
 
-                match (target_type, expr_type) {
-                    (Some(ident_type), Some(expr_type)) if ident_type == expr_type => {
-                        Ok(Some(ident_type))
+                        match (target_type, expr_type) {
+                            (Some(ident_type), Some(expr_type)) if ident_type == expr_type => {
+                                Ok(Some(ident_type))
+                            }
+                            (Some(ident_type), Some(expr_type)) => {
+                                let expr = self.ast.expression(expr);
+                                self.diagnostics.report_err(
+                                    format!("Expected {ident_type}, got {expr_type}",),
+                                    expr.span().clone(),
+                                    (file!(), line!()),
+                                );
+                                Err(())
+                            }
+                            (Some(t), None) => {
+                                let expr = self.ast.expression(expr);
+                                self.diagnostics.report_err(
+                                    format!("Expected {t}, got no type",),
+                                    expr.span().clone(),
+                                    (file!(), line!()),
+                                );
+                                Err(())
+                            }
+                            (None, _) => panic!("ident has no type"),
+                        }
                     }
-                    (Some(ident_type), Some(expr_type)) => {
-                        let expr = self.ast.expression(expr);
-                        self.diagnostics.report_err(
-                            format!("Expected {ident_type}, got {expr_type}",),
-                            expr.span().clone(),
-                            (file!(), line!()),
-                        );
-                        Err(())
-                    }
-                    (Some(t), None) => {
-                        let expr = self.ast.expression(expr);
-                        self.diagnostics.report_err(
-                            format!("Expected {t}, got no type",),
-                            expr.span().clone(),
-                            (file!(), line!()),
-                        );
-                        Err(())
-                    }
-                    (None, _) => panic!("ident has no type"),
+                    None => Err(()),
                 }
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
@@ -259,7 +288,45 @@ impl Visitor<Res> for TypeChecker<'_> {
 
                 self.visit_expression(expr)
             }
-            ExpressionKind::Literal(lit) => self.visit_literal(lit),
+            ExpressionKind::Literal(literal) => match literal.kind() {
+                LiteralKind::Boolean(_) => Ok(Some(Type::Boolean)),
+                LiteralKind::Number(_) => Ok(Some(Type::Number)),
+                LiteralKind::Identifier(ident_ref) => match self.resolve(*ident_ref, scope) {
+                    Some(symbol) => {
+                        let symbol = self.table.symbol(symbol);
+
+                        match symbol.node() {
+                            Node::LetStatement(stmt) => {
+                                let stmt = self.ast.statement(*stmt);
+                                match stmt.kind() {
+                                    StatementKind::Let(_, expr) => self.visit_expression(*expr),
+                                    _ => {
+                                        panic!("expected let statement, got {:?}", stmt.kind())
+                                    }
+                                }
+                            }
+                            Node::LetFnStatement(_) => {
+                                todo!()
+                            }
+                            Node::Parameter(p) => {
+                                let ident = self.ast.identifier(p.ty().id());
+                                match Type::try_from(ident) {
+                                    Ok(ty) => Ok(Some(ty)),
+                                    Err(e) => {
+                                        self.diagnostics.report_err(
+                                            e,
+                                            p.span().clone(),
+                                            (file!(), line!()),
+                                        );
+                                        Err(())
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    None => Err(()),
+                },
+            },
             ExpressionKind::Unary(op, expr) => {
                 let op = *op.kind();
                 let expr = *expr;
@@ -303,51 +370,58 @@ impl Visitor<Res> for TypeChecker<'_> {
                     }
                 }
             }
-            ExpressionKind::FunctionCall(ident, _) => {
-                // todo use params to find function (overloads)
-                let ident = self.ast.identifier_ref(*ident);
-                let symbol = ident.symbol_id().unwrap_or_else(|| {
-                    panic!(
-                        "symbol '{}' is resolved",
-                        self.ast.identifier(ident.ident().id())
-                    )
-                });
-                let ty = match self.table.symbol(symbol).node() {
-                    Node::LetStatement(_) | Node::Parameter(_) => {
-                        panic!(
-                            "'{}' is not a function",
-                            self.ast.identifier(ident.ident().id())
-                        );
-                    }
-                    Node::LetFnStatement(stmt) => {
-                        let stmt = self.ast.statement(*stmt);
-                        match stmt.kind() {
-                            StatementKind::LetFn(_, _, ty, _) => ty.as_ref(),
-                            _ => panic!(),
+            ExpressionKind::FunctionCall(ident, exprs) => {
+                let ident = *ident;
+
+                #[allow(clippy::unnecessary_to_owned)]
+                for expr in exprs.to_vec() {
+                    let _ = self.visit_expression(expr);
+                }
+
+                match self.resolve(ident, scope) {
+                    Some(symbol) => {
+                        // todo use params to find function (overloads)
+                        let ident = self.ast.identifier_ref(ident);
+
+                        let ty = match self.table.symbol(symbol).node() {
+                            Node::LetStatement(_) | Node::Parameter(_) => {
+                                panic!(
+                                    "'{}' is not a function",
+                                    self.ast.identifier(ident.ident().id())
+                                );
+                            }
+                            Node::LetFnStatement(stmt) => {
+                                let stmt = self.ast.statement(*stmt);
+                                match stmt.kind() {
+                                    StatementKind::LetFn(_, _, ty, _) => ty.as_ref(),
+                                    _ => panic!(),
+                                }
+                            }
+                        };
+                        match ty.map(|ty| self.ast.identifier(ty.id())) {
+                            None => Ok(Some(Type::Void)),
+                            Some(str) => match Type::try_from(str) {
+                                Ok(t) => Ok(Some(t)),
+                                Err(e) => {
+                                    self.diagnostics.report_err(
+                                        e,
+                                        ty.unwrap().span().clone(),
+                                        (file!(), line!()),
+                                    );
+                                    Err(())
+                                }
+                            },
                         }
                     }
-                };
-                match ty.map(|ty| self.ast.identifier(ty.id())) {
-                    None => Ok(Some(Type::Void)),
-                    Some(str) => match Type::try_from(str) {
-                        Ok(t) => Ok(Some(t)),
-                        Err(e) => {
-                            self.diagnostics.report_err(
-                                e,
-                                ty.unwrap().span().clone(),
-                                (file!(), line!()),
-                            );
-                            Err(())
-                        }
-                    },
+                    None => Err(()),
                 }
             }
-            ExpressionKind::Block(expr) => {
+            ExpressionKind::Block(stmt) => {
                 let mut ty = Ok(Some(Type::Void));
 
                 #[allow(clippy::unnecessary_to_owned)]
-                for expr in expr.to_vec() {
-                    let t = self.visit_statement(expr);
+                for stmt in stmt.to_vec() {
+                    let t = self.visit_statement(stmt);
                     match ty {
                         Ok(None) => {
                             // we keep the type of the expression only if we did not already see a
@@ -363,51 +437,13 @@ impl Visitor<Res> for TypeChecker<'_> {
                 panic!("should not type check an invalid source code")
             }
         };
-        self.types[expr.id().id()] = Some(t);
+
+        self.types[expr_id.id()] = Some(t);
         t
     }
 
-    fn visit_literal(&mut self, literal: &Literal) -> Res {
-        match literal.kind() {
-            LiteralKind::Boolean(_) => Ok(Some(Type::Boolean)),
-            LiteralKind::Number(_) => Ok(Some(Type::Number)),
-            LiteralKind::Identifier(ident_ref) => {
-                let ident = self.ast.identifier_ref(*ident_ref);
-                let symbol = ident.symbol_id().unwrap_or_else(|| {
-                    panic!(
-                        "symbol '{}' is resolved",
-                        self.ast.identifier(ident.ident().id())
-                    )
-                });
-                let symbol = self.table.symbol(symbol);
-                match symbol.node() {
-                    Node::LetStatement(stmt) => {
-                        let stmt = self.ast.statement(*stmt);
-                        match stmt.kind() {
-                            StatementKind::Let(_, expr) => self.visit_expression(*expr),
-                            _ => panic!("expected let statement, got {:?}", stmt.kind()),
-                        }
-                    }
-                    Node::LetFnStatement(_) => {
-                        todo!()
-                    }
-                    Node::Parameter(p) => {
-                        let ident = self.ast.identifier(p.ty().id());
-                        match Type::try_from(ident) {
-                            Ok(ty) => Ok(Some(ty)),
-                            Err(e) => {
-                                self.diagnostics.report_err(
-                                    e,
-                                    p.span().clone(),
-                                    (file!(), line!()),
-                                );
-                                Err(())
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    fn visit_literal(&mut self, _literal: &Literal) -> Res {
+        unimplemented!()
     }
 }
 
@@ -446,13 +482,129 @@ impl TryFrom<&str> for Type {
 
 #[cfg(test)]
 mod tests {
-    use crate::error::Level;
+    use crate::error::{Diagnostics, Level};
     use crate::lexer::{Lexer, Span};
     use crate::parser::Parser;
     use crate::predefined::Predefined;
-    use crate::resolver::Resolver;
-    use crate::symbol_table::SymbolTableGen;
+    use crate::symbol_table::{Node, SymbolTableGen};
     use crate::type_check::TypeChecker;
+
+    #[test]
+    fn resolve_ref_to_parameter() {
+        let (mut ast, diagnostics) =
+            Parser::new(Lexer::new("let x(n: number): number = { n; }")).parse();
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+        let symbol_table = SymbolTableGen::new(&mut ast).build_table();
+
+        let (ast, diagnostics) =
+            TypeChecker::new(ast, &symbol_table, &Predefined::default()).check();
+
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+        let symbol = ast
+            .identifier_ref(ast.identifier_ref_id(29))
+            .symbol_id()
+            .expect("symbol 'n' is resolved");
+        match symbol_table.symbol(symbol).node() {
+            Node::Parameter(ident) => {
+                assert_eq!(ident.span(), &Span::new(1, 7, 6, 9));
+            }
+            _ => panic!("expected parameter node kind"),
+        }
+    }
+
+    #[test]
+    fn resolve_ref_to_let() {
+        let (mut ast, diagnostics) =
+            Parser::new(Lexer::new("let x(): number = { let n = 0; n; }")).parse();
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+        let symbol_table = SymbolTableGen::new(&mut ast).build_table();
+
+        let (ast, diagnostics) =
+            TypeChecker::new(ast, &symbol_table, &Predefined::default()).check();
+
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+        let symbol = ast
+            .identifier_ref(ast.identifier_ref_id(31))
+            .symbol_id()
+            .expect("symbol 'n' is resolved");
+        match symbol_table.symbol(symbol).node() {
+            Node::LetStatement(stmt) => {
+                assert_eq!(ast.statement(*stmt).span(), &Span::new(1, 21, 20, 10));
+            }
+            _ => panic!("expected let statement node kind"),
+        }
+    }
+
+    #[test]
+    fn resolve_ref_to_let_fn() {
+        let (mut ast, diagnostics) = Parser::new(Lexer::new("let x() = { } x();")).parse();
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+        let symbol_table = SymbolTableGen::new(&mut ast).build_table();
+
+        let (ast, diagnostics) =
+            TypeChecker::new(ast, &symbol_table, &Predefined::default()).check();
+
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+        let symbol = ast
+            .identifier_ref(ast.identifier_ref_id(14))
+            .symbol_id()
+            .expect("symbol 'x' is resolved");
+        match symbol_table.symbol(symbol).node() {
+            Node::LetFnStatement(stmt) => {
+                assert_eq!(ast.statement(*stmt).span(), &Span::new(1, 1, 0, 13));
+            }
+            _ => panic!("expected let statement node kind"),
+        }
+    }
+
+    #[test]
+    fn resolve_ref_to_parameter_nested() {
+        let (mut ast, diagnostics) = Parser::new(Lexer::new(
+            "let x(n: number): number = { while true { ret n; } }",
+        ))
+        .parse();
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+        let symbol_table = SymbolTableGen::new(&mut ast).build_table();
+
+        let (ast, diagnostics) =
+            TypeChecker::new(ast, &symbol_table, &Predefined::default()).check();
+
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+        let symbol = ast
+            .identifier_ref(ast.identifier_ref_id(46))
+            .symbol_id()
+            .expect("symbol 'n' is resolved");
+        match symbol_table.symbol(symbol).node() {
+            Node::Parameter(ident) => {
+                assert_eq!(ident.span(), &Span::new(1, 7, 6, 9));
+            }
+            _ => panic!("expected parameter node kind"),
+        }
+    }
+
+    #[test]
+    fn resolve_missing_def() {
+        let (mut ast, diagnostics) = Parser::new(Lexer::new("let x() = { n; }")).parse();
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+        let symbol_table = SymbolTableGen::new(&mut ast).build_table();
+
+        let (_ast, diagnostics) =
+            TypeChecker::new(ast, &symbol_table, &Predefined::default()).check();
+
+        let mut expected = Diagnostics::default();
+        expected.report_err("'n' not in scope", Span::new(1, 13, 12, 1), (file!(), 54));
+
+        assert_eq!(diagnostics, expected);
+    }
 
     macro_rules! test_type_error {
         ($name:ident, $src:expr, $error:expr, $span:expr) => {
@@ -461,10 +613,8 @@ mod tests {
                 let (mut ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{}", diagnostics);
                 let table = SymbolTableGen::new(&mut ast).build_table();
-                let (ast, diagnostics) = Resolver::new(ast, &table).resolve_symbols();
-                assert!(diagnostics.is_empty(), "{}", diagnostics);
-                let actual_diagnostics =
-                    TypeChecker::new(&ast, &table, &Predefined::default()).check();
+                let (_, actual_diagnostics) =
+                    TypeChecker::new(ast, &table, &Predefined::default()).check();
 
                 let actual_diagnostics = actual_diagnostics
                     .iter()
@@ -485,10 +635,8 @@ mod tests {
                 let (mut ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{}", diagnostics);
                 let table = SymbolTableGen::new(&mut ast).build_table();
-                let (ast, diagnostics) = Resolver::new(ast, &table).resolve_symbols();
-                assert!(diagnostics.is_empty(), "{}", diagnostics);
-                let actual_diagnostics =
-                    TypeChecker::new(&ast, &table, &Predefined::default()).check();
+                let (_, actual_diagnostics) =
+                    TypeChecker::new(ast, &table, &Predefined::default()).check();
 
                 let actual_diagnostics = actual_diagnostics
                     .iter()

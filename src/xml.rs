@@ -431,8 +431,9 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
 mod tests {
     use crate::lexer::Lexer;
     use crate::parser::Parser;
-    use crate::resolver::Resolver;
+    use crate::predefined::Predefined;
     use crate::symbol_table::SymbolTableGen;
+    use crate::type_check::TypeChecker;
     use crate::xml::XmlWriter;
     use insta::assert_snapshot;
 
@@ -442,7 +443,7 @@ mod tests {
             fn $name() {
                 let (mut ast, mut full_diagnostics) = Parser::new(Lexer::new($src)).parse();
                 let table = SymbolTableGen::new(&mut ast).build_table();
-                let (ast, diagnostics) = Resolver::new(ast, &table).resolve_symbols();
+                let (ast, diagnostics) = TypeChecker::new(ast, &table, &Predefined::new()).check();
                 full_diagnostics.append(diagnostics);
 
                 assert!(full_diagnostics.is_empty());
@@ -483,11 +484,12 @@ mod tests {
                 let prev = 1;
                 let current = 0;
 
-                while n > 1 {
+                let m = n;
+                while m > 1 {
                     current = prev_prev + prev;
                     prev_prev = prev;
                     prev = current;
-                    n = n - 1;
+                    m = m - 1;
                 }
 
                 current;
