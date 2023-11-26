@@ -29,9 +29,7 @@ impl<'a> Resolver<'a> {
 
         (self.ast, self.diagnostics)
     }
-}
 
-impl<'a> Resolver<'a> {
     fn resolve(&mut self, ident: IdentRefId, scope: ScopeId) {
         let ident_ref = self.ast.identifier_ref(ident);
         let ident = ident_ref.ident().id();
@@ -237,7 +235,7 @@ mod tests {
         let (_, actual) = Resolver::new(ast, &symbol_table).resolve_symbols();
 
         let mut expected = Diagnostics::default();
-        expected.report_err("'n' not in scope", Span::new(1, 13, 12, 1), (file!(), 43));
+        expected.report_err("'n' not in scope", Span::new(1, 13, 12, 1), (file!(), 41));
 
         assert_eq!(actual, expected);
     }

@@ -46,6 +46,21 @@ impl BinaryOperatorKind {
             BinaryOperatorKind::Subtraction => Precedence::Sum,
         }
     }
+
+    pub fn function_name(&self) -> &'static str {
+        match self {
+            BinaryOperatorKind::Addition => "add",
+            BinaryOperatorKind::Division => "div",
+            BinaryOperatorKind::Equality => "eq",
+            BinaryOperatorKind::GreaterThan => "gt",
+            BinaryOperatorKind::GreaterThanOrEqualTo => "ge",
+            BinaryOperatorKind::Multiplication => "mul",
+            BinaryOperatorKind::NonEquality => "neq",
+            BinaryOperatorKind::SmallerThan => "lt",
+            BinaryOperatorKind::SmallerThanOrEqualTo => "le",
+            BinaryOperatorKind::Subtraction => "sub",
+        }
+    }
 }
 
 impl Display for BinaryOperatorKind {
@@ -94,6 +109,14 @@ impl UnaryOperator {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum UnaryOperatorKind {
     Minus,
+}
+
+impl UnaryOperatorKind {
+    pub fn function_name(&self) -> &'static str {
+        match self {
+            UnaryOperatorKind::Minus => "neg",
+        }
+    }
 }
 
 impl Display for UnaryOperatorKind {

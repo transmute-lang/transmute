@@ -27,7 +27,8 @@ pub struct IdentifierRef {
     id: IdentRefId,
     ident: Identifier,
     /// The referenced symbol id
-    // todo could a Node instead (or as well if we want to keep SymbolId)
+    // todo 1 - could a Node instead (or as well if we want to keep SymbolId)
+    // todo 2 - allow for multiple symbols (overloading for functions and operators)
     symbol_id: Option<SymbolId>,
 }
 

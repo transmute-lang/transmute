@@ -1,23 +1,25 @@
 use crate::ast::expression::ExpressionKind;
 use crate::ast::ids::{ExprId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
 use crate::ast::statement::StatementKind;
 use crate::ast::{Ast, Visitor};
 use crate::error::Diagnostics;
 use crate::exit_points::ExitPoints;
+use crate::predefined::Predefined;
 use crate::symbol_table::{Node, SymbolTable};
 use std::fmt::{Display, Formatter};
 
 pub struct TypeChecker<'a> {
     ast: &'a Ast,
     table: &'a SymbolTable,
+    // todo should maybe be part of the symbol table
+    predefined: &'a Predefined,
     types: Vec<Option<Res>>,
     diagnostics: Diagnostics,
 }
 
 impl<'a> TypeChecker<'a> {
-    pub fn new(ast: &'a Ast, table: &'a SymbolTable) -> Self {
+    pub fn new(ast: &'a Ast, table: &'a SymbolTable, predefined: &'a Predefined) -> Self {
         let mut types = Vec::with_capacity(ast.expressions_count());
         for _ in 0..ast.expressions_count() {
             types.push(None);
@@ -26,6 +28,7 @@ impl<'a> TypeChecker<'a> {
         Self {
             ast,
             table,
+            predefined,
             types,
             diagnostics: Default::default(),
         }
@@ -260,22 +263,14 @@ impl Visitor<Res> for TypeChecker<'_> {
             ExpressionKind::Unary(op, expr) => {
                 let op = *op.kind();
                 let expr = *expr;
-                let ty = self.visit_expression(expr)?;
-                match (op, ty) {
-                    (UnaryOperatorKind::Minus, Some(Type::Number)) => Ok(Some(Type::Number)),
-                    (UnaryOperatorKind::Minus, Some(t)) => {
+                let ty = self.visit_expression(expr)?.unwrap_or(Type::Void);
+
+                match self.predefined.find_fn(op.function_name(), vec![ty]) {
+                    Some(predef) => Ok(Some(predef.return_type())),
+                    None => {
                         let expr = self.ast.expression(expr);
                         self.diagnostics.report_err(
-                            format!("Expected number, got {t}"),
-                            expr.span().clone(),
-                            (file!(), line!()),
-                        );
-                        Err(())
-                    }
-                    (UnaryOperatorKind::Minus, None) => {
-                        let expr = self.ast.expression(expr);
-                        self.diagnostics.report_err(
-                            "Expected number, got no type",
+                            format!("Invalid type {ty} found for {op}"),
                             expr.span().clone(),
                             (file!(), line!()),
                         );
@@ -287,40 +282,15 @@ impl Visitor<Res> for TypeChecker<'_> {
                 let op = *op.kind();
                 let left = *left;
                 let right = *right;
-                let left_type = self.visit_expression(left)?;
-                let right_type = self.visit_expression(right)?;
+                let left_type = self.visit_expression(left)?.unwrap_or(Type::Void);
+                let right_type = self.visit_expression(right)?.unwrap_or(Type::Void);
 
-                // todo use predefs
-                match (left_type, op, right_type) {
-                    (Some(Type::Number), BinaryOperatorKind::GreaterThan, Some(Type::Number))
-                    | (
-                        Some(Type::Number),
-                        BinaryOperatorKind::GreaterThanOrEqualTo,
-                        Some(Type::Number),
-                    )
-                    | (Some(Type::Number), BinaryOperatorKind::SmallerThan, Some(Type::Number))
-                    | (
-                        Some(Type::Number),
-                        BinaryOperatorKind::SmallerThanOrEqualTo,
-                        Some(Type::Number),
-                    )
-                    | (Some(Type::Number), BinaryOperatorKind::Equality, Some(Type::Number))
-                    | (Some(Type::Number), BinaryOperatorKind::NonEquality, Some(Type::Number)) => {
-                        Ok(Some(Type::Boolean))
-                    }
-                    (Some(Type::Number), BinaryOperatorKind::Addition, Some(Type::Number))
-                    | (Some(Type::Number), BinaryOperatorKind::Subtraction, Some(Type::Number))
-                    | (
-                        Some(Type::Number),
-                        BinaryOperatorKind::Multiplication,
-                        Some(Type::Number),
-                    )
-                    | (Some(Type::Number), BinaryOperatorKind::Division, Some(Type::Number)) => {
-                        Ok(Some(Type::Number))
-                    }
-                    (left_type, op, right_type) => {
-                        let left_type = left_type.unwrap_or(Type::Void);
-                        let right_type = right_type.unwrap_or(Type::Void);
+                match self
+                    .predefined
+                    .find_fn(op.function_name(), vec![left_type, right_type])
+                {
+                    Some(predef) => Ok(Some(predef.return_type())),
+                    None => {
                         self.diagnostics.report_err(
                             format!("Invalid types {left_type} and {right_type} found for {op}"),
                             self.ast
@@ -479,6 +449,7 @@ mod tests {
     use crate::error::Level;
     use crate::lexer::{Lexer, Span};
     use crate::parser::Parser;
+    use crate::predefined::Predefined;
     use crate::resolver::Resolver;
     use crate::symbol_table::SymbolTableGen;
     use crate::type_check::TypeChecker;
@@ -492,7 +463,8 @@ mod tests {
                 let table = SymbolTableGen::new(&mut ast).build_table();
                 let (ast, diagnostics) = Resolver::new(ast, &table).resolve_symbols();
                 assert!(diagnostics.is_empty(), "{}", diagnostics);
-                let actual_diagnostics = TypeChecker::new(&ast, &table).check();
+                let actual_diagnostics =
+                    TypeChecker::new(&ast, &table, &Predefined::default()).check();
 
                 let actual_diagnostics = actual_diagnostics
                     .iter()
@@ -515,7 +487,8 @@ mod tests {
                 let table = SymbolTableGen::new(&mut ast).build_table();
                 let (ast, diagnostics) = Resolver::new(ast, &table).resolve_symbols();
                 assert!(diagnostics.is_empty(), "{}", diagnostics);
-                let actual_diagnostics = TypeChecker::new(&ast, &table).check();
+                let actual_diagnostics =
+                    TypeChecker::new(&ast, &table, &Predefined::default()).check();
 
                 let actual_diagnostics = actual_diagnostics
                     .iter()
@@ -709,13 +682,13 @@ mod tests {
     test_type_error!(
         unary_operator_invalid_type,
         "let n = - true;",
-        "Expected number, got boolean",
+        "Invalid type boolean found for -",
         Span::new(1, 11, 10, 4)
     );
     test_type_error!(
         unary_operator_no_type,
         "let n = - if true { ret 42; } else { ret 43; };",
-        "Expected number, got no type",
+        "Invalid type void found for -",
         Span::new(1, 11, 10, 36)
     );
 }

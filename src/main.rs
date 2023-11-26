@@ -5,6 +5,7 @@ use crate::ast::AstNodePrettyPrint;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
+use crate::predefined::Predefined;
 use crate::resolver::Resolver;
 use crate::symbol_table::SymbolTableGen;
 use crate::type_check::TypeChecker;
@@ -15,6 +16,7 @@ mod exit_points;
 mod interpreter;
 mod lexer;
 mod parser;
+mod predefined;
 mod resolver;
 mod symbol_table;
 mod type_check;
@@ -38,7 +40,7 @@ fn main() {
         "Parsed AST:\n{}",
         AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
     );
-    let type_checker_diagnostics = TypeChecker::new(&ast, &symbols).check();
+    let type_checker_diagnostics = TypeChecker::new(&ast, &symbols, &Predefined::new()).check();
     diagnostics.append(type_checker_diagnostics);
 
     if diagnostics.is_empty() {

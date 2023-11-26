@@ -1,9 +1,10 @@
 use crate::ast::expression::ExpressionKind;
 use crate::ast::ids::{ExprId, IdentId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
 use crate::ast::statement::{Parameter, Statement, StatementKind};
 use crate::ast::{Ast, Visitor};
+use crate::predefined::Predefined;
+use crate::type_check::Type;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
@@ -14,6 +15,8 @@ pub struct Interpreter<'a> {
     functions: HashMap<IdentId, (&'a Vec<Parameter>, &'a Vec<StmtId>)>,
     // todo IdentId should be SymbolId
     variables: Vec<HashMap<IdentId, Value>>,
+    // todo should come through symbol table, maybe
+    predefined: Predefined,
 }
 
 impl<'a> Interpreter<'a> {
@@ -21,7 +24,8 @@ impl<'a> Interpreter<'a> {
         Self {
             ast,
             functions: Default::default(),
-            variables: vec![HashMap::default()],
+            variables: vec![Default::default()],
+            predefined: Default::default(),
         }
     }
 
@@ -64,40 +68,25 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                 let l = self.visit_expression(*l);
                 let r = self.visit_expression(*r);
 
-                match l {
-                    Value::Boolean(b) => Value::Boolean(match o.kind() {
-                        BinaryOperatorKind::Equality => b == r.try_to_bool(),
-                        BinaryOperatorKind::NonEquality => b != r.try_to_bool(),
-                        _ => panic!("{} not supported on bool", o.kind()),
-                    }),
-                    Value::Number(n) => match o.kind() {
-                        BinaryOperatorKind::Addition => Value::Number(n + r.try_to_i64()),
-                        BinaryOperatorKind::Division => Value::Number(n / r.try_to_i64()),
-                        BinaryOperatorKind::Equality => Value::Boolean(n == r.try_to_i64()),
-                        BinaryOperatorKind::GreaterThan => Value::Boolean(n > r.try_to_i64()),
-                        BinaryOperatorKind::GreaterThanOrEqualTo => {
-                            Value::Boolean(n >= r.try_to_i64())
-                        }
-                        BinaryOperatorKind::Multiplication => Value::Number(n * r.try_to_i64()),
-                        BinaryOperatorKind::NonEquality => Value::Boolean(n != r.try_to_i64()),
-                        BinaryOperatorKind::SmallerThan => Value::Boolean(n < r.try_to_i64()),
-                        BinaryOperatorKind::SmallerThanOrEqualTo => {
-                            Value::Boolean(n <= r.try_to_i64())
-                        }
-                        BinaryOperatorKind::Subtraction => Value::Number(n - r.try_to_i64()),
-                    },
-                    _ => panic!("{} not supported on {}", o.kind(), l),
-                }
+                self.predefined
+                    .find_fn(o.kind().function_name(), vec![l.ty(), r.ty()])
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "predefined not found for {} {} {}",
+                            l.ty(),
+                            o.kind(),
+                            r.ty()
+                        )
+                    })
+                    .apply(vec![l, r])
             }
             ExpressionKind::Unary(o, e) => {
                 let e = self.visit_expression(*e);
 
-                match e {
-                    Value::Number(n) => Value::Number(match o.kind() {
-                        UnaryOperatorKind::Minus => -n,
-                    }),
-                    _ => panic!("{} not supported on {}", o.kind(), e),
-                }
+                self.predefined
+                    .find_fn(o.kind().function_name(), vec![e.ty()])
+                    .unwrap_or_else(|| panic!("predefined not found for {} {}", o.kind(), e.ty()))
+                    .apply(vec![e])
             }
             ExpressionKind::FunctionCall(ident, arguments) => {
                 let ident = self.ast.identifier_ref(*ident).ident();
@@ -259,17 +248,24 @@ impl Value {
             v => v,
         }
     }
-}
 
-impl Value {
-    fn try_to_i64(self) -> i64 {
+    pub fn ty(&self) -> Type {
+        match self {
+            Value::Boolean(_) => Type::Boolean,
+            Value::Number(_) => Type::Number,
+            Value::RetVal(v) => v.ty(),
+            Value::Void => Type::Void,
+        }
+    }
+
+    pub fn try_to_i64(self) -> i64 {
         match self {
             Value::Number(n) => n,
             _ => panic!("{} is not a number", self),
         }
     }
 
-    fn try_to_bool(self) -> bool {
+    pub fn try_to_bool(self) -> bool {
         match self {
             Value::Boolean(b) => b,
             _ => panic!("{} is not a bool", self),
