@@ -1,0 +1,57 @@
+---
+source: src/ast.rs
+expression: "&xml"
+---
+<?xml version="1.0" encoding="utf-8"?>
+<ast>
+  <identifiers>
+    <ident id="0">c_1</ident>
+    <ident id="1">w_1</ident>
+    <ident id="2">c_2</ident>
+    <ident id="3">w_2</ident>
+  </identifiers>
+  <stmt id="stmt:1" line="1" column="1" start="0" len="18">
+    <expr id="expr:3" line="1" column="1" start="0" len="18">
+      <while>
+        <condition line="1" column="7" start="6" len="3">
+          <expr id="expr:0" line="1" column="7" start="6" len="3">
+            <identifier-ref id="ident-ref:0" ident-ref="ident:0" target-id="">c_1</identifier-ref>
+          </expr>
+        </condition>
+        <body>
+          <expr id="expr:2" line="1" column="11" start="10" len="8">
+            <block>
+              <stmt id="stmt:0" line="1" column="13" start="12" len="4">
+                <expr id="expr:1" line="1" column="13" start="12" len="3">
+                  <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="">w_1</identifier-ref>
+                </expr>
+              </stmt>
+            </block>
+          </expr>
+        </body>
+      </while>
+    </expr>
+  </stmt>
+  <stmt id="stmt:3" line="1" column="1" start="0" len="18">
+    <expr id="expr:7" line="1" column="1" start="0" len="18">
+      <while>
+        <condition line="1" column="7" start="6" len="3">
+          <expr id="expr:4" line="1" column="7" start="6" len="3">
+            <identifier-ref id="ident-ref:2" ident-ref="ident:2" target-id="">c_2</identifier-ref>
+          </expr>
+        </condition>
+        <body>
+          <expr id="expr:6" line="1" column="11" start="10" len="8">
+            <block>
+              <stmt id="stmt:2" line="1" column="13" start="12" len="4">
+                <expr id="expr:5" line="1" column="13" start="12" len="3">
+                  <identifier-ref id="ident-ref:3" ident-ref="ident:3" target-id="">w_2</identifier-ref>
+                </expr>
+              </stmt>
+            </block>
+          </expr>
+        </body>
+      </while>
+    </expr>
+  </stmt>
+</ast>

@@ -4,6 +4,11 @@ expression: "&xml"
 ---
 <?xml version="1.0" encoding="utf-8"?>
 <ast>
+  <identifiers>
+    <ident id="0">f</ident>
+    <ident id="1">n</ident>
+    <ident id="2">number</ident>
+  </identifiers>
   <stmt id="stmt:3" line="2" column="13" start="13" len="152">
     <fn>
       <identifier id="ident:0" line="2" column="17" start="17" len="1">f</identifier>

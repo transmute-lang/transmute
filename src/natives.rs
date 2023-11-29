@@ -1,4 +1,3 @@
-use crate::ast::Ast;
 use crate::interpreter::Value;
 use crate::type_check::Type;
 use std::collections::HashMap;

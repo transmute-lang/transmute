@@ -1,0 +1,107 @@
+---
+source: src/ast.rs
+expression: "&xml"
+---
+<?xml version="1.0" encoding="utf-8"?>
+<ast>
+  <identifiers>
+    <ident id="0">x_1</ident>
+    <ident id="1">x_2</ident>
+  </identifiers>
+  <stmt id="stmt:0" line="1" column="1" start="0" len="12">
+    <let>
+      <identifier id="ident:0" line="1" column="5" start="4" len="3">x_1</identifier>
+      <expression line="1" column="11" start="10" len="1">
+        <expr id="expr:0" line="1" column="11" start="10" len="1">
+          <number line="1" column="11" start="10" len="1">0</number>
+        </expr>
+      </expression>
+    </let>
+  </stmt>
+  <stmt id="stmt:1" line="1" column="14" start="13" len="22">
+    <expr id="expr:7" line="1" column="14" start="13" len="21">
+      <assign ident-ref="ident:0" target-id="">
+        <identifier>x_1</identifier>
+        <expression>
+          <expr id="expr:6" line="1" column="20" start="19" len="15">
+            <binary operator="+" line="1" column="20" start="19" len="15">
+              <left>
+                <expr id="expr:4" line="1" column="20" start="19" len="8">
+                  <binary operator="*" line="1" column="20" start="19" len="8">
+                    <left>
+                      <expr id="expr:2" line="1" column="20" start="19" len="4">
+                        <unary operator="-">
+                          <expr id="expr:1" line="1" column="21" start="20" len="3">
+                            <identifier-ref id="ident-ref:0" ident-ref="ident:0" target-id="">x_1</identifier-ref>
+                          </expr>
+                        </unary>
+                      </expr>
+                    </left>
+                    <right>
+                      <expr id="expr:3" line="1" column="27" start="26" len="1">
+                        <number line="1" column="27" start="26" len="1">2</number>
+                      </expr>
+                    </right>
+                  </binary>
+                </expr>
+              </left>
+              <right>
+                <expr id="expr:5" line="1" column="31" start="30" len="4">
+                  <bool line="1" column="31" start="30" len="4">true</bool>
+                </expr>
+              </right>
+            </binary>
+          </expr>
+        </expression>
+      </assign>
+    </expr>
+  </stmt>
+  <stmt id="stmt:2" line="1" column="1" start="0" len="12">
+    <let>
+      <identifier id="ident:1" line="1" column="5" start="4" len="3">x_2</identifier>
+      <expression line="1" column="11" start="10" len="1">
+        <expr id="expr:8" line="1" column="11" start="10" len="1">
+          <number line="1" column="11" start="10" len="1">0</number>
+        </expr>
+      </expression>
+    </let>
+  </stmt>
+  <stmt id="stmt:3" line="1" column="14" start="13" len="22">
+    <expr id="expr:15" line="1" column="14" start="13" len="21">
+      <assign ident-ref="ident:1" target-id="">
+        <identifier>x_2</identifier>
+        <expression>
+          <expr id="expr:14" line="1" column="20" start="19" len="15">
+            <binary operator="+" line="1" column="20" start="19" len="15">
+              <left>
+                <expr id="expr:12" line="1" column="20" start="19" len="8">
+                  <binary operator="*" line="1" column="20" start="19" len="8">
+                    <left>
+                      <expr id="expr:10" line="1" column="20" start="19" len="4">
+                        <unary operator="-">
+                          <expr id="expr:9" line="1" column="21" start="20" len="3">
+                            <identifier-ref id="ident-ref:2" ident-ref="ident:1" target-id="">x_2</identifier-ref>
+                          </expr>
+                        </unary>
+                      </expr>
+                    </left>
+                    <right>
+                      <expr id="expr:11" line="1" column="27" start="26" len="1">
+                        <number line="1" column="27" start="26" len="1">2</number>
+                      </expr>
+                    </right>
+                  </binary>
+                </expr>
+              </left>
+              <right>
+                <expr id="expr:13" line="1" column="31" start="30" len="4">
+                  <bool line="1" column="31" start="30" len="4">true</bool>
+                </expr>
+              </right>
+            </binary>
+          </expr>
+        </expression>
+      </assign>
+    </expr>
+  </stmt>
+</ast>

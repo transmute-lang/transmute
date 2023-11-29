@@ -1,0 +1,81 @@
+---
+source: src/ast.rs
+expression: "&xml"
+---
+<?xml version="1.0" encoding="utf-8"?>
+<ast>
+  <identifiers>
+    <ident id="0">c_1</ident>
+    <ident id="1">t_1</ident>
+    <ident id="2">f_1</ident>
+    <ident id="3">c_2</ident>
+    <ident id="4">t_2</ident>
+    <ident id="5">f_2</ident>
+  </identifiers>
+  <stmt id="stmt:2" line="1" column="1" start="0" len="29">
+    <expr id="expr:5" line="1" column="1" start="0" len="29">
+      <if>
+        <condition>
+          <expr id="expr:0" line="1" column="4" start="3" len="3">
+            <identifier-ref id="ident-ref:0" ident-ref="ident:0" target-id="">c_1</identifier-ref>
+          </expr>
+        </condition>
+        <true>
+          <expr id="expr:2" line="1" column="8" start="7" len="8">
+            <block>
+              <stmt id="stmt:0" line="1" column="10" start="9" len="4">
+                <expr id="expr:1" line="1" column="10" start="9" len="3">
+                  <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="">t_1</identifier-ref>
+                </expr>
+              </stmt>
+            </block>
+          </expr>
+        </true>
+        <false>
+          <expr id="expr:4" line="1" column="22" start="21" len="8">
+            <block>
+              <stmt id="stmt:1" line="1" column="24" start="23" len="4">
+                <expr id="expr:3" line="1" column="24" start="23" len="3">
+                  <identifier-ref id="ident-ref:2" ident-ref="ident:2" target-id="">f_1</identifier-ref>
+                </expr>
+              </stmt>
+            </block>
+          </expr>
+        </false>
+      </if>
+    </expr>
+  </stmt>
+  <stmt id="stmt:5" line="1" column="1" start="0" len="29">
+    <expr id="expr:11" line="1" column="1" start="0" len="29">
+      <if>
+        <condition>
+          <expr id="expr:6" line="1" column="4" start="3" len="3">
+            <identifier-ref id="ident-ref:3" ident-ref="ident:3" target-id="">c_2</identifier-ref>
+          </expr>
+        </condition>
+        <true>
+          <expr id="expr:8" line="1" column="8" start="7" len="8">
+            <block>
+              <stmt id="stmt:3" line="1" column="10" start="9" len="4">
+                <expr id="expr:7" line="1" column="10" start="9" len="3">
+                  <identifier-ref id="ident-ref:4" ident-ref="ident:4" target-id="">t_2</identifier-ref>
+                </expr>
+              </stmt>
+            </block>
+          </expr>
+        </true>
+        <false>
+          <expr id="expr:10" line="1" column="22" start="21" len="8">
+            <block>
+              <stmt id="stmt:4" line="1" column="24" start="23" len="4">
+                <expr id="expr:9" line="1" column="24" start="23" len="3">
+                  <identifier-ref id="ident-ref:5" ident-ref="ident:5" target-id="">f_2</identifier-ref>
+                </expr>
+              </stmt>
+            </block>
+          </expr>
+        </false>
+      </if>
+    </expr>
+  </stmt>
+</ast>

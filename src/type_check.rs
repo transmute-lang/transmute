@@ -6,7 +6,7 @@ use crate::ast::{Ast, Visitor};
 use crate::error::Diagnostics;
 use crate::exit_points::ExitPoints;
 use crate::natives::Natives;
-use crate::symbol_table::{Node, Symbol, SymbolTable};
+use crate::symbol_table::{Node, SymbolTable};
 use std::fmt::{Display, Formatter};
 
 pub struct TypeChecker<'a> {

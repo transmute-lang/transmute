@@ -1,0 +1,99 @@
+---
+source: src/ast.rs
+expression: "&xml"
+---
+<?xml version="1.0" encoding="utf-8"?>
+<ast>
+  <identifiers>
+    <ident id="0">x_1</ident>
+    <ident id="1">f_1</ident>
+    <ident id="2">p_1</ident>
+    <ident id="3">t_1</ident>
+    <ident id="4">r_1</ident>
+    <ident id="5">x_2</ident>
+    <ident id="6">f_2</ident>
+    <ident id="7">p_2</ident>
+    <ident id="8">t_2</ident>
+    <ident id="9">r_2</ident>
+  </identifiers>
+  <stmt id="stmt:0" line="1" column="1" start="0" len="12">
+    <let>
+      <identifier id="ident:0" line="1" column="5" start="4" len="3">x_1</identifier>
+      <expression line="1" column="11" start="10" len="1">
+        <expr id="expr:0" line="1" column="11" start="10" len="1">
+          <number line="1" column="11" start="10" len="1">0</number>
+        </expr>
+      </expression>
+    </let>
+  </stmt>
+  <stmt id="stmt:1" line="1" column="14" start="13" len="27">
+    <fn>
+      <identifier id="ident:1" line="1" column="18" start="17" len="3">f_1</identifier>
+      <type id="ident:4" line="1" column="33" start="32" len="3">r_1</type>
+      <parameters>
+        <parameter line="1" column="22" start="21" len="8">
+          <name id="ident:2" line="1" column="22" start="21" len="3">p_1</name>
+          <type id="ident:3" line="1" column="27" start="26" len="3">t_1</type>
+        </parameter>
+      </parameters>
+      <body line="1" column="39" start="38" len="2">
+        <expr id="expr:1" line="1" column="39" start="38" len="2">
+          <block />
+        </expr>
+      </body>
+    </fn>
+  </stmt>
+  <stmt id="stmt:2" line="1" column="42" start="41" len="9">
+    <expr id="expr:3" line="1" column="42" start="41" len="8">
+      <call ident-ref="ident:1" name="f_1" target-id="">
+        <parameters>
+          <parameter>
+            <expr id="expr:2" line="1" column="46" start="45" len="3">
+              <identifier-ref id="ident-ref:0" ident-ref="ident:0" target-id="">x_1</identifier-ref>
+            </expr>
+          </parameter>
+        </parameters>
+      </call>
+    </expr>
+  </stmt>
+  <stmt id="stmt:3" line="1" column="1" start="0" len="12">
+    <let>
+      <identifier id="ident:5" line="1" column="5" start="4" len="3">x_2</identifier>
+      <expression line="1" column="11" start="10" len="1">
+        <expr id="expr:4" line="1" column="11" start="10" len="1">
+          <number line="1" column="11" start="10" len="1">0</number>
+        </expr>
+      </expression>
+    </let>
+  </stmt>
+  <stmt id="stmt:4" line="1" column="14" start="13" len="27">
+    <fn>
+      <identifier id="ident:6" line="1" column="18" start="17" len="3">f_2</identifier>
+      <type id="ident:9" line="1" column="33" start="32" len="3">r_2</type>
+      <parameters>
+        <parameter line="1" column="22" start="21" len="8">
+          <name id="ident:7" line="1" column="22" start="21" len="3">p_2</name>
+          <type id="ident:8" line="1" column="27" start="26" len="3">t_2</type>
+        </parameter>
+      </parameters>
+      <body line="1" column="39" start="38" len="2">
+        <expr id="expr:5" line="1" column="39" start="38" len="2">
+          <block />
+        </expr>
+      </body>
+    </fn>
+  </stmt>
+  <stmt id="stmt:5" line="1" column="42" start="41" len="9">
+    <expr id="expr:7" line="1" column="42" start="41" len="8">
+      <call ident-ref="ident:6" name="f_2" target-id="">
+        <parameters>
+          <parameter>
+            <expr id="expr:6" line="1" column="46" start="45" len="3">
+              <identifier-ref id="ident-ref:2" ident-ref="ident:5" target-id="">x_2</identifier-ref>
+            </expr>
+          </parameter>
+        </parameters>
+      </call>
+    </expr>
+  </stmt>
+</ast>

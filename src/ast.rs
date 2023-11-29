@@ -6,10 +6,11 @@ pub mod operators;
 pub mod statement;
 
 use crate::ast::expression::{Expression, ExpressionKind};
-use crate::ast::identifier::IdentifierRef;
+use crate::ast::identifier::{Identifier, IdentifierRef};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::statement::{Statement, StatementKind};
+use crate::ast::statement::{Parameter, Statement, StatementKind};
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 pub trait Visitor<R> {
@@ -52,8 +53,190 @@ impl Ast {
         }
     }
 
+    pub fn merge(self, other: Ast) -> Ast {
+        let mut identifiers = self
+            .identifiers
+            .into_iter()
+            .enumerate()
+            .map(|(i, ident)| (ident, i))
+            .collect::<HashMap<String, usize>>();
+
+        let mut ident_map = Vec::with_capacity(other.identifiers.len());
+        for ident in other.identifiers.into_iter() {
+            if let Some(id) = identifiers.get(&ident) {
+                ident_map.push(*id);
+            } else {
+                let id = identifiers.len();
+                identifiers.insert(ident, id);
+                ident_map.push(id);
+            }
+        }
+
+        let mut identifier_refs = self.identifier_refs;
+        let mut ident_ref_map = Vec::with_capacity(other.identifier_refs.len());
+        for ident_ref in other.identifier_refs.into_iter() {
+            let id = identifier_refs.len();
+            identifier_refs.push(IdentifierRef::new(
+                IdentRefId::from(id),
+                Identifier::new(
+                    IdentId::from(ident_map[ident_ref.ident().id().id()]),
+                    ident_ref.ident().span().clone(),
+                ),
+            ));
+            ident_ref_map.push(id);
+        }
+
+        let stmt_base = self.statements.len();
+        let expr_base = self.expressions.len();
+
+        let mut expressions = self.expressions;
+        for expression in other.expressions {
+            let expression = Expression::new(
+                ExprId::from(expr_base + expression.id().id()),
+                match expression.kind() {
+                    ExpressionKind::Assignment(ident_ref, expr) => {
+                        ExpressionKind::Assignment(IdentRefId::from(
+                            ident_ref_map[ident_ref.id()],
+                        ), ExprId::from(expr_base + expr.id()))
+                    }
+                    ExpressionKind::If(cond, true_branch, false_branch) => ExpressionKind::If(
+                        ExprId::from(expr_base + cond.id()),
+                        ExprId::from(expr_base + true_branch.id()),
+                        false_branch.map(|expr| ExprId::from(expr_base + expr.id())),
+                    ),
+                    ExpressionKind::Literal(lit) => match lit.kind() {
+                        LiteralKind::Boolean(b) => ExpressionKind::Literal(Literal::new(
+                            LiteralKind::Boolean(*b),
+                            lit.span().clone(),
+                        )),
+                        LiteralKind::Identifier(ident_ref) => {
+                            ExpressionKind::Literal(Literal::new(
+                                LiteralKind::Identifier(IdentRefId::from(
+                                    ident_ref_map[ident_ref.id()],
+                                )),
+                                lit.span().clone(),
+                            ))
+                        }
+                        LiteralKind::Number(n) => ExpressionKind::Literal(Literal::new(
+                            LiteralKind::Number(*n),
+                            lit.span().clone(),
+                        )),
+                    },
+                    ExpressionKind::Binary(left, op, right) => ExpressionKind::Binary(
+                        ExprId::from(expr_base + left.id()),
+                        op.clone(),
+                        ExprId::from(expr_base + right.id()),
+                    ),
+                    ExpressionKind::FunctionCall(ident_ref, parameters) => {
+                        ExpressionKind::FunctionCall(
+                            IdentRefId::from(ident_ref_map[ident_ref.id()]),
+                            parameters
+                                .iter()
+                                .map(|e| ExprId::from(expr_base + e.id()))
+                                .collect::<Vec<ExprId>>(),
+                        )
+                    }
+                    ExpressionKind::Unary(op, expr) => {
+                        ExpressionKind::Unary(op.clone(), ExprId::from(expr_base + expr.id()))
+                    }
+                    ExpressionKind::While(cond, expr) => ExpressionKind::While(
+                        ExprId::from(expr_base + cond.id()),
+                        ExprId::from(expr_base + expr.id()),
+                    ),
+                    ExpressionKind::Block(stmts) => ExpressionKind::Block(
+                        stmts
+                            .iter()
+                            .map(|s| StmtId::from(stmt_base + s.id()))
+                            .collect::<Vec<StmtId>>(),
+                    ),
+                    ExpressionKind::Dummy => ExpressionKind::Dummy,
+                },
+                expression.span().clone(),
+            );
+
+            expressions.push(expression);
+        }
+
+        let mut statements = self.statements;
+
+        for statement in other.statements {
+            let statement = Statement::new(
+                StmtId::from(stmt_base + statement.id().id()),
+                match statement.kind() {
+                    StatementKind::Expression(expr) => {
+                        StatementKind::Expression(ExprId::from(expr_base + expr.id()))
+                    }
+                    StatementKind::Let(identifier, expr) => StatementKind::Let(
+                        Identifier::new(
+                            IdentId::from(ident_map[identifier.id().id()]),
+                            identifier.span().clone(),
+                        ),
+                        ExprId::from(expr_base + expr.id()),
+                    ),
+                    StatementKind::Ret(expr) => {
+                        StatementKind::Ret(ExprId::from(expr_base + expr.id()))
+                    }
+                    StatementKind::LetFn(identifier, parameters, return_type, expr) => {
+                        StatementKind::LetFn(
+                            Identifier::new(
+                                IdentId::from(ident_map[identifier.id().id()]),
+                                identifier.span().clone(),
+                            ),
+                            parameters
+                                .iter()
+                                .map(|p| {
+                                    Parameter::new(
+                                        Identifier::new(
+                                            IdentId::from(ident_map[p.identifier().id().id()]),
+                                            p.identifier().span().clone(),
+                                        ),
+                                        Identifier::new(
+                                            IdentId::from(ident_map[p.ty().id().id()]),
+                                            p.ty().span().clone(),
+                                        ),
+                                        p.span().clone(),
+                                    )
+                                })
+                                .collect::<Vec<Parameter>>(),
+                            return_type.as_ref().map(|t| {
+                                Identifier::new(
+                                    IdentId::from(ident_map[t.id().id()]),
+                                    t.span().clone(),
+                                )
+                            }),
+                            ExprId::from(expr_base + expr.id()),
+                        )
+                    }
+                },
+                statement.span().clone(),
+            );
+
+            statements.push(statement);
+        }
+
+        let mut root = self.root;
+        for stmt in other.root {
+            root.push(StmtId::from(stmt_base + stmt.id()));
+        }
+
+        let mut identifiers = identifiers.into_iter().collect::<Vec<(String, usize)>>();
+
+        identifiers.sort_by(|(_, id1), (_, id2)| id1.cmp(id2));
+
+        let identifiers = identifiers
+            .into_iter()
+            .map(|(ident, _)| ident)
+            .collect::<Vec<String>>();
+
+        Ast::new(identifiers, identifier_refs, expressions, statements, root)
+    }
+
     pub fn statements(&self) -> &Vec<StmtId> {
         &self.root
+    }
+
+    pub fn identifiers(&self) -> &Vec<String> {
+        &self.identifiers
     }
 
     pub fn identifier(&self, id: IdentId) -> &str {
@@ -350,6 +533,9 @@ mod tests {
     use crate::ast::AstNodePrettyPrint;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
+    use crate::symbol_table::SymbolTableGen;
+    use crate::xml::XmlWriter;
+    use insta::assert_snapshot;
 
     #[test]
     fn pretty_print() {
@@ -389,6 +575,90 @@ mod tests {
 }
 "#;
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn merge_1() {
+        let (ast1, d) = Parser::new(Lexer::new(
+            "let x_1 = 0; let f_1(p_1: t_1): r_1 = {} f_1(x_1);",
+        ))
+        .parse();
+        assert!(d.is_empty(), "{:?}", d);
+
+        let (ast2, d) = Parser::new(Lexer::new(
+            "let x_2 = 0; let f_2(p_2: t_2): r_2 = {} f_2(x_2);",
+        ))
+        .parse();
+        assert!(d.is_empty(), "{:?}", d);
+
+        let mut ast = ast1.merge(ast2);
+        let table = SymbolTableGen::new(&mut ast).build_table();
+
+        let xml = XmlWriter::new(&ast, &table).serialize();
+        assert_snapshot!(&xml);
+    }
+
+    #[test]
+    fn merge_2() {
+        let (ast1, d) = Parser::new(Lexer::new(
+            "let x_1 = 0; x_1 = -x_1 * 2 + true;",
+        ))
+            .parse();
+        assert!(d.is_empty(), "{:?}", d);
+
+        let (ast2, d) = Parser::new(Lexer::new(
+            "let x_2 = 0; x_2 = -x_2 * 2 + true;",
+        ))
+            .parse();
+        assert!(d.is_empty(), "{:?}", d);
+
+        let mut ast = ast1.merge(ast2);
+        let table = SymbolTableGen::new(&mut ast).build_table();
+
+        let xml = XmlWriter::new(&ast, &table).serialize();
+        assert_snapshot!(&xml);
+    }
+
+    #[test]
+    fn merge_if() {
+        let (ast1, d) = Parser::new(Lexer::new(
+            "if c_1 { t_1; } else { f_1; }",
+        ))
+            .parse();
+        assert!(d.is_empty(), "{:?}", d);
+
+        let (ast2, d) = Parser::new(Lexer::new(
+            "if c_2 { t_2; } else { f_2; }",
+        ))
+            .parse();
+        assert!(d.is_empty(), "{:?}", d);
+
+        let mut ast = ast1.merge(ast2);
+        let table = SymbolTableGen::new(&mut ast).build_table();
+
+        let xml = XmlWriter::new(&ast, &table).serialize();
+        assert_snapshot!(&xml);
+    }
+
+    #[test]
+    fn merge_while() {
+        let (ast1, d) = Parser::new(Lexer::new(
+            "while c_1 { w_1; }",
+        ))
+            .parse();
+        assert!(d.is_empty(), "{:?}", d);
+
+        let (ast2, d) = Parser::new(Lexer::new(
+            "while c_2 { w_2; }",
+        ))
+            .parse();
+        assert!(d.is_empty(), "{:?}", d);
+
+        let mut ast = ast1.merge(ast2);
+        let table = SymbolTableGen::new(&mut ast).build_table();
+
+        let xml = XmlWriter::new(&ast, &table).serialize();
+        assert_snapshot!(&xml);
     }
 }
 

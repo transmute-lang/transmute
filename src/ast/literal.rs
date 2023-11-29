@@ -15,6 +15,10 @@ impl Literal {
     pub fn kind(&self) -> &LiteralKind {
         &self.kind
     }
+
+    pub fn span(&self) -> &Span {
+        &self.span
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -31,6 +31,15 @@ impl<'a> XmlWriter<'a> {
 
     pub fn serialize(mut self) -> String {
         self.write(XmlEvent::start_element("ast"));
+
+        self.write(XmlEvent::start_element("identifiers"));
+        for (id, identifier) in self.ast.identifiers().iter().enumerate() {
+            self.write(XmlEvent::start_element("ident").attr("id", &id.to_string()));
+            self.write(XmlEvent::Characters(identifier));
+            self.write(XmlEvent::end_element());
+        }
+        self.write(XmlEvent::end_element());
+
         #[allow(clippy::unnecessary_to_owned)]
         for stmt in self.ast.statements().to_vec() {
             self.visit_statement(stmt);
@@ -227,6 +236,7 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                 self.write(
                     XmlEvent::start_element("assign")
                         .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
+                        // fixme seems broken
                         .attr("target-id", &symbol),
                 );
 
@@ -298,6 +308,7 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                         XmlEvent::start_element("identifier-ref")
                             .attr("id", &format!("ident-ref:{}", ident_ref.id()))
                             .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
+                            // fixme seems broken
                             .attr("target-id", &symbol),
                     );
                     self.write(XmlEvent::characters(
@@ -358,8 +369,10 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
 
                 self.write(
                     XmlEvent::start_element("call")
+                        // todo miss id of the ident-ref? (or remove from identifier-ref? or use identifier-ref here too)
                         .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
                         .attr("name", self.ast.identifier(ident_ref.ident().id()))
+                        // fixme seems broken
                         .attr("target-id", &symbol),
                 );
 
