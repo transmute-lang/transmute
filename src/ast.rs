@@ -60,7 +60,6 @@ impl Ast {
         &self.identifiers[id.id()]
     }
 
-    #[cfg(test)]
     pub fn identifier_id(&self, name: &str) -> IdentId {
         for (id, ident) in self.identifiers.iter().enumerate() {
             if ident == name {

@@ -1,25 +1,26 @@
+use crate::ast::Ast;
 use crate::interpreter::Value;
 use crate::type_check::Type;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 
-pub struct Predefined {
-    functions: HashMap<&'static str, Vec<PredefinedFn>>,
+pub struct Natives {
+    functions: HashMap<&'static str, Vec<Native>>,
 }
 
-impl Default for Predefined {
+impl Default for Natives {
     fn default() -> Self {
-        Predefined::new()
+        Natives::new()
     }
 }
 
-impl Predefined {
-    pub fn new() -> Predefined {
+impl Natives {
+    pub fn new() -> Natives {
         let mut predef = Self {
             functions: Default::default(),
         };
 
-        predef.insert_fn(PredefinedFn {
+        predef.insert_fn(Native {
             name: "neg",
             parameters: vec![Type::Number],
             return_type: Type::Number,
@@ -29,7 +30,7 @@ impl Predefined {
             },
         });
 
-        predef.insert_fn(PredefinedFn {
+        predef.insert_fn(Native {
             name: "add",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
@@ -39,7 +40,7 @@ impl Predefined {
                 Value::Number(left + right)
             },
         });
-        predef.insert_fn(PredefinedFn {
+        predef.insert_fn(Native {
             name: "sub",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
@@ -49,7 +50,7 @@ impl Predefined {
                 Value::Number(left - right)
             },
         });
-        predef.insert_fn(PredefinedFn {
+        predef.insert_fn(Native {
             name: "mul",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
@@ -59,7 +60,7 @@ impl Predefined {
                 Value::Number(left * right)
             },
         });
-        predef.insert_fn(PredefinedFn {
+        predef.insert_fn(Native {
             name: "div",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
@@ -69,7 +70,7 @@ impl Predefined {
                 Value::Number(left / right)
             },
         });
-        predef.insert_fn(PredefinedFn {
+        predef.insert_fn(Native {
             name: "eq",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
@@ -79,7 +80,7 @@ impl Predefined {
                 Value::Boolean(left == right)
             },
         });
-        predef.insert_fn(PredefinedFn {
+        predef.insert_fn(Native {
             name: "neq",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
@@ -89,7 +90,7 @@ impl Predefined {
                 Value::Boolean(left != right)
             },
         });
-        predef.insert_fn(PredefinedFn {
+        predef.insert_fn(Native {
             name: "gt",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
@@ -99,7 +100,7 @@ impl Predefined {
                 Value::Boolean(left > right)
             },
         });
-        predef.insert_fn(PredefinedFn {
+        predef.insert_fn(Native {
             name: "lt",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
@@ -109,7 +110,7 @@ impl Predefined {
                 Value::Boolean(left < right)
             },
         });
-        predef.insert_fn(PredefinedFn {
+        predef.insert_fn(Native {
             name: "ge",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
@@ -119,7 +120,7 @@ impl Predefined {
                 Value::Boolean(left >= right)
             },
         });
-        predef.insert_fn(PredefinedFn {
+        predef.insert_fn(Native {
             name: "le",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
@@ -130,7 +131,7 @@ impl Predefined {
             },
         });
 
-        predef.insert_fn(PredefinedFn {
+        predef.insert_fn(Native {
             name: "eq",
             parameters: vec![Type::Boolean, Type::Boolean],
             return_type: Type::Boolean,
@@ -140,7 +141,7 @@ impl Predefined {
                 Value::Boolean(left == right)
             },
         });
-        predef.insert_fn(PredefinedFn {
+        predef.insert_fn(Native {
             name: "neq",
             parameters: vec![Type::Boolean, Type::Boolean],
             return_type: Type::Boolean,
@@ -154,7 +155,7 @@ impl Predefined {
         predef
     }
 
-    fn insert_fn(&mut self, predef: PredefinedFn) {
+    fn insert_fn(&mut self, predef: Native) {
         if let Some(v) = self.functions.get_mut(predef.name) {
             v.push(predef);
         } else {
@@ -162,7 +163,7 @@ impl Predefined {
         }
     }
 
-    pub fn find_fn(&self, ident: &str, parameters: Vec<Type>) -> Option<&PredefinedFn> {
+    pub fn find_fn(&self, ident: &str, parameters: Vec<Type>) -> Option<&Native> {
         if let Some(function) = self.functions.get(ident) {
             function.iter().find(|f| f.parameters == parameters)
         } else {
@@ -171,14 +172,23 @@ impl Predefined {
     }
 }
 
-pub struct PredefinedFn {
+#[derive(PartialEq)]
+pub struct Native {
     name: &'static str,
     parameters: Vec<Type>,
     return_type: Type,
     body: fn(Vec<Value>) -> Value,
 }
 
-impl PredefinedFn {
+impl Native {
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
+
+    pub fn parameters(&self) -> &Vec<Type> {
+        &self.parameters
+    }
+
     pub fn return_type(&self) -> Type {
         self.return_type
     }
@@ -188,7 +198,7 @@ impl PredefinedFn {
     }
 }
 
-impl Debug for PredefinedFn {
+impl Debug for Native {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -207,14 +217,14 @@ impl Debug for PredefinedFn {
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Value;
-    use crate::predefined::Predefined;
+    use crate::natives::Natives;
     use crate::type_check::Type;
 
     macro_rules! predef {
         ($name:ident: $function:expr, [$($value:expr,)*] => $expected:expr) => {
             #[test]
             fn $name() {
-                let predef = Predefined::default();
+                let predef = Natives::default();
                 let values = vec![$($value),*];
                 let types = values.iter().map(|v| v.ty()).collect::<Vec<Type>>();
 

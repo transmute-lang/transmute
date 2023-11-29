@@ -3,7 +3,7 @@ use crate::ast::ids::{ExprId, IdentId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Parameter, Statement, StatementKind};
 use crate::ast::{Ast, Visitor};
-use crate::predefined::Predefined;
+use crate::natives::Natives;
 use crate::type_check::Type;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -16,7 +16,7 @@ pub struct Interpreter<'a> {
     // todo IdentId should be SymbolId
     variables: Vec<HashMap<IdentId, Value>>,
     // todo should come through symbol table, maybe
-    predefined: Predefined,
+    predefined: Natives,
 }
 
 impl<'a> Interpreter<'a> {

@@ -5,21 +5,21 @@ use crate::ast::statement::StatementKind;
 use crate::ast::{Ast, Visitor};
 use crate::error::Diagnostics;
 use crate::exit_points::ExitPoints;
-use crate::predefined::Predefined;
-use crate::symbol_table::{Node, SymbolTable};
+use crate::natives::Natives;
+use crate::symbol_table::{Node, Symbol, SymbolTable};
 use std::fmt::{Display, Formatter};
 
 pub struct TypeChecker<'a> {
     ast: Ast,
     table: &'a SymbolTable,
     // todo should maybe be part of the symbol table
-    predefined: &'a Predefined,
+    predefined: &'a Natives,
     types: Vec<Option<Res>>,
     diagnostics: Diagnostics,
 }
 
 impl<'a> TypeChecker<'a> {
-    pub fn new(ast: Ast, table: &'a SymbolTable, predefined: &'a Predefined) -> Self {
+    pub fn new(ast: Ast, table: &'a SymbolTable, predefined: &'a Natives) -> Self {
         let mut types = Vec::with_capacity(ast.expressions_count());
         for _ in 0..ast.expressions_count() {
             types.push(None);
@@ -484,8 +484,8 @@ impl TryFrom<&str> for Type {
 mod tests {
     use crate::error::{Diagnostics, Level};
     use crate::lexer::{Lexer, Span};
+    use crate::natives::Natives;
     use crate::parser::Parser;
-    use crate::predefined::Predefined;
     use crate::symbol_table::{Node, SymbolTableGen};
     use crate::type_check::TypeChecker;
 
@@ -497,8 +497,7 @@ mod tests {
 
         let symbol_table = SymbolTableGen::new(&mut ast).build_table();
 
-        let (ast, diagnostics) =
-            TypeChecker::new(ast, &symbol_table, &Predefined::default()).check();
+        let (ast, diagnostics) = TypeChecker::new(ast, &symbol_table, &Natives::default()).check();
 
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
@@ -522,8 +521,7 @@ mod tests {
 
         let symbol_table = SymbolTableGen::new(&mut ast).build_table();
 
-        let (ast, diagnostics) =
-            TypeChecker::new(ast, &symbol_table, &Predefined::default()).check();
+        let (ast, diagnostics) = TypeChecker::new(ast, &symbol_table, &Natives::default()).check();
 
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
@@ -546,8 +544,7 @@ mod tests {
 
         let symbol_table = SymbolTableGen::new(&mut ast).build_table();
 
-        let (ast, diagnostics) =
-            TypeChecker::new(ast, &symbol_table, &Predefined::default()).check();
+        let (ast, diagnostics) = TypeChecker::new(ast, &symbol_table, &Natives::default()).check();
 
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
@@ -573,8 +570,7 @@ mod tests {
 
         let symbol_table = SymbolTableGen::new(&mut ast).build_table();
 
-        let (ast, diagnostics) =
-            TypeChecker::new(ast, &symbol_table, &Predefined::default()).check();
+        let (ast, diagnostics) = TypeChecker::new(ast, &symbol_table, &Natives::default()).check();
 
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
@@ -597,8 +593,7 @@ mod tests {
 
         let symbol_table = SymbolTableGen::new(&mut ast).build_table();
 
-        let (_ast, diagnostics) =
-            TypeChecker::new(ast, &symbol_table, &Predefined::default()).check();
+        let (_ast, diagnostics) = TypeChecker::new(ast, &symbol_table, &Natives::default()).check();
 
         let mut expected = Diagnostics::default();
         expected.report_err("'n' not in scope", Span::new(1, 13, 12, 1), (file!(), 54));
@@ -614,7 +609,7 @@ mod tests {
                 assert!(diagnostics.is_empty(), "{}", diagnostics);
                 let table = SymbolTableGen::new(&mut ast).build_table();
                 let (_, actual_diagnostics) =
-                    TypeChecker::new(ast, &table, &Predefined::default()).check();
+                    TypeChecker::new(ast, &table, &Natives::default()).check();
 
                 let actual_diagnostics = actual_diagnostics
                     .iter()
@@ -636,7 +631,7 @@ mod tests {
                 assert!(diagnostics.is_empty(), "{}", diagnostics);
                 let table = SymbolTableGen::new(&mut ast).build_table();
                 let (_, actual_diagnostics) =
-                    TypeChecker::new(ast, &table, &Predefined::default()).check();
+                    TypeChecker::new(ast, &table, &Natives::default()).check();
 
                 let actual_diagnostics = actual_diagnostics
                     .iter()

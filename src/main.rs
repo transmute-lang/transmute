@@ -4,8 +4,8 @@ extern crate core;
 use crate::ast::AstNodePrettyPrint;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
+use crate::natives::Natives;
 use crate::parser::Parser;
-use crate::predefined::Predefined;
 use crate::symbol_table::SymbolTableGen;
 use crate::type_check::TypeChecker;
 
@@ -14,8 +14,8 @@ mod error;
 mod exit_points;
 mod interpreter;
 mod lexer;
+mod natives;
 mod parser;
-mod predefined;
 mod symbol_table;
 mod type_check;
 mod xml;
@@ -41,8 +41,7 @@ fn fibonacci_rec() {
         "Parsed AST:\n{}",
         AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
     );
-    let (ast, type_checker_diagnostics) =
-        TypeChecker::new(ast, &symbols, &Predefined::new()).check();
+    let (ast, type_checker_diagnostics) = TypeChecker::new(ast, &symbols, &Natives::new()).check();
     diagnostics.append(type_checker_diagnostics);
 
     if diagnostics.is_empty() {
@@ -88,8 +87,7 @@ fn fibonacci_iter() {
         "Parsed AST:\n{}",
         AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
     );
-    let (ast, type_checker_diagnostics) =
-        TypeChecker::new(ast, &symbols, &Predefined::new()).check();
+    let (ast, type_checker_diagnostics) = TypeChecker::new(ast, &symbols, &Natives::new()).check();
     diagnostics.append(type_checker_diagnostics);
 
     if diagnostics.is_empty() {

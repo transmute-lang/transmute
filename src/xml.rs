@@ -430,8 +430,8 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
 #[cfg(test)]
 mod tests {
     use crate::lexer::Lexer;
+    use crate::natives::Natives;
     use crate::parser::Parser;
-    use crate::predefined::Predefined;
     use crate::symbol_table::SymbolTableGen;
     use crate::type_check::TypeChecker;
     use crate::xml::XmlWriter;
@@ -443,7 +443,7 @@ mod tests {
             fn $name() {
                 let (mut ast, mut full_diagnostics) = Parser::new(Lexer::new($src)).parse();
                 let table = SymbolTableGen::new(&mut ast).build_table();
-                let (ast, diagnostics) = TypeChecker::new(ast, &table, &Predefined::new()).check();
+                let (ast, diagnostics) = TypeChecker::new(ast, &table, &Natives::new()).check();
                 full_diagnostics.append(diagnostics);
 
                 assert!(full_diagnostics.is_empty());
