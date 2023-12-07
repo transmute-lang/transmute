@@ -3,14 +3,15 @@ use crate::ast::ids::{ExprId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::StatementKind;
 use crate::ast::{Ast, Visitor};
-use crate::symbol_table::{Node, SymbolTable};
+use crate::symbol_table::{SymbolKind, SymbolTable};
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
 
 #[cfg(test)]
 pub fn eprint_ast(ast: Ast) -> Ast {
+    let natives = crate::natives::Natives::default();
     let mut ast = ast;
-    let table = crate::symbol_table::SymbolTableGen::new(&mut ast).build_table();
+    let table = crate::symbol_table::SymbolTableGen::new(&mut ast, natives).build_table();
     eprintln!("{}", XmlWriter::new(&ast, &table).serialize());
     ast
 }
@@ -30,11 +31,93 @@ impl<'a> XmlWriter<'a> {
     }
 
     pub fn serialize(mut self) -> String {
+        self.write(XmlEvent::start_element("unit"));
+
+        self.write(XmlEvent::start_element("scopes"));
+        for scope in self.table.scopes() {
+            match scope.parent() {
+                None => {
+                    self.write(
+                        XmlEvent::start_element("scope")
+                            .attr("id", &format!("scope:{}", scope.id())),
+                    );
+                }
+                Some(parent) => self.write(
+                    XmlEvent::start_element("scope")
+                        .attr("id", &format!("scope:{}", scope.id()))
+                        .attr("parent", &format!("scope:{}", parent)),
+                ),
+            };
+
+            for child in scope.children() {
+                self.write(
+                    XmlEvent::start_element("child").attr("ref", &format!("scope:{}", child)),
+                );
+                self.write(XmlEvent::end_element());
+            }
+
+            self.write(XmlEvent::end_element());
+        }
+        self.write(XmlEvent::end_element()); // scopes
+
+        self.write(XmlEvent::start_element("symbols"));
+        for symbol in self.table.symbols() {
+            self.write(
+                XmlEvent::start_element("symbol")
+                    .attr("id", &format!("sym:{}", symbol.id()))
+                    .attr("scope", &format!("scope:{}", symbol.scope())),
+            );
+
+            match symbol.kind() {
+                SymbolKind::LetStatement(stmt) | SymbolKind::LetFnStatement(stmt, _) => {
+                    self.write(
+                        XmlEvent::start_element("statement").attr("ref", &format!("stmt:{}", stmt)),
+                    );
+                    self.write(XmlEvent::end_element());
+                }
+                SymbolKind::Parameter(parameter) => {
+                    // todo how to link to actual parameter?
+                    self.write(
+                        XmlEvent::start_element("parameter")
+                            .attr(
+                                "ident-ref",
+                                &format!("ident:{}", parameter.identifier().id()),
+                            )
+                            .attr("type-ref", &format!("ident:{}", parameter.ty().id())),
+                    );
+                    self.write(XmlEvent::end_element());
+                }
+                SymbolKind::Native(native) => {
+                    self.write(XmlEvent::start_element("native"));
+                    self.write(XmlEvent::start_element("name"));
+                    self.write(XmlEvent::characters(native.name()));
+                    self.write(XmlEvent::end_element());
+
+                    self.write(XmlEvent::start_element("parameters"));
+                    for parameter in native.parameters() {
+                        self.write(XmlEvent::start_element("parameter"));
+                        self.write(XmlEvent::characters(&parameter.to_string()));
+                        self.write(XmlEvent::end_element());
+                    }
+                    self.write(XmlEvent::end_element());
+
+                    self.write(XmlEvent::start_element("return"));
+                    self.write(XmlEvent::characters(&native.return_type().to_string()));
+                    self.write(XmlEvent::end_element());
+
+                    self.write(XmlEvent::end_element());
+                }
+            }
+
+            self.write(XmlEvent::end_element());
+        }
+        self.write(XmlEvent::end_element()); // symbols
+
         self.write(XmlEvent::start_element("ast"));
 
         self.write(XmlEvent::start_element("identifiers"));
         for (id, identifier) in self.ast.identifiers().iter().enumerate() {
-            self.write(XmlEvent::start_element("ident").attr("id", &id.to_string()));
+            self.write(XmlEvent::start_element("ident").attr("id", &format!("ident:{id}")));
             self.write(XmlEvent::Characters(identifier));
             self.write(XmlEvent::end_element());
         }
@@ -44,7 +127,10 @@ impl<'a> XmlWriter<'a> {
         for stmt in self.ast.statements().to_vec() {
             self.visit_statement(stmt);
         }
-        self.write(XmlEvent::end_element());
+        self.write(XmlEvent::end_element()); // ast
+
+        self.write(XmlEvent::end_element()); // unit
+
         String::from_utf8(self.writer.into_inner()).unwrap()
     }
 
@@ -61,19 +147,21 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
         let stmt = self.ast.statement(stmt);
         let id = stmt.id().to_string();
 
-        self.writer
-            .write::<XmlEvent>(
-                XmlEvent::start_element("stmt")
-                    .attr("id", &format!("stmt:{id}"))
-                    .attr("line", &stmt.span().line().to_string())
-                    .attr("column", &stmt.span().column().to_string())
-                    .attr("start", &stmt.span().start().to_string())
-                    .attr("len", &stmt.span().len().to_string())
-                    .into(),
-            )
-            .unwrap();
-
-        let stmt = self.ast.statement(stmt.id());
+        self.write(
+            XmlEvent::start_element("stmt")
+                .attr("id", &format!("stmt:{id}"))
+                .attr("line", &stmt.span().line().to_string())
+                .attr("column", &stmt.span().column().to_string())
+                .attr("start", &stmt.span().start().to_string())
+                .attr("len", &stmt.span().len().to_string())
+                .attr(
+                    "scope",
+                    &format!(
+                        "scope:{}",
+                        stmt.scope().map(|s| s.to_string()).unwrap_or_default()
+                    ),
+                ),
+        );
 
         match stmt.kind() {
             StatementKind::Expression(expr) => {
@@ -84,7 +172,7 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
 
                 self.write(
                     XmlEvent::start_element("identifier")
-                        .attr("id", &format!("ident:{}", ident.id())) // todo correct?
+                        .attr("ref", &format!("ident:{}", ident.id()))
                         .attr("line", &ident.span().line().to_string())
                         .attr("column", &ident.span().column().to_string())
                         .attr("start", &ident.span().start().to_string())
@@ -123,7 +211,7 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
 
                 self.write(
                     XmlEvent::start_element("identifier")
-                        .attr("id", &format!("ident:{}", ident.id()))
+                        .attr("ref", &format!("ident:{}", ident.id()))
                         .attr("line", &ident.span().line().to_string())
                         .attr("column", &ident.span().column().to_string())
                         .attr("start", &ident.span().start().to_string())
@@ -135,7 +223,7 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                 if let Some(ty) = ty {
                     self.write(
                         XmlEvent::start_element("type")
-                            .attr("id", &format!("ident:{}", ty.id()))
+                            .attr("ref", &format!("ident:{}", ty.id()))
                             .attr("line", &ty.span().line().to_string())
                             .attr("column", &ty.span().column().to_string())
                             .attr("start", &ty.span().start().to_string())
@@ -157,7 +245,7 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
 
                     self.write(
                         XmlEvent::start_element("name")
-                            .attr("id", &format!("ident:{}", param.identifier().id()))
+                            .attr("ref", &format!("ident:{}", param.identifier().id()))
                             .attr("line", &param.identifier().span().line().to_string())
                             .attr("column", &param.identifier().span().column().to_string())
                             .attr("start", &param.identifier().span().start().to_string())
@@ -170,7 +258,7 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
 
                     self.write(
                         XmlEvent::start_element("type")
-                            .attr("id", &format!("ident:{}", param.ty().id()))
+                            .attr("ref", &format!("ident:{}", param.ty().id()))
                             .attr("line", &param.ty().span().line().to_string())
                             .attr("column", &param.ty().span().column().to_string())
                             .attr("start", &param.ty().span().start().to_string())
@@ -210,7 +298,14 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                 .attr("line", &expr.span().line().to_string())
                 .attr("column", &expr.span().column().to_string())
                 .attr("start", &expr.span().start().to_string())
-                .attr("len", &expr.span().len().to_string()),
+                .attr("len", &expr.span().len().to_string())
+                .attr(
+                    "scope",
+                    &format!(
+                        "scope:{}",
+                        expr.scope().map(|s| s.to_string()).unwrap_or_default()
+                    ),
+                ),
         );
 
         match expr.kind() {
@@ -220,16 +315,18 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                 let symbol = ident_ref
                     .symbol_id()
                     .map(|sid| self.table.symbol(sid))
-                    .map(|s| match s.node() {
-                        Node::LetStatement(stmt) => {
+                    .map(|s| match s.kind() {
+                        SymbolKind::LetStatement(stmt) => {
                             format!("stmt:{stmt}")
                         }
-                        Node::LetFnStatement(stmt) => {
+                        SymbolKind::LetFnStatement(stmt, _) => {
                             format!("stmt:{stmt}")
                         }
-                        Node::Parameter(param) => {
+                        SymbolKind::Parameter(param) => {
+                            // todo add ref to parameter itself
                             format!("ident:{}", param.identifier().id())
                         }
+                        SymbolKind::Native(_) => "native".to_string(),
                     })
                     .unwrap_or_default();
 
@@ -275,13 +372,7 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
             }
             ExpressionKind::Literal(literal) => match literal.kind() {
                 LiteralKind::Boolean(b) => {
-                    self.write(
-                        XmlEvent::start_element("bool")
-                            .attr("line", &expr.span().line().to_string())
-                            .attr("column", &expr.span().column().to_string())
-                            .attr("start", &expr.span().start().to_string())
-                            .attr("len", &expr.span().len().to_string()),
-                    );
+                    self.write(XmlEvent::start_element("bool"));
                     self.write(XmlEvent::characters(&b.to_string()));
                     self.write(XmlEvent::end_element());
                 }
@@ -291,16 +382,18 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                     let symbol = ident_ref
                         .symbol_id()
                         .map(|sid| self.table.symbol(sid))
-                        .map(|s| match s.node() {
-                            Node::LetStatement(stmt) => {
+                        .map(|s| match s.kind() {
+                            SymbolKind::LetStatement(stmt) => {
                                 format!("stmt:{stmt}")
                             }
-                            Node::LetFnStatement(stmt) => {
+                            SymbolKind::LetFnStatement(stmt, _) => {
                                 format!("stmt:{stmt}")
                             }
-                            Node::Parameter(param) => {
+                            SymbolKind::Parameter(param) => {
+                                // todo add ref to parameter itself
                                 format!("ident:{}", param.identifier().id())
                             }
+                            SymbolKind::Native(_) => "native".to_string(),
                         })
                         .unwrap_or_default();
 
@@ -317,13 +410,7 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                     self.write(XmlEvent::end_element());
                 }
                 LiteralKind::Number(number) => {
-                    self.write(
-                        XmlEvent::start_element("number")
-                            .attr("line", &expr.span().line().to_string())
-                            .attr("column", &expr.span().column().to_string())
-                            .attr("start", &expr.span().start().to_string())
-                            .attr("len", &expr.span().len().to_string()),
-                    );
+                    self.write(XmlEvent::start_element("number"));
                     self.write(XmlEvent::characters(&number.to_string()));
                     self.write(XmlEvent::end_element());
                 }
@@ -354,21 +441,38 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                 let symbol = ident_ref
                     .symbol_id()
                     .map(|sid| self.table.symbol(sid))
-                    .map(|s| match s.node() {
-                        Node::LetStatement(stmt) => {
+                    .map(|s| match s.kind() {
+                        SymbolKind::LetStatement(stmt) => {
                             format!("stmt:{stmt}")
                         }
-                        Node::LetFnStatement(stmt) => {
+                        SymbolKind::LetFnStatement(stmt, _) => {
                             format!("stmt:{stmt}")
                         }
-                        Node::Parameter(param) => {
+                        SymbolKind::Parameter(param) => {
                             format!("ident:{}", param.identifier().id())
+                        }
+                        SymbolKind::Native(native) => {
+                            format!(
+                                "native:{}:{}:{}",
+                                native.name(),
+                                native
+                                    .parameters()
+                                    .iter()
+                                    .map(|t| t.to_string())
+                                    .collect::<Vec<String>>()
+                                    .join(":"),
+                                native.return_type()
+                            )
                         }
                     })
                     .unwrap_or_default();
 
                 self.write(
                     XmlEvent::start_element("call")
+                        .attr("line", &expr.span().line().to_string())
+                        .attr("column", &expr.span().column().to_string())
+                        .attr("start", &expr.span().start().to_string())
+                        .attr("len", &expr.span().len().to_string())
                         // todo miss id of the ident-ref? (or remove from identifier-ref? or use identifier-ref here too)
                         .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
                         .attr("name", self.ast.identifier(ident_ref.ident().id()))
@@ -454,12 +558,18 @@ mod tests {
         ($name:ident, $src:expr) => {
             #[test]
             fn $name() {
-                let (mut ast, mut full_diagnostics) = Parser::new(Lexer::new($src)).parse();
-                let table = SymbolTableGen::new(&mut ast).build_table();
-                let (ast, diagnostics) = TypeChecker::new(ast, &table, &Natives::new()).check();
-                full_diagnostics.append(diagnostics);
+                let natives = Natives::default();
+                let ast_natives = Into::<crate::ast::Ast>::into(&natives);
 
-                assert!(full_diagnostics.is_empty());
+                let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
+                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+                let mut ast = ast.merge(ast_natives);
+                let table = SymbolTableGen::new(&mut ast, natives).build_table();
+
+                let (ast, diagnostics) = TypeChecker::new(ast, &table).check();
+
+                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
                 let xml = XmlWriter::new(&ast, &table).serialize();
                 assert_snapshot!(&xml);
@@ -467,6 +577,7 @@ mod tests {
         };
     }
 
+    test_xml_write!(write_unary_operator, "- 42;");
     test_xml_write!(write_expr, "40 + 2;");
     test_xml_write!(write_let, "let ident = 42;");
     test_xml_write!(write_let_fn, "let f(n: number): number = n * 2;");

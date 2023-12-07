@@ -4,6 +4,7 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Parameter, Statement, StatementKind};
 use crate::ast::{Ast, Visitor};
 use crate::natives::Natives;
+use crate::symbol_table::{SymbolKind, SymbolTable};
 use crate::type_check::Type;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -12,20 +13,24 @@ pub struct Interpreter<'a> {
     ast: &'a Ast,
     // todo merge functions and variables (needs ValueKind)
     // todo IdentId should be SymbolId
+    // todo delete
     functions: HashMap<IdentId, (&'a Vec<Parameter>, &'a Vec<StmtId>)>,
     // todo IdentId should be SymbolId
+    // todo turn into frame
     variables: Vec<HashMap<IdentId, Value>>,
     // todo should come through symbol table, maybe
-    predefined: Natives,
+    natives: Natives,
+    symbols: &'a SymbolTable,
 }
 
 impl<'a> Interpreter<'a> {
-    pub fn new(ast: &'a Ast) -> Self {
+    pub fn new(ast: &'a Ast, symbols: &'a SymbolTable) -> Self {
         Self {
             ast,
             functions: Default::default(),
             variables: vec![Default::default()],
-            predefined: Default::default(),
+            natives: Default::default(),
+            symbols,
         }
     }
 
@@ -64,60 +69,57 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
         let expr = self.ast.expression(expr);
         match expr.kind() {
             ExpressionKind::Literal(n) => self.visit_literal(n),
-            ExpressionKind::Binary(l, o, r) => {
-                let l = self.visit_expression(*l);
-                let r = self.visit_expression(*r);
-
-                self.predefined
-                    .find_fn(o.kind().function_name(), vec![l.ty(), r.ty()])
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "predefined not found for {} {} {}",
-                            l.ty(),
-                            o.kind(),
-                            r.ty()
-                        )
-                    })
-                    .apply(vec![l, r])
-            }
-            ExpressionKind::Unary(o, e) => {
-                let e = self.visit_expression(*e);
-
-                self.predefined
-                    .find_fn(o.kind().function_name(), vec![e.ty()])
-                    .unwrap_or_else(|| panic!("predefined not found for {} {}", o.kind(), e.ty()))
-                    .apply(vec![e])
-            }
+            ExpressionKind::Binary(_, _, _) => unimplemented!(),
+            ExpressionKind::Unary(_, _) => unimplemented!(),
             ExpressionKind::FunctionCall(ident, arguments) => {
-                let ident = self.ast.identifier_ref(*ident).ident();
-                let (parameters, statements) = match self.functions.get(&ident.id()) {
-                    Some(f) => *f,
-                    None => {
-                        panic!("{} not in scope", self.ast.identifier(ident.id()))
+                let ident_ref = self.ast.identifier_ref(*ident);
+                let symbol = ident_ref.symbol_id().expect("function not resolved");
+                let symbol = self.symbols.symbol(symbol);
+                match symbol.kind() {
+                    SymbolKind::LetStatement(_) | SymbolKind::Parameter(_) => {
+                        panic!("let fn expected")
                     }
-                };
+                    SymbolKind::LetFnStatement(stmt, _) => {
+                        let stmt = self.ast.statement(*stmt);
+                        match stmt.kind() {
+                            StatementKind::LetFn(_, parameters, _, expr) => {
+                                let expr = self.ast.expression(*expr);
+                                match expr.kind() {
+                                    ExpressionKind::Block(stmts) => {
+                                        let env = parameters
+                                            .iter()
+                                            .zip(arguments.iter())
+                                            .map(|(param, expr)| {
+                                                (
+                                                    param.identifier().id(),
+                                                    self.visit_expression(*expr),
+                                                )
+                                            })
+                                            .collect::<HashMap<IdentId, Value>>();
 
-                if parameters.len() != arguments.len() {
-                    panic!("parameters and provided arguments for {} differ in length: expected {}, provided {}",
-                           self.ast.identifier(ident.id()),
-                           parameters.len(),
-                           arguments.len()
-                    )
+                                        self.variables.push(env);
+
+                                        let ret = self.visit_statements(stmts).unwrap();
+
+                                        let _ = self.variables.pop();
+
+                                        ret
+                                    }
+                                    _ => panic!("block expected"),
+                                }
+                            }
+                            _ => panic!("let fn expected"),
+                        }
+                    }
+                    SymbolKind::Native(native) => {
+                        let env = arguments
+                            .iter()
+                            .map(|expr| self.visit_expression(*expr))
+                            .collect::<Vec<Value>>();
+
+                        native.apply(env)
+                    }
                 }
-
-                let env = parameters
-                    .iter()
-                    .zip(arguments.iter())
-                    .map(|(param, expr)| (param.identifier().id(), self.visit_expression(*expr)))
-                    .collect::<HashMap<IdentId, Value>>();
-
-                self.variables.push(env);
-
-                let ret = self.visit_statements(statements).unwrap();
-
-                let _ = self.variables.pop();
-
-                ret
             }
             ExpressionKind::Assignment(ident, expr) => {
                 let ident = self.ast.identifier_ref(*ident).ident();
@@ -212,6 +214,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
 }
 
 impl<'a> Interpreter<'a> {
+    // todo replace &Vec<...> with &[...] everywhere possible
     fn visit_statements(&mut self, statements: &Vec<StmtId>) -> Value {
         let mut value = Value::Void;
 
@@ -298,18 +301,32 @@ fn is_ret(s: &Statement) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::ast::Ast;
     use crate::interpreter::Interpreter;
     use crate::lexer::Lexer;
+    use crate::natives::Natives;
     use crate::parser::Parser;
+    use crate::symbol_table::SymbolTableGen;
+    use crate::type_check::TypeChecker;
 
     macro_rules! eval {
         ($name:ident, $src:expr => $kind:ident($value:expr)) => {
             #[test]
             fn $name() {
                 let parser = Parser::new(Lexer::new($src));
-                let ast = parser.parse().0;
+                let (ast, diagnostics) = parser.parse();
+                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let actual = Interpreter::new(&ast).start();
+                let (symbols, ast) = {
+                    let natives = Natives::default();
+                    let mut ast = ast.merge(Into::<Ast>::into(&natives));
+                    (SymbolTableGen::new(&mut ast, natives).build_table(), ast)
+                };
+
+                let (ast, diagnostics) = TypeChecker::new(ast, &symbols).check();
+                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+                let actual = Interpreter::new(&ast, &symbols).start();
 
                 assert_eq!(actual, super::Value::$kind($value))
             }
@@ -318,9 +335,19 @@ mod tests {
             #[test]
             fn $name() {
                 let parser = Parser::new(Lexer::new($src));
-                let ast = parser.parse().0;
+                let (ast, diagnostics) = parser.parse();
+                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let actual = Interpreter::new(&ast).start();
+                let (symbols, ast) = {
+                    let natives = Natives::default();
+                    let mut ast = ast.merge(Into::<Ast>::into(&natives));
+                    (SymbolTableGen::new(&mut ast, natives).build_table(), ast)
+                };
+
+                let (ast, diagnostics) = TypeChecker::new(ast, &symbols).check();
+                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+                let actual = Interpreter::new(&ast, &symbols).start();
 
                 assert_eq!(actual, super::Value::$kind)
             }
@@ -337,10 +364,10 @@ mod tests {
     eval!(division, "85 / 2;" => Number(42));
     eval!(let_stmt, "let forty_two = 42;" => Void);
     eval!(let_stmt_then_expression, "let forty = 2 * 20; forty + 2;" => Number(42));
-    eval!(function, "let times_two(v: number) = v * 2;" => Void);
-    eval!(function_call, "let times_two(v: number) = v * 2; times_two(21);" => Number(42));
-    eval!(complex_function_call, "let plus_one_times_two(v: number) = { let res = v + 1; res * 2; } plus_one_times_two(20);" => Number(42));
-    eval!(ret_function_call, "let times_two(v: number) = { 41; ret v * 2; 42; } times_two(21);" => Number(42));
+    eval!(function, "let times_two(v: number): number = v * 2;" => Void);
+    eval!(function_call, "let times_two(v: number): number = v * 2; times_two(21);" => Number(42));
+    eval!(complex_function_call, "let plus_one_times_two(v: number): number = { let res = v + 1; res * 2; } plus_one_times_two(20);" => Number(42));
+    eval!(ret_function_call, "let times_two(v: number): number = { 41; ret v * 2; 42; } times_two(21);" => Number(42));
     eval!(bool_true, "true;" => Boolean(true));
     eval!(bool_false, "false;" => Boolean(false));
     eval!(equality_numbers_eq_true, "42 == 42;" => Boolean(true));
@@ -361,7 +388,7 @@ mod tests {
     eval!(equality_bool_neq1, "true == false;" => Boolean(false));
     eval!(equality_bool_neq2, "false == true;" => Boolean(false));
     eval!(fibonacci_rec, r#"
-        let f(n: number) = {
+        let f(n: number): number = {
             if n <= 1 {
                 ret n;
             }
@@ -370,10 +397,11 @@ mod tests {
         f(9) + 8;
     "# => Number(42));
     eval!(fibonacci_iter, r#"
-        let f(n: number) = {
+        let f(n: number): number = {
             if n == 0 { ret 0; }
             if n == 1 { ret 1; }
 
+            let n = n;
             let prev_prev = 0;
             let prev = 1;
             let current = 0;
@@ -390,7 +418,7 @@ mod tests {
         f(9) + 8;
     "# => Number(42));
     eval!(wtf, r#"
-        let wtf(i: number, j: number) = {
+        let wtf(i: number, j: number): number = {
             ret if i > j {
                 i + j;
             } else if i < 10 {
@@ -407,7 +435,8 @@ mod tests {
         seven * tree + twenty_one;
     "# => Number(42));
     eval!(fact, r#"
-        let fact(n: number) = {
+        let fact(n: number): number = {
+            let n = n;
             let product = 1;
             while n > 0 {
                 product = product * n;

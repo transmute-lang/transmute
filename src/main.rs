@@ -1,7 +1,7 @@
 #![allow(dead_code)] // fixme eventually remove
 extern crate core;
 
-use crate::ast::AstNodePrettyPrint;
+use crate::ast::{Ast, AstNodePrettyPrint};
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
 use crate::natives::Natives;
@@ -32,20 +32,31 @@ fn fibonacci_rec() {
     ))
     .parse();
 
-    let (symbols, ast) = {
-        let mut ast = ast;
-        (SymbolTableGen::new(&mut ast).build_table(), ast)
-    };
+    if !diagnostics.is_empty() {
+        print!("Errors:\n{}", diagnostics);
+        return;
+    }
 
     print!(
         "Parsed AST:\n{}",
         AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
     );
-    let (ast, type_checker_diagnostics) = TypeChecker::new(ast, &symbols, &Natives::new()).check();
+
+    let (symbols, ast) = {
+        let natives = Natives::default();
+        let mut ast = ast.merge(Into::<Ast>::into(&natives));
+        (SymbolTableGen::new(&mut ast, natives).build_table(), ast)
+    };
+
+    let (ast, type_checker_diagnostics) = TypeChecker::new(ast, &symbols).check();
     diagnostics.append(type_checker_diagnostics);
 
     if diagnostics.is_empty() {
-        let result = Interpreter::new(&ast).start();
+        print!(
+            "Executable AST:\n{}",
+            AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
+        );
+        let result = Interpreter::new(&ast, &symbols).start();
         println!("Result: {}", result);
     } else {
         print!("Errors:\n{}", diagnostics);
@@ -78,20 +89,31 @@ fn fibonacci_iter() {
     ))
     .parse();
 
-    let (symbols, ast) = {
-        let mut ast = ast;
-        (SymbolTableGen::new(&mut ast).build_table(), ast)
-    };
-
     print!(
         "Parsed AST:\n{}",
         AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
     );
-    let (ast, type_checker_diagnostics) = TypeChecker::new(ast, &symbols, &Natives::new()).check();
+
+    if !diagnostics.is_empty() {
+        print!("Errors:\n{}", diagnostics);
+        return;
+    }
+
+    let (symbols, ast) = {
+        let natives = Natives::default();
+        let mut ast = ast.merge(Into::<Ast>::into(&natives));
+        (SymbolTableGen::new(&mut ast, natives).build_table(), ast)
+    };
+
+    let (ast, type_checker_diagnostics) = TypeChecker::new(ast, &symbols).check();
     diagnostics.append(type_checker_diagnostics);
 
     if diagnostics.is_empty() {
-        let result = Interpreter::new(&ast).start();
+        print!(
+            "Executable AST:\n{}",
+            AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
+        );
+        let result = Interpreter::new(&ast, &symbols).start();
         println!("Result: {}", result);
     } else {
         print!("Errors:\n{}", diagnostics);

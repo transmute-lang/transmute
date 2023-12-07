@@ -3,8 +3,9 @@ use crate::ast::ids::{ExprId, IdentId, ScopeId, StmtId, SymbolId};
 use crate::ast::literal::Literal;
 use crate::ast::statement::{Parameter, StatementKind};
 use crate::ast::{Ast, Visitor};
+use crate::natives::{Native, Natives};
 use std::collections::HashMap;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Formatter};
 
 pub struct SymbolTableGen<'a> {
     ast: &'a mut Ast,
@@ -14,14 +15,22 @@ pub struct SymbolTableGen<'a> {
 }
 
 impl<'a> SymbolTableGen<'a> {
-    pub fn new(ast: &'a mut Ast) -> Self {
+    pub fn new(ast: &'a mut Ast, natives: Natives) -> Self {
         let scope = ScopeId::from(0);
-        Self {
+        let mut me = Self {
             ast,
             symbols: vec![],
             scopes: vec![Scope::root(scope)],
             scopes_stack: vec![scope],
+        };
+
+        for native in natives.into_iter() {
+            let ident = me.ast.identifier_id(native.name());
+            me.insert(ident, SymbolKind::Native(native));
         }
+
+        me.push_scope();
+        me
     }
 
     pub fn build_table(mut self) -> SymbolTable {
@@ -59,16 +68,24 @@ impl<'a> SymbolTableGen<'a> {
 
     fn pop_scope(&mut self) {
         self.scopes_stack.pop();
+        match self.scopes_stack.last() {
+            None => panic!("popped the last scope"),
+            Some(scope) => {
+                if self.scopes[scope.id()].parent.is_none() {
+                    panic!("current scope is the root scope");
+                }
+            }
+        }
     }
 
-    fn insert(&mut self, ident: IdentId, node: Node) {
+    fn insert(&mut self, ident: IdentId, node: SymbolKind) {
         let scope_id = self.scopes_stack.last().expect("there is a current scope");
         let scope = self.scopes.get_mut(scope_id.id()).expect("scope exists");
         let symbol_id = SymbolId::from(self.symbols.len());
         let symbol = Symbol {
             id: symbol_id,
             scope_id: *scope_id,
-            node,
+            kind: node,
         };
         self.symbols.push(symbol);
         scope.insert(ident, symbol_id);
@@ -90,17 +107,20 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
             StatementKind::Let(ident, expr) => {
                 self.visit_expression(*expr);
                 self.push_sub_scope();
-                self.insert(ident.id(), Node::LetStatement(stmt));
+                self.insert(ident.id(), SymbolKind::LetStatement(stmt));
             }
             StatementKind::LetFn(ident, params, _, expr) => {
-                self.insert(ident.id(), Node::LetFnStatement(stmt));
+                self.insert(ident.id(), SymbolKind::LetFnStatement(stmt, params.len()));
 
                 // todo make sure type exist (or in type checker?)
 
                 {
                     self.push_scope();
                     for param in params {
-                        self.insert(param.identifier().id(), Node::Parameter(param.clone()));
+                        self.insert(
+                            param.identifier().id(),
+                            SymbolKind::Parameter(param.clone()),
+                        );
                     }
 
                     self.visit_expression(*expr);
@@ -184,7 +204,7 @@ pub struct Scope {
     id: ScopeId,
     parent: Option<ScopeId>,
     children: Vec<ScopeId>,
-    symbols: HashMap<IdentId, SymbolId>,
+    symbols: HashMap<IdentId, Vec<SymbolId>>,
 }
 
 impl Scope {
@@ -208,10 +228,23 @@ impl Scope {
     }
 
     fn insert(&mut self, identifier: IdentId, symbol_id: SymbolId) {
-        self.symbols.insert(identifier, symbol_id);
+        // todo make sure we dont insert the same symbol twice
+        self.symbols.entry(identifier).or_default().push(symbol_id);
     }
 
-    pub fn get(&self, identifier: IdentId) -> Option<SymbolId> {
+    pub fn id(&self) -> ScopeId {
+        self.id
+    }
+
+    pub fn parent(&self) -> Option<ScopeId> {
+        self.parent
+    }
+
+    pub fn children(&self) -> &Vec<ScopeId> {
+        &self.children
+    }
+
+    pub fn get(&self, identifier: IdentId) -> Option<Vec<SymbolId>> {
         self.symbols.get(&identifier).cloned()
     }
 }
@@ -226,13 +259,13 @@ impl Debug for Scope {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Symbol {
     id: SymbolId,
     /// points to the scope where this symbol is defined
     scope_id: ScopeId,
     /// the AST node that defines that symbol
-    node: Node,
+    kind: SymbolKind,
 }
 
 impl Symbol {
@@ -240,16 +273,22 @@ impl Symbol {
         self.id
     }
 
-    pub fn node(&self) -> &Node {
-        &self.node
+    pub fn scope(&self) -> ScopeId {
+        self.scope_id
+    }
+
+    pub fn kind(&self) -> &SymbolKind {
+        &self.kind
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Node {
+#[derive(Debug, PartialEq)]
+pub enum SymbolKind {
     LetStatement(StmtId),
-    LetFnStatement(StmtId),
+    // usize is arity
+    LetFnStatement(StmtId, usize),
     Parameter(Parameter),
+    Native(Native),
 }
 
 #[derive(Debug, PartialEq)]
@@ -263,10 +302,14 @@ impl SymbolTable {
         Self { symbols, scopes }
     }
 
-    pub fn find(&self, identifier: IdentId, scope: ScopeId) -> Option<Symbol> {
+    pub fn find(&self, identifier: IdentId, scope: ScopeId) -> Option<&Symbol> {
         let scope = &self.scopes[scope.id()];
-        if let Some(symbol) = scope.get(identifier) {
-            Some(self.symbols[symbol.id()].clone())
+        if let Some(symbols) = scope.get(identifier) {
+            if symbols.len() != 1 {
+                // fixme: this does not work with eq(n, 0) for instance
+                panic!("Expected 1 symbol. found {}", symbols.len());
+            }
+            Some(&self.symbols[symbols.first().unwrap().id()])
         } else if let Some(parent) = scope.parent {
             self.find(identifier, parent)
         } else {
@@ -274,397 +317,140 @@ impl SymbolTable {
         }
     }
 
+    pub fn find_with_arity(
+        &self,
+        identifier: IdentId,
+        arity: usize,
+        scope: ScopeId,
+    ) -> Vec<SymbolId> {
+        let scope = &self.scopes[scope.id()];
+        match scope.get(identifier) {
+            Some(s) => {
+                let mut symbols = s
+                    .iter()
+                    .filter(|s| match &self.symbols[s.id()].kind {
+                        SymbolKind::LetStatement(_) => false,
+                        SymbolKind::LetFnStatement(_, a) => arity == *a,
+                        SymbolKind::Parameter(_) => false,
+                        SymbolKind::Native(native) => native.parameters().len() == arity,
+                    })
+                    .cloned()
+                    .collect::<Vec<SymbolId>>();
+                if let Some(parent) = scope.parent {
+                    symbols.append(&mut self.find_with_arity(identifier, arity, parent));
+                }
+                symbols
+            }
+            None => {
+                if let Some(parent) = scope.parent {
+                    self.find_with_arity(identifier, arity, parent)
+                } else {
+                    vec![]
+                }
+            }
+        }
+    }
+
+    pub fn symbols(&self) -> &Vec<Symbol> {
+        &self.symbols
+    }
+
+    pub fn scopes(&self) -> &Vec<Scope> {
+        &self.scopes
+    }
+
     pub fn symbol(&self, id: SymbolId) -> &Symbol {
         &self.symbols[id.id()]
-    }
-}
-
-pub struct ScopePrettyPrint<'a> {
-    indent: usize,
-    table: &'a SymbolTable,
-    ast: &'a Ast,
-    id: ScopeId,
-}
-
-impl<'a> ScopePrettyPrint<'a> {
-    pub fn new(table: &'a SymbolTable, ast: &'a Ast, id: ScopeId) -> Self {
-        let mut indent = 0;
-        let mut parent_id = id;
-        while let Some(id) = table.scopes[parent_id.id()].parent {
-            parent_id = id;
-            indent += 1;
-        }
-
-        Self {
-            indent,
-            table,
-            ast,
-            id,
-        }
-    }
-
-    fn new_with_indent(table: &'a SymbolTable, ast: &'a Ast, id: ScopeId, indent: usize) -> Self {
-        Self {
-            indent,
-            table,
-            ast,
-            id,
-        }
-    }
-}
-
-impl Display for ScopePrettyPrint<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let indent = "|  ".repeat(self.indent);
-        writeln!(f, "{indent}Table {}:", self.id.id())?;
-        for (ident, symbol) in self.table.scopes[self.id.id()].symbols.iter() {
-            let symbol = &self.table.symbols[symbol.id()];
-            let symbol_span = match &symbol.node {
-                Node::LetStatement(s) => self.ast.statement(*s).span(),
-                Node::LetFnStatement(s) => self.ast.statement(*s).span(),
-                Node::Parameter(i) => i.span(),
-            };
-            writeln!(
-                f,
-                "{indent}  {} -> {}:{}",
-                self.ast.identifier(*ident),
-                symbol_span.line(),
-                symbol_span.column(),
-            )?;
-        }
-        if let Some(parent_id) = self.table.scopes[self.id.id()].parent {
-            writeln!(
-                f,
-                "{}",
-                ScopePrettyPrint::new_with_indent(self.table, self.ast, parent_id, self.indent - 1)
-            )?;
-        }
-        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::identifier::Identifier;
-    use crate::ast::ids::{IdentId, ScopeId, StmtId, SymbolId};
-    use crate::lexer::{Lexer, Span};
+    use crate::lexer::Lexer;
     use crate::parser::Parser;
+    use crate::type_check::Type;
+    use crate::xml::XmlWriter;
+    use insta::assert_snapshot;
 
     #[test]
     fn top_level_function_with_parameter() {
-        let mut ast = Parser::new(Lexer::new("let f(n: number) = { }")).parse().0;
+        let natives = Natives::default();
 
-        let table = SymbolTableGen::new(&mut ast).build_table();
+        let ast = Parser::new(Lexer::new("let f(n: number) = { }")).parse().0;
+        let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let expected = SymbolTable {
-            symbols: vec![
-                Symbol {
-                    id: SymbolId::from(0),
-                    scope_id: ScopeId::from(0),
-                    node: Node::LetFnStatement(StmtId::from(0)),
-                },
-                Symbol {
-                    id: SymbolId::from(1),
-                    scope_id: ScopeId::from(1),
-                    node: Node::Parameter(Parameter::new(
-                        Identifier::new(ast.identifier_id("n"), Span::new(1, 7, 6, 1)),
-                        Identifier::new(ast.identifier_id("number"), Span::new(1, 10, 9, 6)),
-                        Span::new(1, 7, 6, 9),
-                    )),
-                },
-            ],
-            scopes: vec![
-                Scope {
-                    id: ScopeId::from(0),
-                    parent: None,
-                    children: vec![ScopeId::from(1)],
-                    symbols: vec![(ast.identifier_id("f"), SymbolId::from(0))]
-                        .into_iter()
-                        .collect::<HashMap<IdentId, SymbolId>>(),
-                },
-                Scope {
-                    id: ScopeId::from(1),
-                    parent: Some(ScopeId::from(0)),
-                    children: vec![ScopeId::from(2)],
-                    symbols: vec![(ast.identifier_id("n"), SymbolId::from(1))]
-                        .into_iter()
-                        .collect::<HashMap<IdentId, SymbolId>>(),
-                },
-                Scope {
-                    id: ScopeId::from(2),
-                    parent: Some(ScopeId::from(1)),
-                    children: vec![],
-                    symbols: Default::default(),
-                },
-            ],
-        };
+        let table = SymbolTableGen::new(&mut ast, natives).build_table();
 
-        assert_eq!(table, expected);
+        assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
     }
 
     #[test]
     fn top_level_function_with_used_parameter() {
-        let mut ast = Parser::new(Lexer::new("let f(n: number) = { n; }"))
+        let natives = Natives::default();
+
+        let ast = Parser::new(Lexer::new("let f(n: number): number = { n; }"))
             .parse()
             .0;
+        let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let table = SymbolTableGen::new(&mut ast).build_table();
+        let table = SymbolTableGen::new(&mut ast, natives).build_table();
 
-        let expected = SymbolTable {
-            symbols: vec![
-                Symbol {
-                    id: SymbolId::from(0),
-                    scope_id: ScopeId::from(0),
-                    node: Node::LetFnStatement(StmtId::from(1)),
-                },
-                Symbol {
-                    id: SymbolId::from(1),
-                    scope_id: ScopeId::from(1),
-                    node: Node::Parameter(Parameter::new(
-                        Identifier::new(ast.identifier_id("n"), Span::new(1, 7, 6, 1)),
-                        Identifier::new(ast.identifier_id("number"), Span::new(1, 10, 9, 6)),
-                        Span::new(1, 7, 6, 9),
-                    )),
-                },
-            ],
-            scopes: vec![
-                Scope {
-                    id: ScopeId::from(0),
-                    parent: None,
-                    children: vec![ScopeId::from(1)],
-                    symbols: vec![(ast.identifier_id("f"), SymbolId::from(0))]
-                        .into_iter()
-                        .collect::<HashMap<IdentId, SymbolId>>(),
-                },
-                Scope {
-                    id: ScopeId::from(1),
-                    parent: Some(ScopeId::from(0)),
-                    children: vec![ScopeId::from(2)],
-                    symbols: vec![(ast.identifier_id("n"), SymbolId::from(1))]
-                        .into_iter()
-                        .collect::<HashMap<IdentId, SymbolId>>(),
-                },
-                Scope {
-                    id: ScopeId::from(2),
-                    parent: Some(ScopeId::from(1)),
-                    children: vec![],
-                    symbols: HashMap::default(),
-                },
-            ],
-        };
-
-        assert_eq!(table, expected);
+        assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
     }
 
     #[test]
     fn top_level_function_with_variable() {
-        let mut ast = Parser::new(Lexer::new("let f(n: number) = { let m = 0; }"))
+        let natives = Natives::default();
+
+        let ast = Parser::new(Lexer::new("let f(n: number) = { let m = 0; }"))
             .parse()
             .0;
 
-        let table = SymbolTableGen::new(&mut ast).build_table();
+        let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let expected = SymbolTable {
-            symbols: vec![
-                Symbol {
-                    id: SymbolId::from(0),
-                    scope_id: ScopeId::from(0),
-                    node: Node::LetFnStatement(StmtId::from(1)),
-                },
-                Symbol {
-                    id: SymbolId::from(1),
-                    scope_id: ScopeId::from(1),
-                    node: Node::Parameter(Parameter::new(
-                        Identifier::new(ast.identifier_id("n"), Span::new(1, 7, 6, 1)),
-                        Identifier::new(ast.identifier_id("number"), Span::new(1, 10, 9, 6)),
-                        Span::new(1, 7, 6, 9),
-                    )),
-                },
-                Symbol {
-                    id: SymbolId::from(2),
-                    scope_id: ScopeId::from(3),
-                    node: Node::LetStatement(StmtId::from(0)),
-                },
-            ],
-            scopes: vec![
-                Scope {
-                    id: ScopeId::from(0),
-                    parent: None,
-                    children: vec![ScopeId::from(1)],
-                    symbols: vec![(ast.identifier_id("f"), SymbolId::from(0))]
-                        .into_iter()
-                        .collect::<HashMap<IdentId, SymbolId>>(),
-                },
-                Scope {
-                    id: ScopeId::from(1),
-                    parent: Some(ScopeId::from(0)),
-                    children: vec![ScopeId::from(2)],
-                    symbols: vec![(ast.identifier_id("n"), SymbolId::from(1))]
-                        .into_iter()
-                        .collect::<HashMap<IdentId, SymbolId>>(),
-                },
-                Scope {
-                    id: ScopeId::from(2),
-                    parent: Some(ScopeId::from(1)),
-                    children: vec![ScopeId::from(3)],
-                    symbols: HashMap::default(),
-                },
-                Scope {
-                    id: ScopeId::from(3),
-                    parent: Some(ScopeId::from(2)),
-                    children: vec![],
-                    symbols: vec![(ast.identifier_id("m"), SymbolId::from(2))]
-                        .into_iter()
-                        .collect::<HashMap<IdentId, SymbolId>>(),
-                },
-            ],
-        };
+        let table = SymbolTableGen::new(&mut ast, natives).build_table();
 
-        assert_eq!(table, expected);
+        assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
     }
 
     #[test]
     fn top_level_function_with_redefined_parameter() {
-        let mut ast = Parser::new(Lexer::new("let f(n: number) = { let n = 0; }"))
+        let natives = Natives::default();
+
+        let ast = Parser::new(Lexer::new("let f(n: number) = { let n = 0; }"))
             .parse()
             .0;
 
-        let table = SymbolTableGen::new(&mut ast).build_table();
+        let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let expected = SymbolTable {
-            symbols: vec![
-                Symbol {
-                    id: SymbolId::from(0),
-                    scope_id: ScopeId::from(0),
-                    node: Node::LetFnStatement(StmtId::from(1)),
-                },
-                Symbol {
-                    id: SymbolId::from(1),
-                    scope_id: ScopeId::from(1),
-                    node: Node::Parameter(Parameter::new(
-                        Identifier::new(ast.identifier_id("n"), Span::new(1, 7, 6, 1)),
-                        Identifier::new(ast.identifier_id("number"), Span::new(1, 10, 9, 6)),
-                        Span::new(1, 7, 6, 9),
-                    )),
-                },
-                Symbol {
-                    id: SymbolId::from(2),
-                    scope_id: ScopeId::from(3),
-                    node: Node::LetStatement(StmtId::from(0)),
-                },
-            ],
-            scopes: vec![
-                Scope {
-                    id: ScopeId::from(0),
-                    parent: None,
-                    children: vec![ScopeId::from(1)],
-                    symbols: vec![(ast.identifier_id("f"), SymbolId::from(0))]
-                        .into_iter()
-                        .collect::<HashMap<IdentId, SymbolId>>(),
-                },
-                Scope {
-                    id: ScopeId::from(1),
-                    parent: Some(ScopeId::from(0)),
-                    children: vec![ScopeId::from(2)],
-                    symbols: vec![(ast.identifier_id("n"), SymbolId::from(1))]
-                        .into_iter()
-                        .collect::<HashMap<IdentId, SymbolId>>(),
-                },
-                Scope {
-                    id: ScopeId::from(2),
-                    parent: Some(ScopeId::from(1)),
-                    children: vec![ScopeId::from(3)],
-                    symbols: HashMap::default(),
-                },
-                Scope {
-                    id: ScopeId::from(3),
-                    parent: Some(ScopeId::from(2)),
-                    children: vec![],
-                    symbols: vec![(ast.identifier_id("n"), SymbolId::from(2))]
-                        .into_iter()
-                        .collect::<HashMap<IdentId, SymbolId>>(),
-                },
-            ],
-        };
+        let table = SymbolTableGen::new(&mut ast, natives).build_table();
 
-        assert_eq!(table, expected);
+        assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
     }
 
     #[test]
     fn find_in_scope() {
-        let mut ast = Parser::new(Lexer::new(
+        let natives = Natives::default();
+
+        let ast = Parser::new(Lexer::new(
             "let f(n: number) = { let m = 0; let p = 0; let p = n + m; let q = p; }",
         ))
         .parse()
         .0;
 
-        let table = SymbolTableGen::new(&mut ast).build_table();
+        let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let let_second_p_stmt = ast.statement(ast.statement_id(43));
+        let table = SymbolTableGen::new(&mut ast, natives).build_table();
 
-        match table
-            .find(
-                ast.identifier_id("p"),
-                let_second_p_stmt.scope().expect("scope exists"),
-            )
-            .expect("p is in scope")
-            .node
-        {
-            Node::LetStatement(stmt) => {
-                assert_eq!(ast.statement(stmt).span().start(), 32);
-            }
-            _ => panic!("statement expected"),
-        }
-
-        match table
-            .find(
-                ast.identifier_id("n"),
-                let_second_p_stmt.scope().expect("scope exists"),
-            )
-            .expect("n is in scope")
-            .node
-        {
-            Node::Parameter(param) => {
-                assert_eq!(param.span().start(), 6);
-            }
-            _ => panic!("statement expected"),
-        }
-
-        match table
-            .find(
-                ast.identifier_id("m"),
-                let_second_p_stmt.scope().expect("scope exists"),
-            )
-            .expect("m is in scope")
-            .node
-        {
-            Node::LetStatement(stmt) => {
-                assert_eq!(ast.statement(stmt).span().start(), 21);
-            }
-            _ => panic!("statement expected"),
-        }
-
-        let let_q_stmt = ast.statement(ast.statement_id(58));
-
-        match table
-            .find(
-                ast.identifier_id("p"),
-                let_q_stmt.scope().expect("scope exists"),
-            )
-            .expect("p is in scope")
-            .node
-        {
-            Node::LetStatement(stmt) => {
-                assert_eq!(ast.statement(stmt).span().start(), 43);
-            }
-            _ => panic!("statement expected"),
-        }
+        assert_snapshot!(XmlWriter::new(&ast, &table).serialize())
     }
 
     #[test]
     fn if_statement() {
-        let mut ast = Parser::new(Lexer::new(
+        let natives = Natives::default();
+
+        let ast = Parser::new(Lexer::new(
             r#"
             let f() = {
                 let a = 0;
@@ -687,117 +473,77 @@ mod tests {
         .parse()
         .0;
 
-        let table = SymbolTableGen::new(&mut ast).build_table();
+        let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        {
-            let stmt = ast.statement_id(41);
-            let scope_id = ast.statement(stmt).scope().expect("scope exists");
-            assert!(table.find(ast.identifier_id("a"), scope_id).is_none());
-            assert!(table.find(ast.identifier_id("b"), scope_id).is_none());
-            assert!(table.find(ast.identifier_id("c"), scope_id).is_none());
-            assert!(table.find(ast.identifier_id("d"), scope_id).is_none());
-            assert!(table.find(ast.identifier_id("e"), scope_id).is_none());
-        }
+        let table = SymbolTableGen::new(&mut ast, natives).build_table();
 
-        {
-            let stmt = ast.statement_id(130);
-            let scope_id = ast.statement(stmt).scope().expect("scope exists");
-            let symbol = table
-                .find(ast.identifier_id("a"), scope_id)
-                .expect("a is in scope");
-            match symbol.node {
-                Node::LetStatement(stmt) => {
-                    assert_eq!(ast.statement(stmt).span().start(), 41);
-                }
-                _ => panic!("statement expected"),
-            }
-            let symbol = table
-                .find(ast.identifier_id("b"), scope_id)
-                .expect("a is in scope");
-            match symbol.node {
-                Node::LetStatement(stmt) => {
-                    assert_eq!(ast.statement(stmt).span().start(), 98);
-                }
-                _ => panic!("statement expected"),
-            }
-            assert!(table.find(ast.identifier_id("c"), scope_id).is_none());
-            assert!(table.find(ast.identifier_id("d"), scope_id).is_none());
-            assert!(table.find(ast.identifier_id("e"), scope_id).is_none());
-        }
-
-        {
-            let stmt = ast.statement_id(235);
-            let scope_id = ast.statement(stmt).scope().expect("scope exists");
-            let symbol = table
-                .find(ast.identifier_id("c"), scope_id)
-                .expect("c is in scope");
-            match symbol.node {
-                Node::LetStatement(stmt) => {
-                    assert_eq!(ast.statement(stmt).span().start(), 203);
-                }
-                _ => panic!("statement expected"),
-            }
-            assert!(table.find(ast.identifier_id("b"), scope_id).is_none());
-            assert!(table.find(ast.identifier_id("d"), scope_id).is_none());
-            assert!(table.find(ast.identifier_id("e"), scope_id).is_none());
-        }
-
-        {
-            let c_stmt = ast.statement_id(331);
-            let scope_id = ast.statement(c_stmt).scope().expect("scope exists");
-            let symbol = table
-                .find(ast.identifier_id("d"), scope_id)
-                .expect("d is in scope");
-            match symbol.node {
-                Node::LetStatement(stmt) => {
-                    assert_eq!(ast.statement(stmt).span().start(), 299);
-                }
-                _ => panic!("statement expected"),
-            }
-            assert!(table.find(ast.identifier_id("b"), scope_id).is_none());
-            assert!(table.find(ast.identifier_id("c"), scope_id).is_none());
-            assert!(table.find(ast.identifier_id("e"), scope_id).is_none());
-        }
-
-        {
-            let stmt = ast.statement_id(396);
-            let scope_id = ast.statement(stmt).scope().expect("scope exists");
-            assert!(table.find(ast.identifier_id("a"), scope_id).is_some());
-            assert!(table.find(ast.identifier_id("b"), scope_id).is_none());
-            assert!(table.find(ast.identifier_id("c"), scope_id).is_none());
-            assert!(table.find(ast.identifier_id("d"), scope_id).is_none());
-            assert!(table.find(ast.identifier_id("e"), scope_id).is_some());
-        }
+        assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
     }
 
     #[test]
     fn while_statement() {
-        let mut ast = Parser::new(Lexer::new(
+        let natives = Natives::default();
+
+        let ast = Parser::new(Lexer::new(
             "let x() = { while true { let a = 42; a; } let b = 42; }",
         ))
         .parse()
         .0;
 
-        let table = SymbolTableGen::new(&mut ast).build_table();
+        let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        {
-            let stmt = ast.statement_id(37);
-            let scope_id = ast.statement(stmt).scope().expect("scope exists");
-            let symbol = table
-                .find(ast.identifier_id("a"), scope_id)
-                .expect("a is in scope");
-            match symbol.node {
-                Node::LetStatement(stmt) => {
-                    assert_eq!(ast.statement(stmt).span().start(), 25);
-                }
-                _ => panic!("statement expected"),
+        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+
+        assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
+    }
+
+    #[test]
+    fn find_with_arity_add() {
+        let ast = Ast::default();
+        let natives = Natives::default();
+        let mut ast = ast.merge(Into::<Ast>::into(&natives));
+        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+
+        let add = ast.identifier_id("add");
+        let symbols = table.find_with_arity(add, 2, ScopeId::from(0));
+        assert_eq!(symbols.len(), 1);
+
+        let symbol = table.symbol(*symbols.first().unwrap());
+        match &symbol.kind {
+            SymbolKind::Native(native) => {
+                assert_eq!(native.parameters(), &vec![Type::Number, Type::Number]);
             }
+            _ => panic!("expected native, got {:?}", symbol.kind),
         }
+    }
+    #[test]
+    fn find_with_arity_eq() {
+        let ast = Ast::default();
+        let natives = Natives::default();
+        let mut ast = ast.merge(Into::<Ast>::into(&natives));
+        let table = SymbolTableGen::new(&mut ast, natives).build_table();
 
-        {
-            let stmt = ast.statement_id(42);
-            let scope_id = ast.statement(stmt).scope().expect("scope exists");
-            assert!(table.find(ast.identifier_id("a"), scope_id).is_none());
-        }
+        let eq = ast.identifier_id("eq");
+        let symbols = table.find_with_arity(eq, 2, ScopeId::from(0));
+        assert_eq!(symbols.len(), 2);
+
+        let mut params = symbols
+            .iter()
+            .map(|s| table.symbol(*s))
+            .map(|s| match &s.kind {
+                SymbolKind::Native(native) => native
+                    .parameters()
+                    .iter()
+                    .map(|p| p.to_string())
+                    .collect::<Vec<String>>()
+                    .join(","),
+                _ => panic!("expected native, got {:?}", s.kind),
+            })
+            .collect::<Vec<String>>();
+        params.sort();
+        assert_eq!(
+            params,
+            vec!["boolean,boolean".to_string(), "number,number".to_string()]
+        );
     }
 }

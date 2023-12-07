@@ -1,6 +1,6 @@
 ---
-source: src/xml.rs
-expression: "&xml"
+source: src/symbol_table.rs
+expression: "XmlWriter::new(&ast, &table).serialize()"
 ---
 <?xml version="1.0" encoding="utf-8"?>
 <unit>
@@ -14,7 +14,19 @@ expression: "&xml"
     <scope id="scope:2" parent="scope:1">
       <child ref="scope:3" />
     </scope>
-    <scope id="scope:3" parent="scope:2" />
+    <scope id="scope:3" parent="scope:2">
+      <child ref="scope:4" />
+    </scope>
+    <scope id="scope:4" parent="scope:3">
+      <child ref="scope:5" />
+    </scope>
+    <scope id="scope:5" parent="scope:4">
+      <child ref="scope:6" />
+    </scope>
+    <scope id="scope:6" parent="scope:5">
+      <child ref="scope:7" />
+    </scope>
+    <scope id="scope:7" parent="scope:6" />
   </scopes>
   <symbols>
     <symbol id="sym:0" scope="scope:0">
@@ -147,10 +159,22 @@ expression: "&xml"
       </native>
     </symbol>
     <symbol id="sym:13" scope="scope:1">
-      <statement ref="stmt:1" />
+      <statement ref="stmt:4" />
     </symbol>
     <symbol id="sym:14" scope="scope:2">
       <parameter ident-ref="ident:1" type-ref="ident:2" />
+    </symbol>
+    <symbol id="sym:15" scope="scope:4">
+      <statement ref="stmt:0" />
+    </symbol>
+    <symbol id="sym:16" scope="scope:5">
+      <statement ref="stmt:1" />
+    </symbol>
+    <symbol id="sym:17" scope="scope:6">
+      <statement ref="stmt:2" />
+    </symbol>
+    <symbol id="sym:18" scope="scope:7">
+      <statement ref="stmt:3" />
     </symbol>
   </symbols>
   <ast>
@@ -158,48 +182,83 @@ expression: "&xml"
       <ident id="ident:0">f</ident>
       <ident id="ident:1">n</ident>
       <ident id="ident:2">number</ident>
-      <ident id="ident:3">add</ident>
-      <ident id="ident:4">div</ident>
-      <ident id="ident:5">eq</ident>
-      <ident id="ident:6">ge</ident>
-      <ident id="ident:7">gt</ident>
-      <ident id="ident:8">le</ident>
-      <ident id="ident:9">lt</ident>
-      <ident id="ident:10">mul</ident>
-      <ident id="ident:11">neg</ident>
-      <ident id="ident:12">neq</ident>
-      <ident id="ident:13">sub</ident>
+      <ident id="ident:3">m</ident>
+      <ident id="ident:4">p</ident>
+      <ident id="ident:5">q</ident>
+      <ident id="ident:6">add</ident>
+      <ident id="ident:7">div</ident>
+      <ident id="ident:8">eq</ident>
+      <ident id="ident:9">ge</ident>
+      <ident id="ident:10">gt</ident>
+      <ident id="ident:11">le</ident>
+      <ident id="ident:12">lt</ident>
+      <ident id="ident:13">mul</ident>
+      <ident id="ident:14">neg</ident>
+      <ident id="ident:15">neq</ident>
+      <ident id="ident:16">sub</ident>
     </identifiers>
-    <stmt id="stmt:1" line="1" column="1" start="0" len="33" scope="scope:1">
+    <stmt id="stmt:4" line="1" column="1" start="0" len="70" scope="scope:1">
       <fn>
         <identifier ref="ident:0" line="1" column="5" start="4" len="1">f</identifier>
-        <type ref="ident:2" line="1" column="19" start="18" len="6">number</type>
         <parameters>
           <parameter line="1" column="7" start="6" len="9">
             <name ref="ident:1" line="1" column="7" start="6" len="1">n</name>
             <type ref="ident:2" line="1" column="10" start="9" len="6">number</type>
           </parameter>
         </parameters>
-        <body line="1" column="28" start="27" len="6">
-          <expr id="expr:3" line="1" column="28" start="27" len="6" scope="scope:2">
+        <body line="1" column="20" start="19" len="51">
+          <expr id="expr:6" line="1" column="20" start="19" len="51" scope="scope:2">
             <block>
-              <stmt id="stmt:0" line="1" column="28" start="27" len="6" scope="scope:3">
-                <expr id="expr:2" line="1" column="28" start="27" len="5" scope="scope:3">
-                  <call line="1" column="28" start="27" len="5" ident-ref="ident:10" name="mul" target-id="native:mul:number:number:number">
-                    <parameters>
-                      <parameter>
-                        <expr id="expr:0" line="1" column="28" start="27" len="1" scope="scope:3">
-                          <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
-                        </expr>
-                      </parameter>
-                      <parameter>
-                        <expr id="expr:1" line="1" column="32" start="31" len="1" scope="scope:3">
-                          <number>2</number>
-                        </expr>
-                      </parameter>
-                    </parameters>
-                  </call>
-                </expr>
+              <stmt id="stmt:0" line="1" column="22" start="21" len="10" scope="scope:3">
+                <let>
+                  <identifier ref="ident:3" line="1" column="26" start="25" len="1">m</identifier>
+                  <expression line="1" column="30" start="29" len="1">
+                    <expr id="expr:0" line="1" column="30" start="29" len="1" scope="scope:3">
+                      <number>0</number>
+                    </expr>
+                  </expression>
+                </let>
+              </stmt>
+              <stmt id="stmt:1" line="1" column="33" start="32" len="10" scope="scope:4">
+                <let>
+                  <identifier ref="ident:4" line="1" column="37" start="36" len="1">p</identifier>
+                  <expression line="1" column="41" start="40" len="1">
+                    <expr id="expr:1" line="1" column="41" start="40" len="1" scope="scope:4">
+                      <number>0</number>
+                    </expr>
+                  </expression>
+                </let>
+              </stmt>
+              <stmt id="stmt:2" line="1" column="44" start="43" len="14" scope="scope:5">
+                <let>
+                  <identifier ref="ident:4" line="1" column="48" start="47" len="1">p</identifier>
+                  <expression line="1" column="52" start="51" len="5">
+                    <expr id="expr:4" line="1" column="52" start="51" len="5" scope="scope:5">
+                      <binary operator="+" line="1" column="52" start="51" len="5">
+                        <left>
+                          <expr id="expr:2" line="1" column="52" start="51" len="1" scope="scope:5">
+                            <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="">n</identifier-ref>
+                          </expr>
+                        </left>
+                        <right>
+                          <expr id="expr:3" line="1" column="56" start="55" len="1" scope="scope:5">
+                            <identifier-ref id="ident-ref:1" ident-ref="ident:3" target-id="">m</identifier-ref>
+                          </expr>
+                        </right>
+                      </binary>
+                    </expr>
+                  </expression>
+                </let>
+              </stmt>
+              <stmt id="stmt:3" line="1" column="59" start="58" len="10" scope="scope:6">
+                <let>
+                  <identifier ref="ident:5" line="1" column="63" start="62" len="1">q</identifier>
+                  <expression line="1" column="67" start="66" len="1">
+                    <expr id="expr:5" line="1" column="67" start="66" len="1" scope="scope:6">
+                      <identifier-ref id="ident-ref:2" ident-ref="ident:4" target-id="">p</identifier-ref>
+                    </expr>
+                  </expression>
+                </let>
               </stmt>
             </block>
           </expr>

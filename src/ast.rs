@@ -7,7 +7,7 @@ pub mod statement;
 
 use crate::ast::expression::{Expression, ExpressionKind};
 use crate::ast::identifier::{Identifier, IdentifierRef};
-use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
+use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Parameter, Statement, StatementKind};
 use std::collections::HashMap;
@@ -94,11 +94,10 @@ impl Ast {
             let expression = Expression::new(
                 ExprId::from(expr_base + expression.id().id()),
                 match expression.kind() {
-                    ExpressionKind::Assignment(ident_ref, expr) => {
-                        ExpressionKind::Assignment(IdentRefId::from(
-                            ident_ref_map[ident_ref.id()],
-                        ), ExprId::from(expr_base + expr.id()))
-                    }
+                    ExpressionKind::Assignment(ident_ref, expr) => ExpressionKind::Assignment(
+                        IdentRefId::from(ident_ref_map[ident_ref.id()]),
+                        ExprId::from(expr_base + expr.id()),
+                    ),
                     ExpressionKind::If(cond, true_branch, false_branch) => ExpressionKind::If(
                         ExprId::from(expr_base + cond.id()),
                         ExprId::from(expr_base + true_branch.id()),
@@ -244,12 +243,25 @@ impl Ast {
     }
 
     pub fn identifier_id(&self, name: &str) -> IdentId {
+        // todo use a map instead
         for (id, ident) in self.identifiers.iter().enumerate() {
             if ident == name {
                 return IdentId::from(id);
             }
         }
         panic!("Identifier {} not found", name)
+    }
+
+    pub fn create_identifier_ref(
+        &mut self,
+        identifier: Identifier,
+        symbol: SymbolId,
+    ) -> IdentRefId {
+        let id = IdentRefId::from(self.identifier_refs.len());
+        let mut identifier_ref = IdentifierRef::new(id, identifier);
+        identifier_ref.set_symbol_id(symbol);
+        self.identifier_refs.push(identifier_ref);
+        id
     }
 
     pub fn identifier_ref(&self, id: IdentRefId) -> &IdentifierRef {
@@ -311,6 +323,12 @@ impl Ast {
     pub fn replace_statement(&mut self, statement: Statement) {
         let id = statement.id().id();
         self.statements[id] = statement
+    }
+}
+
+impl Default for Ast {
+    fn default() -> Self {
+        Self::new(vec![], vec![], vec![], vec![], vec![])
     }
 }
 
@@ -530,8 +548,9 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::AstNodePrettyPrint;
+    use crate::ast::{Ast, AstNodePrettyPrint};
     use crate::lexer::Lexer;
+    use crate::natives::Natives;
     use crate::parser::Parser;
     use crate::symbol_table::SymbolTableGen;
     use crate::xml::XmlWriter;
@@ -579,6 +598,8 @@ mod tests {
 
     #[test]
     fn merge_1() {
+        let natives = Natives::default();
+
         let (ast1, d) = Parser::new(Lexer::new(
             "let x_1 = 0; let f_1(p_1: t_1): r_1 = {} f_1(x_1);",
         ))
@@ -591,8 +612,8 @@ mod tests {
         .parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let mut ast = ast1.merge(ast2);
-        let table = SymbolTableGen::new(&mut ast).build_table();
+        let mut ast = ast1.merge(ast2).merge(Into::<Ast>::into(&natives));
+        let table = SymbolTableGen::new(&mut ast, natives).build_table();
 
         let xml = XmlWriter::new(&ast, &table).serialize();
         assert_snapshot!(&xml);
@@ -600,20 +621,16 @@ mod tests {
 
     #[test]
     fn merge_2() {
-        let (ast1, d) = Parser::new(Lexer::new(
-            "let x_1 = 0; x_1 = -x_1 * 2 + true;",
-        ))
-            .parse();
+        let natives = Natives::default();
+
+        let (ast1, d) = Parser::new(Lexer::new("let x_1 = 0; x_1 = -x_1 * 2 + true;")).parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let (ast2, d) = Parser::new(Lexer::new(
-            "let x_2 = 0; x_2 = -x_2 * 2 + true;",
-        ))
-            .parse();
+        let (ast2, d) = Parser::new(Lexer::new("let x_2 = 0; x_2 = -x_2 * 2 + true;")).parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let mut ast = ast1.merge(ast2);
-        let table = SymbolTableGen::new(&mut ast).build_table();
+        let mut ast = ast1.merge(ast2).merge(Into::<Ast>::into(&natives));
+        let table = SymbolTableGen::new(&mut ast, natives).build_table();
 
         let xml = XmlWriter::new(&ast, &table).serialize();
         assert_snapshot!(&xml);
@@ -621,20 +638,16 @@ mod tests {
 
     #[test]
     fn merge_if() {
-        let (ast1, d) = Parser::new(Lexer::new(
-            "if c_1 { t_1; } else { f_1; }",
-        ))
-            .parse();
+        let natives = Natives::default();
+
+        let (ast1, d) = Parser::new(Lexer::new("if c_1 { t_1; } else { f_1; }")).parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let (ast2, d) = Parser::new(Lexer::new(
-            "if c_2 { t_2; } else { f_2; }",
-        ))
-            .parse();
+        let (ast2, d) = Parser::new(Lexer::new("if c_2 { t_2; } else { f_2; }")).parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let mut ast = ast1.merge(ast2);
-        let table = SymbolTableGen::new(&mut ast).build_table();
+        let mut ast = ast1.merge(ast2).merge(Into::<Ast>::into(&natives));
+        let table = SymbolTableGen::new(&mut ast, natives).build_table();
 
         let xml = XmlWriter::new(&ast, &table).serialize();
         assert_snapshot!(&xml);
@@ -642,20 +655,16 @@ mod tests {
 
     #[test]
     fn merge_while() {
-        let (ast1, d) = Parser::new(Lexer::new(
-            "while c_1 { w_1; }",
-        ))
-            .parse();
+        let natives = Natives::default();
+
+        let (ast1, d) = Parser::new(Lexer::new("while c_1 { w_1; }")).parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let (ast2, d) = Parser::new(Lexer::new(
-            "while c_2 { w_2; }",
-        ))
-            .parse();
+        let (ast2, d) = Parser::new(Lexer::new("while c_2 { w_2; }")).parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let mut ast = ast1.merge(ast2);
-        let table = SymbolTableGen::new(&mut ast).build_table();
+        let mut ast = ast1.merge(ast2).merge(Into::<Ast>::into(&natives));
+        let table = SymbolTableGen::new(&mut ast, natives).build_table();
 
         let xml = XmlWriter::new(&ast, &table).serialize();
         assert_snapshot!(&xml);

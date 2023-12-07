@@ -15,6 +15,10 @@ impl BinaryOperator {
     pub fn kind(&self) -> &BinaryOperatorKind {
         &self.kind
     }
+
+    pub fn span(&self) -> &Span {
+        &self.span
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -103,6 +107,10 @@ impl UnaryOperator {
 
     pub fn kind(&self) -> &UnaryOperatorKind {
         &self.kind
+    }
+
+    pub fn span(&self) -> &Span {
+        &self.span
     }
 }
 
