@@ -1,5 +1,3 @@
-use std::fmt::{Display, Formatter};
-
 macro_rules! make_id {
     ($name:ident) => {
         #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -13,8 +11,8 @@ macro_rules! make_id {
             }
         }
 
-        impl Display for $name {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", self.id)
             }
         }
@@ -26,6 +24,8 @@ macro_rules! make_id {
         }
     };
 }
+
+pub(crate) use make_id;
 
 make_id!(IdentId);
 make_id!(IdentRefId);

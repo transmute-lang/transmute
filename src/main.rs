@@ -2,14 +2,17 @@
 extern crate core;
 
 use crate::ast::{Ast, AstNodePrettyPrint};
+use crate::dot::Dot;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
 use crate::natives::Natives;
 use crate::parser::Parser;
 use crate::symbol_table::SymbolTableGen;
 use crate::type_check::TypeChecker;
+use std::fs::File;
 
 mod ast;
+mod dot;
 mod error;
 mod exit_points;
 mod interpreter;
@@ -48,6 +51,10 @@ fn fibonacci_rec() {
         (SymbolTableGen::new(&mut ast, natives).build_table(), ast)
     };
 
+    Dot::new(&ast, &symbols)
+        .write(&mut File::create("target/fibonacci_rec_parsed_ast.dot").unwrap())
+        .unwrap();
+
     let (ast, type_checker_diagnostics) = TypeChecker::new(ast, &symbols).check();
     diagnostics.append(type_checker_diagnostics);
 
@@ -56,6 +63,9 @@ fn fibonacci_rec() {
             "Executable AST:\n{}",
             AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
         );
+        Dot::new(&ast, &symbols)
+            .write(&mut File::create("target/fibonacci_rec_executable_ast.dot").unwrap())
+            .unwrap();
         let result = Interpreter::new(&ast, &symbols).start();
         println!("Result: {}", result);
     } else {
@@ -105,6 +115,10 @@ fn fibonacci_iter() {
         (SymbolTableGen::new(&mut ast, natives).build_table(), ast)
     };
 
+    Dot::new(&ast, &symbols)
+        .write(&mut File::create("target/fibonacci_iter_parsed_ast.dot").unwrap())
+        .unwrap();
+
     let (ast, type_checker_diagnostics) = TypeChecker::new(ast, &symbols).check();
     diagnostics.append(type_checker_diagnostics);
 
@@ -113,6 +127,9 @@ fn fibonacci_iter() {
             "Executable AST:\n{}",
             AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
         );
+        Dot::new(&ast, &symbols)
+            .write(&mut File::create("target/fibonacci_iter_executable_ast.dot").unwrap())
+            .unwrap();
         let result = Interpreter::new(&ast, &symbols).start();
         println!("Result: {}", result);
     } else {

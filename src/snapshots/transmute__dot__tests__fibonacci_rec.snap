@@ -1,0 +1,44 @@
+---
+source: src/dot.rs
+expression: "Dot::new(&ast, &symbols).serialize()"
+---
+digraph ast {
+ordering="out";
+splines=false;
+n0[label="le()"][shape="plaintext"][fontcolor="orange"]
+n1[label="n"][shape="plaintext"][fontcolor="blue"]
+n2[label="1"][shape="plaintext"][fontcolor="black"]
+n3[label="n"][shape="plaintext"][fontcolor="blue"]
+n4[label="ret"][shape="plaintext"][fontcolor="black"]
+n5[label="add()"][shape="plaintext"][fontcolor="orange"]
+n6[label="fibo()"][shape="plaintext"][fontcolor="blue"]
+n7[label="sub()"][shape="plaintext"][fontcolor="orange"]
+n8[label="n"][shape="plaintext"][fontcolor="blue"]
+n9[label="1"][shape="plaintext"][fontcolor="black"]
+n10[label="fibo()"][shape="plaintext"][fontcolor="blue"]
+n11[label="sub()"][shape="plaintext"][fontcolor="orange"]
+n12[label="n"][shape="plaintext"][fontcolor="blue"]
+n13[label="2"][shape="plaintext"][fontcolor="black"]
+n14[label="if"][shape="plaintext"][fontcolor="black"]
+n15[label="{ {<fn>let fibo(): number } | { <p0>n: number | <p1>m: number } }"][shape="record"][fontcolor="black"]
+n0 -> n1[style="solid"][color="black"][arrowhead="none"]
+n0 -> n2[style="solid"][color="black"][arrowhead="none"]
+n4 -> n3[style="solid"][color="black"][arrowhead="none"]
+n7 -> n8[style="solid"][color="black"][arrowhead="none"]
+n7 -> n9[style="solid"][color="black"][arrowhead="none"]
+n6 -> n7[style="solid"][color="black"][arrowhead="none"]
+n5 -> n6[style="solid"][color="black"][arrowhead="none"]
+n11 -> n12[style="solid"][color="black"][arrowhead="none"]
+n11 -> n13[style="solid"][color="black"][arrowhead="none"]
+n10 -> n11[style="solid"][color="black"][arrowhead="none"]
+n5 -> n10[style="solid"][color="black"][arrowhead="none"]
+n14 -> n0[style="solid"][color="black"][arrowhead="none"]
+n14 -> n4[style="solid"][color="green"][arrowhead="none"]
+n14 -> n5[style="solid"][color="red"][arrowhead="none"]
+n15 -> n14[style="solid"][color="black"][arrowhead="none"]
+n6 -> n15:fn[style="dotted"][color="gray"][arrowhead="vee"][constraint=false]
+n10 -> n15:fn[style="dotted"][color="gray"][arrowhead="vee"][constraint=false]
+n1 -> n15:p0[style="dotted"][color="gray"][arrowhead="vee"][constraint=false]
+n3 -> n15:p0[style="dotted"][color="gray"][arrowhead="vee"][constraint=false]
+n8 -> n15:p0[style="dotted"][color="gray"][arrowhead="vee"][constraint=false]
+n12 -> n15:p0[style="dotted"][color="gray"][arrowhead="vee"][constraint=false]}

@@ -76,7 +76,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                 let symbol = ident_ref.symbol_id().expect("function not resolved");
                 let symbol = self.symbols.symbol(symbol);
                 match symbol.kind() {
-                    SymbolKind::LetStatement(_) | SymbolKind::Parameter(_) => {
+                    SymbolKind::LetStatement(_) | SymbolKind::Parameter(_, _, _) => {
                         panic!("let fn expected")
                     }
                     SymbolKind::LetFnStatement(stmt, _) => {

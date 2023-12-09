@@ -116,10 +116,10 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
 
                 {
                     self.push_scope();
-                    for param in params {
+                    for (index, param) in params.iter().enumerate() {
                         self.insert(
                             param.identifier().id(),
-                            SymbolKind::Parameter(param.clone()),
+                            SymbolKind::Parameter(param.clone(), stmt, index),
                         );
                     }
 
@@ -287,7 +287,7 @@ pub enum SymbolKind {
     LetStatement(StmtId),
     // usize is arity
     LetFnStatement(StmtId, usize),
-    Parameter(Parameter),
+    Parameter(/*todo delete*/ Parameter, StmtId, usize),
     Native(Native),
 }
 
@@ -331,7 +331,7 @@ impl SymbolTable {
                     .filter(|s| match &self.symbols[s.id()].kind {
                         SymbolKind::LetStatement(_) => false,
                         SymbolKind::LetFnStatement(_, a) => arity == *a,
-                        SymbolKind::Parameter(_) => false,
+                        SymbolKind::Parameter(_, _, _) => false,
                         SymbolKind::Native(native) => native.parameters().len() == arity,
                     })
                     .cloned()

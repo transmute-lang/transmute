@@ -136,7 +136,7 @@ impl Visitor<Res> for TypeChecker<'_> {
                             SymbolKind::LetFnStatement(_, _) => {
                                 panic!("cannot assign to a let fn");
                             }
-                            SymbolKind::Parameter(_) => {
+                            SymbolKind::Parameter(_, _, _) => {
                                 panic!("cannot assign to a parameter");
                             }
                             SymbolKind::Native(_) => {
@@ -279,7 +279,7 @@ impl Visitor<Res> for TypeChecker<'_> {
                             SymbolKind::LetFnStatement(_, _) => {
                                 todo!()
                             }
-                            SymbolKind::Parameter(p) => {
+                            SymbolKind::Parameter(p, _, _) => {
                                 let ident = self.ast.identifier(p.ty().id());
                                 match Type::try_from(ident) {
                                     Ok(ty) => Ok(Some(ty)),
@@ -373,7 +373,7 @@ impl Visitor<Res> for TypeChecker<'_> {
                         let ident = self.ast.identifier_ref(ident);
 
                         let ty = match self.table.symbol(symbol).kind() {
-                            SymbolKind::LetStatement(_) | SymbolKind::Parameter(_) => {
+                            SymbolKind::LetStatement(_) | SymbolKind::Parameter(_, _, _) => {
                                 panic!(
                                     "'{}' is not a function",
                                     self.ast.identifier(ident.ident().id())
@@ -976,4 +976,16 @@ mod tests {
         "Invalid parameter types found for -: expected one of\n - (number)\n, but got (void)",
         Span::new(1, 9, 8, 38)
     );
+    // fixme un-comment the following test
+    // test_type_error!(
+    //     call_variable,
+    //     "let n = 10; n();",
+    //     "panic",
+    //     Span::new(0, 0, 0, 0)
+    // );
+    // fixme un-comment the following test
+    // test_type_ok!(
+    //     assign_from_native,
+    //     "let n = add;"
+    // );
 }
