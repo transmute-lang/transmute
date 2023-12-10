@@ -37,6 +37,8 @@ impl<'a> XmlWriter<'a> {
     }
 
     pub fn serialize(mut self) -> String {
+        // todo review ref, ident-ref, type-ref, target-id, scope(scope-ref) in ast
+
         self.emit(XmlEvent::start_element("unit"));
 
         self.emit(XmlEvent::start_element("scopes"));
@@ -86,9 +88,9 @@ impl<'a> XmlWriter<'a> {
                         StatementKind::LetFn(_, params, _, _) => &params[*index],
                         _ => panic!(),
                     };
-                    // todo how to link to actual parameter?
                     self.emit(
                         XmlEvent::start_element("parameter")
+                            .attr("target-id", &format!("stmt:{}:{}", stmt.id(), index))
                             .attr(
                                 "ident-ref",
                                 &format!("ident:{}", parameter.identifier().id()),
@@ -244,9 +246,10 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                 }
 
                 self.emit(XmlEvent::start_element("parameters"));
-                for param in params {
+                for (index, param) in params.iter().enumerate() {
                     self.emit(
                         XmlEvent::start_element("parameter")
+                            .attr("id", &format!("stmt:{id}:{index}"))
                             .attr("line", &param.span().line().to_string())
                             .attr("column", &param.span().column().to_string())
                             .attr("start", &param.span().start().to_string())
@@ -333,12 +336,7 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                             format!("stmt:{stmt}")
                         }
                         SymbolKind::Parameter(stmt, index) => {
-                            let param = match self.ast.statement(*stmt).kind() {
-                                StatementKind::LetFn(_, params, _, _) => &params[*index],
-                                _ => panic!(),
-                            };
-                            // todo add ref to parameter itself
-                            format!("ident:{}", param.identifier().id())
+                            format!("stmt:{}:{}", stmt.id(), index)
                         }
                         SymbolKind::Native(_) => "native".to_string(),
                     })
@@ -347,7 +345,6 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                 self.emit(
                     XmlEvent::start_element("assign")
                         .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
-                        // fixme seems broken
                         .attr("target-id", &symbol),
                 );
 
@@ -404,12 +401,7 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                                 format!("stmt:{stmt}")
                             }
                             SymbolKind::Parameter(stmt, index) => {
-                                let param = match self.ast.statement(*stmt).kind() {
-                                    StatementKind::LetFn(_, params, _, _) => &params[*index],
-                                    _ => panic!(),
-                                };
-                                // todo add ref to parameter itself
-                                format!("ident:{}", param.identifier().id())
+                                format!("stmt:{}:{}", stmt.id(), index)
                             }
                             SymbolKind::Native(_) => "native".to_string(),
                         })
@@ -419,7 +411,6 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                         XmlEvent::start_element("identifier-ref")
                             .attr("id", &format!("ident-ref:{}", ident_ref.id()))
                             .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
-                            // fixme seems broken
                             .attr("target-id", &symbol),
                     );
                     self.emit(XmlEvent::characters(
@@ -495,10 +486,8 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                         .attr("column", &expr.span().column().to_string())
                         .attr("start", &expr.span().start().to_string())
                         .attr("len", &expr.span().len().to_string())
-                        // todo miss id of the ident-ref? (or remove from identifier-ref? or use identifier-ref here too)
                         .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
                         .attr("name", self.ast.identifier(ident_ref.ident().id()))
-                        // fixme seems broken
                         .attr("target-id", &symbol),
                 );
 

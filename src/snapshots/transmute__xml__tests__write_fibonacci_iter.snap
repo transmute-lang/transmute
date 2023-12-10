@@ -169,7 +169,7 @@ expression: "&xml"
       <statement ref="stmt:14" />
     </symbol>
     <symbol id="sym:14" scope="scope:2">
-      <parameter ident-ref="ident:1" type-ref="ident:2" />
+      <parameter target-id="stmt:14:0" ident-ref="ident:1" type-ref="ident:2" />
     </symbol>
     <symbol id="sym:15" scope="scope:6">
       <statement ref="stmt:4" />
@@ -210,7 +210,7 @@ expression: "&xml"
         <identifier ref="ident:0" line="2" column="17" start="17" len="1">f</identifier>
         <type ref="ident:2" line="2" column="31" start="31" len="6">number</type>
         <parameters>
-          <parameter line="2" column="19" start="19" len="9">
+          <parameter id="stmt:14:0" line="2" column="19" start="19" len="9">
             <name ref="ident:1" line="2" column="19" start="19" len="1">n</name>
             <type ref="ident:2" line="2" column="22" start="22" len="6">number</type>
           </parameter>
@@ -227,7 +227,7 @@ expression: "&xml"
                           <parameters>
                             <parameter>
                               <expr id="expr:0" line="3" column="20" start="61" len="1" scope="scope:3">
-                                <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
+                                <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:14:0">n</identifier-ref>
                               </expr>
                             </parameter>
                             <parameter>
@@ -264,7 +264,7 @@ expression: "&xml"
                           <parameters>
                             <parameter>
                               <expr id="expr:6" line="4" column="20" start="98" len="1" scope="scope:3">
-                                <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
+                                <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="stmt:14:0">n</identifier-ref>
                               </expr>
                             </parameter>
                             <parameter>
@@ -327,7 +327,7 @@ expression: "&xml"
                   <identifier ref="ident:6" line="10" column="21" start="236" len="1">m</identifier>
                   <expression line="10" column="25" start="240" len="1">
                     <expr id="expr:15" line="10" column="25" start="240" len="1" scope="scope:8">
-                      <identifier-ref id="ident-ref:2" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
+                      <identifier-ref id="ident-ref:2" ident-ref="ident:1" target-id="stmt:14:0">n</identifier-ref>
                     </expr>
                   </expression>
                 </let>

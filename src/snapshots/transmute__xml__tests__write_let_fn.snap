@@ -150,7 +150,7 @@ expression: "&xml"
       <statement ref="stmt:1" />
     </symbol>
     <symbol id="sym:14" scope="scope:2">
-      <parameter ident-ref="ident:1" type-ref="ident:2" />
+      <parameter target-id="stmt:1:0" ident-ref="ident:1" type-ref="ident:2" />
     </symbol>
   </symbols>
   <ast>
@@ -175,7 +175,7 @@ expression: "&xml"
         <identifier ref="ident:0" line="1" column="5" start="4" len="1">f</identifier>
         <type ref="ident:2" line="1" column="19" start="18" len="6">number</type>
         <parameters>
-          <parameter line="1" column="7" start="6" len="9">
+          <parameter id="stmt:1:0" line="1" column="7" start="6" len="9">
             <name ref="ident:1" line="1" column="7" start="6" len="1">n</name>
             <type ref="ident:2" line="1" column="10" start="9" len="6">number</type>
           </parameter>
@@ -189,7 +189,7 @@ expression: "&xml"
                     <parameters>
                       <parameter>
                         <expr id="expr:0" line="1" column="28" start="27" len="1" scope="scope:3">
-                          <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="ident:1">n</identifier-ref>
+                          <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:1:0">n</identifier-ref>
                         </expr>
                       </parameter>
                       <parameter>

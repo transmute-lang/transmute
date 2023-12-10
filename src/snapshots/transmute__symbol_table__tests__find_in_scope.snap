@@ -162,7 +162,7 @@ expression: "XmlWriter::new(&ast, &table).serialize()"
       <statement ref="stmt:4" />
     </symbol>
     <symbol id="sym:14" scope="scope:2">
-      <parameter ident-ref="ident:1" type-ref="ident:2" />
+      <parameter target-id="stmt:4:0" ident-ref="ident:1" type-ref="ident:2" />
     </symbol>
     <symbol id="sym:15" scope="scope:4">
       <statement ref="stmt:0" />
@@ -201,7 +201,7 @@ expression: "XmlWriter::new(&ast, &table).serialize()"
       <fn>
         <identifier ref="ident:0" line="1" column="5" start="4" len="1">f</identifier>
         <parameters>
-          <parameter line="1" column="7" start="6" len="9">
+          <parameter id="stmt:4:0" line="1" column="7" start="6" len="9">
             <name ref="ident:1" line="1" column="7" start="6" len="1">n</name>
             <type ref="ident:2" line="1" column="10" start="9" len="6">number</type>
           </parameter>

@@ -164,7 +164,7 @@ expression: "&xml"
       <statement ref="stmt:1" />
     </symbol>
     <symbol id="sym:15" scope="scope:3">
-      <parameter ident-ref="ident:2" type-ref="ident:3" />
+      <parameter target-id="stmt:1:0" ident-ref="ident:2" type-ref="ident:3" />
     </symbol>
     <symbol id="sym:16" scope="scope:5">
       <statement ref="stmt:3" />
@@ -173,7 +173,7 @@ expression: "&xml"
       <statement ref="stmt:4" />
     </symbol>
     <symbol id="sym:18" scope="scope:6">
-      <parameter ident-ref="ident:7" type-ref="ident:8" />
+      <parameter target-id="stmt:4:0" ident-ref="ident:7" type-ref="ident:8" />
     </symbol>
   </symbols>
   <ast>
@@ -215,7 +215,7 @@ expression: "&xml"
         <identifier ref="ident:1" line="1" column="18" start="17" len="3">f_1</identifier>
         <type ref="ident:4" line="1" column="33" start="32" len="3">r_1</type>
         <parameters>
-          <parameter line="1" column="22" start="21" len="8">
+          <parameter id="stmt:1:0" line="1" column="22" start="21" len="8">
             <name ref="ident:2" line="1" column="22" start="21" len="3">p_1</name>
             <type ref="ident:3" line="1" column="27" start="26" len="3">t_1</type>
           </parameter>
@@ -255,7 +255,7 @@ expression: "&xml"
         <identifier ref="ident:6" line="1" column="18" start="17" len="3">f_2</identifier>
         <type ref="ident:9" line="1" column="33" start="32" len="3">r_2</type>
         <parameters>
-          <parameter line="1" column="22" start="21" len="8">
+          <parameter id="stmt:4:0" line="1" column="22" start="21" len="8">
             <name ref="ident:7" line="1" column="22" start="21" len="3">p_2</name>
             <type ref="ident:8" line="1" column="27" start="26" len="3">t_2</type>
           </parameter>
