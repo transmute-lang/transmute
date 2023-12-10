@@ -369,6 +369,7 @@ impl<'s> Parser<'s> {
         // let name ( param , ... ): type '= expr ;
         let token = self.lexer.next();
         if token.kind() != &TokenKind::Equal {
+            // todo allow to skip the equal sign if the next token is {
             report_and_insert_missing_token!(self, token, TokenKind::Equal);
             self.lexer.push_next(token);
         }

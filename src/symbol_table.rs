@@ -78,14 +78,14 @@ impl<'a> SymbolTableGen<'a> {
         }
     }
 
-    fn insert(&mut self, ident: IdentId, node: SymbolKind) {
+    fn insert(&mut self, ident: IdentId, kind: SymbolKind) {
         let scope_id = self.scopes_stack.last().expect("there is a current scope");
         let scope = self.scopes.get_mut(scope_id.id()).expect("scope exists");
         let symbol_id = SymbolId::from(self.symbols.len());
         let symbol = Symbol {
             id: symbol_id,
             scope_id: *scope_id,
-            kind: node,
+            kind,
         };
         self.symbols.push(symbol);
         scope.insert(ident, symbol_id);
@@ -110,6 +110,8 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
                 self.insert(ident.id(), SymbolKind::LetStatement(stmt));
             }
             StatementKind::LetFn(ident, params, _, expr) => {
+                // todo use types instead of arity
+
                 self.insert(ident.id(), SymbolKind::LetFnStatement(stmt, params.len()));
 
                 // todo make sure type exist (or in type checker?)
@@ -225,7 +227,7 @@ impl Scope {
     }
 
     fn insert(&mut self, identifier: IdentId, symbol_id: SymbolId) {
-        // todo make sure we dont insert the same symbol twice
+        // todo make sure we dont insert the same symbol twice if it's a function
         self.symbols.entry(identifier).or_default().push(symbol_id);
     }
 
@@ -543,4 +545,27 @@ mod tests {
             vec!["boolean,boolean".to_string(), "number,number".to_string()]
         );
     }
+
+    #[test]
+    fn same_var_multiple_times_in_scope() {
+        let mut ast = Parser::new(Lexer::new("let x = 0; let x = 1;")).parse().0;
+
+        let table = SymbolTableGen::new(&mut ast, Natives::empty()).build_table();
+
+        assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
+    }
+
+    // // todo the test supposed to fail
+    // #[test]
+    // fn same_fn_multiple_times_in_scope() {
+    //     let mut ast = Parser::new(Lexer::new(
+    //         "let x() = 0; let x() = 1;",
+    //     ))
+    //         .parse()
+    //         .0;
+    //
+    //     let table = SymbolTableGen::new(&mut ast, Natives::empty()).build_table();
+    //
+    //     assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
+    // }
 }

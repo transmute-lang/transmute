@@ -157,6 +157,12 @@ impl Natives {
         natives
     }
 
+    pub fn empty() -> Natives {
+        Self {
+            functions: Default::default(),
+        }
+    }
+
     fn insert_fn(&mut self, native: Native) {
         if let Some(v) = self.functions.get_mut(native.name) {
             v.push(native);

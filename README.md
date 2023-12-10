@@ -6,7 +6,7 @@ Transmute is a general purpose programming language.
 
 ### Fibonacci
 ```
-let fibonacci(n) = {
+let fibonacci(n: number): number = {
     if n <= 1 {
         ret n;
     }
@@ -18,7 +18,7 @@ fibonacci(5);
 
 ### Factorial
 ```
-let fact(n) = {
+let fact(n: number): number = {
     let product = 1;
     while n > 0 {
         product = product * n;
