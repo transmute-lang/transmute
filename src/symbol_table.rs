@@ -1,7 +1,7 @@
 use crate::ast::expression::ExpressionKind;
 use crate::ast::ids::{ExprId, IdentId, ScopeId, StmtId, SymbolId};
 use crate::ast::literal::Literal;
-use crate::ast::statement::{Parameter, StatementKind};
+use crate::ast::statement::StatementKind;
 use crate::ast::{Ast, Visitor};
 use crate::natives::{Native, Natives};
 use std::collections::HashMap;
@@ -117,10 +117,7 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
                 {
                     self.push_scope();
                     for (index, param) in params.iter().enumerate() {
-                        self.insert(
-                            param.identifier().id(),
-                            SymbolKind::Parameter(param.clone(), stmt, index),
-                        );
+                        self.insert(param.identifier().id(), SymbolKind::Parameter(stmt, index));
                     }
 
                     self.visit_expression(*expr);
@@ -287,7 +284,7 @@ pub enum SymbolKind {
     LetStatement(StmtId),
     // usize is arity
     LetFnStatement(StmtId, usize),
-    Parameter(/*todo delete*/ Parameter, StmtId, usize),
+    Parameter(StmtId, usize),
     Native(Native),
 }
 
@@ -331,7 +328,7 @@ impl SymbolTable {
                     .filter(|s| match &self.symbols[s.id()].kind {
                         SymbolKind::LetStatement(_) => false,
                         SymbolKind::LetFnStatement(_, a) => arity == *a,
-                        SymbolKind::Parameter(_, _, _) => false,
+                        SymbolKind::Parameter(_, _) => false,
                         SymbolKind::Native(native) => native.parameters().len() == arity,
                     })
                     .cloned()

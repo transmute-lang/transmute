@@ -81,7 +81,11 @@ impl<'a> XmlWriter<'a> {
                     );
                     self.emit(XmlEvent::end_element());
                 }
-                SymbolKind::Parameter(parameter, _, _) => {
+                SymbolKind::Parameter(stmt, index) => {
+                    let parameter = match self.ast.statement(*stmt).kind() {
+                        StatementKind::LetFn(_, params, _, _) => &params[*index],
+                        _ => panic!(),
+                    };
                     // todo how to link to actual parameter?
                     self.emit(
                         XmlEvent::start_element("parameter")
@@ -328,7 +332,11 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                         SymbolKind::LetFnStatement(stmt, _) => {
                             format!("stmt:{stmt}")
                         }
-                        SymbolKind::Parameter(param, _, _) => {
+                        SymbolKind::Parameter(stmt, index) => {
+                            let param = match self.ast.statement(*stmt).kind() {
+                                StatementKind::LetFn(_, params, _, _) => &params[*index],
+                                _ => panic!(),
+                            };
                             // todo add ref to parameter itself
                             format!("ident:{}", param.identifier().id())
                         }
@@ -395,7 +403,11 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                             SymbolKind::LetFnStatement(stmt, _) => {
                                 format!("stmt:{stmt}")
                             }
-                            SymbolKind::Parameter(param, _, _) => {
+                            SymbolKind::Parameter(stmt, index) => {
+                                let param = match self.ast.statement(*stmt).kind() {
+                                    StatementKind::LetFn(_, params, _, _) => &params[*index],
+                                    _ => panic!(),
+                                };
                                 // todo add ref to parameter itself
                                 format!("ident:{}", param.identifier().id())
                             }
@@ -454,7 +466,11 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                         SymbolKind::LetFnStatement(stmt, _) => {
                             format!("stmt:{stmt}")
                         }
-                        SymbolKind::Parameter(param, _, _) => {
+                        SymbolKind::Parameter(stmt, index) => {
+                            let param = match self.ast.statement(*stmt).kind() {
+                                StatementKind::LetFn(_, params, _, _) => &params[*index],
+                                _ => panic!(),
+                            };
                             format!("ident:{}", param.identifier().id())
                         }
                         SymbolKind::Native(native) => {

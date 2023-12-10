@@ -248,7 +248,7 @@ impl<'a> Visitor<NodeId> for DotBuilder<'a> {
                                 self.references.push((ident_node_id, *stmt));
                                 ident_node_id
                             }
-                            SymbolKind::Parameter(_, stmt, index) => {
+                            SymbolKind::Parameter(stmt, index) => {
                                 match self.ast.statement(*stmt).kind() {
                                     StatementKind::LetFn(_, params, _, _) => {
                                         let ident_node_id = self.insert_node(Node::Identifier(
@@ -295,7 +295,7 @@ impl<'a> Visitor<NodeId> for DotBuilder<'a> {
                             self.references.push((call_node_id, *stmt));
                             call_node_id
                         }
-                        SymbolKind::Parameter(_, stmt, index) => {
+                        SymbolKind::Parameter(stmt, index) => {
                             match self.ast.statement(*stmt).kind() {
                                 StatementKind::LetFn(_, params, _, _) => {
                                     let ident_node_id = self.insert_node(Node::FunctionCall(

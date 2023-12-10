@@ -136,7 +136,7 @@ impl Visitor<Res> for TypeChecker<'_> {
                             SymbolKind::LetFnStatement(_, _) => {
                                 panic!("cannot assign to a let fn");
                             }
-                            SymbolKind::Parameter(_, _, _) => {
+                            SymbolKind::Parameter(_, _) => {
                                 panic!("cannot assign to a parameter");
                             }
                             SymbolKind::Native(_) => {
@@ -279,14 +279,18 @@ impl Visitor<Res> for TypeChecker<'_> {
                             SymbolKind::LetFnStatement(_, _) => {
                                 todo!()
                             }
-                            SymbolKind::Parameter(p, _, _) => {
-                                let ident = self.ast.identifier(p.ty().id());
+                            SymbolKind::Parameter(stmt, index) => {
+                                let param = match self.ast.statement(*stmt).kind() {
+                                    StatementKind::LetFn(_, params, _, _) => &params[*index],
+                                    _ => panic!(),
+                                };
+                                let ident = self.ast.identifier(param.ty().id());
                                 match Type::try_from(ident) {
                                     Ok(ty) => Ok(Some(ty)),
                                     Err(e) => {
                                         self.diagnostics.report_err(
                                             e,
-                                            p.span().clone(),
+                                            param.span().clone(),
                                             (file!(), line!()),
                                         );
                                         Err(())
@@ -373,7 +377,7 @@ impl Visitor<Res> for TypeChecker<'_> {
                         let ident = self.ast.identifier_ref(ident);
 
                         let ty = match self.table.symbol(symbol).kind() {
-                            SymbolKind::LetStatement(_) | SymbolKind::Parameter(_, _, _) => {
+                            SymbolKind::LetStatement(_) | SymbolKind::Parameter(_, _) => {
                                 panic!(
                                     "'{}' is not a function",
                                     self.ast.identifier(ident.ident().id())
@@ -730,7 +734,7 @@ mod tests {
         let (_ast, diagnostics) = TypeChecker::new(ast, &symbol_table).check();
 
         let mut expected = Diagnostics::default();
-        expected.report_err("'n' not in scope", Span::new(1, 13, 12, 1), (file!(), 460));
+        expected.report_err("'n' not in scope", Span::new(1, 13, 12, 1), (file!(), 464));
 
         assert_eq!(diagnostics, expected);
     }
