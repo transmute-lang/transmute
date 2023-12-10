@@ -164,15 +164,6 @@ impl Natives {
             self.functions.insert(native.name, vec![native]);
         }
     }
-
-    // todo remove!
-    pub fn find_fn(&self, ident: &str, parameters: Vec<Type>) -> Option<&Native> {
-        if let Some(function) = self.functions.get(ident) {
-            function.iter().find(|f| f.parameters == parameters)
-        } else {
-            None
-        }
-    }
 }
 
 impl From<&Natives> for Ast {
@@ -316,8 +307,13 @@ mod tests {
                 let values = vec![$($value),*];
                 let types = values.iter().map(|v| v.ty()).collect::<Vec<Type>>();
 
-                let actual = native
-                    .find_fn($function, types)
+                let f = if let Some(function) = native.functions.get($function) {
+                    function.iter().find(|f| f.parameters == types)
+                } else {
+                    None
+                };
+
+                let actual = f
                     .unwrap()
                     .apply(values);
 

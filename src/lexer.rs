@@ -87,7 +87,7 @@ impl<'s> Lexer<'s> {
                     self.advance_consumed(span.len);
                     (TokenKind::ExclaimEqual, span)
                 }
-                _ => todo!(),
+                _ => todo!("issue a NOT here"),
             },
             '>' => match chars.next().unwrap_or_default() {
                 '=' => {

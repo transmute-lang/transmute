@@ -33,5 +33,3 @@ make_id!(ExprId);
 make_id!(StmtId);
 make_id!(SymbolId);
 make_id!(ScopeId);
-
-// todo implement IdVec?

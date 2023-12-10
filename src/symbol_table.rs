@@ -284,6 +284,7 @@ pub enum SymbolKind {
     LetStatement(StmtId),
     // usize is arity
     LetFnStatement(StmtId, usize),
+    // usize is index
     Parameter(StmtId, usize),
     Native(Native),
 }

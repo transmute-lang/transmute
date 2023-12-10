@@ -134,13 +134,15 @@ impl Visitor<Res> for TypeChecker<'_> {
                         let target_type = match symbol.kind() {
                             SymbolKind::LetStatement(stmt) => self.visit_statement(*stmt),
                             SymbolKind::LetFnStatement(_, _) => {
+                                // todo this constraint should be removed
                                 panic!("cannot assign to a let fn");
                             }
                             SymbolKind::Parameter(_, _) => {
+                                // todo this constraint should be removed
                                 panic!("cannot assign to a parameter");
                             }
                             SymbolKind::Native(_) => {
-                                todo!()
+                                panic!("cannot assign to a native")
                             }
                         }?;
 
@@ -268,11 +270,10 @@ impl Visitor<Res> for TypeChecker<'_> {
 
                         match symbol.kind() {
                             SymbolKind::LetStatement(stmt) => {
-                                let stmt = self.ast.statement(*stmt);
-                                match stmt.kind() {
+                                match self.ast.statement(*stmt).kind() {
                                     StatementKind::Let(_, expr) => self.visit_expression(*expr),
-                                    _ => {
-                                        panic!("expected let statement, got {:?}", stmt.kind())
+                                    kind => {
+                                        panic!("expected let statement, got {:?}", kind)
                                     }
                                 }
                             }
@@ -734,7 +735,7 @@ mod tests {
         let (_ast, diagnostics) = TypeChecker::new(ast, &symbol_table).check();
 
         let mut expected = Diagnostics::default();
-        expected.report_err("'n' not in scope", Span::new(1, 13, 12, 1), (file!(), 464));
+        expected.report_err("'n' not in scope", Span::new(1, 13, 12, 1), (file!(), 465));
 
         assert_eq!(diagnostics, expected);
     }
