@@ -539,7 +539,19 @@ mod tests {
         };
     }
 
-    generate!(fibonacci_rec, "let fibo(n: number, m: number): number = { if n <= 1 { ret n; } else { fibo(n - 1) + fibo(n - 2); } }");
+    generate!(
+        fibonacci_rec,
+        r#"
+            let fibo(n: number): number = {
+                if n <= 1 {
+                    ret n;
+                }
+                else {
+                    fibo(n - 1) + fibo(n - 2);
+                }
+            }
+        "#
+    );
     generate!(
         fibonacci_iter,
         r#"
@@ -560,6 +572,19 @@ mod tests {
                 }
 
                 current;
+            }
+        "#
+    );
+    generate!(
+        max,
+        r#"
+            let max(a: number, b: number): number = {
+                if a < b {
+                    max(b, a);
+                }
+                else {
+                    b;
+                }
             }
         "#
     );

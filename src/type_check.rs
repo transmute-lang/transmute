@@ -33,6 +33,10 @@ impl<'a> TypeChecker<'a> {
     }
 }
 
+/// Several things may happen while resolving a type:
+///  - we could not resolve. In that case, we return an Err(())
+///  - the resolver found no type (used to ret stmt). In that case, we return Ok(None)
+///  - the resolver found a type. In that case, we return Ok(type)
 type Res = Result<Option<Type>, ()>;
 
 impl Visitor<Res> for TypeChecker<'_> {
@@ -60,6 +64,7 @@ impl Visitor<Res> for TypeChecker<'_> {
             }
             StatementKind::Ret(expr) => {
                 let _ = self.visit_expression(*expr);
+                // todo should it be Ok(Void) instead?
                 Ok(None)
             }
             StatementKind::LetFn(_, _, ty, expr) => {
@@ -315,24 +320,29 @@ impl Visitor<Res> for TypeChecker<'_> {
                 let operand = *operand;
                 let operand_type = self.visit_expression(operand)?.unwrap_or(Type::Void);
 
-                self.resolve_function(
-                    self.ast.identifier_id(op_kind.function_name()),
-                    &op_kind.to_string(),
-                    &[operand_type],
+                let ident_id = self.ast.identifier_id(op_kind.function_name());
+                let resolved = self.resolve_function(
+                    ident_id,
                     scope,
-                    expr_span,
-                    |ast: &mut Ast, ident_id: IdentId, symbol: SymbolId, span: Span| {
-                        let ident_ref_id =
-                            ast.create_identifier_ref(Identifier::new(ident_id, op_span), symbol);
+                    &[operand_type],
+                    (op_kind.as_str(), &expr_span),
+                );
+                match resolved {
+                    Ok((symbol, ret_type)) => {
+                        let ident_ref_id = self
+                            .ast
+                            .create_identifier_ref(Identifier::new(ident_id, op_span), symbol);
                         let mut expression = Expression::new(
                             expr_id,
                             ExpressionKind::FunctionCall(ident_ref_id, vec![operand]),
-                            span,
+                            expr_span,
                         );
                         expression.set_scope(scope);
-                        ast.replace_expression(expression);
-                    },
-                )
+                        self.ast.replace_expression(expression);
+                        Ok(ret_type)
+                    }
+                    Err(_) => Err(()),
+                }
             }
             ExpressionKind::Binary(left, op, right) => {
                 let expr_span = expr.span().clone();
@@ -345,72 +355,66 @@ impl Visitor<Res> for TypeChecker<'_> {
                 let left_type = self.visit_expression(left)?.unwrap_or(Type::Void);
                 let right_type = self.visit_expression(right)?.unwrap_or(Type::Void);
 
-                self.resolve_function(
-                    self.ast.identifier_id(op_kind.function_name()),
-                    &op_kind.to_string(),
-                    &[left_type, right_type],
+                let ident_id = self.ast.identifier_id(op_kind.function_name());
+                let resolved = self.resolve_function(
+                    ident_id,
                     scope,
-                    expr_span,
-                    |ast: &mut Ast, ident_id: IdentId, symbol: SymbolId, span: Span| {
-                        let ident_ref_id =
-                            ast.create_identifier_ref(Identifier::new(ident_id, op_span), symbol);
+                    &[left_type, right_type],
+                    (op_kind.as_str(), &expr_span),
+                );
+                match resolved {
+                    Ok((symbol, ret_type)) => {
+                        let ident_ref_id = self
+                            .ast
+                            .create_identifier_ref(Identifier::new(ident_id, op_span), symbol);
                         let mut expression = Expression::new(
                             expr_id,
                             ExpressionKind::FunctionCall(ident_ref_id, vec![left, right]),
-                            span,
+                            expr_span,
                         );
                         expression.set_scope(scope);
-                        ast.replace_expression(expression);
-                    },
-                )
+                        self.ast.replace_expression(expression);
+                        Ok(ret_type)
+                    }
+                    Err(_) => Err(()),
+                }
             }
-            ExpressionKind::FunctionCall(ident, exprs) => {
-                let ident = *ident;
+            ExpressionKind::FunctionCall(ident_ref, exprs) => {
+                let exprs = exprs.to_vec();
+                let parameters_count = exprs.len();
+                let ident_ref = *ident_ref;
 
-                #[allow(clippy::unnecessary_to_owned)]
-                for expr in exprs.to_vec() {
-                    let _ = self.visit_expression(expr);
+                let parameter_types = exprs
+                    .iter()
+                    .map_while(|e| match self.visit_expression(*e) {
+                        Ok(Some(t)) => Some(t),
+                        Ok(None) => Some(Type::Void),
+                        Err(_) => None,
+                    })
+                    .collect::<Vec<Type>>();
+
+                if parameter_types.len() != parameters_count {
+                    // some if the parameters could not be typed -> abandon
+                    return Err(());
                 }
 
-                match self.resolve(ident, scope) {
-                    Some(symbol) => {
-                        // todo use params to find function (overloads)
-                        let ident = self.ast.identifier_ref(ident);
-
-                        let ty = match self.table.symbol(symbol).kind() {
-                            SymbolKind::LetStatement(_) | SymbolKind::Parameter(_, _) => {
-                                panic!(
-                                    "'{}' is not a function",
-                                    self.ast.identifier(ident.ident().id())
-                                );
-                            }
-                            SymbolKind::LetFnStatement(stmt, _) => {
-                                let stmt = self.ast.statement(*stmt);
-                                match stmt.kind() {
-                                    StatementKind::LetFn(_, _, ty, _) => ty.as_ref(),
-                                    _ => panic!(),
-                                }
-                            }
-                            SymbolKind::Native(_) => {
-                                todo!()
-                            }
-                        };
-                        match ty.map(|ty| self.ast.identifier(ty.id())) {
-                            None => Ok(Some(Type::Void)),
-                            Some(str) => match Type::try_from(str) {
-                                Ok(t) => Ok(Some(t)),
-                                Err(e) => {
-                                    self.diagnostics.report_err(
-                                        e,
-                                        ty.unwrap().span().clone(),
-                                        (file!(), line!()),
-                                    );
-                                    Err(())
-                                }
-                            },
-                        }
+                let ident_ref = self.ast.identifier_ref(ident_ref).clone();
+                let span = ident_ref.ident().span().clone();
+                let name = self.ast.identifier(ident_ref.ident().id()).to_string();
+                let resolved = self.resolve_function(
+                    ident_ref.ident().id(),
+                    scope,
+                    &parameter_types,
+                    (&name, &span),
+                );
+                match resolved {
+                    Ok((symbol, ret_type)) => {
+                        let mut ident_ref = ident_ref;
+                        ident_ref.set_symbol_id(symbol);
+                        self.ast.replace_identifier_ref(ident_ref);
+                        Ok(ret_type)
                     }
-                    None => Err(()),
+                    Err(_) => Err(()),
                 }
             }
             ExpressionKind::Block(stmt) => {
@@ -475,19 +479,14 @@ impl TypeChecker<'_> {
         }
     }
 
-    fn resolve_function<F>(
+    fn resolve_function(
         &mut self,
         ident_id: IdentId,
-        name: &str,
-        parameter_types: &[Type],
         scope: ScopeId,
-        span: Span,
-        replace_call: F,
-    ) -> Result<Option<Type>, ()>
-    where
-        F: FnOnce(&mut Ast, IdentId, SymbolId, Span),
-    {
-        let symbols = self.symbols_of_arity(scope, ident_id, parameter_types.len());
+        parameter_types: &[Type],
+        diagnostic: (&str, &Span),
+    ) -> Result<(SymbolId, Option<Type>), ()> {
+        let symbols = self.functions_of_arity(scope, ident_id, parameter_types.len());
 
         let matching_symbols = symbols
             .iter()
@@ -520,31 +519,37 @@ impl TypeChecker<'_> {
                     .collect::<Vec<String>>()
                     .join(", ");
 
-                self.diagnostics.report_err(
-                    format!("Invalid parameter types found for {name}: expected one of\n{found_parameter_types}\n, but got ({actual_parameter_types})"),
-                    span,
-                    (file!(), line!()),
-                );
+                if !found_parameter_types.is_empty() {
+                    self.diagnostics.report_err(
+                        format!("Invalid parameter types found for {}: expected one of\n{found_parameter_types}\n, but got ({actual_parameter_types})", diagnostic.0,),
+                        diagnostic.1.clone(),
+                        (file!(), line!()),
+                    );
+                } else {
+                    self.diagnostics.report_err(
+                        format!("No function '{}' found for parameters of types ({actual_parameter_types})", diagnostic.0),
+                        diagnostic.1.clone(),
+                        (file!(), line!()),
+                    );
+                }
+
                 Err(())
             }
-            1 => {
-                replace_call(&mut self.ast, ident_id, matching_symbols[0].0, span);
-                Ok(Some(matching_symbols[0].1))
-            }
+            1 => Ok((matching_symbols[0].0, Some(matching_symbols[0].1))),
             _ => {
                 todo!()
             }
         }
     }
 
-    fn symbols_of_arity(
+    fn functions_of_arity(
         &mut self,
         scope: ScopeId,
         ident_id: IdentId,
         arity: usize,
     ) -> Vec<(SymbolId, Vec<Type>, Type)> {
         self.table
-            .find_with_arity(ident_id, arity, scope)
+            .find_function(ident_id, scope, arity)
             .into_iter()
             .filter_map(|s| {
                 let symbol = self.table.symbol(s);
@@ -635,7 +640,7 @@ impl TryFrom<&str> for Type {
 #[cfg(test)]
 mod tests {
     use crate::ast::Ast;
-    use crate::error::{Diagnostics, Level};
+    use crate::error::Level;
     use crate::lexer::{Lexer, Span};
     use crate::natives::Natives;
     use crate::parser::Parser;
@@ -732,12 +737,17 @@ mod tests {
 
         let symbol_table = SymbolTableGen::new(&mut ast, Natives::default()).build_table();
 
-        let (_ast, diagnostics) = TypeChecker::new(ast, &symbol_table).check();
+        let (_ast, actual_diagnostics) = TypeChecker::new(ast, &symbol_table).check();
 
-        let mut expected = Diagnostics::default();
-        expected.report_err("'n' not in scope", Span::new(1, 13, 12, 1), (file!(), 465));
+        let actual_diagnostics = actual_diagnostics
+            .iter()
+            .map(|d| (d.message(), d.span().clone(), d.level()))
+            .collect::<Vec<(&str, Span, Level)>>();
 
-        assert_eq!(diagnostics, expected);
+        let expected_diagnostics =
+            vec![("'n' not in scope", Span::new(1, 13, 12, 1), Level::Error)];
+
+        assert_eq!(actual_diagnostics, expected_diagnostics);
     }
 
     macro_rules! test_type_error {
@@ -965,6 +975,18 @@ mod tests {
         "Invalid parameter types found for +: expected one of\n - (number, number)\n, but got (number, boolean)",
         Span::new(1, 30, 29, 8)
     );
+    test_type_error!(
+        function_parameter_incorrect_arity,
+        "let f(n: number, b: bool) = { f(0); }",
+        "No function 'f' found for parameters of types (number)",
+        Span::new(1, 31, 30, 1)
+    );
+    test_type_error!(
+        function_not_found,
+        "let f() = { g(); }",
+        "No function 'g' found for parameters of types ()",
+        Span::new(1, 13, 12, 1)
+    );
     test_type_ok!(
         function_invalid_return_type_after_valid_return_type,
         "let f(n: number): number = { ret 41; ret true; }"
@@ -981,13 +1003,12 @@ mod tests {
         "Invalid parameter types found for -: expected one of\n - (number)\n, but got (void)",
         Span::new(1, 9, 8, 38)
     );
-    // fixme un-comment the following test
-    // test_type_error!(
-    //     call_variable,
-    //     "let n = 10; n();",
-    //     "panic",
-    //     Span::new(0, 0, 0, 0)
-    // );
+    test_type_error!(
+        call_variable,
+        "let n = 10; n();",
+        "No function 'n' found for parameters of types ()",
+        Span::new(1, 13, 12, 1)
+    );
     // fixme un-comment the following test
     // test_type_ok!(
     //     assign_from_native,

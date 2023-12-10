@@ -64,6 +64,8 @@ impl<'a> XmlWriter<'a> {
                 self.emit(XmlEvent::end_element());
             }
 
+            // todo serialize symbols
+
             self.emit(XmlEvent::end_element());
         }
         self.emit(XmlEvent::end_element()); // scopes

@@ -65,22 +65,26 @@ impl BinaryOperatorKind {
             BinaryOperatorKind::Subtraction => "sub",
         }
     }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            BinaryOperatorKind::Addition => "+",
+            BinaryOperatorKind::Division => "/",
+            BinaryOperatorKind::Equality => "==",
+            BinaryOperatorKind::GreaterThan => ">",
+            BinaryOperatorKind::GreaterThanOrEqualTo => ">=",
+            BinaryOperatorKind::Multiplication => "*",
+            BinaryOperatorKind::NonEquality => "!=",
+            BinaryOperatorKind::SmallerThan => "<",
+            BinaryOperatorKind::SmallerThanOrEqualTo => "<=",
+            BinaryOperatorKind::Subtraction => "-",
+        }
+    }
 }
 
 impl Display for BinaryOperatorKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BinaryOperatorKind::Addition => write!(f, "+"),
-            BinaryOperatorKind::Division => write!(f, "/"),
-            BinaryOperatorKind::Equality => write!(f, "=="),
-            BinaryOperatorKind::GreaterThan => write!(f, ">"),
-            BinaryOperatorKind::GreaterThanOrEqualTo => write!(f, ">="),
-            BinaryOperatorKind::Multiplication => write!(f, "*"),
-            BinaryOperatorKind::NonEquality => write!(f, "!="),
-            BinaryOperatorKind::SmallerThan => write!(f, "<"),
-            BinaryOperatorKind::SmallerThanOrEqualTo => write!(f, "<="),
-            BinaryOperatorKind::Subtraction => write!(f, "-"),
-        }
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -125,12 +129,16 @@ impl UnaryOperatorKind {
             UnaryOperatorKind::Minus => "neg",
         }
     }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            UnaryOperatorKind::Minus => "-",
+        }
+    }
 }
 
 impl Display for UnaryOperatorKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            UnaryOperatorKind::Minus => write!(f, "-"),
-        }
+        write!(f, "{}", self.as_str())
     }
 }

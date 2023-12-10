@@ -1,0 +1,30 @@
+---
+source: src/dot.rs
+expression: "Dot::new(&ast, &symbols).serialize()"
+---
+digraph ast {
+ordering="out";
+splines=false;
+n0[label="lt()"][shape="plaintext"][fontcolor="orange"]
+n1[label="a"][shape="plaintext"][fontcolor="blue"]
+n2[label="b"][shape="plaintext"][fontcolor="blue"]
+n3[label="max()"][shape="plaintext"][fontcolor="blue"]
+n4[label="b"][shape="plaintext"][fontcolor="blue"]
+n5[label="a"][shape="plaintext"][fontcolor="blue"]
+n6[label="b"][shape="plaintext"][fontcolor="blue"]
+n7[label="if"][shape="plaintext"][fontcolor="black"]
+n8[label="{ {<fn>let max(): number } | { <p0>a: number | <p1>b: number } }"][shape="record"][fontcolor="black"]
+n0 -> n1[style="solid"][color="black"][arrowhead="none"]
+n0 -> n2[style="solid"][color="black"][arrowhead="none"]
+n3 -> n4[style="solid"][color="black"][arrowhead="none"]
+n3 -> n5[style="solid"][color="black"][arrowhead="none"]
+n7 -> n0[style="solid"][color="black"][arrowhead="none"]
+n7 -> n3[style="solid"][color="green"][arrowhead="none"]
+n7 -> n6[style="solid"][color="red"][arrowhead="none"]
+n8 -> n7[style="solid"][color="black"][arrowhead="none"]
+n3 -> n8:fn[style="dotted"][color="gray"][arrowhead="vee"][constraint=false]
+n1 -> n8:p0[style="dotted"][color="gray"][arrowhead="vee"][constraint=false]
+n2 -> n8:p1[style="dotted"][color="gray"][arrowhead="vee"][constraint=false]
+n4 -> n8:p1[style="dotted"][color="gray"][arrowhead="vee"][constraint=false]
+n5 -> n8:p0[style="dotted"][color="gray"][arrowhead="vee"][constraint=false]
+n6 -> n8:p1[style="dotted"][color="gray"][arrowhead="vee"][constraint=false]}

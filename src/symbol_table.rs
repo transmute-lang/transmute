@@ -304,7 +304,6 @@ impl SymbolTable {
         let scope = &self.scopes[scope.id()];
         if let Some(symbols) = scope.get(identifier) {
             if symbols.len() != 1 {
-                // fixme: this does not work with eq(n, 0) for instance
                 panic!("Expected 1 symbol. found {}", symbols.len());
             }
             Some(&self.symbols[symbols.first().unwrap().id()])
@@ -315,11 +314,11 @@ impl SymbolTable {
         }
     }
 
-    pub fn find_with_arity(
+    pub fn find_function(
         &self,
         identifier: IdentId,
-        arity: usize,
         scope: ScopeId,
+        arity: usize,
     ) -> Vec<SymbolId> {
         let scope = &self.scopes[scope.id()];
         match scope.get(identifier) {
@@ -335,13 +334,13 @@ impl SymbolTable {
                     .cloned()
                     .collect::<Vec<SymbolId>>();
                 if let Some(parent) = scope.parent {
-                    symbols.append(&mut self.find_with_arity(identifier, arity, parent));
+                    symbols.append(&mut self.find_function(identifier, parent, arity));
                 }
                 symbols
             }
             None => {
                 if let Some(parent) = scope.parent {
-                    self.find_with_arity(identifier, arity, parent)
+                    self.find_function(identifier, parent, arity)
                 } else {
                     vec![]
                 }
@@ -496,14 +495,14 @@ mod tests {
     }
 
     #[test]
-    fn find_with_arity_add() {
+    fn find_function_add() {
         let ast = Ast::default();
         let natives = Natives::default();
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
         let table = SymbolTableGen::new(&mut ast, natives).build_table();
 
         let add = ast.identifier_id("add");
-        let symbols = table.find_with_arity(add, 2, ScopeId::from(0));
+        let symbols = table.find_function(add, ScopeId::from(0), 2);
         assert_eq!(symbols.len(), 1);
 
         let symbol = table.symbol(*symbols.first().unwrap());
@@ -515,14 +514,14 @@ mod tests {
         }
     }
     #[test]
-    fn find_with_arity_eq() {
+    fn find_function_eq() {
         let ast = Ast::default();
         let natives = Natives::default();
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
         let table = SymbolTableGen::new(&mut ast, natives).build_table();
 
         let eq = ast.identifier_id("eq");
-        let symbols = table.find_with_arity(eq, 2, ScopeId::from(0));
+        let symbols = table.find_function(eq, ScopeId::from(0), 2);
         assert_eq!(symbols.len(), 2);
 
         let mut params = symbols
