@@ -13,7 +13,7 @@ use std::fmt::{Display, Formatter};
 pub struct TypeChecker<'a> {
     ast: Ast,
     table: &'a SymbolTable,
-    types: Vec<Option<Res>>,
+    types: Vec<Option<Result<Type, ()>>>,
     diagnostics: Diagnostics,
 }
 
@@ -33,39 +33,32 @@ impl<'a> TypeChecker<'a> {
     }
 }
 
-/// Several things may happen while resolving a type:
-///  - we could not resolve. In that case, we return an Err(())
-///  - the resolver found no type (used to ret stmt). In that case, we return Ok(None)
-///  - the resolver found a type. In that case, we return Ok(type)
-type Res = Result<Option<Type>, ()>;
-
-impl Visitor<Res> for TypeChecker<'_> {
-    fn visit_statement(&mut self, stmt_id: StmtId) -> Res {
+impl Visitor<Result<Type, ()>> for TypeChecker<'_> {
+    fn visit_statement(&mut self, stmt_id: StmtId) -> Result<Type, ()> {
         let stmt = self.ast.statement(stmt_id);
 
         match stmt.kind() {
             StatementKind::Expression(expr) => self.visit_expression(*expr),
             StatementKind::Let(_, expr) => {
                 let expr = *expr;
-                // fixme this is wrong, the let does not have a type, only the expr... but it's an
-                //  acceptable proxy
+                // the let does not have a type, only the expr... but it's an acceptable proxy
                 match self.visit_expression(expr) {
-                    Ok(None) => {
+                    Ok(Type::None) => {
                         let expr = self.ast.expression(expr);
                         self.diagnostics.report_err(
-                            "Expected some type, got none",
+                            format!("Expected some type, got {}", Type::None),
                             expr.span().clone(),
                             (file!(), line!()),
                         );
                         Err(())
                     }
-                    t => t,
+                    Ok(t) => Ok(t),
+                    Err(_) => Err(()),
                 }
             }
             StatementKind::Ret(expr) => {
                 let _ = self.visit_expression(*expr);
-                // todo should it be Ok(Void) instead?
-                Ok(None)
+                Ok(Type::None)
             }
             StatementKind::LetFn(_, _, ty, expr) => {
                 let ret_type = match ty {
@@ -99,7 +92,8 @@ impl Visitor<Res> for TypeChecker<'_> {
                 } else {
                     for expr in exit_points {
                         match self.visit_expression(expr) {
-                            Ok(Some(ty)) => {
+                            Ok(Type::None) => panic!("functions must not return {}", Type::None),
+                            Ok(ty) => {
                                 if ty != ret_type {
                                     let expr = self.ast.expression(expr);
                                     self.diagnostics.report_err(
@@ -109,18 +103,17 @@ impl Visitor<Res> for TypeChecker<'_> {
                                     );
                                 }
                             }
-                            Ok(None) => panic!(),
                             Err(_) => {}
                         }
                     }
                 }
 
-                Ok(Some(Type::Function))
+                Ok(Type::Function)
             }
         }
     }
 
-    fn visit_expression(&mut self, expr_id: ExprId) -> Res {
+    fn visit_expression(&mut self, expr_id: ExprId) -> Result<Type, ()> {
         if let Some(t) = self.types[expr_id.id()] {
             return t;
         }
@@ -154,10 +147,18 @@ impl Visitor<Res> for TypeChecker<'_> {
                         let expr_type = self.visit_expression(expr)?;
 
                         match (target_type, expr_type) {
-                            (Some(ident_type), Some(expr_type)) if ident_type == expr_type => {
-                                Ok(Some(ident_type))
+                            (Type::None, _) => panic!("ident has type {}", Type::None),
+                            (t, Type::None) => {
+                                let expr = self.ast.expression(expr);
+                                self.diagnostics.report_err(
+                                    format!("Expected {t}, got {}", Type::None),
+                                    expr.span().clone(),
+                                    (file!(), line!()),
+                                );
+                                Err(())
                             }
-                            (Some(ident_type), Some(expr_type)) => {
+                            (ident_type, expr_type) if ident_type == expr_type => Ok(ident_type),
+                            (ident_type, expr_type) => {
                                 let expr = self.ast.expression(expr);
                                 self.diagnostics.report_err(
                                     format!("Expected {ident_type}, got {expr_type}",),
@@ -166,16 +167,6 @@ impl Visitor<Res> for TypeChecker<'_> {
                                 );
                                 Err(())
                             }
-                            (Some(t), None) => {
-                                let expr = self.ast.expression(expr);
-                                self.diagnostics.report_err(
-                                    format!("Expected {t}, got no type",),
-                                    expr.span().clone(),
-                                    (file!(), line!()),
-                                );
-                                Err(())
-                            }
-                            (None, _) => panic!("ident has no type"),
                         }
                     }
                     None => Err(()),
@@ -189,21 +180,13 @@ impl Visitor<Res> for TypeChecker<'_> {
                 let condition_type = self.visit_expression(cond)?;
 
                 match condition_type {
-                    Some(Type::Boolean) => {
+                    Type::Boolean => {
                         // all good
                     }
-                    Some(t) => {
+                    t => {
                         let expr = self.ast.expression(cond);
                         self.diagnostics.report_err(
                             format!("Expected boolean, got {t}"),
-                            expr.span().clone(),
-                            (file!(), line!()),
-                        );
-                    }
-                    None => {
-                        let expr = self.ast.expression(cond);
-                        self.diagnostics.report_err(
-                            "Expected boolean, got no type",
                             expr.span().clone(),
                             (file!(), line!()),
                         );
@@ -214,17 +197,17 @@ impl Visitor<Res> for TypeChecker<'_> {
 
                 let false_type = false_branch
                     .map(|expr| self.visit_expression(expr))
-                    .unwrap_or(Ok(Some(Type::Void)))?;
+                    .unwrap_or(Ok(Type::Void))?;
 
                 match (true_type, false_type) {
-                    (None, None) => Ok(None),
-                    (None, Some(t)) | (Some(t), None) => Ok(Some(t)),
-                    (Some(_), Some(Type::Void)) | (Some(Type::Void), Some(_)) => {
+                    (Type::None, Type::None) => Ok(Type::None),
+                    (Type::None, t) | (t, Type::None) => Ok(t),
+                    (_, Type::Void) | (Type::Void, _) => {
                         // todo: option<t>
-                        Ok(Some(Type::Void))
+                        Ok(Type::Void)
                     }
-                    (Some(tt), Some(ft)) if tt == ft => Ok(Some(tt)),
-                    (Some(tt), Some(ft)) => {
+                    (tt, ft) if tt == ft => Ok(tt),
+                    (tt, ft) => {
                         let false_branch = self
                             .ast
                             .expression(false_branch.expect("false branch exists"));
@@ -243,21 +226,13 @@ impl Visitor<Res> for TypeChecker<'_> {
                 let cond = *cond;
                 let condition_type = self.visit_expression(cond)?;
                 match condition_type {
-                    Some(Type::Boolean) => {
+                    Type::Boolean => {
                         // all good
                     }
-                    Some(t) => {
+                    t => {
                         let expr = self.ast.expression(cond);
                         self.diagnostics.report_err(
                             format!("Expected boolean, got {t}"),
-                            expr.span().clone(),
-                            (file!(), line!()),
-                        );
-                    }
-                    None => {
-                        let expr = self.ast.expression(cond);
-                        self.diagnostics.report_err(
-                            "Expected boolean, got no type",
                             expr.span().clone(),
                             (file!(), line!()),
                         );
@@ -267,8 +242,8 @@ impl Visitor<Res> for TypeChecker<'_> {
                 self.visit_expression(expr)
             }
             ExpressionKind::Literal(literal) => match literal.kind() {
-                LiteralKind::Boolean(_) => Ok(Some(Type::Boolean)),
-                LiteralKind::Number(_) => Ok(Some(Type::Number)),
+                LiteralKind::Boolean(_) => Ok(Type::Boolean),
+                LiteralKind::Number(_) => Ok(Type::Number),
                 LiteralKind::Identifier(ident_ref) => match self.resolve(*ident_ref, scope) {
                     Some(symbol) => {
                         let symbol = self.table.symbol(symbol);
@@ -292,7 +267,7 @@ impl Visitor<Res> for TypeChecker<'_> {
                                 };
                                 let ident = self.ast.identifier(param.ty().id());
                                 match Type::try_from(ident) {
-                                    Ok(ty) => Ok(Some(ty)),
+                                    Ok(ty) => Ok(ty),
                                     Err(e) => {
                                         self.diagnostics.report_err(
                                             e,
@@ -318,7 +293,7 @@ impl Visitor<Res> for TypeChecker<'_> {
                 let op_kind = *op.kind();
 
                 let operand = *operand;
-                let operand_type = self.visit_expression(operand)?.unwrap_or(Type::Void);
+                let operand_type = self.visit_expression(operand)?;
 
                 let ident_id = self.ast.identifier_id(op_kind.function_name());
                 let resolved = self.resolve_function(
@@ -356,8 +331,8 @@ impl Visitor<Res> for TypeChecker<'_> {
 
                 let left = *left;
                 let right = *right;
-                let left_type = self.visit_expression(left)?.unwrap_or(Type::Void);
-                let right_type = self.visit_expression(right)?.unwrap_or(Type::Void);
+                let left_type = self.visit_expression(left)?;
+                let right_type = self.visit_expression(right)?;
 
                 let ident_id = self.ast.identifier_id(op_kind.function_name());
                 let resolved = self.resolve_function(
@@ -391,8 +366,7 @@ impl Visitor<Res> for TypeChecker<'_> {
                 let parameter_types = exprs
                     .iter()
                     .map_while(|e| match self.visit_expression(*e) {
-                        Ok(Some(t)) => Some(t),
-                        Ok(None) => Some(Type::Void),
+                        Ok(t) => Some(t),
                         Err(_) => None,
                     })
                     .collect::<Vec<Type>>();
@@ -422,13 +396,13 @@ impl Visitor<Res> for TypeChecker<'_> {
                 }
             }
             ExpressionKind::Block(stmt) => {
-                let mut ty = Ok(Some(Type::Void));
+                let mut ty = Ok(Type::Void);
 
                 #[allow(clippy::unnecessary_to_owned)]
                 for stmt in stmt.to_vec() {
                     let t = self.visit_statement(stmt);
                     match ty {
-                        Ok(None) => {
+                        Ok(Type::None) => {
                             // we keep the type of the expression only if we did not already see a
                             // ret
                         }
@@ -447,7 +421,7 @@ impl Visitor<Res> for TypeChecker<'_> {
         t
     }
 
-    fn visit_literal(&mut self, _literal: &Literal) -> Res {
+    fn visit_literal(&mut self, _literal: &Literal) -> Result<Type, ()> {
         unimplemented!()
     }
 }
@@ -489,7 +463,7 @@ impl TypeChecker<'_> {
         scope: ScopeId,
         parameter_types: &[Type],
         diagnostic: (&str, &Span),
-    ) -> Result<(SymbolId, Option<Type>), ()> {
+    ) -> Result<(SymbolId, Type), ()> {
         let symbols = self.functions_of_arity(scope, ident_id, parameter_types.len());
 
         let matching_symbols = symbols
@@ -539,7 +513,7 @@ impl TypeChecker<'_> {
 
                 Err(())
             }
-            1 => Ok((matching_symbols[0].0, Some(matching_symbols[0].1))),
+            1 => Ok((matching_symbols[0].0, matching_symbols[0].1)),
             _ => {
                 todo!()
             }
@@ -614,6 +588,10 @@ pub enum Type {
     Function,
     Number,
     Void,
+    // fixme once expressions/statements are merged, update the doc
+    /// This value is used when the statement/expression does not return any value. This is the
+    /// case of `ret` for instance.
+    None,
 }
 
 impl Display for Type {
@@ -623,6 +601,7 @@ impl Display for Type {
             Type::Function => write!(f, "function"),
             Type::Number => write!(f, "number"),
             Type::Void => write!(f, "void"),
+            Type::None => write!(f, "no type"),
         }
     }
 }
@@ -804,10 +783,11 @@ mod tests {
         };
     }
 
+    // todo this is questionable...
     test_type_error!(
         let_expr_type_is_void,
         "let x = if true { ret 42; } else { ret 43; };",
-        "Expected some type, got none",
+        "Expected some type, got no type",
         Span::new(1, 9, 8, 36)
     );
 
@@ -1004,7 +984,7 @@ mod tests {
     test_type_error!(
         unary_operator_no_type,
         "let n = - if true { ret 42; } else { ret 43; };",
-        "Invalid parameter types found for -: expected one of\n - (number)\n, but got (void)",
+        "Invalid parameter types found for -: expected one of\n - (number)\n, but got (no type)",
         Span::new(1, 9, 8, 38)
     );
     test_type_error!(
