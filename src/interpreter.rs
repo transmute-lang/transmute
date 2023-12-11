@@ -76,10 +76,10 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                 let symbol = ident_ref.symbol_id().expect("function not resolved");
                 let symbol = self.symbols.symbol(symbol);
                 match symbol.kind() {
-                    SymbolKind::LetStatement(_) | SymbolKind::Parameter(_, _) => {
+                    SymbolKind::LetStatement(_, _) | SymbolKind::Parameter(_, _, _) => {
                         panic!("let fn expected")
                     }
-                    SymbolKind::LetFnStatement(stmt, _) => {
+                    SymbolKind::LetFnStatement(_, stmt, _) => {
                         let stmt = self.ast.statement(*stmt);
                         match stmt.kind() {
                             StatementKind::LetFn(_, parameters, _, expr) => {
@@ -129,8 +129,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                     .expect("there is an env")
                     .contains_key(&ident.id())
                 {
-                    let ident = self.ast.identifier(ident.id());
-                    panic!("{ident} not in scope")
+                    panic!("{} not in scope", self.ast.identifier(ident.id()));
                 }
 
                 let val = self.visit_expression(*expr);
@@ -320,7 +319,11 @@ mod tests {
                 let (symbols, ast) = {
                     let natives = Natives::default();
                     let mut ast = ast.merge(Into::<Ast>::into(&natives));
-                    (SymbolTableGen::new(&mut ast, natives).build_table(), ast)
+
+                    let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
+                    assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+                    (table, ast)
                 };
 
                 let (ast, diagnostics) = TypeChecker::new(ast, &symbols).check();
@@ -341,7 +344,10 @@ mod tests {
                 let (symbols, ast) = {
                     let natives = Natives::default();
                     let mut ast = ast.merge(Into::<Ast>::into(&natives));
-                    (SymbolTableGen::new(&mut ast, natives).build_table(), ast)
+                    let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
+                    assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+                    (table, ast)
                 };
 
                 let (ast, diagnostics) = TypeChecker::new(ast, &symbols).check();

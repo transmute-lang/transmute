@@ -48,7 +48,12 @@ fn fibonacci_rec() {
     let (symbols, ast) = {
         let natives = Natives::default();
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
-        (SymbolTableGen::new(&mut ast, natives).build_table(), ast)
+        let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
+        if !diagnostics.is_empty() {
+            print!("Errors:\n{}", diagnostics);
+            return;
+        }
+        (table, ast)
     };
 
     Dot::new(&ast, &symbols)
@@ -112,7 +117,12 @@ fn fibonacci_iter() {
     let (symbols, ast) = {
         let natives = Natives::default();
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
-        (SymbolTableGen::new(&mut ast, natives).build_table(), ast)
+        let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
+        if !diagnostics.is_empty() {
+            print!("Errors:\n{}", diagnostics);
+            return;
+        }
+        (table, ast)
     };
 
     Dot::new(&ast, &symbols)

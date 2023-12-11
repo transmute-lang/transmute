@@ -3,6 +3,8 @@ use crate::ast::ids::{ExprId, IdentId, ScopeId, StmtId, SymbolId};
 use crate::ast::literal::Literal;
 use crate::ast::statement::StatementKind;
 use crate::ast::{Ast, Visitor};
+use crate::error::{Diagnostic, Diagnostics, Level};
+use crate::lexer::Span;
 use crate::natives::{Native, Natives};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
@@ -12,6 +14,7 @@ pub struct SymbolTableGen<'a> {
     symbols: Vec<Symbol>,
     scopes: Vec<Scope>,
     scopes_stack: Vec<ScopeId>,
+    diagnostics: Diagnostics,
 }
 
 impl<'a> SymbolTableGen<'a> {
@@ -22,25 +25,29 @@ impl<'a> SymbolTableGen<'a> {
             symbols: vec![],
             scopes: vec![Scope::root(scope)],
             scopes_stack: vec![scope],
+            diagnostics: Default::default(),
         };
 
         for native in natives.into_iter() {
             let ident = me.ast.identifier_id(native.name());
-            me.insert(ident, SymbolKind::Native(native));
+            me.insert(ident, SymbolKind::Native(native), &Span::new(1, 1, 0, 0));
         }
 
         me.push_scope();
         me
     }
 
-    pub fn build_table(mut self) -> SymbolTable {
+    pub fn build_table(mut self) -> (SymbolTable, Diagnostics) {
         let statements = self.ast.statements().to_vec();
 
         for stmt in statements {
             self.visit_statement(stmt);
         }
 
-        SymbolTable::new(self.symbols, self.scopes)
+        (
+            SymbolTable::new(self.symbols, self.scopes),
+            self.diagnostics,
+        )
     }
 
     fn push_scope(&mut self) {
@@ -78,7 +85,7 @@ impl<'a> SymbolTableGen<'a> {
         }
     }
 
-    fn insert(&mut self, ident: IdentId, kind: SymbolKind) {
+    fn insert(&mut self, ident: IdentId, kind: SymbolKind, span: &Span) {
         let scope_id = self.scopes_stack.last().expect("there is a current scope");
         let scope = self.scopes.get_mut(scope_id.id()).expect("scope exists");
         let symbol_id = SymbolId::from(self.symbols.len());
@@ -87,8 +94,15 @@ impl<'a> SymbolTableGen<'a> {
             scope_id: *scope_id,
             kind,
         };
-        self.symbols.push(symbol);
-        scope.insert(ident, symbol_id);
+
+        match scope.insert(ident, symbol, &self.symbols, span) {
+            Ok(symbol) => {
+                self.symbols.push(symbol);
+            }
+            Err(diagnostic) => {
+                self.diagnostics.push(diagnostic);
+            }
+        }
     }
 }
 
@@ -107,19 +121,30 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
             StatementKind::Let(ident, expr) => {
                 self.visit_expression(*expr);
                 self.push_sub_scope();
-                self.insert(ident.id(), SymbolKind::LetStatement(stmt));
+                self.insert(
+                    ident.id(),
+                    SymbolKind::LetStatement(ident.id(), stmt),
+                    ident.span(),
+                );
             }
             StatementKind::LetFn(ident, params, _, expr) => {
-                // todo use types instead of arity
-
-                self.insert(ident.id(), SymbolKind::LetFnStatement(stmt, params.len()));
+                let params_types = params.iter().map(|p| p.ty().id()).collect::<Vec<IdentId>>();
+                self.insert(
+                    ident.id(),
+                    SymbolKind::LetFnStatement(ident.id(), stmt, params_types),
+                    ident.span(),
+                );
 
                 // todo make sure type exist (or in type checker?)
 
                 {
                     self.push_scope();
                     for (index, param) in params.iter().enumerate() {
-                        self.insert(param.identifier().id(), SymbolKind::Parameter(stmt, index));
+                        self.insert(
+                            param.identifier().id(),
+                            SymbolKind::Parameter(ident.id(), stmt, index),
+                            param.identifier().span(),
+                        );
                     }
 
                     self.visit_expression(*expr);
@@ -226,9 +251,69 @@ impl Scope {
         }
     }
 
-    fn insert(&mut self, identifier: IdentId, symbol_id: SymbolId) {
-        // todo make sure we dont insert the same symbol twice if it's a function
-        self.symbols.entry(identifier).or_default().push(symbol_id);
+    fn insert(
+        &mut self,
+        identifier: IdentId,
+        symbol: Symbol,
+        symbols: &[Symbol],
+        span: &Span,
+    ) -> Result<Symbol, Diagnostic> {
+        let entry = self.symbols.entry(identifier).or_default();
+
+        let symbol = match symbol.kind() {
+            SymbolKind::LetFnStatement(_, _, new_params_types) => {
+                let same_signature_exists_in_scope =
+                    entry
+                        .iter()
+                        .map(|e| &symbols[e.id()])
+                        .any(|s| match &s.kind {
+                            SymbolKind::LetFnStatement(_, _, params_types) => {
+                                new_params_types == params_types
+                            }
+                            _ => false,
+                        });
+                if same_signature_exists_in_scope {
+                    Err(Diagnostic::new(
+                        "A function with the same signature already exists in scope",
+                        span.clone(),
+                        Level::Error,
+                        (file!(), line!()),
+                    ))
+                } else {
+                    Ok(symbol)
+                }
+            }
+            SymbolKind::Parameter(new_ident, _, _) => {
+                let same_parameter_exists =
+                    entry
+                        .iter()
+                        .map(|e| &symbols[e.id()])
+                        .any(|s| match &s.kind {
+                            SymbolKind::Parameter(ident, _, _) => new_ident == ident,
+                            _ => false,
+                        });
+                if same_parameter_exists {
+                    Err(Diagnostic::new(
+                        "A parameter with the same already exists",
+                        span.clone(),
+                        Level::Error,
+                        (file!(), line!()),
+                    ))
+                } else {
+                    Ok(symbol)
+                }
+            }
+            SymbolKind::LetStatement(_, _) => Ok(symbol),
+            SymbolKind::Native(_) => Ok(symbol),
+        };
+
+        if let Ok(symbol) = &symbol {
+            self.symbols
+                .entry(identifier)
+                .or_default()
+                .push(symbol.id());
+        }
+        symbol
     }
 
     pub fn id(&self) -> ScopeId {
@@ -283,11 +368,10 @@ impl Symbol {
 
 #[derive(Debug, PartialEq)]
 pub enum SymbolKind {
-    LetStatement(StmtId),
-    // usize is arity
-    LetFnStatement(StmtId, usize),
+    LetStatement(IdentId, StmtId),
+    LetFnStatement(IdentId, StmtId, Vec<IdentId>),
     // usize is index
-    Parameter(StmtId, usize),
+    Parameter(IdentId, StmtId, usize),
     Native(Native),
 }
 
@@ -328,9 +412,9 @@ impl SymbolTable {
                 let mut symbols = s
                     .iter()
                     .filter(|s| match &self.symbols[s.id()].kind {
-                        SymbolKind::LetStatement(_) => false,
-                        SymbolKind::LetFnStatement(_, a) => arity == *a,
-                        SymbolKind::Parameter(_, _) => false,
+                        SymbolKind::LetStatement(_, _) => false,
+                        SymbolKind::LetFnStatement(_, _, params) => arity == params.len(),
+                        SymbolKind::Parameter(_, _, _) => false,
                         SymbolKind::Native(native) => native.parameters().len() == arity,
                     })
                     .cloned()
@@ -379,8 +463,9 @@ mod tests {
         let ast = Parser::new(Lexer::new("let f(n: number) = { }")).parse().0;
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+        let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
 
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
         assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
     }
 
@@ -393,8 +478,9 @@ mod tests {
             .0;
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+        let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
 
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
         assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
     }
 
@@ -408,8 +494,9 @@ mod tests {
 
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+        let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
 
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
         assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
     }
 
@@ -423,7 +510,9 @@ mod tests {
 
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+        let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
+
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
         assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
     }
@@ -440,8 +529,9 @@ mod tests {
 
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+        let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
 
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
         assert_snapshot!(XmlWriter::new(&ast, &table).serialize())
     }
 
@@ -474,8 +564,9 @@ mod tests {
 
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+        let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
 
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
         assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
     }
 
@@ -491,8 +582,9 @@ mod tests {
 
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+        let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
 
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
         assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
     }
 
@@ -501,7 +593,9 @@ mod tests {
         let ast = Ast::default();
         let natives = Natives::default();
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
-        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+        let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
+
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
         let add = ast.identifier_id("add");
         let symbols = table.find_function(add, ScopeId::from(0), 2);
@@ -515,12 +609,15 @@ mod tests {
             _ => panic!("expected native, got {:?}", symbol.kind),
         }
     }
+
     #[test]
     fn find_function_eq() {
         let ast = Ast::default();
         let natives = Natives::default();
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
-        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+        let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
+
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
         let eq = ast.identifier_id("eq");
         let symbols = table.find_function(eq, ScopeId::from(0), 2);
@@ -550,22 +647,55 @@ mod tests {
     fn same_var_multiple_times_in_scope() {
         let mut ast = Parser::new(Lexer::new("let x = 0; let x = 1;")).parse().0;
 
-        let table = SymbolTableGen::new(&mut ast, Natives::empty()).build_table();
+        let (table, diagnostics) = SymbolTableGen::new(&mut ast, Natives::empty()).build_table();
 
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
         assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
     }
 
-    // // todo the test supposed to fail
-    // #[test]
-    // fn same_fn_multiple_times_in_scope() {
-    //     let mut ast = Parser::new(Lexer::new(
-    //         "let x() = 0; let x() = 1;",
-    //     ))
-    //         .parse()
-    //         .0;
-    //
-    //     let table = SymbolTableGen::new(&mut ast, Natives::empty()).build_table();
-    //
-    //     assert_snapshot!(XmlWriter::new(&ast, &table).serialize());
-    // }
+    #[test]
+    fn function_same_parameter_type() {
+        let mut ast = Parser::new(Lexer::new("let f(x: number) = 0; let f(x: number) = 0;"))
+            .parse()
+            .0;
+
+        let (_, diagnostics) = SymbolTableGen::new(&mut ast, Natives::empty()).build_table();
+
+        let actual_diagnostics = diagnostics
+            .iter()
+            .map(|d| (d.message(), d.span().clone(), d.level()))
+            .collect::<Vec<(&str, Span, Level)>>();
+
+        assert_eq!(
+            actual_diagnostics,
+            vec![(
+                "A function with the same signature already exists in scope",
+                Span::new(1, 27, 26, 1),
+                Level::Error
+            )]
+        )
+    }
+
+    #[test]
+    fn function_same_parameter_name() {
+        let mut ast = Parser::new(Lexer::new("let f(x: number, x: number) = 0;"))
+            .parse()
+            .0;
+
+        let (_, diagnostics) = SymbolTableGen::new(&mut ast, Natives::empty()).build_table();
+
+        let actual_diagnostics = diagnostics
+            .iter()
+            .map(|d| (d.message(), d.span().clone(), d.level()))
+            .collect::<Vec<(&str, Span, Level)>>();
+
+        assert_eq!(
+            actual_diagnostics,
+            vec![(
+                "A parameter with the same already exists",
+                Span::new(1, 18, 17, 1),
+                Level::Error
+            )]
+        )
+    }
 }

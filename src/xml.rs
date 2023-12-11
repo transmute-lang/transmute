@@ -13,7 +13,13 @@ use xml::{EmitterConfig, EventWriter};
 pub fn eprint_ast(ast: Ast) -> Ast {
     let natives = crate::natives::Natives::default();
     let mut ast = ast;
-    let table = crate::symbol_table::SymbolTableGen::new(&mut ast, natives).build_table();
+
+    let (table, diagnostics) =
+        crate::symbol_table::SymbolTableGen::new(&mut ast, natives).build_table();
+    if !diagnostics.is_empty() {
+        panic!("Errors:\n{}", diagnostics);
+    }
+
     eprintln!("{}", XmlWriter::new(&ast, &table).serialize());
     ast
 }
@@ -79,13 +85,13 @@ impl<'a> XmlWriter<'a> {
             );
 
             match symbol.kind() {
-                SymbolKind::LetStatement(stmt) | SymbolKind::LetFnStatement(stmt, _) => {
+                SymbolKind::LetStatement(_, stmt) | SymbolKind::LetFnStatement(_, stmt, _) => {
                     self.emit(
                         XmlEvent::start_element("statement").attr("ref", &format!("stmt:{}", stmt)),
                     );
                     self.emit(XmlEvent::end_element());
                 }
-                SymbolKind::Parameter(stmt, index) => {
+                SymbolKind::Parameter(_, stmt, index) => {
                     let parameter = match self.ast.statement(*stmt).kind() {
                         StatementKind::LetFn(_, params, _, _) => &params[*index],
                         _ => panic!(),
@@ -331,13 +337,13 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                     .symbol_id()
                     .map(|sid| self.table.symbol(sid))
                     .map(|s| match s.kind() {
-                        SymbolKind::LetStatement(stmt) => {
+                        SymbolKind::LetStatement(_, stmt) => {
                             format!("stmt:{stmt}")
                         }
-                        SymbolKind::LetFnStatement(stmt, _) => {
+                        SymbolKind::LetFnStatement(_, stmt, _) => {
                             format!("stmt:{stmt}")
                         }
-                        SymbolKind::Parameter(stmt, index) => {
+                        SymbolKind::Parameter(_, stmt, index) => {
                             format!("stmt:{}:{}", stmt.id(), index)
                         }
                         SymbolKind::Native(_) => "native".to_string(),
@@ -396,13 +402,13 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                         .symbol_id()
                         .map(|sid| self.table.symbol(sid))
                         .map(|s| match s.kind() {
-                            SymbolKind::LetStatement(stmt) => {
+                            SymbolKind::LetStatement(_, stmt) => {
                                 format!("stmt:{stmt}")
                             }
-                            SymbolKind::LetFnStatement(stmt, _) => {
+                            SymbolKind::LetFnStatement(_, stmt, _) => {
                                 format!("stmt:{stmt}")
                             }
-                            SymbolKind::Parameter(stmt, index) => {
+                            SymbolKind::Parameter(_, stmt, index) => {
                                 format!("stmt:{}:{}", stmt.id(), index)
                             }
                             SymbolKind::Native(_) => "native".to_string(),
@@ -453,13 +459,13 @@ impl<'a> Visitor<()> for XmlWriter<'a> {
                     .symbol_id()
                     .map(|sid| self.table.symbol(sid))
                     .map(|s| match s.kind() {
-                        SymbolKind::LetStatement(stmt) => {
+                        SymbolKind::LetStatement(_, stmt) => {
                             format!("stmt:{stmt}")
                         }
-                        SymbolKind::LetFnStatement(stmt, _) => {
+                        SymbolKind::LetFnStatement(_, stmt, _) => {
                             format!("stmt:{stmt}")
                         }
-                        SymbolKind::Parameter(stmt, index) => {
+                        SymbolKind::Parameter(_, stmt, index) => {
                             let param = match self.ast.statement(*stmt).kind() {
                                 StatementKind::LetFn(_, params, _, _) => &params[*index],
                                 _ => panic!(),
@@ -578,10 +584,11 @@ mod tests {
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
                 let mut ast = ast.merge(ast_natives);
-                let table = SymbolTableGen::new(&mut ast, natives).build_table();
+
+                let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
+                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
                 let (ast, diagnostics) = TypeChecker::new(ast, &table).check();
-
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
                 let xml = XmlWriter::new(&ast, &table).serialize();

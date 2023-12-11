@@ -613,7 +613,8 @@ mod tests {
         assert!(d.is_empty(), "{:?}", d);
 
         let mut ast = ast1.merge(ast2).merge(Into::<Ast>::into(&natives));
-        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+        let (table, d) = SymbolTableGen::new(&mut ast, natives).build_table();
+        assert!(d.is_empty(), "{:?}", d);
 
         let xml = XmlWriter::new(&ast, &table).serialize();
         assert_snapshot!(&xml);
@@ -630,7 +631,8 @@ mod tests {
         assert!(d.is_empty(), "{:?}", d);
 
         let mut ast = ast1.merge(ast2).merge(Into::<Ast>::into(&natives));
-        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+        let (table, d) = SymbolTableGen::new(&mut ast, natives).build_table();
+        assert!(d.is_empty(), "{:?}", d);
 
         let xml = XmlWriter::new(&ast, &table).serialize();
         assert_snapshot!(&xml);
@@ -647,7 +649,8 @@ mod tests {
         assert!(d.is_empty(), "{:?}", d);
 
         let mut ast = ast1.merge(ast2).merge(Into::<Ast>::into(&natives));
-        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+        let (table, d) = SymbolTableGen::new(&mut ast, natives).build_table();
+        assert!(d.is_empty(), "{:?}", d);
 
         let xml = XmlWriter::new(&ast, &table).serialize();
         assert_snapshot!(&xml);
@@ -664,7 +667,8 @@ mod tests {
         assert!(d.is_empty(), "{:?}", d);
 
         let mut ast = ast1.merge(ast2).merge(Into::<Ast>::into(&natives));
-        let table = SymbolTableGen::new(&mut ast, natives).build_table();
+        let (table, d) = SymbolTableGen::new(&mut ast, natives).build_table();
+        assert!(d.is_empty(), "{:?}", d);
 
         let xml = XmlWriter::new(&ast, &table).serialize();
         assert_snapshot!(&xml);

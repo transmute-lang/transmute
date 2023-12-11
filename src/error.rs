@@ -33,18 +33,17 @@ impl Diagnostics {
         self.diagnostics.append(&mut other.diagnostics)
     }
 
+    pub fn push(&mut self, diagnostic: Diagnostic) {
+        self.diagnostics.push(diagnostic);
+    }
+
     pub fn report_err<S: Into<String>>(
         &mut self,
         message: S,
         span: Span,
         generated_at: (&'static str, u32),
     ) {
-        self.diagnostics.push(Diagnostic {
-            message: message.into(),
-            span,
-            level: Level::Error,
-            generated_at,
-        })
+        self.push(Diagnostic::new(message, span, Level::Error, generated_at));
     }
 }
 
@@ -95,6 +94,20 @@ pub struct Diagnostic {
 }
 
 impl Diagnostic {
+    pub fn new<S: Into<String>>(
+        message: S,
+        span: Span,
+        level: Level,
+        generated_at: (&'static str, u32),
+    ) -> Self {
+        Self {
+            message: message.into(),
+            span,
+            level,
+            generated_at,
+        }
+    }
+
     pub fn message(&self) -> &str {
         &self.message
     }

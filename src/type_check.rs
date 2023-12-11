@@ -130,12 +130,12 @@ impl Visitor<Result<Type, ()>> for TypeChecker<'_> {
                         let symbol = self.table.symbol(symbol);
 
                         let target_type = match symbol.kind() {
-                            SymbolKind::LetStatement(stmt) => self.visit_statement(*stmt),
-                            SymbolKind::LetFnStatement(_, _) => {
+                            SymbolKind::LetStatement(_, stmt) => self.visit_statement(*stmt),
+                            SymbolKind::LetFnStatement(_, _, _) => {
                                 // todo this constraint should be removed
                                 panic!("cannot assign to a let fn");
                             }
-                            SymbolKind::Parameter(_, _) => {
+                            SymbolKind::Parameter(_, _, _) => {
                                 // todo this constraint should be removed
                                 panic!("cannot assign to a parameter");
                             }
@@ -249,7 +249,7 @@ impl Visitor<Result<Type, ()>> for TypeChecker<'_> {
                         let symbol = self.table.symbol(symbol);
 
                         match symbol.kind() {
-                            SymbolKind::LetStatement(stmt) => {
+                            SymbolKind::LetStatement(_, stmt) => {
                                 match self.ast.statement(*stmt).kind() {
                                     StatementKind::Let(_, expr) => self.visit_expression(*expr),
                                     kind => {
@@ -257,10 +257,10 @@ impl Visitor<Result<Type, ()>> for TypeChecker<'_> {
                                     }
                                 }
                             }
-                            SymbolKind::LetFnStatement(_, _) => {
+                            SymbolKind::LetFnStatement(_, _, _) => {
                                 todo!()
                             }
-                            SymbolKind::Parameter(stmt, index) => {
+                            SymbolKind::Parameter(_, stmt, index) => {
                                 let param = match self.ast.statement(*stmt).kind() {
                                     StatementKind::LetFn(_, params, _, _) => &params[*index],
                                     _ => panic!(),
@@ -532,46 +532,48 @@ impl TypeChecker<'_> {
             .filter_map(|s| {
                 let symbol = self.table.symbol(s);
                 match symbol.kind() {
-                    SymbolKind::LetFnStatement(stmt, _) => match self.ast.statement(*stmt).kind() {
-                        StatementKind::LetFn(_, params, ret_type, _) => {
-                            let mut types = Vec::with_capacity(params.len());
+                    SymbolKind::LetFnStatement(_, stmt, _) => {
+                        match self.ast.statement(*stmt).kind() {
+                            StatementKind::LetFn(_, params, ret_type, _) => {
+                                let mut types = Vec::with_capacity(params.len());
 
-                            for param in params {
-                                let ident = self.ast.identifier(param.ty().id());
-                                types.push(match Type::try_from(ident) {
-                                    Ok(ty) => ty,
-                                    Err(e) => {
-                                        self.diagnostics.report_err(
-                                            e,
-                                            param.ty().span().clone(),
-                                            (file!(), line!()),
-                                        );
-                                        return None;
-                                    }
-                                })
-                            }
-
-                            let ret_type = ret_type
-                                .as_ref()
-                                .and_then(|ret| {
-                                    match Type::try_from(self.ast.identifier(ret.id())) {
-                                        Ok(ty) => Some(ty),
+                                for param in params {
+                                    let ident = self.ast.identifier(param.ty().id());
+                                    types.push(match Type::try_from(ident) {
+                                        Ok(ty) => ty,
                                         Err(e) => {
                                             self.diagnostics.report_err(
                                                 e,
-                                                ret.span().clone(),
+                                                param.ty().span().clone(),
                                                 (file!(), line!()),
                                             );
-                                            None
+                                            return None;
                                         }
-                                    }
-                                })
-                                .or(Some(Type::Void));
+                                    })
+                                }
 
-                            Some((s, types, ret_type?))
+                                let ret_type = ret_type
+                                    .as_ref()
+                                    .and_then(|ret| {
+                                        match Type::try_from(self.ast.identifier(ret.id())) {
+                                            Ok(ty) => Some(ty),
+                                            Err(e) => {
+                                                self.diagnostics.report_err(
+                                                    e,
+                                                    ret.span().clone(),
+                                                    (file!(), line!()),
+                                                );
+                                                None
+                                            }
+                                        }
+                                    })
+                                    .or(Some(Type::Void));
+
+                                Some((s, types, ret_type?))
+                            }
+                            _ => panic!(),
                         }
-                        _ => panic!(),
-                    },
+                    }
                     SymbolKind::Native(native) => {
                         Some((s, native.parameters().clone(), native.return_type()))
                     }
@@ -642,7 +644,9 @@ mod tests {
 
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let symbol_table = SymbolTableGen::new(&mut ast, Natives::default()).build_table();
+        let (symbol_table, diagnostics) =
+            SymbolTableGen::new(&mut ast, Natives::default()).build_table();
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
         let (ast, diagnostics) = TypeChecker::new(ast, &symbol_table).check();
 
@@ -661,7 +665,9 @@ mod tests {
 
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let symbol_table = SymbolTableGen::new(&mut ast, Natives::default()).build_table();
+        let (symbol_table, diagnostics) =
+            SymbolTableGen::new(&mut ast, Natives::default()).build_table();
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
         let (ast, diagnostics) = TypeChecker::new(ast, &symbol_table).check();
 
@@ -679,7 +685,9 @@ mod tests {
 
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let symbol_table = SymbolTableGen::new(&mut ast, Natives::default()).build_table();
+        let (symbol_table, diagnostics) =
+            SymbolTableGen::new(&mut ast, Natives::default()).build_table();
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
         let (ast, diagnostics) = TypeChecker::new(ast, &symbol_table).check();
 
@@ -700,7 +708,9 @@ mod tests {
 
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let symbol_table = SymbolTableGen::new(&mut ast, Natives::new()).build_table();
+        let (symbol_table, diagnostics) =
+            SymbolTableGen::new(&mut ast, Natives::default()).build_table();
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
         let (ast, diagnostics) = TypeChecker::new(ast, &symbol_table).check();
 
@@ -718,7 +728,9 @@ mod tests {
 
         let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-        let symbol_table = SymbolTableGen::new(&mut ast, Natives::default()).build_table();
+        let (symbol_table, diagnostics) =
+            SymbolTableGen::new(&mut ast, Natives::default()).build_table();
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
         let (_ast, actual_diagnostics) = TypeChecker::new(ast, &symbol_table).check();
 
@@ -744,7 +756,10 @@ mod tests {
 
                 let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-                let table = SymbolTableGen::new(&mut ast, Natives::new()).build_table();
+                let (table, diagnostics) =
+                    SymbolTableGen::new(&mut ast, Natives::new()).build_table();
+                assert!(diagnostics.is_empty(), "{}", diagnostics);
+
                 let (_, actual_diagnostics) = TypeChecker::new(ast, &table).check();
 
                 let actual_diagnostics = actual_diagnostics
@@ -770,7 +785,10 @@ mod tests {
 
                 let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-                let table = SymbolTableGen::new(&mut ast, Natives::new()).build_table();
+                let (table, diagnostics) =
+                    SymbolTableGen::new(&mut ast, Natives::default()).build_table();
+                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
                 let (_, actual_diagnostics) = TypeChecker::new(ast, &table).check();
 
                 let actual_diagnostics = actual_diagnostics

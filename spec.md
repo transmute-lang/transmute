@@ -26,6 +26,7 @@ The curly braces can be omitted if the function is composed of only one expressi
 ```
 let f(a: number, b: number): number = ...;
 ```
+Functions of a given signature (same name, same parameter types) can only be declared once in their scope.
 
 ### Issues / improvements
  - function parameters cannot be reassigned

@@ -211,7 +211,8 @@ impl<'a> Visitor<NodeId> for DotBuilder<'a> {
 
                 if let Some(symbol) = ident.symbol_id() {
                     match self.symbols.symbol(symbol).kind() {
-                        SymbolKind::LetStatement(stmt) | SymbolKind::LetFnStatement(stmt, _) => {
+                        SymbolKind::LetStatement(_, stmt)
+                        | SymbolKind::LetFnStatement(_, stmt, _) => {
                             self.references.push((ident_node_id, *stmt));
                         }
                         _ => panic!(),
@@ -241,14 +242,14 @@ impl<'a> Visitor<NodeId> for DotBuilder<'a> {
 
                     if let Some(symbol) = ident.symbol_id() {
                         match self.symbols.symbol(symbol).kind() {
-                            SymbolKind::LetStatement(stmt)
-                            | SymbolKind::LetFnStatement(stmt, _) => {
+                            SymbolKind::LetStatement(_, stmt)
+                            | SymbolKind::LetFnStatement(_, stmt, _) => {
                                 let ident_node_id =
                                     self.insert_node(Node::Identifier(ident.ident().id()));
                                 self.references.push((ident_node_id, *stmt));
                                 ident_node_id
                             }
-                            SymbolKind::Parameter(stmt, index) => {
+                            SymbolKind::Parameter(_, stmt, index) => {
                                 match self.ast.statement(*stmt).kind() {
                                     StatementKind::LetFn(_, params, _, _) => {
                                         let ident_node_id = self.insert_node(Node::Identifier(
@@ -289,13 +290,13 @@ impl<'a> Visitor<NodeId> for DotBuilder<'a> {
 
                 let call_node_id = if let Some(symbol) = ident.symbol_id() {
                     match self.symbols.symbol(symbol).kind() {
-                        SymbolKind::LetFnStatement(stmt, _) => {
+                        SymbolKind::LetFnStatement(_, stmt, _) => {
                             let call_node_id =
                                 self.insert_node(Node::FunctionCall(ident.ident().id()));
                             self.references.push((call_node_id, *stmt));
                             call_node_id
                         }
-                        SymbolKind::Parameter(stmt, index) => {
+                        SymbolKind::Parameter(_, stmt, index) => {
                             match self.ast.statement(*stmt).kind() {
                                 StatementKind::LetFn(_, params, _, _) => {
                                     let ident_node_id = self.insert_node(Node::FunctionCall(
@@ -519,22 +520,23 @@ mod tests {
         ($name:ident, $src:expr) => {
             #[test]
             fn $name() {
-                let (ast, symbols) = {
+                let (ast, table) = {
                     let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                     assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
                     let natives = Natives::default();
                     let mut ast = ast.merge(Into::<Ast>::into(&natives));
 
-                    let symbols = SymbolTableGen::new(&mut ast, natives).build_table();
-
-                    let (ast, diagnostics) = TypeChecker::new(ast, &symbols).check();
+                    let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
                     assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                    (ast, symbols)
+                    let (ast, diagnostics) = TypeChecker::new(ast, &table).check();
+                    assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+                    (ast, table)
                 };
 
-                assert_snapshot!(Dot::new(&ast, &symbols).serialize());
+                assert_snapshot!(Dot::new(&ast, &table).serialize());
             }
         };
     }
