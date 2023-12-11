@@ -329,6 +329,10 @@ impl Visitor<Res> for TypeChecker<'_> {
                 );
                 match resolved {
                     Ok((symbol, ret_type)) => {
+                        // todo do we actually want to rewrite the ast here?
+                        //  we could as well keep the operator ans resolve by the corresponding
+                        //  function name. In any case we want to perform some desugaring phase
+                        //  during which we can replace ops with functions
                         let ident_ref_id = self
                             .ast
                             .create_identifier_ref(Identifier::new(ident_id, op_span), symbol);
