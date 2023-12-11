@@ -1,9 +1,8 @@
 use crate::ast::expression::ExpressionKind;
 use crate::ast::ids::{ExprId, IdentId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::statement::{Parameter, Statement, StatementKind};
+use crate::ast::statement::{Statement, StatementKind};
 use crate::ast::{Ast, Visitor};
-use crate::natives::Natives;
 use crate::symbol_table::{SymbolKind, SymbolTable};
 use crate::type_check::Type;
 use std::collections::HashMap;
@@ -11,15 +10,9 @@ use std::fmt::{Display, Formatter};
 
 pub struct Interpreter<'a> {
     ast: &'a Ast,
-    // todo merge functions and variables (needs ValueKind)
-    // todo IdentId should be SymbolId
-    // todo delete
-    functions: HashMap<IdentId, (&'a Vec<Parameter>, &'a Vec<StmtId>)>,
     // todo IdentId should be SymbolId
     // todo turn into frame
     variables: Vec<HashMap<IdentId, Value>>,
-    // todo should come through symbol table, maybe
-    natives: Natives,
     symbols: &'a SymbolTable,
 }
 
@@ -27,9 +20,7 @@ impl<'a> Interpreter<'a> {
     pub fn new(ast: &'a Ast, symbols: &'a SymbolTable) -> Self {
         Self {
             ast,
-            functions: Default::default(),
             variables: vec![Default::default()],
-            natives: Default::default(),
             symbols,
         }
     }
@@ -52,13 +43,7 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
                     .insert(ident.id(), val);
                 Value::Void
             }
-            StatementKind::LetFn(ident, params, _, expr) => {
-                match self.ast.expression(*expr).kind() {
-                    ExpressionKind::Block(statements) => {
-                        self.functions.insert(ident.id(), (params, statements))
-                    }
-                    _ => panic!("block expected"),
-                };
+            StatementKind::LetFn(_, _, _, _) => {
                 Value::Void // todo this is wrong
             }
             StatementKind::Ret(e) => self.visit_expression(*e),

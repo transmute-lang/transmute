@@ -23,6 +23,10 @@ mod symbol_table;
 mod type_check;
 mod xml;
 
+// todo things to check:
+//  let f() = 0:
+//  f = 1;
+
 fn main() {
     fibonacci_rec();
     println!();
