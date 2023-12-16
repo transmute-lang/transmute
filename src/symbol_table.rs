@@ -1,7 +1,7 @@
 use crate::ast::expression::ExpressionKind;
 use crate::ast::ids::{ExprId, IdentId, ScopeId, StmtId, SymbolId};
 use crate::ast::literal::Literal;
-use crate::ast::statement::StatementKind;
+use crate::ast::statement::{Statement, StatementKind};
 use crate::ast::{Ast, Visitor};
 use crate::error::{Diagnostic, Diagnostics, Level};
 use crate::lexer::Span;
@@ -108,26 +108,43 @@ impl<'a> SymbolTableGen<'a> {
 
 impl<'a> Visitor<()> for SymbolTableGen<'a> {
     fn visit_statement(&mut self, stmt: StmtId) {
-        let scope_id = *self.scopes_stack.last().expect("current scope exists");
+        let stmt_scope_id = *self.scopes_stack.last().expect("current scope exists");
 
-        let statement = {
-            let mut statement = self.ast.statement(stmt).clone();
-            statement.set_scope(scope_id);
-            self.ast.replace_statement(statement.clone());
-            statement
-        };
+        let statement = self.ast.statement(stmt);
+        let stmt_span = statement.span().clone();
 
-        match statement.kind() {
+        let statement = match statement.kind() {
             StatementKind::Let(ident, expr) => {
-                self.visit_expression(*expr);
+                let mut ident = ident.clone();
+                let expr = *expr;
+
+                self.visit_expression(expr);
                 self.push_sub_scope();
                 self.insert(
                     ident.id(),
                     SymbolKind::LetStatement(ident.id(), stmt),
                     ident.span(),
                 );
+
+                ident.set_scope(*self.scopes_stack.last().expect("current scope exists"));
+
+                Statement::new_with_scope(
+                    stmt,
+                    StatementKind::Let(ident, expr),
+                    stmt_span,
+                    stmt_scope_id,
+                )
             }
-            StatementKind::LetFn(ident, params, _, expr) => {
+            StatementKind::LetFn(ident, params, ret_type, expr) => {
+                let ident = {
+                    let mut ident = ident.clone();
+                    ident.set_scope(*self.scopes_stack.last().expect("current scope exists"));
+                    ident
+                };
+                let params = params.to_owned();
+                let ret_type = ret_type.clone();
+                let expr = *expr;
+
                 let params_types = params.iter().map(|p| p.ty().id()).collect::<Vec<IdentId>>();
                 self.insert(
                     ident.id(),
@@ -147,18 +164,36 @@ impl<'a> Visitor<()> for SymbolTableGen<'a> {
                         );
                     }
 
-                    self.visit_expression(*expr);
+                    self.visit_expression(expr);
 
                     self.pop_scope();
                 }
+
+                Statement::new_with_scope(
+                    stmt,
+                    StatementKind::LetFn(ident, params, ret_type, expr),
+                    stmt_span,
+                    stmt_scope_id,
+                )
             }
             StatementKind::Expression(expr) => {
-                self.visit_expression(*expr);
+                let expr = *expr;
+                self.visit_expression(expr);
+                Statement::new_with_scope(
+                    stmt,
+                    StatementKind::Expression(expr),
+                    stmt_span,
+                    stmt_scope_id,
+                )
             }
             StatementKind::Ret(expr) => {
-                self.visit_expression(*expr);
+                let expr = *expr;
+                self.visit_expression(expr);
+                Statement::new_with_scope(stmt, StatementKind::Ret(expr), stmt_span, stmt_scope_id)
             }
         };
+
+        self.ast.replace_statement(statement);
     }
 
     fn visit_expression(&mut self, expr: ExprId) {

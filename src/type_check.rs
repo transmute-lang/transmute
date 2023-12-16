@@ -7,27 +7,33 @@ use crate::ast::{Ast, Visitor};
 use crate::error::Diagnostics;
 use crate::exit_points::ExitPoints;
 use crate::lexer::Span;
-use crate::symbol_table::{SymbolKind, SymbolTable};
+use crate::symbol_table::{Symbol, SymbolKind, SymbolTable};
 use std::fmt::{Display, Formatter};
 
 pub struct TypeChecker<'a> {
     ast: Ast,
     table: &'a SymbolTable,
-    types: Vec<Option<Result<Type, ()>>>,
+    expression_types: Vec<Option<Result<Type, ()>>>,
+    symbol_types: Vec<Option<Result<Type, ()>>>,
     diagnostics: Diagnostics,
 }
 
 impl<'a> TypeChecker<'a> {
     pub fn new(ast: Ast, table: &'a SymbolTable) -> Self {
-        let mut types = Vec::with_capacity(ast.expressions_count());
+        let mut expression_types = Vec::with_capacity(ast.expressions_count());
         for _ in 0..ast.expressions_count() {
-            types.push(None);
+            expression_types.push(None);
+        }
+        let mut symbol_types = Vec::with_capacity(table.symbols().len());
+        for _ in 0..table.symbols().len() {
+            symbol_types.push(None);
         }
 
         Self {
             ast,
             table,
-            types,
+            expression_types,
+            symbol_types,
             diagnostics: Default::default(),
         }
     }
@@ -39,9 +45,27 @@ impl Visitor<Result<Type, ()>> for TypeChecker<'_> {
 
         match stmt.kind() {
             StatementKind::Expression(expr) => self.visit_expression(*expr),
-            StatementKind::Let(_, expr) => {
+            StatementKind::Let(ident, expr) => {
+                let symbol_id = {
+                    let ident_scope = ident.scope().expect("identifier belong to a scope");
+                    let symbols = self.table.scopes()[ident_scope.id()]
+                        .get(ident.id())
+                        .expect("symbol exists")
+                        .iter()
+                        .map(|s| self.table.symbol(*s))
+                        .filter(|s| matches!(s.kind(), SymbolKind::LetStatement(_, _)))
+                        .collect::<Vec<&Symbol>>();
+                    assert_eq!(
+                        symbols.len(),
+                        1,
+                        "Found {} symbols for '{}', expected 1",
+                        symbols.len(),
+                        self.ast.identifier(ident.id())
+                    );
+                    symbols[0].id()
+                };
+
                 let expr = *expr;
-                // the let does not have a type, only the expr... but it's an acceptable proxy
                 match self.visit_expression(expr) {
                     Ok(Type::None) => {
                         let expr = self.ast.expression(expr);
@@ -52,7 +76,10 @@ impl Visitor<Result<Type, ()>> for TypeChecker<'_> {
                         );
                         Err(())
                     }
-                    Ok(t) => Ok(t),
+                    Ok(t) => {
+                        self.symbol_types[symbol_id.id()] = Some(Ok(t));
+                        Ok(Type::None)
+                    }
                     Err(_) => Err(()),
                 }
             }
@@ -60,15 +87,54 @@ impl Visitor<Result<Type, ()>> for TypeChecker<'_> {
                 let _ = self.visit_expression(*expr);
                 Ok(Type::None)
             }
-            StatementKind::LetFn(_, _, ty, expr) => {
-                let ret_type = match ty {
+            StatementKind::LetFn(ident, params, ret_type, expr) => {
+                let symbol_id = {
+                    let parameter_types = params
+                        .iter()
+                        .map_while(|p| match Type::try_from(self.ast.identifier(p.ty().id())) {
+                            Ok(t) => Some(t),
+                            Err(_) => None,
+                        })
+                        .collect::<Vec<Type>>();
+
+                    let ident_scope = ident.scope().expect("identifier belong to a scope");
+                    let symbols = self.table.scopes()[ident_scope.id()]
+                        .get(ident.id())
+                        .expect("symbol exists")
+                        .iter()
+                        .map(|s| self.table.symbol(*s))
+                        .filter(|s| match s.kind() {
+                            SymbolKind::LetFnStatement(_, _, param_types) => {
+                                let types = param_types
+                                    .iter()
+                                    .filter_map(|p| match Type::try_from(self.ast.identifier(*p)) {
+                                        Ok(t) => Some(t),
+                                        Err(_) => None,
+                                    })
+                                    .collect::<Vec<Type>>();
+                                parameter_types == types
+                            }
+                            _ => false,
+                        })
+                        .collect::<Vec<&Symbol>>();
+                    assert_eq!(
+                        symbols.len(),
+                        1,
+                        "Found {} symbols for '{}', expected 1",
+                        symbols.len(),
+                        self.ast.identifier(ident.id())
+                    );
+                    symbols[0].id()
+                };
+
+                let ret_type = match ret_type {
                     None => Ok(Type::Void),
                     Some(ident) => match Type::try_from(self.ast.identifier(ident.id())) {
                         Ok(ty) => Ok(ty),
                         Err(e) => {
                             self.diagnostics.report_err(
                                 e,
-                                ty.as_ref().unwrap().span().clone(),
+                                ret_type.as_ref().unwrap().span().clone(),
                                 (file!(), line!()),
                             );
                             Err(())
@@ -108,13 +174,14 @@ impl Visitor<Result<Type, ()>> for TypeChecker<'_> {
                     }
                 }
 
-                Ok(Type::Function)
+                self.symbol_types[symbol_id.id()] = Some(Ok(Type::Function));
+                Ok(Type::None)
             }
         }
     }
 
     fn visit_expression(&mut self, expr_id: ExprId) -> Result<Type, ()> {
-        if let Some(t) = self.types[expr_id.id()] {
+        if let Some(t) = self.expression_types[expr_id.id()] {
             return t;
         }
 
@@ -126,11 +193,14 @@ impl Visitor<Result<Type, ()>> for TypeChecker<'_> {
                 let expr = *expr;
                 let ident = *ident;
                 match self.resolve(ident, scope) {
-                    Some(symbol) => {
-                        let symbol = self.table.symbol(symbol);
+                    Some(symbol_id) => {
+                        let symbol = self.table.symbol(symbol_id);
 
                         let target_type = match symbol.kind() {
-                            SymbolKind::LetStatement(_, stmt) => self.visit_statement(*stmt),
+                            SymbolKind::LetStatement(_, _) => {
+                                // let _ = self.visit_statement(*stmt);
+                                self.symbol_types[symbol_id.id()].expect("symbol type resolved")
+                            }
                             SymbolKind::LetFnStatement(_, _, _) => {
                                 // todo this constraint should be removed
                                 panic!("cannot assign to a let fn");
@@ -305,7 +375,7 @@ impl Visitor<Result<Type, ()>> for TypeChecker<'_> {
                 match resolved {
                     Ok((symbol, ret_type)) => {
                         // todo do we actually want to rewrite the ast here?
-                        //  we could as well keep the operator ans resolve by the corresponding
+                        //  we could as well keep the operator and resolve by the corresponding
                         //  function name. In any case we want to perform some desugaring phase
                         //  during which we can replace ops with functions
                         let ident_ref_id = self
@@ -417,7 +487,7 @@ impl Visitor<Result<Type, ()>> for TypeChecker<'_> {
             }
         };
 
-        self.types[expr_id.id()] = Some(t);
+        self.expression_types[expr_id.id()] = Some(t);
         t
     }
 
@@ -432,6 +502,7 @@ impl TypeChecker<'_> {
         for stmt in self.ast.statements().to_vec() {
             let _ = self.visit_statement(stmt);
         }
+
         (self.ast, self.diagnostics)
     }
 
@@ -801,7 +872,6 @@ mod tests {
         };
     }
 
-    // todo this is questionable...
     test_type_error!(
         let_expr_type_is_void,
         "let x = if true { ret 42; } else { ret 43; };",

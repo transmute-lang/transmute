@@ -37,9 +37,9 @@ impl Expression {
         &self.span
     }
 
-    pub fn set_scope(&mut self, symbols: ScopeId) {
+    pub fn set_scope(&mut self, scope: ScopeId) {
         // todo should take a self and return a new self?
-        self.scope = Some(symbols);
+        self.scope = Some(scope);
     }
 
     pub fn scope(&self) -> Option<ScopeId> {

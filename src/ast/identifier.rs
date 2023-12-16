@@ -1,15 +1,20 @@
-use crate::ast::ids::{IdentId, IdentRefId, SymbolId};
+use crate::ast::ids::{IdentId, IdentRefId, ScopeId, SymbolId};
 use crate::lexer::Span;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Identifier {
     id: IdentId,
     span: Span,
+    scope: Option<ScopeId>,
 }
 
 impl Identifier {
     pub fn new(id: IdentId, span: Span) -> Self {
-        Self { id, span }
+        Self {
+            id,
+            span,
+            scope: None,
+        }
     }
 
     pub fn id(&self) -> IdentId {
@@ -18,6 +23,15 @@ impl Identifier {
 
     pub fn span(&self) -> &Span {
         &self.span
+    }
+
+    pub fn set_scope(&mut self, scope: ScopeId) {
+        // todo should take a self and return a new self?
+        self.scope = Some(scope);
+    }
+
+    pub fn scope(&self) -> Option<ScopeId> {
+        self.scope
     }
 }
 

@@ -5,9 +5,9 @@ use crate::lexer::Span;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Statement {
     id: StmtId,
-    // todo should be merged with Expression, maybe?
     kind: StatementKind,
     span: Span,
+    // todo remove, this is useless
     scope: Option<ScopeId>,
 }
 
@@ -18,6 +18,15 @@ impl Statement {
             kind,
             span,
             scope: None,
+        }
+    }
+
+    pub fn new_with_scope(id: StmtId, kind: StatementKind, span: Span, scope: ScopeId) -> Self {
+        Self {
+            id,
+            kind,
+            span,
+            scope: Some(scope),
         }
     }
 
@@ -33,9 +42,9 @@ impl Statement {
         &self.span
     }
 
-    pub fn set_scope(&mut self, symbols: ScopeId) {
+    pub fn set_scope(&mut self, scope: ScopeId) {
         // todo should take a self and return a new self?
-        self.scope = Some(symbols);
+        self.scope = Some(scope);
     }
 
     pub fn scope(&self) -> Option<ScopeId> {
