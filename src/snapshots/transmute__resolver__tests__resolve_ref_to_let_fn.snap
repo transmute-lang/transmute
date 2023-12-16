@@ -1,0 +1,39 @@
+---
+source: src/resolver.rs
+expression: "XmlWriter::new2(&ast, &symbols).serialize()"
+---
+<?xml version="1.0" encoding="utf-8"?>
+<unit>
+  <ast>
+    <identifiers>
+      <ident id="ident:0">x</ident>
+      <ident id="ident:1">add</ident>
+      <ident id="ident:2">div</ident>
+      <ident id="ident:3">eq</ident>
+      <ident id="ident:4">ge</ident>
+      <ident id="ident:5">gt</ident>
+      <ident id="ident:6">le</ident>
+      <ident id="ident:7">lt</ident>
+      <ident id="ident:8">mul</ident>
+      <ident id="ident:9">neg</ident>
+      <ident id="ident:10">neq</ident>
+      <ident id="ident:11">sub</ident>
+    </identifiers>
+    <stmt id="stmt:0" line="1" column="1" start="0" len="13">
+      <fn>
+        <identifier ref="ident:0" line="1" column="5" start="4" len="1">x</identifier>
+        <parameters />
+        <body line="1" column="11" start="10" len="3">
+          <expr id="expr:0" line="1" column="11" start="10" len="3">
+            <block />
+          </expr>
+        </body>
+      </fn>
+    </stmt>
+    <stmt id="stmt:1" line="1" column="15" start="14" len="4">
+      <expr id="expr:1" line="1" column="15" start="14" len="3">
+        <call line="1" column="15" start="14" len="3" ident-ref="ident:0" name="x" target-id="stmt:0" />
+      </expr>
+    </stmt>
+  </ast>
+</unit>

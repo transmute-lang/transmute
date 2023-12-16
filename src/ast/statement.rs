@@ -1,5 +1,5 @@
 use crate::ast::identifier::Identifier;
-use crate::ast::ids::{ExprId, ScopeId, StmtId};
+use crate::ast::ids::{ExprId, StmtId};
 use crate::lexer::Span;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -7,8 +7,6 @@ pub struct Statement {
     id: StmtId,
     kind: StatementKind,
     span: Span,
-    // todo remove, this is useless
-    scope: Option<ScopeId>,
 }
 
 impl Statement {
@@ -17,16 +15,6 @@ impl Statement {
             id,
             kind,
             span,
-            scope: None,
-        }
-    }
-
-    pub fn new_with_scope(id: StmtId, kind: StatementKind, span: Span, scope: ScopeId) -> Self {
-        Self {
-            id,
-            kind,
-            span,
-            scope: Some(scope),
         }
     }
 
@@ -40,15 +28,6 @@ impl Statement {
 
     pub fn span(&self) -> &Span {
         &self.span
-    }
-
-    pub fn set_scope(&mut self, scope: ScopeId) {
-        // todo should take a self and return a new self?
-        self.scope = Some(scope);
-    }
-
-    pub fn scope(&self) -> Option<ScopeId> {
-        self.scope
     }
 }
 

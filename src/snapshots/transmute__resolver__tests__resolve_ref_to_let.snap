@@ -1,0 +1,53 @@
+---
+source: src/resolver.rs
+expression: "XmlWriter::new2(&ast, &symbols).serialize()"
+---
+<?xml version="1.0" encoding="utf-8"?>
+<unit>
+  <ast>
+    <identifiers>
+      <ident id="ident:0">x</ident>
+      <ident id="ident:1">number</ident>
+      <ident id="ident:2">n</ident>
+      <ident id="ident:3">add</ident>
+      <ident id="ident:4">div</ident>
+      <ident id="ident:5">eq</ident>
+      <ident id="ident:6">ge</ident>
+      <ident id="ident:7">gt</ident>
+      <ident id="ident:8">le</ident>
+      <ident id="ident:9">lt</ident>
+      <ident id="ident:10">mul</ident>
+      <ident id="ident:11">neg</ident>
+      <ident id="ident:12">neq</ident>
+      <ident id="ident:13">sub</ident>
+    </identifiers>
+    <stmt id="stmt:2" line="1" column="1" start="0" len="35">
+      <fn>
+        <identifier ref="ident:0" line="1" column="5" start="4" len="1">x</identifier>
+        <type ref="ident:1" line="1" column="10" start="9" len="6">number</type>
+        <parameters />
+        <body line="1" column="19" start="18" len="17">
+          <expr id="expr:2" line="1" column="19" start="18" len="17">
+            <block>
+              <stmt id="stmt:0" line="1" column="21" start="20" len="10">
+                <let>
+                  <identifier ref="ident:2" line="1" column="25" start="24" len="1">n</identifier>
+                  <expression line="1" column="29" start="28" len="1">
+                    <expr id="expr:0" line="1" column="29" start="28" len="1">
+                      <number>0</number>
+                    </expr>
+                  </expression>
+                </let>
+              </stmt>
+              <stmt id="stmt:1" line="1" column="32" start="31" len="2">
+                <expr id="expr:1" line="1" column="32" start="31" len="1">
+                  <identifier-ref id="ident-ref:0" ident-ref="ident:2" target-id="stmt:0">n</identifier-ref>
+                </expr>
+              </stmt>
+            </block>
+          </expr>
+        </body>
+      </fn>
+    </stmt>
+  </ast>
+</unit>

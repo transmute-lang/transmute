@@ -4,143 +4,6 @@ expression: "&xml"
 ---
 <?xml version="1.0" encoding="utf-8"?>
 <unit>
-  <scopes>
-    <scope id="scope:0">
-      <child ref="scope:1" />
-    </scope>
-    <scope id="scope:1" parent="scope:0" />
-  </scopes>
-  <symbols>
-    <symbol id="sym:0" scope="scope:0">
-      <native>
-        <name>sub</name>
-        <parameters>
-          <parameter>number</parameter>
-          <parameter>number</parameter>
-        </parameters>
-        <return>number</return>
-      </native>
-    </symbol>
-    <symbol id="sym:1" scope="scope:0">
-      <native>
-        <name>neq</name>
-        <parameters>
-          <parameter>number</parameter>
-          <parameter>number</parameter>
-        </parameters>
-        <return>boolean</return>
-      </native>
-    </symbol>
-    <symbol id="sym:2" scope="scope:0">
-      <native>
-        <name>neq</name>
-        <parameters>
-          <parameter>boolean</parameter>
-          <parameter>boolean</parameter>
-        </parameters>
-        <return>boolean</return>
-      </native>
-    </symbol>
-    <symbol id="sym:3" scope="scope:0">
-      <native>
-        <name>neg</name>
-        <parameters>
-          <parameter>number</parameter>
-        </parameters>
-        <return>number</return>
-      </native>
-    </symbol>
-    <symbol id="sym:4" scope="scope:0">
-      <native>
-        <name>mul</name>
-        <parameters>
-          <parameter>number</parameter>
-          <parameter>number</parameter>
-        </parameters>
-        <return>number</return>
-      </native>
-    </symbol>
-    <symbol id="sym:5" scope="scope:0">
-      <native>
-        <name>lt</name>
-        <parameters>
-          <parameter>number</parameter>
-          <parameter>number</parameter>
-        </parameters>
-        <return>boolean</return>
-      </native>
-    </symbol>
-    <symbol id="sym:6" scope="scope:0">
-      <native>
-        <name>le</name>
-        <parameters>
-          <parameter>number</parameter>
-          <parameter>number</parameter>
-        </parameters>
-        <return>boolean</return>
-      </native>
-    </symbol>
-    <symbol id="sym:7" scope="scope:0">
-      <native>
-        <name>gt</name>
-        <parameters>
-          <parameter>number</parameter>
-          <parameter>number</parameter>
-        </parameters>
-        <return>boolean</return>
-      </native>
-    </symbol>
-    <symbol id="sym:8" scope="scope:0">
-      <native>
-        <name>ge</name>
-        <parameters>
-          <parameter>number</parameter>
-          <parameter>number</parameter>
-        </parameters>
-        <return>boolean</return>
-      </native>
-    </symbol>
-    <symbol id="sym:9" scope="scope:0">
-      <native>
-        <name>eq</name>
-        <parameters>
-          <parameter>number</parameter>
-          <parameter>number</parameter>
-        </parameters>
-        <return>boolean</return>
-      </native>
-    </symbol>
-    <symbol id="sym:10" scope="scope:0">
-      <native>
-        <name>eq</name>
-        <parameters>
-          <parameter>boolean</parameter>
-          <parameter>boolean</parameter>
-        </parameters>
-        <return>boolean</return>
-      </native>
-    </symbol>
-    <symbol id="sym:11" scope="scope:0">
-      <native>
-        <name>div</name>
-        <parameters>
-          <parameter>number</parameter>
-          <parameter>number</parameter>
-        </parameters>
-        <return>number</return>
-      </native>
-    </symbol>
-    <symbol id="sym:12" scope="scope:0">
-      <native>
-        <name>add</name>
-        <parameters>
-          <parameter>number</parameter>
-          <parameter>number</parameter>
-        </parameters>
-        <return>number</return>
-      </native>
-    </symbol>
-  </symbols>
   <ast>
     <identifiers>
       <ident id="ident:0">add</ident>
@@ -155,9 +18,9 @@ expression: "&xml"
       <ident id="ident:9">neq</ident>
       <ident id="ident:10">sub</ident>
     </identifiers>
-    <stmt id="stmt:0" line="1" column="1" start="0" len="7" scope="scope:1">
+    <stmt id="stmt:0" line="1" column="1" start="0" len="7">
       <ret line="1" column="1" start="0" len="7">
-        <expr id="expr:0" line="1" column="5" start="4" len="2" scope="scope:1">
+        <expr id="expr:0" line="1" column="5" start="4" len="2">
           <number>42</number>
         </expr>
       </ret>

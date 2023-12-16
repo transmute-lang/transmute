@@ -3,7 +3,7 @@ use crate::ast::ids::{make_id, ExprId, IdentId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::StatementKind;
 use crate::ast::{Ast, Visitor};
-use crate::symbol_table::{SymbolKind, SymbolTable};
+use crate::resolver::{Symbol, SymbolKind};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io;
@@ -58,7 +58,7 @@ enum EdgeKind {
 
 struct DotBuilder<'a> {
     ast: &'a Ast,
-    symbols: &'a SymbolTable,
+    symbols: &'a Vec<Symbol>,
     nodes: Vec<Node>,
     edges: Vec<Edge>,
     stmt_map: HashMap<StmtId, NodeId>,
@@ -67,7 +67,7 @@ struct DotBuilder<'a> {
 }
 
 impl<'a> DotBuilder<'a> {
-    pub fn new(ast: &'a Ast, symbols: &'a SymbolTable) -> Self {
+    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>) -> Self {
         Self {
             ast,
             symbols,
@@ -210,9 +210,8 @@ impl<'a> Visitor<NodeId> for DotBuilder<'a> {
                 self.insert_edge(assignment_mode_id, expr_node_id);
 
                 if let Some(symbol) = ident.symbol_id() {
-                    match self.symbols.symbol(symbol).kind() {
-                        SymbolKind::LetStatement(_, stmt)
-                        | SymbolKind::LetFnStatement(_, stmt, _) => {
+                    match self.symbols[symbol.id()].kind() {
+                        SymbolKind::Let(stmt) | SymbolKind::LetFn(stmt, _, _) => {
                             self.references.push((ident_node_id, *stmt));
                         }
                         _ => panic!(),
@@ -241,15 +240,14 @@ impl<'a> Visitor<NodeId> for DotBuilder<'a> {
                     let ident = self.ast.identifier_ref(*ident);
 
                     if let Some(symbol) = ident.symbol_id() {
-                        match self.symbols.symbol(symbol).kind() {
-                            SymbolKind::LetStatement(_, stmt)
-                            | SymbolKind::LetFnStatement(_, stmt, _) => {
+                        match self.symbols[symbol.id()].kind() {
+                            SymbolKind::Let(stmt) | SymbolKind::LetFn(stmt, _, _) => {
                                 let ident_node_id =
                                     self.insert_node(Node::Identifier(ident.ident().id()));
                                 self.references.push((ident_node_id, *stmt));
                                 ident_node_id
                             }
-                            SymbolKind::Parameter(_, stmt, index) => {
+                            SymbolKind::Parameter(stmt, index) => {
                                 match self.ast.statement(*stmt).kind() {
                                     StatementKind::LetFn(_, params, _, _) => {
                                         let ident_node_id = self.insert_node(Node::Identifier(
@@ -289,14 +287,14 @@ impl<'a> Visitor<NodeId> for DotBuilder<'a> {
                 let ident = self.ast.identifier_ref(*ident);
 
                 let call_node_id = if let Some(symbol) = ident.symbol_id() {
-                    match self.symbols.symbol(symbol).kind() {
-                        SymbolKind::LetFnStatement(_, stmt, _) => {
+                    match self.symbols[symbol.id()].kind() {
+                        SymbolKind::LetFn(stmt, _, _) => {
                             let call_node_id =
                                 self.insert_node(Node::FunctionCall(ident.ident().id()));
                             self.references.push((call_node_id, *stmt));
                             call_node_id
                         }
-                        SymbolKind::Parameter(_, stmt, index) => {
+                        SymbolKind::Parameter(stmt, index) => {
                             match self.ast.statement(*stmt).kind() {
                                 StatementKind::LetFn(_, params, _, _) => {
                                     let ident_node_id = self.insert_node(Node::FunctionCall(
@@ -375,7 +373,7 @@ pub struct Dot<'a> {
 }
 
 impl<'a> Dot<'a> {
-    pub fn new(ast: &'a Ast, symbols: &'a SymbolTable) -> Self {
+    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>) -> Self {
         DotBuilder::new(ast, symbols).build()
     }
 
@@ -507,36 +505,25 @@ impl<'a> Dot<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::Ast;
     use crate::dot::Dot;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
     use crate::parser::Parser;
-    use crate::symbol_table::SymbolTableGen;
-    use crate::type_check::TypeChecker;
+    use crate::resolver::Resolver;
     use insta::assert_snapshot;
 
     macro_rules! generate {
         ($name:ident, $src:expr) => {
             #[test]
             fn $name() {
-                let (ast, table) = {
-                    let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
-                    assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+                let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
+                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                    let natives = Natives::default();
-                    let mut ast = ast.merge(Into::<Ast>::into(&natives));
+                let (ast, symbols) = Resolver::new(ast, Natives::default())
+                    .resolve()
+                    .expect("ok expected");
 
-                    let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
-                    assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-                    let (ast, diagnostics) = TypeChecker::new(ast, &table).check();
-                    assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-                    (ast, table)
-                };
-
-                assert_snapshot!(Dot::new(&ast, &table).serialize());
+                assert_snapshot!(Dot::new(&ast, &symbols).serialize());
             }
         };
     }

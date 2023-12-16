@@ -1,14 +1,13 @@
 #![allow(dead_code)] // fixme eventually remove
 extern crate core;
 
-use crate::ast::{Ast, AstNodePrettyPrint};
+use crate::ast::AstNodePrettyPrint;
 use crate::dot::Dot;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
 use crate::natives::Natives;
 use crate::parser::Parser;
-use crate::symbol_table::SymbolTableGen;
-use crate::type_check::TypeChecker;
+use crate::resolver::Resolver;
 use std::fs::File;
 
 mod ast;
@@ -19,8 +18,9 @@ mod interpreter;
 mod lexer;
 mod natives;
 mod parser;
-mod symbol_table;
-mod type_check;
+mod resolver;
+// mod symbol_table;
+// mod type_check;
 mod xml;
 
 // todo things to check:
@@ -34,56 +34,38 @@ fn main() {
 }
 
 fn fibonacci_rec() {
-    let (ast, mut diagnostics) = Parser::new(Lexer::new(
+    let (ast, diagnostics) = Parser::new(Lexer::new(
         "let f(n: number): number = { if n <= 1 { ret n; } f(n - 1) + f(n - 2); } f(9) + 8;",
     ))
     .parse();
-
-    if !diagnostics.is_empty() {
-        print!("Errors:\n{}", diagnostics);
-        return;
-    }
 
     print!(
         "Parsed AST:\n{}",
         AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
     );
 
-    let (symbols, ast) = {
-        let natives = Natives::default();
-        let mut ast = ast.merge(Into::<Ast>::into(&natives));
-        let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
-        if !diagnostics.is_empty() {
-            print!("Errors:\n{}", diagnostics);
-            return;
-        }
-        (table, ast)
-    };
+    if !diagnostics.is_empty() {
+        print!("Errors:\n{}", diagnostics);
+        return;
+    }
+
+    let (ast, symbols) = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
     Dot::new(&ast, &symbols)
-        .write(&mut File::create("target/fibonacci_rec_parsed_ast.dot").unwrap())
+        .write(&mut File::create("target/fibonacci_rec.dot").unwrap())
         .unwrap();
 
-    let (ast, type_checker_diagnostics) = TypeChecker::new(ast, &symbols).check();
-    diagnostics.append(type_checker_diagnostics);
+    print!(
+        "Executable AST:\n{}",
+        AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
+    );
 
-    if diagnostics.is_empty() {
-        print!(
-            "Executable AST:\n{}",
-            AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
-        );
-        Dot::new(&ast, &symbols)
-            .write(&mut File::create("target/fibonacci_rec_executable_ast.dot").unwrap())
-            .unwrap();
-        let result = Interpreter::new(&ast, &symbols).start();
-        println!("Result: {}", result);
-    } else {
-        print!("Errors:\n{}", diagnostics);
-    }
+    let result = Interpreter::new(&ast, &symbols).start();
+    println!("Result: {}", result);
 }
 
 fn fibonacci_iter() {
-    let (ast, mut diagnostics) = Parser::new(Lexer::new(
+    let (ast, diagnostics) = Parser::new(Lexer::new(
         r#"
             let f(n: number): number = {
                 if n == 0 { ret 0; }
@@ -118,35 +100,17 @@ fn fibonacci_iter() {
         return;
     }
 
-    let (symbols, ast) = {
-        let natives = Natives::default();
-        let mut ast = ast.merge(Into::<Ast>::into(&natives));
-        let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
-        if !diagnostics.is_empty() {
-            print!("Errors:\n{}", diagnostics);
-            return;
-        }
-        (table, ast)
-    };
+    let (ast, symbols) = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
     Dot::new(&ast, &symbols)
-        .write(&mut File::create("target/fibonacci_iter_parsed_ast.dot").unwrap())
+        .write(&mut File::create("target/fibonacci_iter.dot").unwrap())
         .unwrap();
 
-    let (ast, type_checker_diagnostics) = TypeChecker::new(ast, &symbols).check();
-    diagnostics.append(type_checker_diagnostics);
+    print!(
+        "Executable AST:\n{}",
+        AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
+    );
 
-    if diagnostics.is_empty() {
-        print!(
-            "Executable AST:\n{}",
-            AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
-        );
-        Dot::new(&ast, &symbols)
-            .write(&mut File::create("target/fibonacci_iter_executable_ast.dot").unwrap())
-            .unwrap();
-        let result = Interpreter::new(&ast, &symbols).start();
-        println!("Result: {}", result);
-    } else {
-        print!("Errors:\n{}", diagnostics);
-    }
+    let result = Interpreter::new(&ast, &symbols).start();
+    println!("Result: {}", result);
 }

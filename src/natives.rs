@@ -1,7 +1,7 @@
 use crate::ast::ids::IdentId;
 use crate::ast::Ast;
 use crate::interpreter::Value;
-use crate::type_check::Type;
+use crate::resolver::Type;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
@@ -301,9 +301,7 @@ impl Debug for Native {
 
 #[cfg(test)]
 mod tests {
-    use crate::interpreter::Value;
-    use crate::natives::Natives;
-    use crate::type_check::Type;
+    use super::*;
 
     macro_rules! native {
         ($name:ident: $function:expr, [$($value:expr,)*] => $expected:expr) => {

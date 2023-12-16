@@ -1,0 +1,67 @@
+---
+source: src/resolver.rs
+expression: "XmlWriter::new2(&ast, &symbols).serialize()"
+---
+<?xml version="1.0" encoding="utf-8"?>
+<unit>
+  <ast>
+    <identifiers>
+      <ident id="ident:0">x</ident>
+      <ident id="ident:1">n</ident>
+      <ident id="ident:2">number</ident>
+      <ident id="ident:3">add</ident>
+      <ident id="ident:4">div</ident>
+      <ident id="ident:5">eq</ident>
+      <ident id="ident:6">ge</ident>
+      <ident id="ident:7">gt</ident>
+      <ident id="ident:8">le</ident>
+      <ident id="ident:9">lt</ident>
+      <ident id="ident:10">mul</ident>
+      <ident id="ident:11">neg</ident>
+      <ident id="ident:12">neq</ident>
+      <ident id="ident:13">sub</ident>
+    </identifiers>
+    <stmt id="stmt:2" line="1" column="1" start="0" len="52">
+      <fn>
+        <identifier ref="ident:0" line="1" column="5" start="4" len="1">x</identifier>
+        <type ref="ident:2" line="1" column="19" start="18" len="6">number</type>
+        <parameters>
+          <parameter id="stmt:2:0" line="1" column="7" start="6" len="9">
+            <name ref="ident:1" line="1" column="7" start="6" len="1">n</name>
+            <type ref="ident:2" line="1" column="10" start="9" len="6">number</type>
+          </parameter>
+        </parameters>
+        <body line="1" column="28" start="27" len="25">
+          <expr id="expr:4" line="1" column="28" start="27" len="25">
+            <block>
+              <stmt id="stmt:1" line="1" column="30" start="29" len="21">
+                <expr id="expr:3" line="1" column="30" start="29" len="21">
+                  <while>
+                    <condition line="1" column="36" start="35" len="4">
+                      <expr id="expr:0" line="1" column="36" start="35" len="4">
+                        <bool>true</bool>
+                      </expr>
+                    </condition>
+                    <body>
+                      <expr id="expr:2" line="1" column="41" start="40" len="10">
+                        <block>
+                          <stmt id="stmt:0" line="1" column="43" start="42" len="6">
+                            <ret line="1" column="43" start="42" len="6">
+                              <expr id="expr:1" line="1" column="47" start="46" len="1">
+                                <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:2:0">n</identifier-ref>
+                              </expr>
+                            </ret>
+                          </stmt>
+                        </block>
+                      </expr>
+                    </body>
+                  </while>
+                </expr>
+              </stmt>
+            </block>
+          </expr>
+        </body>
+      </fn>
+    </stmt>
+  </ast>
+</unit>

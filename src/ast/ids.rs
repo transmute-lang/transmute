@@ -32,4 +32,3 @@ make_id!(IdentRefId);
 make_id!(ExprId);
 make_id!(StmtId);
 make_id!(SymbolId);
-make_id!(ScopeId);

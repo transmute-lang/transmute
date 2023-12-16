@@ -1,12 +1,12 @@
 ---
-source: src/xml.rs
-expression: "&xml"
+source: src/resolver.rs
+expression: "XmlWriter::new2(&ast, &symbols).serialize()"
 ---
 <?xml version="1.0" encoding="utf-8"?>
 <unit>
   <ast>
     <identifiers>
-      <ident id="ident:0">f</ident>
+      <ident id="ident:0">x</ident>
       <ident id="ident:1">n</ident>
       <ident id="ident:2">number</ident>
       <ident id="ident:3">add</ident>
@@ -23,7 +23,7 @@ expression: "&xml"
     </identifiers>
     <stmt id="stmt:1" line="1" column="1" start="0" len="33">
       <fn>
-        <identifier ref="ident:0" line="1" column="5" start="4" len="1">f</identifier>
+        <identifier ref="ident:0" line="1" column="5" start="4" len="1">x</identifier>
         <type ref="ident:2" line="1" column="19" start="18" len="6">number</type>
         <parameters>
           <parameter id="stmt:1:0" line="1" column="7" start="6" len="9">
@@ -32,24 +32,11 @@ expression: "&xml"
           </parameter>
         </parameters>
         <body line="1" column="28" start="27" len="6">
-          <expr id="expr:3" line="1" column="28" start="27" len="6">
+          <expr id="expr:1" line="1" column="28" start="27" len="6">
             <block>
-              <stmt id="stmt:0" line="1" column="28" start="27" len="6">
-                <expr id="expr:2" line="1" column="28" start="27" len="5">
-                  <call line="1" column="28" start="27" len="5" ident-ref="ident:10" name="mul" target-id="native:mul:number:number:number">
-                    <parameters>
-                      <parameter>
-                        <expr id="expr:0" line="1" column="28" start="27" len="1">
-                          <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:1:0">n</identifier-ref>
-                        </expr>
-                      </parameter>
-                      <parameter>
-                        <expr id="expr:1" line="1" column="32" start="31" len="1">
-                          <number>2</number>
-                        </expr>
-                      </parameter>
-                    </parameters>
-                  </call>
+              <stmt id="stmt:0" line="1" column="30" start="29" len="2">
+                <expr id="expr:0" line="1" column="30" start="29" len="1">
+                  <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:1:0">n</identifier-ref>
                 </expr>
               </stmt>
             </block>

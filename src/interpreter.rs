@@ -3,8 +3,7 @@ use crate::ast::ids::{ExprId, IdentId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Statement, StatementKind};
 use crate::ast::{Ast, Visitor};
-use crate::symbol_table::{SymbolKind, SymbolTable};
-use crate::type_check::Type;
+use crate::resolver::{Symbol, SymbolKind, Type};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
@@ -13,11 +12,11 @@ pub struct Interpreter<'a> {
     // todo IdentId should be SymbolId
     // todo turn into frame
     variables: Vec<HashMap<IdentId, Value>>,
-    symbols: &'a SymbolTable,
+    symbols: &'a Vec<Symbol>,
 }
 
 impl<'a> Interpreter<'a> {
-    pub fn new(ast: &'a Ast, symbols: &'a SymbolTable) -> Self {
+    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>) -> Self {
         Self {
             ast,
             variables: vec![Default::default()],
@@ -59,12 +58,12 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
             ExpressionKind::FunctionCall(ident, arguments) => {
                 let ident_ref = self.ast.identifier_ref(*ident);
                 let symbol = ident_ref.symbol_id().expect("function not resolved");
-                let symbol = self.symbols.symbol(symbol);
+                let symbol = &self.symbols[symbol.id()];
                 match symbol.kind() {
-                    SymbolKind::LetStatement(_, _) | SymbolKind::Parameter(_, _, _) => {
+                    SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => {
                         panic!("let fn expected")
                     }
-                    SymbolKind::LetFnStatement(_, stmt, _) => {
+                    SymbolKind::LetFn(stmt, _, _) => {
                         let stmt = self.ast.statement(*stmt);
                         match stmt.kind() {
                             StatementKind::LetFn(_, parameters, _, expr) => {
@@ -285,13 +284,11 @@ fn is_ret(s: &Statement) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::Ast;
     use crate::interpreter::Interpreter;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
     use crate::parser::Parser;
-    use crate::symbol_table::SymbolTableGen;
-    use crate::type_check::TypeChecker;
+    use crate::resolver::Resolver;
 
     macro_rules! eval {
         ($name:ident, $src:expr => $kind:ident($value:expr)) => {
@@ -301,18 +298,9 @@ mod tests {
                 let (ast, diagnostics) = parser.parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (symbols, ast) = {
-                    let natives = Natives::default();
-                    let mut ast = ast.merge(Into::<Ast>::into(&natives));
-
-                    let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
-                    assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-                    (table, ast)
-                };
-
-                let (ast, diagnostics) = TypeChecker::new(ast, &symbols).check();
-                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+                let (ast, symbols) = Resolver::new(ast, Natives::default())
+                    .resolve()
+                    .expect("ok expected");
 
                 let actual = Interpreter::new(&ast, &symbols).start();
 
@@ -326,17 +314,9 @@ mod tests {
                 let (ast, diagnostics) = parser.parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (symbols, ast) = {
-                    let natives = Natives::default();
-                    let mut ast = ast.merge(Into::<Ast>::into(&natives));
-                    let (table, diagnostics) = SymbolTableGen::new(&mut ast, natives).build_table();
-                    assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-                    (table, ast)
-                };
-
-                let (ast, diagnostics) = TypeChecker::new(ast, &symbols).check();
-                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+                let (ast, symbols) = Resolver::new(ast, Natives::default())
+                    .resolve()
+                    .expect("ok expected");
 
                 let actual = Interpreter::new(&ast, &symbols).start();
 

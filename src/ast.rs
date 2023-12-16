@@ -548,11 +548,11 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{Ast, AstNodePrettyPrint};
+    use crate::ast::AstNodePrettyPrint;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
     use crate::parser::Parser;
-    use crate::symbol_table::SymbolTableGen;
+    use crate::resolver::Resolver;
     use crate::xml::XmlWriter;
     use insta::assert_snapshot;
 
@@ -598,79 +598,95 @@ mod tests {
 
     #[test]
     fn merge_1() {
-        let natives = Natives::default();
-
         let (ast1, d) = Parser::new(Lexer::new(
-            "let x_1 = 0; let f_1(p_1: t_1): r_1 = {} f_1(x_1);",
+            "let x_1 = 0; let f_1(p_1: number): boolean = { p_1 == 1; } f_1(x_1);",
         ))
         .parse();
         assert!(d.is_empty(), "{:?}", d);
 
         let (ast2, d) = Parser::new(Lexer::new(
-            "let x_2 = 0; let f_2(p_2: t_2): r_2 = {} f_2(x_2);",
+            "let x_2 = 0; let f_2(p_2: number): boolean = { p_2 == 2; } f_2(x_2);",
         ))
         .parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let mut ast = ast1.merge(ast2).merge(Into::<Ast>::into(&natives));
-        let (table, d) = SymbolTableGen::new(&mut ast, natives).build_table();
-        assert!(d.is_empty(), "{:?}", d);
+        let ast = ast1.merge(ast2);
 
-        let xml = XmlWriter::new(&ast, &table).serialize();
+        let (ast, symbols) = Resolver::new(ast, Natives::default())
+            .resolve()
+            .expect("ok expected");
+
+        let xml = XmlWriter::new(&ast, &symbols).serialize();
+
         assert_snapshot!(&xml);
     }
 
     #[test]
     fn merge_2() {
-        let natives = Natives::default();
-
-        let (ast1, d) = Parser::new(Lexer::new("let x_1 = 0; x_1 = -x_1 * 2 + true;")).parse();
+        let (ast1, d) = Parser::new(Lexer::new("let x_1 = 0; x_1 = -x_1 * 2;")).parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let (ast2, d) = Parser::new(Lexer::new("let x_2 = 0; x_2 = -x_2 * 2 + true;")).parse();
+        let (ast2, d) = Parser::new(Lexer::new("let x_2 = 0; x_2 = -x_2 * 2;")).parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let mut ast = ast1.merge(ast2).merge(Into::<Ast>::into(&natives));
-        let (table, d) = SymbolTableGen::new(&mut ast, natives).build_table();
-        assert!(d.is_empty(), "{:?}", d);
+        let ast = ast1.merge(ast2);
 
-        let xml = XmlWriter::new(&ast, &table).serialize();
+        let (ast, symbols) = Resolver::new(ast, Natives::default())
+            .resolve()
+            .expect("ok expected");
+
+        let xml = XmlWriter::new(&ast, &symbols).serialize();
+
         assert_snapshot!(&xml);
     }
 
     #[test]
     fn merge_if() {
-        let natives = Natives::default();
-
-        let (ast1, d) = Parser::new(Lexer::new("if c_1 { t_1; } else { f_1; }")).parse();
+        let (ast1, d) = Parser::new(Lexer::new(
+            "let c_1 = true; let t_1 = 1; let f_1 = 0; if c_1 { t_1; } else { f_1; }",
+        ))
+        .parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let (ast2, d) = Parser::new(Lexer::new("if c_2 { t_2; } else { f_2; }")).parse();
+        let (ast2, d) = Parser::new(Lexer::new(
+            "let c_2 = true; let t_2 = 1; let f_2 = 0; if c_2 { t_2; } else { f_2; }",
+        ))
+        .parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let mut ast = ast1.merge(ast2).merge(Into::<Ast>::into(&natives));
-        let (table, d) = SymbolTableGen::new(&mut ast, natives).build_table();
-        assert!(d.is_empty(), "{:?}", d);
+        let ast = ast1.merge(ast2);
 
-        let xml = XmlWriter::new(&ast, &table).serialize();
+        let (ast, symbols) = Resolver::new(ast, Natives::default())
+            .resolve()
+            .expect("ok expected");
+
+        let xml = XmlWriter::new(&ast, &symbols).serialize();
+
         assert_snapshot!(&xml);
     }
 
     #[test]
     fn merge_while() {
-        let natives = Natives::default();
-
-        let (ast1, d) = Parser::new(Lexer::new("while c_1 { w_1; }")).parse();
+        let (ast1, d) = Parser::new(Lexer::new(
+            "let c_1 = true; let w_1 = 1; while c_1 { w_1; }",
+        ))
+        .parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let (ast2, d) = Parser::new(Lexer::new("while c_2 { w_2; }")).parse();
+        let (ast2, d) = Parser::new(Lexer::new(
+            "let c_2 = false; let w_2 = 2; while c_2 { w_2; }",
+        ))
+        .parse();
         assert!(d.is_empty(), "{:?}", d);
 
-        let mut ast = ast1.merge(ast2).merge(Into::<Ast>::into(&natives));
-        let (table, d) = SymbolTableGen::new(&mut ast, natives).build_table();
-        assert!(d.is_empty(), "{:?}", d);
+        let ast = ast1.merge(ast2);
 
-        let xml = XmlWriter::new(&ast, &table).serialize();
+        let (ast, symbols) = Resolver::new(ast, Natives::default())
+            .resolve()
+            .expect("ok expected");
+
+        let xml = XmlWriter::new(&ast, &symbols).serialize();
+
         assert_snapshot!(&xml);
     }
 }

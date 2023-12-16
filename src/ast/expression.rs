@@ -1,4 +1,4 @@
-use crate::ast::ids::{ExprId, IdentRefId, ScopeId, StmtId};
+use crate::ast::ids::{ExprId, IdentRefId,  StmtId};
 use crate::ast::literal::Literal;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::lexer::Span;
@@ -8,7 +8,6 @@ pub struct Expression {
     id: ExprId,
     kind: ExpressionKind,
     span: Span,
-    scope: Option<ScopeId>,
 }
 
 impl Expression {
@@ -17,7 +16,6 @@ impl Expression {
             id,
             kind,
             span,
-            scope: None,
         }
     }
 
@@ -36,15 +34,6 @@ impl Expression {
     pub fn span(&self) -> &Span {
         &self.span
     }
-
-    pub fn set_scope(&mut self, scope: ScopeId) {
-        // todo should take a self and return a new self?
-        self.scope = Some(scope);
-    }
-
-    pub fn scope(&self) -> Option<ScopeId> {
-        self.scope
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -53,8 +42,8 @@ pub enum ExpressionKind {
     If(ExprId, ExprId, Option<ExprId>),
     Literal(Literal),
     Binary(ExprId, BinaryOperator, ExprId),
-    FunctionCall(IdentRefId, Vec<ExprId>),
     Unary(UnaryOperator, ExprId),
+    FunctionCall(IdentRefId, Vec<ExprId>),
     While(ExprId, ExprId),
     // todo: should it be it's own struct and use it like While(ExprId, Block)?
     Block(Vec<StmtId>),
