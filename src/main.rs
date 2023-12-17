@@ -8,6 +8,7 @@ use crate::lexer::Lexer;
 use crate::natives::Natives;
 use crate::parser::Parser;
 use crate::resolver::Resolver;
+use crate::xml::XmlWriter;
 use std::fs::File;
 
 mod ast;
@@ -19,8 +20,6 @@ mod lexer;
 mod natives;
 mod parser;
 mod resolver;
-// mod symbol_table;
-// mod type_check;
 mod xml;
 
 // todo things to check:
@@ -54,6 +53,9 @@ fn fibonacci_rec() {
     Dot::new(&ast, &symbols)
         .write(&mut File::create("target/fibonacci_rec.dot").unwrap())
         .unwrap();
+    XmlWriter::new(&ast, &symbols)
+        .write(&mut File::create("target/fibonacci_rec.xml").unwrap())
+        .unwrap();
 
     print!(
         "Executable AST:\n{}",
@@ -75,12 +77,11 @@ fn fibonacci_iter() {
                 let prev = 1;
                 let current = 0;
 
-                let m = n;
-                while m > 1 {
+                while n > 1 {
                     current = prev_prev + prev;
                     prev_prev = prev;
                     prev = current;
-                    m = m - 1;
+                    n = n - 1;
                 }
 
                 current;
@@ -104,6 +105,9 @@ fn fibonacci_iter() {
 
     Dot::new(&ast, &symbols)
         .write(&mut File::create("target/fibonacci_iter.dot").unwrap())
+        .unwrap();
+    XmlWriter::new(&ast, &symbols)
+        .write(&mut File::create("target/fibonacci_iter.xml").unwrap())
         .unwrap();
 
     print!(

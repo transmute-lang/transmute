@@ -1,4 +1,4 @@
-use crate::ast::ids::{ExprId, IdentRefId,  StmtId};
+use crate::ast::ids::{ExprId, IdentRefId, StmtId};
 use crate::ast::literal::Literal;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::lexer::Span;
@@ -12,11 +12,7 @@ pub struct Expression {
 
 impl Expression {
     pub fn new(id: ExprId, kind: ExpressionKind, span: Span) -> Self {
-        Self {
-            id,
-            kind,
-            span,
-        }
+        Self { id, kind, span }
     }
 
     pub fn id(&self) -> ExprId {

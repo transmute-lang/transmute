@@ -1,4 +1,4 @@
-use crate::ast::ids::{IdentId, IdentRefId,  SymbolId};
+use crate::ast::ids::{IdentId, IdentRefId, SymbolId};
 use crate::lexer::Span;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -9,10 +9,7 @@ pub struct Identifier {
 
 impl Identifier {
     pub fn new(id: IdentId, span: Span) -> Self {
-        Self {
-            id,
-            span,
-        }
+        Self { id, span }
     }
 
     pub fn id(&self) -> IdentId {

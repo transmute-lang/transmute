@@ -1,0 +1,19 @@
+---
+source: src/resolver.rs
+expression: "Dot::new(&ast, &symbols).serialize()"
+---
+digraph ast {
+ordering="out";
+splines=false;
+n0[label="true"][shape="plaintext"][fontcolor="black"]
+n1[label="let x"][shape="plaintext"][fontcolor="black"]
+n2[label="1"][shape="plaintext"][fontcolor="black"]
+n3[label="let x"][shape="plaintext"][fontcolor="black"]
+n4[label="add()"][shape="plaintext"][fontcolor="orange"]
+n5[label="x"][shape="plaintext"][fontcolor="blue"]
+n6[label="1"][shape="plaintext"][fontcolor="black"]
+n1 -> n0[style="solid"][color="black"][arrowhead="none"]
+n3 -> n2[style="solid"][color="black"][arrowhead="none"]
+n4 -> n5[style="solid"][color="black"][arrowhead="none"]
+n4 -> n6[style="solid"][color="black"][arrowhead="none"]
+n5 -> n3[style="dotted"][color="gray"][arrowhead="vee"][constraint=false]}

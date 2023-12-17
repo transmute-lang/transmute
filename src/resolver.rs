@@ -6,7 +6,7 @@ use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Parameter, StatementKind};
 use crate::ast::Ast;
 use crate::error::Diagnostics;
-use crate::exit_points::ExitPoints;
+use crate::exit_points::{ExitPoint, ExitPoints};
 use crate::lexer::Span;
 use crate::natives::{Native, Natives};
 use std::cell::RefCell;
@@ -174,7 +174,6 @@ impl Resolver {
 
         // todo some things to check:
         //  - assign to a let fn
-        //  - assign to a parameter
 
         let expr_type = self.resolve_expression(expr)?;
 
@@ -469,14 +468,18 @@ impl Resolver {
                 );
             }
         } else {
-            for expr in exit_points {
+            for exit_point in exit_points {
+                let (expr, explicit) = match exit_point {
+                    ExitPoint::Explicit(e) => (e, true),
+                    ExitPoint::Implicit(e) => (e, false),
+                };
                 match self.resolve_expression(expr) {
                     Ok(Type::None) => panic!("functions must not return {}", Type::None),
-                    Ok(ty) => {
-                        if ty != ret_type {
+                    Ok(expr_type) => {
+                        if expr_type != ret_type && (ret_type != Type::Void || explicit) {
                             let expr = self.ast.expression(expr);
                             self.diagnostics.report_err(
-                                format!("Expected type {ret_type}, got {ty}"),
+                                format!("Expected type {ret_type}, got {expr_type}"),
                                 expr.span().clone(),
                                 (file!(), line!()),
                             );
@@ -608,38 +611,30 @@ impl Scope {
     }
 
     fn find(&self, ident: &IdentId, param_types: Option<&[Type]>) -> Option<SymbolId> {
-        self.symbols
-            .get(ident)
-            .and_then(|symbols| {
-                let filtered_symbols = symbols
-                    .iter()
-                    .filter(|s| {
-                        let symbol = &self.all_symbols.borrow()[s.id()];
-                        match param_types {
-                            None => match symbol.kind {
-                                SymbolKind::LetFn(_, _, _) | SymbolKind::Native(_) => false,
-                                SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => true,
-                            },
-                            Some(param_types) => match &symbol.kind {
-                                SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => false,
-                                SymbolKind::LetFn(_, ref fn_param_type, _) => {
-                                    param_types == fn_param_type.as_slice()
-                                }
-                                SymbolKind::Native(native) => {
-                                    param_types == native.parameters().as_slice()
-                                }
-                            },
-                        }
-                    })
-                    .collect::<Vec<&SymbolId>>();
-
-                if filtered_symbols.len() > 1 {
-                    return None;
-                }
-
-                filtered_symbols.first().copied()
-            })
-            .copied()
+        self.symbols.get(ident).and_then(|symbols| {
+            symbols
+                .iter()
+                .rev()
+                .find(|s| {
+                    let symbol = &self.all_symbols.borrow()[s.id()];
+                    match param_types {
+                        None => match symbol.kind {
+                            SymbolKind::LetFn(_, _, _) | SymbolKind::Native(_) => false,
+                            SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => true,
+                        },
+                        Some(param_types) => match &symbol.kind {
+                            SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => false,
+                            SymbolKind::LetFn(_, ref fn_param_type, _) => {
+                                param_types == fn_param_type.as_slice()
+                            }
+                            SymbolKind::Native(native) => {
+                                param_types == native.parameters().as_slice()
+                            }
+                        },
+                    }
+                })
+                .copied()
+        })
     }
 }
 
@@ -672,7 +667,6 @@ pub enum Type {
     Function,
     Number,
     Void,
-    // fixme once expressions/statements are merged, update the doc
     /// This value is used when the statement/expression does not return any value. This is the
     /// case of `ret` for instance.
     None,
@@ -706,6 +700,7 @@ impl TryFrom<&str> for Type {
 
 #[cfg(test)]
 mod tests {
+    use crate::dot::Dot;
     use crate::error::Level;
     use crate::lexer::{Lexer, Span};
     use crate::natives::Natives;
@@ -788,6 +783,17 @@ mod tests {
         )];
 
         assert_eq!(actual_diagnostics, expected_diagnostics);
+    }
+
+    #[test]
+    fn rebinding() {
+        let (ast, diagnostics) = Parser::new(Lexer::new("let x = true; let x = 1; x + 1;")).parse();
+        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+        let (ast, symbols) = Resolver::new(ast, Natives::default()).resolve().unwrap();
+
+        assert_snapshot!("rebinding-xml", XmlWriter::new(&ast, &symbols).serialize());
+        assert_snapshot!("rebinding-dot", Dot::new(&ast, &symbols).serialize());
     }
 
     macro_rules! test_type_error {
@@ -942,6 +948,16 @@ mod tests {
         assignment_correct_type,
         "let forty_two = 0; forty_two = 42;"
     );
+    test_type_ok!(
+        assignment_to_function_parameter_correct_type,
+        "let f(n: number): number = { n = 1; }"
+    );
+    test_type_error!(
+        assignment_to_function_parameter_incorrect_type,
+        "let f(n: number): number = { n = true; }",
+        "Expected type number, got boolean",
+        Span::new(1, 34, 33, 4)
+    );
     test_type_error!(
         assignment_wrong_type_from_function,
         "let forty_two = 42; let f(): boolean = true; forty_two = f();",
@@ -963,6 +979,13 @@ mod tests {
     test_type_ok!(
         assignment_correct_type_from_function,
         "let forty_two = 0; let f(): number = 42; forty_two = f();"
+    );
+    test_type_ok!(function_is_allowed_to_return_void, "let f() = { 1; }");
+    test_type_error!(
+        function_void_cannot_return_number,
+        "let f() = { ret 1; }",
+        "Expected type void, got number",
+        Span::new(1, 17, 16, 1)
     );
     test_type_error!(
         function_invalid_return_type,

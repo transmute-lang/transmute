@@ -214,6 +214,15 @@ impl<'a> Visitor<NodeId> for DotBuilder<'a> {
                         SymbolKind::Let(stmt) | SymbolKind::LetFn(stmt, _, _) => {
                             self.references.push((ident_node_id, *stmt));
                         }
+                        SymbolKind::Parameter(stmt, index) => {
+                            match self.ast.statement(*stmt).kind() {
+                                StatementKind::LetFn(_, _, _, _) => {
+                                    self.parameter_references
+                                        .push((ident_node_id, *stmt, *index));
+                                }
+                                _ => panic!(),
+                            }
+                        }
                         _ => panic!(),
                     }
                 }

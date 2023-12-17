@@ -11,11 +11,7 @@ pub struct Statement {
 
 impl Statement {
     pub fn new(id: StmtId, kind: StatementKind, span: Span) -> Self {
-        Self {
-            id,
-            kind,
-            span,
-        }
+        Self { id, kind, span }
     }
 
     pub fn id(&self) -> StmtId {
