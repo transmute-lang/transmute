@@ -49,7 +49,7 @@ impl Resolver {
 
         self.insert_functions(&stmts);
 
-        let _ = self.resolve_statements(&stmts);
+        let _ = self.visit_statements(&stmts);
 
         if self.diagnostics.is_empty() {
             Ok((self.ast, self.symbols.replace(vec![])))
@@ -117,7 +117,7 @@ impl Resolver {
             .push(id);
     }
 
-    fn resolve_expression(&mut self, expr: ExprId) -> Result<Type, ()> {
+    fn visit_expression(&mut self, expr: ExprId) -> Result<Type, ()> {
         let expr_id = expr.id();
         if let Some(ty) = self.expression_types[expr_id] {
             return ty;
@@ -126,23 +126,23 @@ impl Resolver {
         let expr = self.ast.expression(expr);
         let ty = match expr.kind() {
             ExpressionKind::Assignment(ident_ref, expr) => {
-                self.resolve_assignment(*ident_ref, *expr)
+                self.visit_assignment(*ident_ref, *expr)
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
-                self.resolve_if(*cond, *true_branch, *false_branch)
+                self.visit_if(*cond, *true_branch, *false_branch)
             }
-            ExpressionKind::Literal(literal) => self.resolve_literal(literal.kind().clone()),
+            ExpressionKind::Literal(literal) => self.visit_literal(literal.kind().clone()),
             ExpressionKind::Binary(left, op, right) => {
-                self.resolve_binary(expr.id(), expr.span().clone(), *left, op.clone(), *right)
+                self.visit_binary_operator(expr.id(), expr.span().clone(), *left, op.clone(), *right)
             }
             ExpressionKind::Unary(op, operand) => {
-                self.resolve_unary(expr.id(), expr.span().clone(), op.clone(), *operand)
+                self.visit_unary_operator(expr.id(), expr.span().clone(), op.clone(), *operand)
             }
             ExpressionKind::FunctionCall(ident_ref, params) => {
-                self.resolve_function_call(*ident_ref, params.to_vec().as_slice())
+                self.visit_function_call(*ident_ref, params.to_vec().as_slice())
             }
-            ExpressionKind::While(cond, expr) => self.resolve_while(*cond, *expr),
-            ExpressionKind::Block(stmts) => self.resolve_block(&stmts.to_vec()),
+            ExpressionKind::While(cond, expr) => self.visit_while(*cond, *expr),
+            ExpressionKind::Block(stmts) => self.visit_block(&stmts.to_vec()),
             ExpressionKind::Dummy => {
                 panic!()
             }
@@ -152,7 +152,7 @@ impl Resolver {
         ty
     }
 
-    fn resolve_assignment(&mut self, ident_ref: IdentRefId, expr: ExprId) -> Result<Type, ()> {
+    fn visit_assignment(&mut self, ident_ref: IdentRefId, expr: ExprId) -> Result<Type, ()> {
         // If we have the following:
         //   let add(a: number, b: number): number = {}
         //   let add(a: boolean, b: boolean): boolean = {}
@@ -175,7 +175,7 @@ impl Resolver {
         // todo some things to check:
         //  - assign to a let fn
 
-        let expr_type = self.resolve_expression(expr)?;
+        let expr_type = self.visit_expression(expr)?;
 
         let expected_type = self
             // todo: to search for method, we need to extract the parameter types from the
@@ -198,13 +198,13 @@ impl Resolver {
         Ok(expr_type)
     }
 
-    fn resolve_if(
+    fn visit_if(
         &mut self,
         cond: ExprId,
         true_branch: ExprId,
         false_branch: Option<ExprId>,
     ) -> Result<Type, ()> {
-        let cond_type = self.resolve_expression(cond)?;
+        let cond_type = self.visit_expression(cond)?;
 
         if cond_type != Type::Boolean {
             self.diagnostics.report_err(
@@ -214,9 +214,9 @@ impl Resolver {
             );
         }
 
-        let true_branch_type = self.resolve_expression(true_branch)?;
+        let true_branch_type = self.visit_expression(true_branch)?;
         let false_branch_type = false_branch
-            .map(|e| self.resolve_expression(e))
+            .map(|e| self.visit_expression(e))
             .unwrap_or(Ok(Type::Void))?;
 
         match (true_branch_type, false_branch_type) {
@@ -241,7 +241,7 @@ impl Resolver {
         }
     }
 
-    fn resolve_literal(&mut self, literal: LiteralKind) -> Result<Type, ()> {
+    fn visit_literal(&mut self, literal: LiteralKind) -> Result<Type, ()> {
         match literal {
             LiteralKind::Boolean(_) => Ok(Type::Boolean),
             LiteralKind::Number(_) => Ok(Type::Number),
@@ -257,7 +257,7 @@ impl Resolver {
         }
     }
 
-    fn resolve_binary(
+    fn visit_binary_operator(
         &mut self,
         expr: ExprId,
         expr_span: Span,
@@ -265,8 +265,8 @@ impl Resolver {
         op: BinaryOperator,
         right: ExprId,
     ) -> Result<Type, ()> {
-        let left_type = self.resolve_expression(left)?;
-        let right_type = self.resolve_expression(right)?;
+        let left_type = self.visit_expression(left)?;
+        let right_type = self.visit_expression(right)?;
 
         let ident_id = self.ast.identifier_id(op.kind().function_name());
         let symbol = self
@@ -288,14 +288,14 @@ impl Resolver {
         Ok(self.symbols.borrow()[symbol.id()].ty)
     }
 
-    fn resolve_unary(
+    fn visit_unary_operator(
         &mut self,
         expr: ExprId,
         expr_span: Span,
         op: UnaryOperator,
         operand: ExprId,
     ) -> Result<Type, ()> {
-        let operand_type = self.resolve_expression(operand)?;
+        let operand_type = self.visit_expression(operand)?;
 
         let ident_id = self.ast.identifier_id(op.kind().function_name());
         let symbol = self
@@ -317,14 +317,14 @@ impl Resolver {
         Ok(self.symbols.borrow()[symbol.id()].ty)
     }
 
-    fn resolve_function_call(
+    fn visit_function_call(
         &mut self,
         ident_ref: IdentRefId,
         params: &[ExprId],
     ) -> Result<Type, ()> {
         let param_types = params
             .iter()
-            .filter_map(|e| self.resolve_expression(*e).ok())
+            .filter_map(|e| self.visit_expression(*e).ok())
             .collect::<Vec<Type>>();
 
         if param_types.len() != params.len() {
@@ -342,8 +342,8 @@ impl Resolver {
             .ok_or(())?
     }
 
-    fn resolve_while(&mut self, cond: ExprId, expr: ExprId) -> Result<Type, ()> {
-        let cond_type = self.resolve_expression(cond)?;
+    fn visit_while(&mut self, cond: ExprId, expr: ExprId) -> Result<Type, ()> {
+        let cond_type = self.visit_expression(cond)?;
 
         if cond_type != Type::Boolean {
             self.diagnostics.report_err(
@@ -353,36 +353,36 @@ impl Resolver {
             );
         }
 
-        self.resolve_expression(expr)
+        self.visit_expression(expr)
     }
 
-    fn resolve_block(&mut self, stmts: &[StmtId]) -> Result<Type, ()> {
+    fn visit_block(&mut self, stmts: &[StmtId]) -> Result<Type, ()> {
         self.push_scope();
 
         self.insert_functions(stmts);
-        let ret_type = self.resolve_statements(stmts);
+        let ret_type = self.visit_statements(stmts);
 
         self.pop_scope();
 
         ret_type
     }
 
-    fn resolve_statements(&mut self, stmts: &[StmtId]) -> Result<Type, ()> {
+    fn visit_statements(&mut self, stmts: &[StmtId]) -> Result<Type, ()> {
         let mut ret_type = Ok(Type::Void);
 
         for stmt in stmts.iter() {
             let stmt_type = match self.ast.statement(*stmt).kind() {
-                StatementKind::Expression(expr) => self.resolve_expression(*expr),
+                StatementKind::Expression(expr) => self.visit_expression(*expr),
                 StatementKind::Let(ident, expr) => {
-                    self.resolve_let(*stmt, ident.id(), *expr);
+                    self.visit_let(*stmt, ident.id(), *expr);
                     Ok(Type::Void)
                 }
                 StatementKind::Ret(expr) => {
-                    let _ = self.resolve_expression(*expr);
+                    let _ = self.visit_expression(*expr);
                     Ok(Type::None)
                 }
                 StatementKind::LetFn(_ident, params, ret_type, expr) => {
-                    self.resolve_function(
+                    self.visit_function(
                         *stmt,
                         &params.to_vec(),
                         ret_type.clone().as_ref(),
@@ -403,8 +403,8 @@ impl Resolver {
         ret_type
     }
 
-    fn resolve_let(&mut self, stmt: StmtId, ident: IdentId, expr: ExprId) {
-        match self.resolve_expression(expr) {
+    fn visit_let(&mut self, stmt: StmtId, ident: IdentId, expr: ExprId) {
+        match self.visit_expression(expr) {
             Ok(Type::None) => {
                 let expr = self.ast.expression(expr);
                 self.diagnostics.report_err(
@@ -420,7 +420,7 @@ impl Resolver {
         }
     }
 
-    fn resolve_function(
+    fn visit_function(
         &mut self,
         stmt: StmtId,
         params: &[Parameter],
@@ -455,7 +455,7 @@ impl Resolver {
             )
         }
 
-        let _ = self.resolve_expression(expr);
+        let _ = self.visit_expression(expr);
 
         let exit_points = ExitPoints::new(&self.ast).exit_points(expr);
         if exit_points.is_empty() {
@@ -473,7 +473,7 @@ impl Resolver {
                     ExitPoint::Explicit(e) => (e, true),
                     ExitPoint::Implicit(e) => (e, false),
                 };
-                match self.resolve_expression(expr) {
+                match self.visit_expression(expr) {
                     Ok(Type::None) => panic!("functions must not return {}", Type::None),
                     Ok(expr_type) => {
                         if expr_type != ret_type && (ret_type != Type::Void || explicit) {
