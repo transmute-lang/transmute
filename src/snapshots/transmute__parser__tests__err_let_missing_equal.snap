@@ -1,0 +1,65 @@
+---
+source: src/parser.rs
+expression: "(actual_ast, actual_diagnostics)"
+---
+(
+    Ast {
+        identifiers: [
+            "forty_two",
+        ],
+        identifier_refs: [],
+        expressions: [
+            Expression {
+                id: ExprId {
+                    id: 0,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Number(
+                            42,
+                        ),
+                        span: 1:15; [14, 16],
+                    },
+                ),
+                span: 1:15; [14, 16],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: Let(
+                    Identifier {
+                        id: IdentId {
+                            id: 0,
+                        },
+                        span: 1:5; [4, 13],
+                    },
+                    ExprId {
+                        id: 0,
+                    },
+                ),
+                span: 1:1; [0, 17],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 0,
+            },
+        ],
+    },
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Expected `=`, got number",
+                span: 1:15; [14, 16],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    204,
+                ),
+            },
+        ],
+    },
+)

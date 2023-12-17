@@ -1,0 +1,28 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"let x(\")).parse()"
+---
+(
+    Ast {
+        identifiers: [
+            "x",
+        ],
+        identifier_refs: [],
+        expressions: [],
+        statements: [],
+        root: [],
+    },
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `eof`, expected one of identifier, `)`",
+                span: 1:7; [6, 6],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    331,
+                ),
+            },
+        ],
+    },
+)

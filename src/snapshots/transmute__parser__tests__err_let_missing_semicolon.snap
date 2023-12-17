@@ -1,0 +1,65 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"let forty_two = 42\")).parse()"
+---
+(
+    Ast {
+        identifiers: [
+            "forty_two",
+        ],
+        identifier_refs: [],
+        expressions: [
+            Expression {
+                id: ExprId {
+                    id: 0,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Number(
+                            42,
+                        ),
+                        span: 1:17; [16, 18],
+                    },
+                ),
+                span: 1:17; [16, 18],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: Let(
+                    Identifier {
+                        id: IdentId {
+                            id: 0,
+                        },
+                        span: 1:5; [4, 13],
+                    },
+                    ExprId {
+                        id: 0,
+                    },
+                ),
+                span: 1:1; [0, 18],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 0,
+            },
+        ],
+    },
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `eof`, expected one of `;`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                span: 1:19; [18, 18],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    930,
+                ),
+            },
+        ],
+    },
+)

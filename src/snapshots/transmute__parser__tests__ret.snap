@@ -1,0 +1,47 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"ret 42;\")).parse()"
+---
+(
+    Ast {
+        identifiers: [],
+        identifier_refs: [],
+        expressions: [
+            Expression {
+                id: ExprId {
+                    id: 0,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Number(
+                            42,
+                        ),
+                        span: 1:5; [4, 6],
+                    },
+                ),
+                span: 1:5; [4, 6],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: Ret(
+                    ExprId {
+                        id: 0,
+                    },
+                ),
+                span: 1:1; [0, 7],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 0,
+            },
+        ],
+    },
+    Diagnostics {
+        diagnostics: [],
+    },
+)

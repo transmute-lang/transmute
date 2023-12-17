@@ -1,0 +1,62 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"let x(if) = { }\")).parse()"
+---
+(
+    Ast {
+        identifiers: [
+            "x",
+        ],
+        identifier_refs: [],
+        expressions: [
+            Expression {
+                id: ExprId {
+                    id: 0,
+                },
+                kind: Block(
+                    [],
+                ),
+                span: 1:13; [12, 15],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId {
+                            id: 0,
+                        },
+                        span: 1:5; [4, 5],
+                    },
+                    [],
+                    None,
+                    ExprId {
+                        id: 0,
+                    },
+                ),
+                span: 1:1; [0, 15],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 0,
+            },
+        ],
+    },
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `if`, expected one of identifier, `)`",
+                span: 1:7; [6, 8],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    339,
+                ),
+            },
+        ],
+    },
+)

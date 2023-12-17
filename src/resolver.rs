@@ -667,6 +667,7 @@ pub enum Type {
     Function,
     Number,
     Void,
+
     /// This value is used when the statement/expression does not return any value. This is the
     /// case of `ret` for instance.
     None,

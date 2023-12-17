@@ -1,0 +1,80 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"while true {\")).parse()"
+---
+(
+    Ast {
+        identifiers: [],
+        identifier_refs: [],
+        expressions: [
+            Expression {
+                id: ExprId {
+                    id: 0,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Boolean(
+                            true,
+                        ),
+                        span: 1:7; [6, 10],
+                    },
+                ),
+                span: 1:7; [6, 10],
+            },
+            Expression {
+                id: ExprId {
+                    id: 1,
+                },
+                kind: Block(
+                    [],
+                ),
+                span: 1:12; [11, 12],
+            },
+            Expression {
+                id: ExprId {
+                    id: 2,
+                },
+                kind: While(
+                    ExprId {
+                        id: 0,
+                    },
+                    ExprId {
+                        id: 1,
+                    },
+                ),
+                span: 1:1; [0, 12],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: Expression(
+                    ExprId {
+                        id: 2,
+                    },
+                ),
+                span: 1:1; [0, 12],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 0,
+            },
+        ],
+    },
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Expected `}` to close `{` at 1:12, got `eof`",
+                span: 1:13; [12, 12],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    963,
+                ),
+            },
+        ],
+    },
+)

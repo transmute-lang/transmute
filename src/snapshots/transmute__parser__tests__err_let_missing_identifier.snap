@@ -1,0 +1,26 @@
+---
+source: src/parser.rs
+expression: "(actual_ast, actual_diagnostics)"
+---
+(
+    Ast {
+        identifiers: [],
+        identifier_refs: [],
+        expressions: [],
+        statements: [],
+        root: [],
+    },
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `=`, expected one of identifier",
+                span: 1:5; [4, 5],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    186,
+                ),
+            },
+        ],
+    },
+)

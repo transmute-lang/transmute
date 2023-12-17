@@ -1,0 +1,49 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"struct MyStruct { field: };\")).parse()"
+---
+(
+    Ast {
+        identifiers: [
+            "MyStruct",
+            "field",
+        ],
+        identifier_refs: [],
+        expressions: [],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: Struct(
+                    Identifier {
+                        id: IdentId {
+                            id: 0,
+                        },
+                        span: 1:8; [7, 15],
+                    },
+                    [],
+                ),
+                span: 1:1; [0, 27],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 0,
+            },
+        ],
+    },
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `}`, expected one of identifier",
+                span: 1:26; [25, 26],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    313,
+                ),
+            },
+        ],
+    },
+)

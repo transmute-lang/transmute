@@ -1,0 +1,57 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"41 $ 1;\")).parse()"
+---
+(
+    Ast {
+        identifiers: [],
+        identifier_refs: [],
+        expressions: [
+            Expression {
+                id: ExprId {
+                    id: 0,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Number(
+                            41,
+                        ),
+                        span: 1:1; [0, 2],
+                    },
+                ),
+                span: 1:1; [0, 2],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: Expression(
+                    ExprId {
+                        id: 0,
+                    },
+                ),
+                span: 1:1; [0, 3],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 0,
+            },
+        ],
+    },
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `$`, expected one of `;`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                span: 1:4; [3, 4],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    930,
+                ),
+            },
+        ],
+    },
+)
