@@ -1,8 +1,10 @@
 use crate::ast::expression::ExpressionKind;
-use crate::ast::ids::{make_id, ExprId, IdentId, StmtId};
+use crate::ast::identifier::Identifier;
+use crate::ast::ids::{make_id, ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::statement::StatementKind;
-use crate::ast::{Ast, Visitor};
+use crate::ast::operators::{BinaryOperator, UnaryOperator};
+use crate::ast::statement::{Parameter, StatementKind};
+use crate::ast::Ast;
 use crate::resolver::{Symbol, SymbolKind};
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -132,6 +134,253 @@ impl<'a> DotBuilder<'a> {
         }
     }
 
+    fn visit_statement(&mut self, stmt: StmtId) -> NodeId {
+        let node_id = match self.ast.statement(stmt).kind() {
+            StatementKind::Expression(expr) => self.visit_expression(*expr),
+            StatementKind::Let(ident, expr) => self.visit_let(ident, expr),
+            StatementKind::Ret(expr) => self.visit_ret(expr),
+            StatementKind::LetFn(ident, params, ret, expr) => {
+                self.visit_function(ident, params, ret, expr)
+            }
+        };
+
+        self.stmt_map.insert(stmt, node_id);
+        node_id
+    }
+
+    fn visit_expression(&mut self, expr: ExprId) -> NodeId {
+        match self.ast.expression(expr).kind() {
+            ExpressionKind::Assignment(ident_ref, expr) => self.visit_assignment(ident_ref, expr),
+            ExpressionKind::If(cond, true_branch, false_branch) => {
+                self.visit_if(cond, true_branch, false_branch)
+            }
+            ExpressionKind::Literal(lit) => self.visit_literal(lit),
+            ExpressionKind::Binary(left, op, right) => self.visit_binary_operator(left, op, right),
+            ExpressionKind::FunctionCall(ident, params) => self.visit_function_call(ident, params),
+            ExpressionKind::Unary(op, expr) => self.visit_unary_operator(op, expr),
+            ExpressionKind::While(cond, expr) => self.visit_while(cond, expr),
+            ExpressionKind::Block(stmts) => self.visit_block(stmts),
+            ExpressionKind::Dummy => {
+                unimplemented!()
+            }
+        }
+    }
+
+    fn visit_assignment(&mut self, ident_ref: &IdentRefId, expr: &ExprId) -> NodeId {
+        let ident = self.ast.identifier_ref(*ident_ref);
+        let ident_node_id = self.insert_node(Node::Identifier(ident.ident().id()));
+        let expr_node_id = self.visit_expression(*expr);
+        let assignment_mode_id = self.insert_node(Node::Assignment);
+
+        self.insert_edge(assignment_mode_id, ident_node_id);
+        self.insert_edge(assignment_mode_id, expr_node_id);
+
+        if let Some(symbol) = ident.symbol_id() {
+            match self.symbols[symbol.id()].kind() {
+                SymbolKind::Let(stmt) | SymbolKind::LetFn(stmt, _, _) => {
+                    self.references.push((ident_node_id, *stmt));
+                }
+                SymbolKind::Parameter(stmt, index) => match self.ast.statement(*stmt).kind() {
+                    StatementKind::LetFn(_, _, _, _) => {
+                        self.parameter_references
+                            .push((ident_node_id, *stmt, *index));
+                    }
+                    _ => panic!(),
+                },
+                _ => panic!(),
+            }
+        }
+
+        assignment_mode_id
+    }
+
+    fn visit_if(
+        &mut self,
+        cond: &ExprId,
+        true_branch: &ExprId,
+        false_branch: &Option<ExprId>,
+    ) -> NodeId {
+        let cond_node_id = self.visit_expression(*cond);
+        let true_node_id = self.visit_expression(*true_branch);
+        let false_node_id = false_branch.as_ref().map(|e| self.visit_expression(*e));
+        let if_node_id = self.insert_node(Node::If);
+
+        self.insert_edge(if_node_id, cond_node_id);
+        self.insert_edge_with_kind(if_node_id, true_node_id, EdgeKind::TrueBranch);
+        if let Some(false_node_id) = false_node_id {
+            self.insert_edge_with_kind(if_node_id, false_node_id, EdgeKind::FalseBranch);
+        }
+
+        if_node_id
+    }
+
+    fn visit_literal(&mut self, lit: &Literal) -> NodeId {
+        match lit.kind() {
+            LiteralKind::Boolean(b) => self.insert_node(Node::Boolean(*b)),
+            LiteralKind::Identifier(ident) => {
+                let ident = self.ast.identifier_ref(*ident);
+
+                if let Some(symbol) = ident.symbol_id() {
+                    match self.symbols[symbol.id()].kind() {
+                        SymbolKind::Let(stmt) | SymbolKind::LetFn(stmt, _, _) => {
+                            let ident_node_id =
+                                self.insert_node(Node::Identifier(ident.ident().id()));
+                            self.references.push((ident_node_id, *stmt));
+                            ident_node_id
+                        }
+                        SymbolKind::Parameter(stmt, index) => {
+                            match self.ast.statement(*stmt).kind() {
+                                StatementKind::LetFn(_, params, _, _) => {
+                                    let ident_node_id = self.insert_node(Node::Identifier(
+                                        params.get(*index).unwrap().identifier().id(),
+                                    ));
+                                    self.parameter_references
+                                        .push((ident_node_id, *stmt, *index));
+                                    ident_node_id
+                                }
+                                _ => panic!(),
+                            }
+                        }
+                        SymbolKind::Native(native) => self.insert_node(Node::NativeIdentifier(
+                            self.ast.identifier_id(native.name()),
+                        )),
+                    }
+                } else {
+                    self.insert_node(Node::Identifier(ident.ident().id()))
+                }
+            }
+            LiteralKind::Number(n) => self.insert_node(Node::Number(*n)),
+        }
+    }
+
+    fn visit_binary_operator(
+        &mut self,
+        left: &ExprId,
+        op: &BinaryOperator,
+        right: &ExprId,
+    ) -> NodeId {
+        let left_node_id = self.visit_expression(*left);
+        let right_node_id = self.visit_expression(*right);
+        let op_node_id = self.insert_node(Node::Text(op.kind().to_string()));
+
+        self.insert_edge(op_node_id, left_node_id);
+        self.insert_edge(op_node_id, right_node_id);
+
+        op_node_id
+    }
+
+    fn visit_function_call(&mut self, ident: &IdentRefId, params: &[ExprId]) -> NodeId {
+        let ident = self.ast.identifier_ref(*ident);
+
+        let call_node_id = if let Some(symbol) = ident.symbol_id() {
+            match self.symbols[symbol.id()].kind() {
+                SymbolKind::LetFn(stmt, _, _) => {
+                    let call_node_id = self.insert_node(Node::FunctionCall(ident.ident().id()));
+                    self.references.push((call_node_id, *stmt));
+                    call_node_id
+                }
+                SymbolKind::Parameter(stmt, index) => match self.ast.statement(*stmt).kind() {
+                    StatementKind::LetFn(_, params, _, _) => {
+                        let ident_node_id = self.insert_node(Node::FunctionCall(
+                            params.get(*index).unwrap().identifier().id(),
+                        ));
+                        self.parameter_references
+                            .push((ident_node_id, *stmt, *index));
+                        ident_node_id
+                    }
+                    _ => panic!(),
+                },
+                SymbolKind::Native(native) => self.insert_node(Node::NativeFunctionCall(
+                    self.ast.identifier_id(native.name()),
+                )),
+                _ => panic!(),
+            }
+        } else {
+            self.insert_node(Node::FunctionCall(ident.ident().id()))
+        };
+
+        params.iter().for_each(|e| {
+            let expr_node_id = self.visit_expression(*e);
+            self.insert_edge(call_node_id, expr_node_id);
+        });
+
+        call_node_id
+    }
+
+    fn visit_unary_operator(&mut self, op: &UnaryOperator, expr: &ExprId) -> NodeId {
+        let expr_node_id = self.visit_expression(*expr);
+        let op_node_id = self.insert_node(Node::Text(op.kind().to_string()));
+
+        self.insert_edge(op_node_id, expr_node_id);
+
+        op_node_id
+    }
+
+    fn visit_while(&mut self, cond: &ExprId, expr: &ExprId) -> NodeId {
+        let cond_node_id = self.visit_expression(*cond);
+        let expr_node_id = self.visit_expression(*expr);
+        let while_node_id = self.insert_node(Node::While);
+
+        self.insert_edge(while_node_id, cond_node_id);
+        self.insert_edge(while_node_id, expr_node_id);
+
+        while_node_id
+    }
+
+    fn visit_block(&mut self, stmts: &[StmtId]) -> NodeId {
+        if stmts.len() > 1 {
+            let list_node_id = self.insert_node(Node::List);
+
+            stmts.iter().for_each(|s| {
+                let node_id = self.visit_statement(*s);
+                self.insert_edge(list_node_id, node_id);
+            });
+
+            list_node_id
+        } else {
+            self.visit_statement(*stmts.first().unwrap())
+        }
+    }
+
+    fn visit_let(&mut self, ident: &Identifier, expr: &ExprId) -> NodeId {
+        let expr_node_id = self.visit_expression(*expr);
+        let let_node_id = self.insert_node(Node::Let(ident.id()));
+
+        self.insert_edge(let_node_id, expr_node_id);
+
+        let_node_id
+    }
+
+    fn visit_ret(&mut self, expr: &ExprId) -> NodeId {
+        let expr_node_id = self.visit_expression(*expr);
+        let ret_node_id = self.insert_node(Node::Ret);
+
+        self.insert_edge(ret_node_id, expr_node_id);
+
+        ret_node_id
+    }
+
+    fn visit_function(
+        &mut self,
+        ident: &Identifier,
+        params: &[Parameter],
+        ret: &Option<Identifier>,
+        expr: &ExprId,
+    ) -> NodeId {
+        let expr_node_id = self.visit_expression(*expr);
+        let let_fn_node_id = self.insert_node(Node::LetFn(
+            ident.id(),
+            params
+                .iter()
+                .map(|p| (p.identifier().id(), p.ty().id()))
+                .collect::<Vec<(IdentId, IdentId)>>(),
+            ret.as_ref().map(|r| r.id()),
+        ));
+        self.insert_edge(let_fn_node_id, expr_node_id);
+
+        let_fn_node_id
+    }
+
     fn insert_node(&mut self, node: Node) -> NodeId {
         self.nodes.push(node);
         (self.nodes.len() - 1).into()
@@ -155,223 +404,6 @@ impl<'a> DotBuilder<'a> {
             kind,
         });
         (self.edges.len() - 1).into()
-    }
-}
-
-impl<'a> Visitor<NodeId> for DotBuilder<'a> {
-    fn visit_statement(&mut self, stmt: StmtId) -> NodeId {
-        let node_id = match self.ast.statement(stmt).kind() {
-            StatementKind::Expression(expr) => self.visit_expression(*expr),
-            StatementKind::Let(ident, expr) => {
-                let expr_node_id = self.visit_expression(*expr);
-                let let_node_id = self.insert_node(Node::Let(ident.id()));
-
-                self.insert_edge(let_node_id, expr_node_id);
-
-                let_node_id
-            }
-            StatementKind::Ret(expr) => {
-                let expr_node_id = self.visit_expression(*expr);
-                let ret_node_id = self.insert_node(Node::Ret);
-
-                self.insert_edge(ret_node_id, expr_node_id);
-
-                ret_node_id
-            }
-            StatementKind::LetFn(ident, params, ret, expr) => {
-                let expr_node_id = self.visit_expression(*expr);
-                let let_fn_node_id = self.insert_node(Node::LetFn(
-                    ident.id(),
-                    params
-                        .iter()
-                        .map(|p| (p.identifier().id(), p.ty().id()))
-                        .collect::<Vec<(IdentId, IdentId)>>(),
-                    ret.as_ref().map(|r| r.id()),
-                ));
-                self.insert_edge(let_fn_node_id, expr_node_id);
-
-                let_fn_node_id
-            }
-        };
-
-        self.stmt_map.insert(stmt, node_id);
-        node_id
-    }
-
-    fn visit_expression(&mut self, expr: ExprId) -> NodeId {
-        match self.ast.expression(expr).kind() {
-            ExpressionKind::Assignment(ident_ref, expr) => {
-                let ident = self.ast.identifier_ref(*ident_ref);
-                let ident_node_id = self.insert_node(Node::Identifier(ident.ident().id()));
-                let expr_node_id = self.visit_expression(*expr);
-                let assignment_mode_id = self.insert_node(Node::Assignment);
-
-                self.insert_edge(assignment_mode_id, ident_node_id);
-                self.insert_edge(assignment_mode_id, expr_node_id);
-
-                if let Some(symbol) = ident.symbol_id() {
-                    match self.symbols[symbol.id()].kind() {
-                        SymbolKind::Let(stmt) | SymbolKind::LetFn(stmt, _, _) => {
-                            self.references.push((ident_node_id, *stmt));
-                        }
-                        SymbolKind::Parameter(stmt, index) => {
-                            match self.ast.statement(*stmt).kind() {
-                                StatementKind::LetFn(_, _, _, _) => {
-                                    self.parameter_references
-                                        .push((ident_node_id, *stmt, *index));
-                                }
-                                _ => panic!(),
-                            }
-                        }
-                        _ => panic!(),
-                    }
-                }
-
-                assignment_mode_id
-            }
-            ExpressionKind::If(cond, true_branch, false_branch) => {
-                let cond_node_id = self.visit_expression(*cond);
-                let true_node_id = self.visit_expression(*true_branch);
-                let false_node_id = false_branch.as_ref().map(|e| self.visit_expression(*e));
-                let if_node_id = self.insert_node(Node::If);
-
-                self.insert_edge(if_node_id, cond_node_id);
-                self.insert_edge_with_kind(if_node_id, true_node_id, EdgeKind::TrueBranch);
-                if let Some(false_node_id) = false_node_id {
-                    self.insert_edge_with_kind(if_node_id, false_node_id, EdgeKind::FalseBranch);
-                }
-
-                if_node_id
-            }
-            ExpressionKind::Literal(lit) => match lit.kind() {
-                LiteralKind::Boolean(b) => self.insert_node(Node::Boolean(*b)),
-                LiteralKind::Identifier(ident) => {
-                    let ident = self.ast.identifier_ref(*ident);
-
-                    if let Some(symbol) = ident.symbol_id() {
-                        match self.symbols[symbol.id()].kind() {
-                            SymbolKind::Let(stmt) | SymbolKind::LetFn(stmt, _, _) => {
-                                let ident_node_id =
-                                    self.insert_node(Node::Identifier(ident.ident().id()));
-                                self.references.push((ident_node_id, *stmt));
-                                ident_node_id
-                            }
-                            SymbolKind::Parameter(stmt, index) => {
-                                match self.ast.statement(*stmt).kind() {
-                                    StatementKind::LetFn(_, params, _, _) => {
-                                        let ident_node_id = self.insert_node(Node::Identifier(
-                                            params.get(*index).unwrap().identifier().id(),
-                                        ));
-                                        self.parameter_references.push((
-                                            ident_node_id,
-                                            *stmt,
-                                            *index,
-                                        ));
-                                        ident_node_id
-                                    }
-                                    _ => panic!(),
-                                }
-                            }
-                            SymbolKind::Native(native) => self.insert_node(Node::NativeIdentifier(
-                                self.ast.identifier_id(native.name()),
-                            )),
-                        }
-                    } else {
-                        self.insert_node(Node::Identifier(ident.ident().id()))
-                    }
-                }
-                LiteralKind::Number(n) => self.insert_node(Node::Number(*n)),
-            },
-            ExpressionKind::Binary(left, op, right) => {
-                let left_node_id = self.visit_expression(*left);
-                let right_node_id = self.visit_expression(*right);
-                let op_node_id = self.insert_node(Node::Text(op.kind().to_string()));
-
-                self.insert_edge(op_node_id, left_node_id);
-                self.insert_edge(op_node_id, right_node_id);
-
-                op_node_id
-            }
-            ExpressionKind::FunctionCall(ident, params) => {
-                let ident = self.ast.identifier_ref(*ident);
-
-                let call_node_id = if let Some(symbol) = ident.symbol_id() {
-                    match self.symbols[symbol.id()].kind() {
-                        SymbolKind::LetFn(stmt, _, _) => {
-                            let call_node_id =
-                                self.insert_node(Node::FunctionCall(ident.ident().id()));
-                            self.references.push((call_node_id, *stmt));
-                            call_node_id
-                        }
-                        SymbolKind::Parameter(stmt, index) => {
-                            match self.ast.statement(*stmt).kind() {
-                                StatementKind::LetFn(_, params, _, _) => {
-                                    let ident_node_id = self.insert_node(Node::FunctionCall(
-                                        params.get(*index).unwrap().identifier().id(),
-                                    ));
-                                    self.parameter_references
-                                        .push((ident_node_id, *stmt, *index));
-                                    ident_node_id
-                                }
-                                _ => panic!(),
-                            }
-                        }
-                        SymbolKind::Native(native) => self.insert_node(Node::NativeFunctionCall(
-                            self.ast.identifier_id(native.name()),
-                        )),
-                        _ => panic!(),
-                    }
-                } else {
-                    self.insert_node(Node::FunctionCall(ident.ident().id()))
-                };
-
-                params.iter().for_each(|e| {
-                    let expr_node_id = self.visit_expression(*e);
-                    self.insert_edge(call_node_id, expr_node_id);
-                });
-
-                call_node_id
-            }
-            ExpressionKind::Unary(op, expr) => {
-                let expr_node_id = self.visit_expression(*expr);
-                let op_node_id = self.insert_node(Node::Text(op.kind().to_string()));
-
-                self.insert_edge(op_node_id, expr_node_id);
-
-                op_node_id
-            }
-            ExpressionKind::While(cond, expr) => {
-                let cond_node_id = self.visit_expression(*cond);
-                let expr_node_id = self.visit_expression(*expr);
-                let while_node_id = self.insert_node(Node::While);
-
-                self.insert_edge(while_node_id, cond_node_id);
-                self.insert_edge(while_node_id, expr_node_id);
-
-                while_node_id
-            }
-            ExpressionKind::Block(stmts) => {
-                if stmts.len() > 1 {
-                    let list_node_id = self.insert_node(Node::List);
-
-                    stmts.iter().for_each(|s| {
-                        let node_id = self.visit_statement(*s);
-                        self.insert_edge(list_node_id, node_id);
-                    });
-
-                    list_node_id
-                } else {
-                    self.visit_statement(*stmts.first().unwrap())
-                }
-            }
-            ExpressionKind::Dummy => {
-                unimplemented!()
-            }
-        }
-    }
-
-    fn visit_literal(&mut self, _literal: &Literal) -> NodeId {
-        unimplemented!()
     }
 }
 

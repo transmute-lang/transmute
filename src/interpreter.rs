@@ -1,8 +1,8 @@
 use crate::ast::expression::ExpressionKind;
-use crate::ast::ids::{ExprId, IdentId, StmtId};
+use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Statement, StatementKind};
-use crate::ast::{Ast, Visitor};
+use crate::ast::Ast;
 use crate::resolver::{Symbol, SymbolKind, Type};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -27,9 +27,25 @@ impl<'a> Interpreter<'a> {
     pub fn start(&mut self) -> Value {
         self.visit_statements(self.ast.statements())
     }
-}
 
-impl<'a> Visitor<Value> for Interpreter<'a> {
+    fn visit_statements(&mut self, statements: &[StmtId]) -> Value {
+        let mut value = Value::Void;
+
+        for statement in statements {
+            let statement = self.ast.statement(*statement);
+            if is_ret(statement) {
+                return Value::RetVal(Box::new(self.visit_statement(statement.id())));
+            }
+
+            value = match self.visit_statement(statement.id()) {
+                ret @ Value::RetVal(_) => return ret,
+                v => v,
+            }
+        }
+
+        value
+    }
+
     fn visit_statement(&mut self, stmt: StmtId) -> Value {
         let stmt = self.ast.statement(stmt);
         match stmt.kind() {
@@ -56,115 +72,13 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
             ExpressionKind::Binary(_, _, _) => unimplemented!(),
             ExpressionKind::Unary(_, _) => unimplemented!(),
             ExpressionKind::FunctionCall(ident, arguments) => {
-                let ident_ref = self.ast.identifier_ref(*ident);
-                let symbol = ident_ref.symbol_id().expect("function not resolved");
-                let symbol = &self.symbols[symbol.id()];
-                match symbol.kind() {
-                    SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => {
-                        panic!("let fn expected")
-                    }
-                    SymbolKind::LetFn(stmt, _, _) => {
-                        let stmt = self.ast.statement(*stmt);
-                        match stmt.kind() {
-                            StatementKind::LetFn(_, parameters, _, expr) => {
-                                let expr = self.ast.expression(*expr);
-                                match expr.kind() {
-                                    ExpressionKind::Block(stmts) => {
-                                        let env = parameters
-                                            .iter()
-                                            .zip(arguments.iter())
-                                            .map(|(param, expr)| {
-                                                (
-                                                    param.identifier().id(),
-                                                    self.visit_expression(*expr),
-                                                )
-                                            })
-                                            .collect::<HashMap<IdentId, Value>>();
-
-                                        self.variables.push(env);
-
-                                        let ret = self.visit_statements(stmts).unwrap();
-
-                                        let _ = self.variables.pop();
-
-                                        ret
-                                    }
-                                    _ => panic!("block expected"),
-                                }
-                            }
-                            _ => panic!("let fn expected"),
-                        }
-                    }
-                    SymbolKind::Native(native) => {
-                        let env = arguments
-                            .iter()
-                            .map(|expr| self.visit_expression(*expr))
-                            .collect::<Vec<Value>>();
-
-                        native.apply(env)
-                    }
-                }
+                self.visit_function_call(ident, arguments)
             }
-            ExpressionKind::Assignment(ident, expr) => {
-                let ident = self.ast.identifier_ref(*ident).ident();
-                if !self
-                    .variables
-                    .last()
-                    .expect("there is an env")
-                    .contains_key(&ident.id())
-                {
-                    panic!("{} not in scope", self.ast.identifier(ident.id()));
-                }
-
-                let val = self.visit_expression(*expr);
-
-                self.variables
-                    .last_mut()
-                    .expect("there is an env")
-                    .insert(ident.id(), val.clone());
-
-                val
-            }
+            ExpressionKind::Assignment(ident, expr) => self.visit_assignment(ident, expr),
             ExpressionKind::If(cond, true_branch, false_branch) => {
-                let cond = self.visit_expression(*cond);
-                let cond = match cond {
-                    Value::Boolean(b) => b,
-                    _ => panic!("condition is not a boolean"),
-                };
-
-                let statements = if cond {
-                    Some(true_branch)
-                } else {
-                    false_branch.as_ref()
-                }
-                .map(|expr| match self.ast.expression(*expr).kind() {
-                    ExpressionKind::Block(statements) => statements,
-                    _ => panic!("block expected"),
-                });
-
-                if let Some(statements) = statements {
-                    self.visit_statements(statements)
-                } else {
-                    Value::Void
-                }
+                self.visit_if(cond, true_branch, false_branch)
             }
-            ExpressionKind::While(cond, expr) => {
-                let statements = match self.ast.expression(*expr).kind() {
-                    ExpressionKind::Block(statements) => statements,
-                    _ => panic!("block expected"),
-                };
-
-                let mut ret = Value::Void;
-                loop {
-                    match self.visit_expression(*cond) {
-                        Value::Boolean(false) => return ret,
-                        Value::Boolean(true) => {}
-                        _ => panic!("condition is not a boolean"),
-                    };
-
-                    ret = self.visit_statements(statements);
-                }
-            }
+            ExpressionKind::While(cond, expr) => self.visit_while(cond, expr),
             ExpressionKind::Block(_) => {
                 todo!("implement block expression")
             }
@@ -194,28 +108,125 @@ impl<'a> Visitor<Value> for Interpreter<'a> {
             LiteralKind::Boolean(b) => Value::Boolean(*b),
         }
     }
-}
 
-impl<'a> Interpreter<'a> {
-    // todo replace &Vec<...> with &[...] everywhere possible
-    fn visit_statements(&mut self, statements: &Vec<StmtId>) -> Value {
-        let mut value = Value::Void;
-
-        for statement in statements {
-            let statement = self.ast.statement(*statement);
-            if is_ret(statement) {
-                return Value::RetVal(Box::new(self.visit_statement(statement.id())));
+    fn visit_function_call(&mut self, ident: &IdentRefId, arguments: &[ExprId]) -> Value {
+        let ident_ref = self.ast.identifier_ref(*ident);
+        let symbol = ident_ref.symbol_id().expect("function not resolved");
+        let symbol = &self.symbols[symbol.id()];
+        match symbol.kind() {
+            SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => {
+                panic!("let fn expected")
             }
+            SymbolKind::LetFn(stmt, _, _) => {
+                let stmt = self.ast.statement(*stmt);
+                match stmt.kind() {
+                    StatementKind::LetFn(_, parameters, _, expr) => {
+                        let expr = self.ast.expression(*expr);
+                        match expr.kind() {
+                            ExpressionKind::Block(stmts) => {
+                                let env = parameters
+                                    .iter()
+                                    .zip(arguments.iter())
+                                    .map(|(param, expr)| {
+                                        (param.identifier().id(), self.visit_expression(*expr))
+                                    })
+                                    .collect::<HashMap<IdentId, Value>>();
 
-            value = match self.visit_statement(statement.id()) {
-                ret @ Value::RetVal(_) => return ret,
-                v => v,
+                                self.variables.push(env);
+
+                                let ret = self.visit_statements(stmts).unwrap();
+
+                                let _ = self.variables.pop();
+
+                                ret
+                            }
+                            _ => panic!("block expected"),
+                        }
+                    }
+                    _ => panic!("let fn expected"),
+                }
+            }
+            SymbolKind::Native(native) => {
+                let env = arguments
+                    .iter()
+                    .map(|expr| self.visit_expression(*expr))
+                    .collect::<Vec<Value>>();
+
+                native.apply(env)
             }
         }
+    }
 
-        value
+    fn visit_assignment(&mut self, ident: &IdentRefId, expr: &ExprId) -> Value {
+        let ident = self.ast.identifier_ref(*ident).ident();
+        if !self
+            .variables
+            .last()
+            .expect("there is an env")
+            .contains_key(&ident.id())
+        {
+            panic!("{} not in scope", self.ast.identifier(ident.id()));
+        }
+
+        let val = self.visit_expression(*expr);
+
+        self.variables
+            .last_mut()
+            .expect("there is an env")
+            .insert(ident.id(), val.clone());
+
+        val
+    }
+
+    fn visit_if(
+        &mut self,
+        cond: &ExprId,
+        true_branch: &ExprId,
+        false_branch: &Option<ExprId>,
+    ) -> Value {
+        let cond = self.visit_expression(*cond);
+        let cond = match cond {
+            Value::Boolean(b) => b,
+            _ => panic!("condition is not a boolean"),
+        };
+
+        let statements = if cond {
+            Some(true_branch)
+        } else {
+            false_branch.as_ref()
+        }
+        .map(|expr| match self.ast.expression(*expr).kind() {
+            ExpressionKind::Block(statements) => statements,
+            _ => panic!("block expected"),
+        });
+
+        if let Some(statements) = statements {
+            self.visit_statements(statements)
+        } else {
+            Value::Void
+        }
+    }
+
+    fn visit_while(&mut self, cond: &ExprId, expr: &ExprId) -> Value {
+        let statements = match self.ast.expression(*expr).kind() {
+            ExpressionKind::Block(statements) => statements,
+            _ => panic!("block expected"),
+        };
+
+        let mut ret = Value::Void;
+        loop {
+            match self.visit_expression(*cond) {
+                Value::Boolean(false) => return ret,
+                Value::Boolean(true) => {}
+                _ => panic!("condition is not a boolean"),
+            };
+
+            ret = self.visit_statements(statements);
+        }
     }
 }
+
+impl<'a> Interpreter<'a> {}
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub enum Value {

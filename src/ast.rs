@@ -13,14 +13,6 @@ use crate::ast::statement::{Parameter, Statement, StatementKind};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
-pub trait Visitor<R> {
-    fn visit_statement(&mut self, stmt: StmtId) -> R;
-
-    fn visit_expression(&mut self, expr: ExprId) -> R;
-
-    fn visit_literal(&mut self, literal: &Literal) -> R;
-}
-
 #[derive(Debug, PartialEq)]
 pub struct Ast {
     /// Unique identifiers names
