@@ -5,7 +5,7 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{
     BinaryOperator, BinaryOperatorKind, Precedence, UnaryOperator, UnaryOperatorKind,
 };
-use crate::ast::statement::{Parameter, Statement, StatementKind};
+use crate::ast::statement::{Field, Parameter, Statement, StatementKind};
 use crate::ast::Ast;
 use crate::error::Diagnostics;
 use crate::lexer::{Lexer, PeekableLexer, Span, Token, TokenKind};
@@ -247,6 +247,110 @@ impl<'s> Parser<'s> {
                 let id = self.push_statement(StatementKind::Expression(expression), span);
                 Some(&self.statements[id.id()])
             }
+            TokenKind::Struct => {
+                let struct_token = self.lexer.next();
+                let identifier_token = self.lexer.next();
+                let identifier = match identifier_token.kind() {
+                    TokenKind::Identifier => Identifier::new(
+                        self.push_identifier(identifier_token.span()),
+                        identifier_token.span().clone(),
+                    ),
+                    _ => {
+                        report_unexpected_token!(self, identifier_token, [TokenKind::Identifier,]);
+                        self.take_until_one_of(vec![TokenKind::Semicolon]);
+                        return None;
+                    }
+                };
+
+                let token = self.lexer.next();
+                if token.kind() != &TokenKind::OpenCurlyBracket {
+                    report_and_insert_missing_token!(self, token, TokenKind::OpenCurlyBracket);
+                    self.lexer.push_next(token);
+                }
+
+                let mut fields = Vec::new();
+                let mut next = TokenKind::Identifier;
+
+                let span = loop {
+                    let token = self.lexer.next();
+                    match token.kind() {
+                        TokenKind::CloseCurlyBracket => {
+                            // self.expected.clear();
+                            break token.span().clone();
+                        }
+                        TokenKind::Comma if next == TokenKind::Comma => {
+                            // self.expected.clear();
+                            next = TokenKind::Identifier;
+                        }
+                        TokenKind::Identifier
+                            if next == TokenKind::Identifier || next == TokenKind::Comma =>
+                        {
+                            if next == TokenKind::Comma {
+                                report_unexpected_token!(
+                                    self,
+                                    token,
+                                    [next.clone(), TokenKind::Comma,]
+                                );
+                            }
+
+                            // self.expected.clear();
+                            let ident = Identifier::new(
+                                self.push_identifier(token.span()),
+                                token.span().clone(),
+                            );
+
+                            let colon = self.lexer.next();
+                            let mut error = false;
+                            if colon.kind() != &TokenKind::Colon {
+                                report_and_insert_missing_token!(self, colon, TokenKind::Colon);
+                                error = true;
+                                self.lexer.push_next(colon);
+                            }
+
+                            let ty = self.lexer.next();
+                            if ty.kind() != &TokenKind::Identifier {
+                                if !error {
+                                    report_unexpected_token!(self, ty, [TokenKind::Identifier,]);
+                                }
+                                self.lexer.push_next(ty);
+                                next = TokenKind::Comma;
+                                continue;
+                            }
+                            let ty =
+                                Identifier::new(self.push_identifier(ty.span()), ty.span().clone());
+
+                            let span = ident.span().extend_to(ty.span());
+                            fields.push(Field::new(ident, ty, span));
+                            next = TokenKind::Comma;
+                        }
+                        TokenKind::Eof => {
+                            report_unexpected_token!(
+                                self,
+                                token,
+                                [next.clone(), TokenKind::CloseCurlyBracket,]
+                            );
+                            break token.span().clone();
+                        }
+                        _ => {
+                            report_unexpected_token!(
+                                self,
+                                token,
+                                [next.clone(), TokenKind::CloseCurlyBracket,]
+                            );
+                            next = TokenKind::Comma;
+                            self.take_until_one_of(vec![
+                                TokenKind::Comma,
+                                TokenKind::CloseCurlyBracket,
+                            ]);
+                        }
+                    }
+                };
+
+                let span = struct_token.span().extend_to(&span);
+
+                let id = self.push_statement(StatementKind::Struct(identifier, fields), span);
+                Some(&self.statements[id.id()])
+            }
             _ => {
                 report_unexpected_token!(
                     self,
@@ -278,7 +382,7 @@ impl<'s> Parser<'s> {
     /// Parses the following:
     /// ```
     /// let ident '( param , ... ): type = expr ;
-    /// let ident '( param , ... ): type = { expr ; ... } ;
+    /// let ident '( param , ... ): type = { expr ; ... }
     /// ```
     fn parse_function(&mut self, span: &Span, identifier: Identifier) -> Option<&Statement> {
         // let name '( param , ... ): type = expr ;
@@ -289,6 +393,7 @@ impl<'s> Parser<'s> {
         let mut next = TokenKind::Identifier;
 
         loop {
+            // todo we can do better error handling, see struct (actually both can be shared)
             let token = self.lexer.next();
             match token.kind() {
                 TokenKind::CloseParenthesis => {
@@ -1057,6 +1162,8 @@ mod tests {
     test_syntax!(if_else => "if true { 42; } else { 43; }");
     test_syntax!(if_else_if_else => "if true { 42; } else if false { 43; } else { 44; }");
     test_syntax!(while_loop => "while true { 42; }");
+    test_syntax!(struct_statement => "struct MyStruct { a: t_1, b: t_b }");
+    test_syntax!(struct_inside_function => "let f() = { struct MyStruct {} }");
     test_syntax!(err_expression_missing_right_parenthesis => "(42;");
     test_syntax!(err_expression_missing_right_parenthesis_eof => "(42");
     test_syntax!(err_expression_inserted_token_before_expression => "^42;");
@@ -1085,4 +1192,18 @@ mod tests {
     test_syntax!(err_while_missing_close_curly_bracket => "while true {");
     test_syntax!(err_function_call_unwanted_comma => "f(42,,43);");
     test_syntax!(err_function_call_missing_comma => "f(42 43);");
+    test_syntax!(err_struct_missing_name => "struct {}");
+    test_syntax!(err_struct_missing_open_curly => "struct MyStruct field: type }");
+    test_syntax!(err_struct_missing_close_curly => "struct MyStruct { field: type ");
+    test_syntax!(err_struct_missing_field_name => "struct MyStruct { : type }");
+    test_syntax!(err_struct_missing_colon_and_type_name => "struct MyStruct { field }");
+    test_syntax!(err_struct_missing_type_name => "struct MyStruct { field: }");
+    test_syntax!(err_struct_missing_first_field_name => "struct MyStruct { : type, f2: type2 }");
+    test_syntax!(err_struct_missing_first_field_type => "struct MyStruct { f1, f2: type2 }");
+    test_syntax!(err_struct_missing_middle_field_name => "struct MyStruct { f0: type0, : type1, f2: type2 }");
+    test_syntax!(err_struct_missing_middle_field_type => "struct MyStruct { f0: type0, f1, f2: type2 }");
+    test_syntax!(err_struct_missing_last_field_name => "struct MyStruct { f0: type0, : type1 }");
+    test_syntax!(err_struct_missing_last_field_type => "struct MyStruct { f0: type0, f1 }");
+    test_syntax!(err_struct_missing_colon => "struct MyStruct { f0 t0 }");
+    test_syntax!(err_struct_missing_comma => "struct MyStruct { f0: t0 f1: t1 }");
 }

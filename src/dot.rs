@@ -3,7 +3,7 @@ use crate::ast::identifier::Identifier;
 use crate::ast::ids::{make_id, ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
-use crate::ast::statement::{Parameter, StatementKind};
+use crate::ast::statement::{Field, Parameter, StatementKind};
 use crate::ast::Ast;
 use crate::resolver::{Symbol, SymbolKind};
 use std::borrow::Cow;
@@ -24,6 +24,7 @@ enum Node {
     Let(IdentId),
     Ret,
     LetFn(IdentId, Vec<(IdentId, IdentId)>, Option<IdentId>),
+    Struct(IdentId, Vec<(IdentId, IdentId)>),
 
     // Expressions
     Assignment,
@@ -142,6 +143,7 @@ impl<'a> DotBuilder<'a> {
             StatementKind::LetFn(ident, params, ret, expr) => {
                 self.visit_function(ident, params, ret, expr)
             }
+            StatementKind::Struct(ident, fields) => self.visit_struct(ident, &fields),
         };
 
         self.stmt_map.insert(stmt, node_id);
@@ -241,7 +243,9 @@ impl<'a> DotBuilder<'a> {
                                 _ => panic!(),
                             }
                         }
-                        SymbolKind::Native(native) => self.insert_node(Node::NativeIdentifier(
+                        SymbolKind::Struct(_) => todo!(),
+                        SymbolKind::NativeType(_) => todo!(),
+                        SymbolKind::NativeFn(native) => self.insert_node(Node::NativeIdentifier(
                             self.ast.identifier_id(native.name()),
                         )),
                     }
@@ -290,7 +294,7 @@ impl<'a> DotBuilder<'a> {
                     }
                     _ => panic!(),
                 },
-                SymbolKind::Native(native) => self.insert_node(Node::NativeFunctionCall(
+                SymbolKind::NativeFn(native) => self.insert_node(Node::NativeFunctionCall(
                     self.ast.identifier_id(native.name()),
                 )),
                 _ => panic!(),
@@ -337,8 +341,10 @@ impl<'a> DotBuilder<'a> {
             });
 
             list_node_id
-        } else {
+        } else if !stmts.is_empty() {
             self.visit_statement(*stmts.first().unwrap())
+        } else {
+            self.insert_node(Node::Empty)
         }
     }
 
@@ -376,9 +382,20 @@ impl<'a> DotBuilder<'a> {
                 .collect::<Vec<(IdentId, IdentId)>>(),
             ret.as_ref().map(|r| r.id()),
         ));
+        // todo insert edges from type params to types, if possible
         self.insert_edge(let_fn_node_id, expr_node_id);
 
         let_fn_node_id
+    }
+
+    fn visit_struct(&mut self, ident: &Identifier, fields: &[Field]) -> NodeId {
+        self.insert_node(Node::Struct(
+            ident.id(),
+            fields
+                .iter()
+                .map(|p| (p.identifier().id(), p.ty().id()))
+                .collect::<Vec<(IdentId, IdentId)>>(),
+        ))
     }
 
     fn insert_node(&mut self, node: Node) -> NodeId {
@@ -456,7 +473,7 @@ impl<'a> Dot<'a> {
             Node::Let(ident) => Cow::Owned(format!("let {}", self.ast.identifier(*ident))),
             Node::Ret => Cow::Borrowed("ret"),
             Node::LetFn(ident, params, ret) => Cow::Owned(format!(
-                "{{ {{<fn>let {}(){} }} | {{ {} }} }}",
+                "{{ {{<fn>{}(){} }} | {{ {} }} }}",
                 self.ast.identifier(*ident),
                 ret.map(|r| format!(": {}", self.ast.identifier(r)))
                     .unwrap_or_default(),
@@ -465,6 +482,20 @@ impl<'a> Dot<'a> {
                     .enumerate()
                     .map(|(i, (p, t))| format!(
                         "<p{i}>{}: {}",
+                        self.ast.identifier(*p),
+                        self.ast.identifier(*t)
+                    ))
+                    .collect::<Vec<String>>()
+                    .join(" | "),
+            )),
+            Node::Struct(ident, fields) => Cow::Owned(format!(
+                "{{ {{<struct>{}}} | {} }}",
+                self.ast.identifier(*ident),
+                fields
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (p, t))| format!(
+                        "{{ <f{i}>{} | {} }}",
                         self.ast.identifier(*p),
                         self.ast.identifier(*t)
                     ))
@@ -489,7 +520,7 @@ impl<'a> Dot<'a> {
     fn node_shape(node: &Node) -> &'static str {
         match node {
             Node::List | Node::Empty => "point",
-            Node::LetFn(_, _, _) => "record",
+            Node::LetFn(_, _, _) | Node::Struct(_,_) => "record",
             _ => "plaintext",
         }
     }
@@ -616,6 +647,16 @@ mod tests {
                     b;
                 }
             }
+        "#
+    );
+    generate!(
+        struct_custom,
+        r#"
+            struct Point {
+                x: number,
+                y: number
+            }
+            let dist(from: Point, to: Point) = {}
         "#
     );
 }

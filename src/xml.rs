@@ -5,7 +5,7 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Parameter, Statement, StatementKind};
 use crate::ast::Ast;
-use crate::resolver::Symbol;
+use crate::resolver::{Symbol, SymbolKind};
 use std::io;
 use std::io::Write;
 use xml::writer::XmlEvent;
@@ -92,6 +92,9 @@ impl<'a> XmlWriter<'a> {
             StatementKind::LetFn(ident, params, ty, expr) => {
                 self.visit_function(stmt.id(), ident, params, ty, expr);
             }
+            StatementKind::Struct(_, _) => {
+                todo!()
+            }
         }
 
         self.emit(XmlEvent::end_element());
@@ -145,16 +148,22 @@ impl<'a> XmlWriter<'a> {
             .symbol_id()
             .map(|sid| &self.symbols[sid.id()])
             .map(|s| match s.kind() {
-                crate::resolver::SymbolKind::Let(stmt) => {
+                SymbolKind::Let(stmt) => {
                     format!("stmt:{stmt}")
                 }
-                crate::resolver::SymbolKind::LetFn(stmt, _, _) => {
+                SymbolKind::LetFn(stmt, _, _) => {
                     format!("stmt:{stmt}")
                 }
-                crate::resolver::SymbolKind::Parameter(stmt, index) => {
+                SymbolKind::Parameter(stmt, index) => {
                     format!("stmt:{}:{}", stmt.id(), index)
                 }
-                crate::resolver::SymbolKind::Native(_) => "native".to_string(),
+                SymbolKind::Struct(_) => {
+                    todo!()
+                }
+                SymbolKind::NativeType(_) => {
+                    todo!()
+                }
+                SymbolKind::NativeFn(_) => "native".to_string(),
             })
             .expect("assignment identifier not found");
 
@@ -213,16 +222,18 @@ impl<'a> XmlWriter<'a> {
                     .symbol_id()
                     .map(|sid| &self.symbols[sid.id()])
                     .map(|s| match s.kind() {
-                        crate::resolver::SymbolKind::Let(stmt) => {
+                        SymbolKind::Let(stmt) => {
                             format!("stmt:{stmt}")
                         }
-                        crate::resolver::SymbolKind::LetFn(stmt, _, _) => {
+                        SymbolKind::LetFn(stmt, _, _) => {
                             format!("stmt:{stmt}")
                         }
-                        crate::resolver::SymbolKind::Parameter(stmt, index) => {
+                        SymbolKind::Parameter(stmt, index) => {
                             format!("stmt:{}:{}", stmt.id(), index)
                         }
-                        crate::resolver::SymbolKind::Native(_) => "native".to_string(),
+                        SymbolKind::Struct(_) => todo!(),
+                        SymbolKind::NativeType(_) => todo!(),
+                        SymbolKind::NativeFn(_) => "native".to_string(),
                     })
                     .expect("literal identifier not found");
 
@@ -284,20 +295,22 @@ impl<'a> XmlWriter<'a> {
             .symbol_id()
             .map(|sid| &self.symbols[sid.id()])
             .map(|s| match s.kind() {
-                crate::resolver::SymbolKind::Let(stmt) => {
+                SymbolKind::Let(stmt) => {
                     format!("stmt:{stmt}")
                 }
-                crate::resolver::SymbolKind::LetFn(stmt, _, _) => {
+                SymbolKind::LetFn(stmt, _, _) => {
                     format!("stmt:{stmt}")
                 }
-                crate::resolver::SymbolKind::Parameter(stmt, index) => {
+                SymbolKind::Parameter(stmt, index) => {
                     let param = match self.ast.statement(*stmt).kind() {
                         StatementKind::LetFn(_, params, _, _) => &params[*index],
                         _ => panic!(),
                     };
                     format!("ident:{}", param.identifier().id())
                 }
-                crate::resolver::SymbolKind::Native(native) => {
+                SymbolKind::Struct(_) => todo!(),
+                SymbolKind::NativeType(_) => todo!(),
+                SymbolKind::NativeFn(native) => {
                     format!(
                         "native:{}:{}:{}",
                         native.name(),

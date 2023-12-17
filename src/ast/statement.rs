@@ -34,6 +34,7 @@ pub enum StatementKind {
     Ret(ExprId),
     // todo second Identifier should be a type
     LetFn(Identifier, Vec<Parameter>, Option<Identifier>, ExprId),
+    Struct(Identifier, Vec<Field>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -44,6 +45,35 @@ pub struct Parameter {
 }
 
 impl Parameter {
+    pub fn new(identifier: Identifier, ty: Identifier, span: Span) -> Self {
+        Self {
+            identifier,
+            ty,
+            span,
+        }
+    }
+
+    pub fn identifier(&self) -> &Identifier {
+        &self.identifier
+    }
+
+    pub fn ty(&self) -> &Identifier {
+        &self.ty
+    }
+
+    pub fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Field {
+    identifier: Identifier,
+    ty: Identifier, // todo must be something more complex (a TypeId?), but let's start simple
+    span: Span,
+}
+
+impl Field {
     pub fn new(identifier: Identifier, ty: Identifier, span: Span) -> Self {
         Self {
             identifier,

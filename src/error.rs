@@ -34,7 +34,9 @@ impl Diagnostics {
     }
 
     pub fn push(&mut self, diagnostic: Diagnostic) {
-        self.diagnostics.push(diagnostic);
+        if !self.diagnostics.contains(&diagnostic) {
+            self.diagnostics.push(diagnostic);
+        }
     }
 
     pub fn report_err<S: Into<String>>(

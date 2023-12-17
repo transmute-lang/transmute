@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"struct MyStruct { f0 t0 };\")).parse()"
+expression: "Parser::new(Lexer::new(\"struct MyStruct { f0 t0 }\")).parse()"
 ---
 (
     Ast {
@@ -41,7 +41,7 @@ expression: "Parser::new(Lexer::new(\"struct MyStruct { f0 t0 };\")).parse()"
                         },
                     ],
                 ),
-                span: 1:1; [0, 26],
+                span: 1:1; [0, 25],
             },
         ],
         root: [

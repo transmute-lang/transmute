@@ -19,6 +19,9 @@ expression: "&xml"
       <ident id="ident:10">neg</ident>
       <ident id="ident:11">neq</ident>
       <ident id="ident:12">sub</ident>
+      <ident id="ident:13">boolean</ident>
+      <ident id="ident:14">number</ident>
+      <ident id="ident:15">void</ident>
     </identifiers>
     <stmt id="stmt:0" line="1" column="1" start="0" len="12">
       <let>

@@ -62,6 +62,9 @@ impl<'a> Interpreter<'a> {
                 Value::Void // todo this is wrong
             }
             StatementKind::Ret(e) => self.visit_expression(*e),
+            StatementKind::Struct(_, _) => {
+                todo!()
+            }
         }
     }
 
@@ -146,7 +149,9 @@ impl<'a> Interpreter<'a> {
                     _ => panic!("let fn expected"),
                 }
             }
-            SymbolKind::Native(native) => {
+            SymbolKind::Struct(_) => todo!(),
+            SymbolKind::NativeType(_) => todo!(),
+            SymbolKind::NativeFn(native) => {
                 let env = arguments
                     .iter()
                     .map(|expr| self.visit_expression(*expr))

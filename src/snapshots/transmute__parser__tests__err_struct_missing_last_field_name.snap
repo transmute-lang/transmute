@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"struct MyStruct { f0: type0, : type1 };\")).parse()"
+expression: "Parser::new(Lexer::new(\"struct MyStruct { f0: type0, : type1 }\")).parse()"
 ---
 (
     Ast {
@@ -41,7 +41,7 @@ expression: "Parser::new(Lexer::new(\"struct MyStruct { f0: type0, : type1 };\")
                         },
                     ],
                 ),
-                span: 1:1; [0, 39],
+                span: 1:1; [0, 38],
             },
         ],
         root: [
@@ -58,7 +58,7 @@ expression: "Parser::new(Lexer::new(\"struct MyStruct { f0: type0, : type1 };\")
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    344,
+                    335,
                 ),
             },
         ],

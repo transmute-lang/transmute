@@ -297,6 +297,14 @@ impl<'s> Lexer<'s> {
                 1,
                 span.extend('r'.len_utf8()),
             ),
+            's' => make_keyword(
+                self,
+                chars,
+                "truct",
+                TokenKind::Struct,
+                1,
+                span.extend('s'.len_utf8()),
+            ),
             't' => make_keyword(
                 self,
                 chars,
@@ -469,6 +477,7 @@ pub enum TokenKind {
     Smaller,
     SmallerEqual,
     Star,
+    Struct,
     True,
     While,
     Bad(String),
@@ -488,30 +497,31 @@ impl TokenKind {
             TokenKind::If => 6,
             TokenKind::Else => 7,
             TokenKind::While => 8,
+            TokenKind::Struct => 9,
 
-            TokenKind::Comma => 9,
-            TokenKind::Semicolon => 10,
-            TokenKind::Colon => 11,
+            TokenKind::Comma => 10,
+            TokenKind::Semicolon => 11,
+            TokenKind::Colon => 12,
 
-            TokenKind::CloseCurlyBracket => 12,
-            TokenKind::CloseParenthesis => 13,
-            TokenKind::OpenCurlyBracket => 14,
-            TokenKind::OpenParenthesis => 15,
+            TokenKind::CloseCurlyBracket => 13,
+            TokenKind::CloseParenthesis => 14,
+            TokenKind::OpenCurlyBracket => 15,
+            TokenKind::OpenParenthesis => 16,
 
-            TokenKind::Equal => 16,
+            TokenKind::Equal => 17,
 
-            TokenKind::Star => 17,
-            TokenKind::Slash => 18,
+            TokenKind::Star => 18,
+            TokenKind::Slash => 19,
 
-            TokenKind::Minus => 19,
-            TokenKind::Plus => 20,
+            TokenKind::Minus => 20,
+            TokenKind::Plus => 21,
 
-            TokenKind::EqualEqual => 21,
-            TokenKind::ExclaimEqual => 22,
-            TokenKind::Greater => 23,
-            TokenKind::GreaterEqual => 24,
-            TokenKind::Smaller => 25,
-            TokenKind::SmallerEqual => 26,
+            TokenKind::EqualEqual => 22,
+            TokenKind::ExclaimEqual => 23,
+            TokenKind::Greater => 24,
+            TokenKind::GreaterEqual => 25,
+            TokenKind::Smaller => 26,
+            TokenKind::SmallerEqual => 27,
 
             TokenKind::Eof => 254,
             TokenKind::Bad(_) => 255,
@@ -608,6 +618,9 @@ impl Display for TokenKind {
             }
             TokenKind::Star => {
                 write!(f, "`*`")
+            }
+            TokenKind::Struct => {
+                write!(f, "`struct`")
             }
             TokenKind::True => {
                 write!(f, "`true`")
@@ -873,6 +886,7 @@ mod tests {
     lexer_test_keyword!(keyword_while, "while" => While);
     lexer_test_keyword!(keyword_true, "true" => True);
     lexer_test_keyword!(keyword_false, "false" => False);
+    lexer_test_keyword!(keyword_struct, "struct" => Struct);
 
     macro_rules! lexer_test_fn {
         ($name:ident, $f:ident, $src:expr => $expected:expr) => {

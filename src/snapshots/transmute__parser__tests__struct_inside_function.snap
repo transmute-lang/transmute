@@ -1,11 +1,12 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"let x(if) = { }\")).parse()"
+expression: "Parser::new(Lexer::new(\"let f() = { struct MyStruct {} }\")).parse()"
 ---
 (
     Ast {
         identifiers: [
-            "x",
+            "f",
+            "MyStruct",
         ],
         identifier_refs: [],
         expressions: [
@@ -14,15 +15,34 @@ expression: "Parser::new(Lexer::new(\"let x(if) = { }\")).parse()"
                     id: 0,
                 },
                 kind: Block(
-                    [],
+                    [
+                        StmtId {
+                            id: 0,
+                        },
+                    ],
                 ),
-                span: 1:13; [12, 15],
+                span: 1:11; [10, 32],
             },
         ],
         statements: [
             Statement {
                 id: StmtId {
                     id: 0,
+                },
+                kind: Struct(
+                    Identifier {
+                        id: IdentId {
+                            id: 1,
+                        },
+                        span: 1:20; [19, 27],
+                    },
+                    [],
+                ),
+                span: 1:13; [12, 30],
+            },
+            Statement {
+                id: StmtId {
+                    id: 1,
                 },
                 kind: LetFn(
                     Identifier {
@@ -37,26 +57,16 @@ expression: "Parser::new(Lexer::new(\"let x(if) = { }\")).parse()"
                         id: 0,
                     },
                 ),
-                span: 1:1; [0, 15],
+                span: 1:1; [0, 32],
             },
         ],
         root: [
             StmtId {
-                id: 0,
+                id: 1,
             },
         ],
     },
     Diagnostics {
-        diagnostics: [
-            Diagnostic {
-                message: "Unexpected `if`, expected one of identifier, `)`",
-                span: 1:7; [6, 8],
-                level: Error,
-                generated_at: (
-                    "src/parser.rs",
-                    444,
-                ),
-            },
-        ],
+        diagnostics: [],
     },
 )

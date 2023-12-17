@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"struct MyStruct { field: type ;\")).parse()"
+expression: "Parser::new(Lexer::new(\"struct MyStruct { field: type \")).parse()"
 ---
 (
     Ast {
@@ -41,7 +41,7 @@ expression: "Parser::new(Lexer::new(\"struct MyStruct { field: type ;\")).parse(
                         },
                     ],
                 ),
-                span: 1:1; [0, 31],
+                span: 1:1; [0, 30],
             },
         ],
         root: [
@@ -53,12 +53,12 @@ expression: "Parser::new(Lexer::new(\"struct MyStruct { field: type ;\")).parse(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `;`, expected one of `,`, `}`",
-                span: 1:31; [30, 31],
+                message: "Unexpected `eof`, expected one of `,`, `}`",
+                span: 1:31; [30, 30],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    335,
+                    327,
                 ),
             },
         ],

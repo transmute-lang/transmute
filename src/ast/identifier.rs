@@ -27,6 +27,8 @@ pub struct IdentifierRef {
     id: IdentRefId,
     ident: Identifier,
     /// The referenced symbol id
+    // todo this can be moved to an external structure, build by the Resolver at the same time as
+    //   the symbols
     symbol_id: Option<SymbolId>,
 }
 
