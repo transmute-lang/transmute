@@ -1,6 +1,6 @@
 ---
 source: src/resolver.rs
-expression: "XmlWriter::new(&ast, &symbols).serialize()"
+expression: "XmlWriter::new(&ast, &symbols, &types).serialize()"
 ---
 <?xml version="1.0" encoding="utf-8"?>
 <unit>
@@ -22,9 +22,23 @@ expression: "XmlWriter::new(&ast, &symbols).serialize()"
       <ident id="ident:13">number</ident>
       <ident id="ident:14">void</ident>
     </identifiers>
+    <types>
+      <type id="type:1">
+        <number />
+      </type>
+      <type id="type:2">
+        <boolean />
+      </type>
+      <type id="type:3">
+        <void />
+      </type>
+      <type id="type:4">
+        <function />
+      </type>
+    </types>
     <stmt id="stmt:0" line="1" column="1" start="0" len="13">
       <fn>
-        <identifier ref="ident:0" line="1" column="5" start="4" len="1">x</identifier>
+        <identifier ident-ref="ident:0" line="1" column="5" start="4" len="1">x</identifier>
         <parameters />
         <body line="1" column="11" start="10" len="3">
           <expr id="expr:0" line="1" column="11" start="10" len="3">

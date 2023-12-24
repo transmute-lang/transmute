@@ -17,14 +17,18 @@ impl Default for Natives {
     }
 }
 
+pub const TYPE_NUMBER: &str = "number";
+pub const TYPE_BOOLEAN: &str = "boolean";
+pub const TYPE_VOID: &str = "void";
+
 impl Natives {
     pub fn new() -> Natives {
         let mut natives = Self::empty();
 
         natives.insert_fn(NativeFn {
             name: "neg",
-            parameters: vec![Type::Number],
-            return_type: Type::Number,
+            parameters: vec![TYPE_NUMBER],
+            return_type: TYPE_NUMBER,
             body: |mut params| {
                 let v = params.pop().unwrap().try_to_i64();
                 Value::Number(-v)
@@ -33,8 +37,8 @@ impl Natives {
 
         natives.insert_fn(NativeFn {
             name: "add",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Number,
+            parameters: vec![TYPE_NUMBER, TYPE_NUMBER],
+            return_type: TYPE_NUMBER,
             body: |mut params| {
                 let right = params.pop().unwrap().try_to_i64();
                 let left = params.pop().unwrap().try_to_i64();
@@ -43,8 +47,8 @@ impl Natives {
         });
         natives.insert_fn(NativeFn {
             name: "sub",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Number,
+            parameters: vec![TYPE_NUMBER, TYPE_NUMBER],
+            return_type: TYPE_NUMBER,
             body: |mut params| {
                 let right = params.pop().unwrap().try_to_i64();
                 let left = params.pop().unwrap().try_to_i64();
@@ -53,8 +57,8 @@ impl Natives {
         });
         natives.insert_fn(NativeFn {
             name: "mul",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Number,
+            parameters: vec![TYPE_NUMBER, TYPE_NUMBER],
+            return_type: TYPE_NUMBER,
             body: |mut params| {
                 let right = params.pop().unwrap().try_to_i64();
                 let left = params.pop().unwrap().try_to_i64();
@@ -63,8 +67,8 @@ impl Natives {
         });
         natives.insert_fn(NativeFn {
             name: "div",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Number,
+            parameters: vec![TYPE_NUMBER, TYPE_NUMBER],
+            return_type: TYPE_NUMBER,
             body: |mut params| {
                 let right = params.pop().unwrap().try_to_i64();
                 let left = params.pop().unwrap().try_to_i64();
@@ -73,8 +77,8 @@ impl Natives {
         });
         natives.insert_fn(NativeFn {
             name: "eq",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Boolean,
+            parameters: vec![TYPE_NUMBER, TYPE_NUMBER],
+            return_type: TYPE_BOOLEAN,
             body: |mut params| {
                 let right = params.pop().unwrap().try_to_i64();
                 let left = params.pop().unwrap().try_to_i64();
@@ -83,8 +87,8 @@ impl Natives {
         });
         natives.insert_fn(NativeFn {
             name: "neq",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Boolean,
+            parameters: vec![TYPE_NUMBER, TYPE_NUMBER],
+            return_type: TYPE_BOOLEAN,
             body: |mut params| {
                 let right = params.pop().unwrap().try_to_i64();
                 let left = params.pop().unwrap().try_to_i64();
@@ -93,8 +97,8 @@ impl Natives {
         });
         natives.insert_fn(NativeFn {
             name: "gt",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Boolean,
+            parameters: vec![TYPE_NUMBER, TYPE_NUMBER],
+            return_type: TYPE_BOOLEAN,
             body: |mut params| {
                 let right = params.pop().unwrap().try_to_i64();
                 let left = params.pop().unwrap().try_to_i64();
@@ -103,8 +107,8 @@ impl Natives {
         });
         natives.insert_fn(NativeFn {
             name: "lt",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Boolean,
+            parameters: vec![TYPE_NUMBER, TYPE_NUMBER],
+            return_type: TYPE_BOOLEAN,
             body: |mut params| {
                 let right = params.pop().unwrap().try_to_i64();
                 let left = params.pop().unwrap().try_to_i64();
@@ -113,8 +117,8 @@ impl Natives {
         });
         natives.insert_fn(NativeFn {
             name: "ge",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Boolean,
+            parameters: vec![TYPE_NUMBER, TYPE_NUMBER],
+            return_type: TYPE_BOOLEAN,
             body: |mut params| {
                 let right = params.pop().unwrap().try_to_i64();
                 let left = params.pop().unwrap().try_to_i64();
@@ -123,8 +127,8 @@ impl Natives {
         });
         natives.insert_fn(NativeFn {
             name: "le",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Boolean,
+            parameters: vec![TYPE_NUMBER, TYPE_NUMBER],
+            return_type: TYPE_BOOLEAN,
             body: |mut params| {
                 let right = params.pop().unwrap().try_to_i64();
                 let left = params.pop().unwrap().try_to_i64();
@@ -134,8 +138,8 @@ impl Natives {
 
         natives.insert_fn(NativeFn {
             name: "eq",
-            parameters: vec![Type::Boolean, Type::Boolean],
-            return_type: Type::Boolean,
+            parameters: vec![TYPE_BOOLEAN, TYPE_BOOLEAN],
+            return_type: TYPE_BOOLEAN,
             body: |mut params| {
                 let right = params.pop().unwrap().try_to_bool();
                 let left = params.pop().unwrap().try_to_bool();
@@ -144,8 +148,8 @@ impl Natives {
         });
         natives.insert_fn(NativeFn {
             name: "neq",
-            parameters: vec![Type::Boolean, Type::Boolean],
-            return_type: Type::Boolean,
+            parameters: vec![TYPE_BOOLEAN, TYPE_BOOLEAN],
+            return_type: TYPE_BOOLEAN,
             body: |mut params| {
                 let right = params.pop().unwrap().try_to_bool();
                 let left = params.pop().unwrap().try_to_bool();
@@ -154,15 +158,15 @@ impl Natives {
         });
 
         natives.insert_type(NativeType {
-            name: "number",
+            name: TYPE_NUMBER,
             ty: Type::Number,
         });
         natives.insert_type(NativeType {
-            name: "boolean",
+            name: TYPE_BOOLEAN,
             ty: Type::Boolean,
         });
         natives.insert_type(NativeType {
-            name: "void",
+            name: TYPE_VOID,
             ty: Type::Void,
         });
 
@@ -255,8 +259,8 @@ impl From<&Natives> for Ast {
 
 pub struct NativeFn {
     name: &'static str,
-    parameters: Vec<Type>,
-    return_type: Type,
+    parameters: Vec<&'static str>,
+    return_type: &'static str,
     body: fn(Vec<Value>) -> Value,
 }
 
@@ -265,16 +269,16 @@ impl NativeFn {
         self.name
     }
 
-    pub fn parameters(&self) -> &Vec<Type> {
+    pub fn parameters(&self) -> &[&'static str] {
         &self.parameters
     }
 
-    pub fn return_type(&self) -> Type {
+    pub fn return_type(&self) -> &'static str {
         self.return_type
     }
 
-    pub fn apply(&self, parameters: Vec<Value>) -> Value {
-        (self.body)(parameters)
+    pub fn body(self) -> fn(Vec<Value>) -> Value {
+        self.body
     }
 }
 
@@ -302,7 +306,7 @@ impl Ord for NativeFn {
             Ordering::Equal => {}
             o => return o,
         };
-        self.return_type.cmp(&other.return_type)
+        self.return_type.cmp(other.return_type)
     }
 }
 
@@ -344,8 +348,8 @@ impl NativeType {
         self.name
     }
 
-    pub fn ty(&self) -> Type {
-        self.ty
+    pub fn ty(&self) -> &Type {
+        &self.ty
     }
 }
 
@@ -397,7 +401,7 @@ mod tests {
             fn $name() {
                 let native = Natives::default();
                 let values = vec![$($value),*];
-                let types = values.iter().map(|v| v.ty()).collect::<Vec<Type>>();
+                let types = values.iter().map(|v| v.type_kind().to_string()).collect::<Vec<String>>();
 
                 let f = if let Some(function) = native.functions.get($function) {
                     function.iter().find(|f| f.parameters == types)
@@ -405,9 +409,9 @@ mod tests {
                     None
                 };
 
-                let actual = f
+                let actual = (f
                     .unwrap()
-                    .apply(values);
+                    .body)(values);
 
                 assert_eq!(actual, $expected);
             }

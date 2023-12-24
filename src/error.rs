@@ -39,6 +39,10 @@ impl Diagnostics {
         }
     }
 
+    pub fn push_all(&mut self, diagnostics: Vec<Diagnostic>) {
+        diagnostics.into_iter().for_each(|d| self.push(d));
+    }
+
     pub fn report_err<S: Into<String>>(
         &mut self,
         message: S,
@@ -108,6 +112,14 @@ impl Diagnostic {
             level,
             generated_at,
         }
+    }
+
+    pub fn error<S: Into<String>>(
+        message: S,
+        span: Span,
+        generated_at: (&'static str, u32),
+    ) -> Self {
+        Self::new(message, span, Level::Error, generated_at)
     }
 
     pub fn message(&self) -> &str {

@@ -21,6 +21,17 @@ expression: "&xml"
       <ident id="ident:12">number</ident>
       <ident id="ident:13">void</ident>
     </identifiers>
+    <types>
+      <type id="type:1">
+        <number />
+      </type>
+      <type id="type:2">
+        <boolean />
+      </type>
+      <type id="type:3">
+        <void />
+      </type>
+    </types>
     <stmt id="stmt:0" line="1" column="1" start="0" len="7">
       <ret line="1" column="1" start="0" len="7">
         <expr id="expr:0" line="1" column="5" start="4" len="2">

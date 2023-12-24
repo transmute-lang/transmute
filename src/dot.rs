@@ -143,7 +143,7 @@ impl<'a> DotBuilder<'a> {
             StatementKind::LetFn(ident, params, ret, expr) => {
                 self.visit_function(ident, params, ret, expr)
             }
-            StatementKind::Struct(ident, fields) => self.visit_struct(ident, &fields),
+            StatementKind::Struct(ident, fields) => self.visit_struct(ident, fields),
         };
 
         self.stmt_map.insert(stmt, node_id);
@@ -245,9 +245,9 @@ impl<'a> DotBuilder<'a> {
                         }
                         SymbolKind::Struct(_) => todo!(),
                         SymbolKind::NativeType(_) => todo!(),
-                        SymbolKind::NativeFn(native) => self.insert_node(Node::NativeIdentifier(
-                            self.ast.identifier_id(native.name()),
-                        )),
+                        SymbolKind::NativeFn(ident, _, _, _) => {
+                            self.insert_node(Node::NativeIdentifier(*ident))
+                        }
                     }
                 } else {
                     self.insert_node(Node::Identifier(ident.ident().id()))
@@ -294,9 +294,9 @@ impl<'a> DotBuilder<'a> {
                     }
                     _ => panic!(),
                 },
-                SymbolKind::NativeFn(native) => self.insert_node(Node::NativeFunctionCall(
-                    self.ast.identifier_id(native.name()),
-                )),
+                SymbolKind::NativeFn(ident, _, _, _) => {
+                    self.insert_node(Node::NativeFunctionCall(*ident))
+                }
                 _ => panic!(),
             }
         } else {
@@ -520,7 +520,7 @@ impl<'a> Dot<'a> {
     fn node_shape(node: &Node) -> &'static str {
         match node {
             Node::List | Node::Empty => "point",
-            Node::LetFn(_, _, _) | Node::Struct(_,_) => "record",
+            Node::LetFn(_, _, _) | Node::Struct(_, _) => "record",
             _ => "plaintext",
         }
     }
@@ -591,7 +591,7 @@ mod tests {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols) = Resolver::new(ast, Natives::default())
+                let (ast, symbols, _) = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
 

@@ -610,11 +610,11 @@ mod tests {
 
         let ast = ast1.merge(ast2);
 
-        let (ast, symbols) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        let xml = XmlWriter::new(&ast, &symbols).serialize();
+        let xml = XmlWriter::new(&ast, &symbols, &types).serialize();
 
         assert_snapshot!(&xml);
     }
@@ -629,11 +629,11 @@ mod tests {
 
         let ast = ast1.merge(ast2);
 
-        let (ast, symbols) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        let xml = XmlWriter::new(&ast, &symbols).serialize();
+        let xml = XmlWriter::new(&ast, &symbols, &types).serialize();
 
         assert_snapshot!(&xml);
     }
@@ -654,11 +654,11 @@ mod tests {
 
         let ast = ast1.merge(ast2);
 
-        let (ast, symbols) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        let xml = XmlWriter::new(&ast, &symbols).serialize();
+        let xml = XmlWriter::new(&ast, &symbols, &types).serialize();
 
         assert_snapshot!(&xml);
     }
@@ -679,11 +679,11 @@ mod tests {
 
         let ast = ast1.merge(ast2);
 
-        let (ast, symbols) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        let xml = XmlWriter::new(&ast, &symbols).serialize();
+        let xml = XmlWriter::new(&ast, &symbols, &types).serialize();
 
         assert_snapshot!(&xml);
     }

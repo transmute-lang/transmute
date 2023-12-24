@@ -151,13 +151,13 @@ impl<'a> Interpreter<'a> {
             }
             SymbolKind::Struct(_) => todo!(),
             SymbolKind::NativeType(_) => todo!(),
-            SymbolKind::NativeFn(native) => {
+            SymbolKind::NativeFn(_, _, _, body) => {
                 let env = arguments
                     .iter()
                     .map(|expr| self.visit_expression(*expr))
                     .collect::<Vec<Value>>();
 
-                native.apply(env)
+                body(env)
             }
         }
     }
@@ -251,11 +251,11 @@ impl Value {
         }
     }
 
-    pub fn ty(&self) -> Type {
+    pub fn type_kind(&self) -> Type {
         match self {
             Value::Boolean(_) => Type::Boolean,
             Value::Number(_) => Type::Number,
-            Value::RetVal(v) => v.ty(),
+            Value::RetVal(v) => v.type_kind(),
             Value::Void => Type::Void,
         }
     }
@@ -314,7 +314,7 @@ mod tests {
                 let (ast, diagnostics) = parser.parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols) = Resolver::new(ast, Natives::default())
+                let (ast, symbols, _) = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
 
@@ -330,7 +330,7 @@ mod tests {
                 let (ast, diagnostics) = parser.parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols) = Resolver::new(ast, Natives::default())
+                let (ast, symbols, _) = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
 
