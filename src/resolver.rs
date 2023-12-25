@@ -20,8 +20,7 @@ pub struct Resolver {
     ast: Ast,
     symbols: Rc<RefCell<Vec<Symbol>>>,
     types: RefCell<Vec<Type>>,
-    // todo not only expressions, we miss parameters and variables here
-    expression_types: Vec<Option<Result<TypeId, ()>>>,
+    type_bindings: HashMap<Typed, Result<TypeId, ()>>,
     diagnostics: Diagnostics,
     scope_stack: Vec<Scope>,
 }
@@ -29,13 +28,12 @@ pub struct Resolver {
 impl Resolver {
     pub fn new(ast: Ast, natives: Natives) -> Self {
         let ast = ast.merge(Into::<Ast>::into(&natives));
-        let expression_count = ast.expressions_count();
         let symbols = Rc::new(RefCell::new(Vec::<Symbol>::new()));
         let mut me = Self {
             ast,
             symbols: symbols.clone(),
             types: Default::default(),
-            expression_types: vec![None; expression_count],
+            type_bindings: Default::default(),
             diagnostics: Default::default(),
             scope_stack: vec![Scope::new(symbols)],
         };
@@ -79,7 +77,9 @@ impl Resolver {
         me
     }
 
-    pub fn resolve(mut self) -> Result<(Ast, Vec<Symbol>, Vec<Type>), Diagnostics> {
+    pub fn resolve(
+        mut self,
+    ) -> Result<(Ast, Vec<Symbol>, Vec<Type>, HashMap<Typed, TypeId>), Diagnostics> {
         let stmts = self.ast.statements().to_vec();
 
         self.insert_structs(&stmts);
@@ -92,6 +92,13 @@ impl Resolver {
                 self.ast,
                 self.symbols.replace(vec![]),
                 self.types.replace(vec![]),
+                self.type_bindings
+                    .iter()
+                    .filter_map(|(id, t)| match t {
+                        Ok(t) => Some((*id, *t)),
+                        Err(_) => None,
+                    })
+                    .collect::<HashMap<Typed, TypeId>>(),
             ))
         } else {
             Err(self.diagnostics)
@@ -191,9 +198,9 @@ impl Resolver {
     }
 
     fn visit_expression(&mut self, expr: ExprId) -> Result<TypeId, ()> {
-        let expr_id = expr.id();
-        if let Some(ty) = self.expression_types[expr_id] {
-            return ty;
+        let expr_id = expr;
+        if let Some(ty) = self.type_bindings.get(&Typed::Expression(expr_id)) {
+            return ty.clone();
         }
 
         let expr = self.ast.expression(expr);
@@ -223,7 +230,7 @@ impl Resolver {
             }
         };
 
-        self.expression_types[expr_id] = Some(ty);
+        self.type_bindings.insert(Typed::Expression(expr_id), ty);
         ty
     }
 
@@ -507,7 +514,7 @@ impl Resolver {
                     Ok(void_type_id)
                 }
                 StatementKind::Struct(_ident, fields) => {
-                    self.visit_struct(&fields.to_vec());
+                    self.visit_struct(*stmt, &fields.to_vec());
                     Ok(void_type_id)
                 }
             };
@@ -561,13 +568,18 @@ impl Resolver {
 
         for (index, parameter) in params.iter().enumerate() {
             let ty = match self.resolve_type(parameter.ty().id(), parameter.ty().span()) {
-                Ok(ty) => ty,
+                Ok(ty) => {
+                    self.type_bindings
+                        .insert(Typed::Parameter(stmt, index), Ok(ty));
+                    ty
+                }
                 Err(d) => {
+                    self.type_bindings
+                        .insert(Typed::Parameter(stmt, index), Err(()));
                     self.diagnostics.push_all(d);
                     self.type_id(Type::Void)
                 }
             };
-            // todo save parameter type somewhere
 
             self.insert_symbol(
                 parameter.identifier().id(),
@@ -622,10 +634,10 @@ impl Resolver {
         self.pop_scope();
     }
 
-    fn visit_struct(&mut self, fields: &[Field]) {
+    fn visit_struct(&mut self, stmt: StmtId, fields: &[Field]) {
         let mut used_identifiers = Vec::with_capacity(fields.len());
 
-        for field in fields {
+        for (index, field) in fields.iter().enumerate() {
             if used_identifiers.contains(&field.identifier().id()) {
                 self.diagnostics.report_err(
                     format!(
@@ -639,7 +651,12 @@ impl Resolver {
                 used_identifiers.push(field.identifier().id());
             }
 
-            let _ = self.resolve_type(field.ty().id(), field.ty().span());
+            match self.resolve_type(field.ty().id(), field.ty().span()) {
+                Ok(ty) => {
+                    self.type_bindings.insert(Typed::Field(stmt, index), Ok(ty));
+                }
+                Err(d) => self.diagnostics.push_all(d),
+            }
         }
     }
 
@@ -857,6 +874,13 @@ impl Display for Type {
     }
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum Typed {
+    Expression(ExprId),
+    Parameter(StmtId, usize),
+    Field(StmtId, usize),
+}
+
 #[cfg(test)]
 mod tests {
     use crate::dot::Dot;
@@ -874,11 +898,11 @@ mod tests {
             Parser::new(Lexer::new("let x(n: number): number = { n; }")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("no error expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types).serialize());
+        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize());
     }
 
     #[test]
@@ -887,11 +911,11 @@ mod tests {
             Parser::new(Lexer::new("let x(): number = { let n = 0; n; }")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types).serialize());
+        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize());
     }
 
     #[test]
@@ -899,11 +923,11 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new("let x() = { } x();")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types).serialize());
+        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize());
     }
 
     #[test]
@@ -914,11 +938,11 @@ mod tests {
         .parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types).serialize());
+        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize());
     }
 
     #[test]
@@ -949,11 +973,12 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new("let x = true; let x = 1; x + 1;")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, types) = Resolver::new(ast, Natives::default()).resolve().unwrap();
+        let (ast, symbols, types, type_bindings) =
+            Resolver::new(ast, Natives::default()).resolve().unwrap();
 
         assert_snapshot!(
             "rebinding-xml",
-            XmlWriter::new(&ast, &symbols, &types).serialize()
+            XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize()
         );
         assert_snapshot!("rebinding-dot", Dot::new(&ast, &symbols).serialize());
     }

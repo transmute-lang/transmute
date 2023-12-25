@@ -40,9 +40,9 @@ expression: "&xml"
     </types>
     <stmt id="stmt:0" line="1" column="1" start="0" len="15">
       <let>
-        <identifier ref="ident:0" line="1" column="5" start="4" len="3">c_1</identifier>
+        <identifier ident-ref="ident:0" line="1" column="5" start="4" len="3">c_1</identifier>
         <expression line="1" column="11" start="10" len="4">
-          <expr id="expr:0" line="1" column="11" start="10" len="4">
+          <expr id="expr:0" type-ref="type:2" line="1" column="11" start="10" len="4">
             <bool>true</bool>
           </expr>
         </expression>
@@ -50,9 +50,9 @@ expression: "&xml"
     </stmt>
     <stmt id="stmt:1" line="1" column="17" start="16" len="12">
       <let>
-        <identifier ref="ident:1" line="1" column="21" start="20" len="3">t_1</identifier>
+        <identifier ident-ref="ident:1" line="1" column="21" start="20" len="3">t_1</identifier>
         <expression line="1" column="27" start="26" len="1">
-          <expr id="expr:1" line="1" column="27" start="26" len="1">
+          <expr id="expr:1" type-ref="type:1" line="1" column="27" start="26" len="1">
             <number>1</number>
           </expr>
         </expression>
@@ -60,27 +60,27 @@ expression: "&xml"
     </stmt>
     <stmt id="stmt:2" line="1" column="30" start="29" len="12">
       <let>
-        <identifier ref="ident:2" line="1" column="34" start="33" len="3">f_1</identifier>
+        <identifier ident-ref="ident:2" line="1" column="34" start="33" len="3">f_1</identifier>
         <expression line="1" column="40" start="39" len="1">
-          <expr id="expr:2" line="1" column="40" start="39" len="1">
+          <expr id="expr:2" type-ref="type:1" line="1" column="40" start="39" len="1">
             <number>0</number>
           </expr>
         </expression>
       </let>
     </stmt>
     <stmt id="stmt:5" line="1" column="43" start="42" len="29">
-      <expr id="expr:8" line="1" column="43" start="42" len="29">
+      <expr id="expr:8" type-ref="type:1" line="1" column="43" start="42" len="29">
         <if>
           <condition>
-            <expr id="expr:3" line="1" column="46" start="45" len="3">
+            <expr id="expr:3" type-ref="type:2" line="1" column="46" start="45" len="3">
               <identifier-ref id="ident-ref:0" ident-ref="ident:0" target-id="stmt:0">c_1</identifier-ref>
             </expr>
           </condition>
           <true>
-            <expr id="expr:5" line="1" column="50" start="49" len="8">
+            <expr id="expr:5" type-ref="type:1" line="1" column="50" start="49" len="8">
               <block>
                 <stmt id="stmt:3" line="1" column="52" start="51" len="4">
-                  <expr id="expr:4" line="1" column="52" start="51" len="3">
+                  <expr id="expr:4" type-ref="type:1" line="1" column="52" start="51" len="3">
                     <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="stmt:1">t_1</identifier-ref>
                   </expr>
                 </stmt>
@@ -88,10 +88,10 @@ expression: "&xml"
             </expr>
           </true>
           <false>
-            <expr id="expr:7" line="1" column="64" start="63" len="8">
+            <expr id="expr:7" type-ref="type:1" line="1" column="64" start="63" len="8">
               <block>
                 <stmt id="stmt:4" line="1" column="66" start="65" len="4">
-                  <expr id="expr:6" line="1" column="66" start="65" len="3">
+                  <expr id="expr:6" type-ref="type:1" line="1" column="66" start="65" len="3">
                     <identifier-ref id="ident-ref:2" ident-ref="ident:2" target-id="stmt:2">f_1</identifier-ref>
                   </expr>
                 </stmt>
@@ -103,9 +103,9 @@ expression: "&xml"
     </stmt>
     <stmt id="stmt:6" line="1" column="1" start="0" len="15">
       <let>
-        <identifier ref="ident:3" line="1" column="5" start="4" len="3">c_2</identifier>
+        <identifier ident-ref="ident:3" line="1" column="5" start="4" len="3">c_2</identifier>
         <expression line="1" column="11" start="10" len="4">
-          <expr id="expr:9" line="1" column="11" start="10" len="4">
+          <expr id="expr:9" type-ref="type:2" line="1" column="11" start="10" len="4">
             <bool>true</bool>
           </expr>
         </expression>
@@ -113,9 +113,9 @@ expression: "&xml"
     </stmt>
     <stmt id="stmt:7" line="1" column="17" start="16" len="12">
       <let>
-        <identifier ref="ident:4" line="1" column="21" start="20" len="3">t_2</identifier>
+        <identifier ident-ref="ident:4" line="1" column="21" start="20" len="3">t_2</identifier>
         <expression line="1" column="27" start="26" len="1">
-          <expr id="expr:10" line="1" column="27" start="26" len="1">
+          <expr id="expr:10" type-ref="type:1" line="1" column="27" start="26" len="1">
             <number>1</number>
           </expr>
         </expression>
@@ -123,27 +123,27 @@ expression: "&xml"
     </stmt>
     <stmt id="stmt:8" line="1" column="30" start="29" len="12">
       <let>
-        <identifier ref="ident:5" line="1" column="34" start="33" len="3">f_2</identifier>
+        <identifier ident-ref="ident:5" line="1" column="34" start="33" len="3">f_2</identifier>
         <expression line="1" column="40" start="39" len="1">
-          <expr id="expr:11" line="1" column="40" start="39" len="1">
+          <expr id="expr:11" type-ref="type:1" line="1" column="40" start="39" len="1">
             <number>0</number>
           </expr>
         </expression>
       </let>
     </stmt>
     <stmt id="stmt:11" line="1" column="43" start="42" len="29">
-      <expr id="expr:17" line="1" column="43" start="42" len="29">
+      <expr id="expr:17" type-ref="type:1" line="1" column="43" start="42" len="29">
         <if>
           <condition>
-            <expr id="expr:12" line="1" column="46" start="45" len="3">
+            <expr id="expr:12" type-ref="type:2" line="1" column="46" start="45" len="3">
               <identifier-ref id="ident-ref:3" ident-ref="ident:3" target-id="stmt:6">c_2</identifier-ref>
             </expr>
           </condition>
           <true>
-            <expr id="expr:14" line="1" column="50" start="49" len="8">
+            <expr id="expr:14" type-ref="type:1" line="1" column="50" start="49" len="8">
               <block>
                 <stmt id="stmt:9" line="1" column="52" start="51" len="4">
-                  <expr id="expr:13" line="1" column="52" start="51" len="3">
+                  <expr id="expr:13" type-ref="type:1" line="1" column="52" start="51" len="3">
                     <identifier-ref id="ident-ref:4" ident-ref="ident:4" target-id="stmt:7">t_2</identifier-ref>
                   </expr>
                 </stmt>
@@ -151,10 +151,10 @@ expression: "&xml"
             </expr>
           </true>
           <false>
-            <expr id="expr:16" line="1" column="64" start="63" len="8">
+            <expr id="expr:16" type-ref="type:1" line="1" column="64" start="63" len="8">
               <block>
                 <stmt id="stmt:10" line="1" column="66" start="65" len="4">
-                  <expr id="expr:15" line="1" column="66" start="65" len="3">
+                  <expr id="expr:15" type-ref="type:1" line="1" column="66" start="65" len="3">
                     <identifier-ref id="ident-ref:5" ident-ref="ident:5" target-id="stmt:8">f_2</identifier-ref>
                   </expr>
                 </stmt>

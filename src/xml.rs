@@ -1,11 +1,12 @@
 use crate::ast::expression::{Expression, ExpressionKind};
 use crate::ast::identifier::Identifier;
-use crate::ast::ids::{ExprId, IdentRefId, StmtId};
+use crate::ast::ids::{ExprId, IdentRefId, StmtId, TypeId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Field, Parameter, Statement, StatementKind};
 use crate::ast::Ast;
-use crate::resolver::{Symbol, SymbolKind, Type};
+use crate::resolver::{Symbol, SymbolKind, Type, Typed};
+use std::collections::HashMap;
 use std::io;
 use std::io::Write;
 use xml::writer::XmlEvent;
@@ -15,11 +16,17 @@ pub struct XmlWriter<'a> {
     ast: &'a Ast,
     symbols: &'a Vec<Symbol>,
     types: &'a Vec<Type>,
+    type_bindings: &'a HashMap<Typed, TypeId>,
     writer: EventWriter<Vec<u8>>,
 }
 
 impl<'a> XmlWriter<'a> {
-    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>, types: &'a Vec<Type>) -> Self {
+    pub fn new(
+        ast: &'a Ast,
+        symbols: &'a Vec<Symbol>,
+        types: &'a Vec<Type>,
+        type_bindings: &'a HashMap<Typed, TypeId>,
+    ) -> Self {
         let writer = EmitterConfig::new()
             .perform_indent(true)
             .create_writer(vec![]);
@@ -27,6 +34,7 @@ impl<'a> XmlWriter<'a> {
             ast,
             symbols,
             types,
+            type_bindings,
             writer,
         }
     }
@@ -62,31 +70,32 @@ impl<'a> XmlWriter<'a> {
                 Type::Boolean => {
                     self.emit(XmlEvent::start_element(ty.to_string().as_str()));
                     self.emit(XmlEvent::end_element());
-                },
+                }
                 Type::Function => {
                     // todo improve
                     self.emit(XmlEvent::start_element("function"));
                     self.emit(XmlEvent::end_element());
-                },
+                }
                 Type::Number => {
                     self.emit(XmlEvent::start_element(ty.to_string().as_str()));
                     self.emit(XmlEvent::end_element());
-                },
+                }
                 Type::Void => {
                     self.emit(XmlEvent::start_element(ty.to_string().as_str()));
                     self.emit(XmlEvent::end_element());
-                },
+                }
                 Type::Struct(fields) => {
                     self.emit(XmlEvent::start_element("struct"));
                     for (ident, ty) in fields.iter() {
-                        self.emit(XmlEvent::start_element("field")
-                            .attr("ident-ref", &format!("ident:{}", ident.id()))
-                            .attr("type-ref", &format!("type:{}", ty.id()))
+                        self.emit(
+                            XmlEvent::start_element("field")
+                                .attr("ident-ref", &format!("ident:{}", ident.id()))
+                                .attr("type-ref", &format!("type:{}", ty.id())),
                         );
                         self.emit(XmlEvent::end_element());
                     }
                     self.emit(XmlEvent::end_element());
-                },
+                }
                 Type::None => unreachable!(),
             }
 
@@ -152,6 +161,16 @@ impl<'a> XmlWriter<'a> {
         self.emit(
             XmlEvent::start_element("expr")
                 .attr("id", &format!("expr:{}", expr.id()))
+                .attr(
+                    "type-ref",
+                    &format!(
+                        "type:{}",
+                        self.type_bindings
+                            .get(&Typed::Expression(expr.id()))
+                            .unwrap()
+                            .id()
+                    ),
+                )
                 .attr("line", &expr.span().line().to_string())
                 .attr("column", &expr.span().column().to_string())
                 .attr("start", &expr.span().start().to_string())
@@ -442,7 +461,7 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("identifier")
-                .attr("ref", &format!("ident:{}", ident.id()))
+                .attr("ident-ref", &format!("ident:{}", ident.id()))
                 .attr("line", &ident.span().line().to_string())
                 .attr("column", &ident.span().column().to_string())
                 .attr("start", &ident.span().start().to_string())
@@ -516,8 +535,17 @@ impl<'a> XmlWriter<'a> {
         for (index, param) in params.iter().enumerate() {
             self.emit(
                 XmlEvent::start_element("parameter")
-                    // todo add type-ref
                     .attr("id", &format!("stmt:{stmt_id}:{index}"))
+                    .attr(
+                        "type-ref",
+                        &format!(
+                            "type:{}",
+                            self.type_bindings
+                                .get(&Typed::Parameter(stmt_id, index))
+                                .unwrap()
+                                .id()
+                        ),
+                    )
                     .attr("line", &param.span().line().to_string())
                     .attr("column", &param.span().column().to_string())
                     .attr("start", &param.span().start().to_string())
@@ -581,31 +609,46 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::start_element("fields"));
-        for (index, field)  in fields.iter().enumerate() {
-            self.emit(XmlEvent::start_element("field")
-                .attr("id", &format!("stmt:{stmt_id}:{index}"))
-                          .attr("line", &field.span().line().to_string())
-                          .attr("column", &field.span().column().to_string())
-                          .attr("start", &field.span().start().to_string())
-                          .attr("len", &field.span().len().to_string()));
-
-            self.emit(XmlEvent::start_element("name")
-                .attr("ident-ref", &format!("ident:{}", field.identifier().id()))
-                .attr("line", &field.identifier().span().line().to_string())
-                .attr("column", &field.identifier().span().column().to_string())
-                .attr("start", &field.identifier().span().start().to_string())
-                .attr("len", &field.identifier().span().len().to_string())
+        for (index, field) in fields.iter().enumerate() {
+            self.emit(
+                XmlEvent::start_element("field")
+                    .attr("id", &format!("stmt:{stmt_id}:{index}"))
+                    .attr("line", &field.span().line().to_string())
+                    .attr("column", &field.span().column().to_string())
+                    .attr("start", &field.span().start().to_string())
+                    .attr("len", &field.span().len().to_string()),
             );
-            self.emit(XmlEvent::Characters(self.ast.identifier(field.identifier().id())));
+
+            self.emit(
+                XmlEvent::start_element("name")
+                    .attr("ident-ref", &format!("ident:{}", field.identifier().id()))
+                    .attr("line", &field.identifier().span().line().to_string())
+                    .attr("column", &field.identifier().span().column().to_string())
+                    .attr("start", &field.identifier().span().start().to_string())
+                    .attr("len", &field.identifier().span().len().to_string()),
+            );
+            self.emit(XmlEvent::Characters(
+                self.ast.identifier(field.identifier().id()),
+            ));
             self.emit(XmlEvent::end_element()); // name
 
-            self.emit(XmlEvent::start_element("type")
-                .attr("ident-ref", &format!("ident:{}", field.ty().id()))
-                // todo add type-ref
-                .attr("line", &field.ty().span().line().to_string())
-                .attr("column", &field.ty().span().column().to_string())
-                .attr("start", &field.ty().span().start().to_string())
-                .attr("len", &field.ty().span().len().to_string())
+            self.emit(
+                XmlEvent::start_element("type")
+                    .attr("ident-ref", &format!("ident:{}", field.ty().id()))
+                    .attr(
+                        "type-ref",
+                        &format!(
+                            "type-ref:{}",
+                            self.type_bindings
+                                .get(&Typed::Field(stmt_id, index))
+                                .unwrap()
+                                .id()
+                        ),
+                    )
+                    .attr("line", &field.ty().span().line().to_string())
+                    .attr("column", &field.ty().span().column().to_string())
+                    .attr("start", &field.ty().span().start().to_string())
+                    .attr("len", &field.ty().span().len().to_string()),
             );
             self.emit(XmlEvent::Characters(self.ast.identifier(field.ty().id())));
             self.emit(XmlEvent::end_element()); // type
@@ -634,11 +677,11 @@ mod tests {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols, types) = Resolver::new(ast, Natives::default())
+                let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("no error expected");
 
-                let xml = XmlWriter::new(&ast, &symbols, &types).serialize();
+                let xml = XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize();
                 assert_snapshot!(&xml);
             }
         };

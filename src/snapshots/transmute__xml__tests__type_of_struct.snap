@@ -61,11 +61,11 @@ expression: "&xml"
         <fields>
           <field id="stmt:0:0" line="2" column="28" start="28" len="9">
             <name ident-ref="ident:1" line="2" column="28" start="28" len="1">x</name>
-            <type ident-ref="ident:2" line="2" column="31" start="31" len="6">number</type>
+            <type ident-ref="ident:2" type-ref="type-ref:1" line="2" column="31" start="31" len="6">number</type>
           </field>
           <field id="stmt:0:1" line="2" column="39" start="39" len="9">
             <name ident-ref="ident:3" line="2" column="39" start="39" len="1">y</name>
-            <type ident-ref="ident:2" line="2" column="42" start="42" len="6">number</type>
+            <type ident-ref="ident:2" type-ref="type-ref:1" line="2" column="42" start="42" len="6">number</type>
           </field>
         </fields>
       </struct>
@@ -76,11 +76,11 @@ expression: "&xml"
         <fields>
           <field id="stmt:1:0" line="3" column="30" start="80" len="11">
             <name ident-ref="ident:5" line="3" column="30" start="80" len="4">from</name>
-            <type ident-ref="ident:0" line="3" column="36" start="86" len="5">Point</type>
+            <type ident-ref="ident:0" type-ref="type-ref:4" line="3" column="36" start="86" len="5">Point</type>
           </field>
           <field id="stmt:1:1" line="3" column="43" start="93" len="9">
             <name ident-ref="ident:6" line="3" column="43" start="93" len="2">to</name>
-            <type ident-ref="ident:0" line="3" column="47" start="97" len="5">Point</type>
+            <type ident-ref="ident:0" type-ref="type-ref:4" line="3" column="47" start="97" len="5">Point</type>
           </field>
         </fields>
       </struct>
@@ -89,13 +89,13 @@ expression: "&xml"
       <fn>
         <identifier ident-ref="ident:7" line="4" column="17" start="121" len="3">len</identifier>
         <parameters>
-          <parameter id="stmt:2:0" line="4" column="21" start="125" len="12">
+          <parameter id="stmt:2:0" type-ref="type:5" line="4" column="21" start="125" len="12">
             <name ident-ref="ident:8" line="4" column="21" start="125" len="3">seg</name>
             <type ident-ref="ident:4" line="4" column="26" start="130" len="7">Segment</type>
           </parameter>
         </parameters>
         <body line="4" column="37" start="141" len="2">
-          <expr id="expr:0" line="4" column="37" start="141" len="2">
+          <expr id="expr:0" type-ref="type:3" line="4" column="37" start="141" len="2">
             <block />
           </expr>
         </body>

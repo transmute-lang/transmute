@@ -35,9 +35,9 @@ expression: "&xml"
     </types>
     <stmt id="stmt:0" line="1" column="1" start="0" len="15">
       <let>
-        <identifier ref="ident:0" line="1" column="5" start="4" len="5">ident</identifier>
+        <identifier ident-ref="ident:0" line="1" column="5" start="4" len="5">ident</identifier>
         <expression line="1" column="13" start="12" len="2">
-          <expr id="expr:0" line="1" column="13" start="12" len="2">
+          <expr id="expr:0" type-ref="type:1" line="1" column="13" start="12" len="2">
             <number>42</number>
           </expr>
         </expression>

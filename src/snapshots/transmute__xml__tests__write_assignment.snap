@@ -35,20 +35,20 @@ expression: "&xml"
     </types>
     <stmt id="stmt:0" line="1" column="1" start="0" len="10">
       <let>
-        <identifier ref="ident:0" line="1" column="5" start="4" len="1">n</identifier>
+        <identifier ident-ref="ident:0" line="1" column="5" start="4" len="1">n</identifier>
         <expression line="1" column="9" start="8" len="1">
-          <expr id="expr:0" line="1" column="9" start="8" len="1">
+          <expr id="expr:0" type-ref="type:1" line="1" column="9" start="8" len="1">
             <number>0</number>
           </expr>
         </expression>
       </let>
     </stmt>
     <stmt id="stmt:1" line="1" column="12" start="11" len="7">
-      <expr id="expr:2" line="1" column="12" start="11" len="6">
+      <expr id="expr:2" type-ref="type:1" line="1" column="12" start="11" len="6">
         <assign ident-ref="ident:0" target-id="stmt:0">
           <identifier>n</identifier>
           <expression>
-            <expr id="expr:1" line="1" column="16" start="15" len="2">
+            <expr id="expr:1" type-ref="type:1" line="1" column="16" start="15" len="2">
               <number>42</number>
             </expr>
           </expression>

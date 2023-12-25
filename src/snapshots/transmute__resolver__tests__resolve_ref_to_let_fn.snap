@@ -1,6 +1,6 @@
 ---
 source: src/resolver.rs
-expression: "XmlWriter::new(&ast, &symbols, &types).serialize()"
+expression: "XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize()"
 ---
 <?xml version="1.0" encoding="utf-8"?>
 <unit>
@@ -41,14 +41,14 @@ expression: "XmlWriter::new(&ast, &symbols, &types).serialize()"
         <identifier ident-ref="ident:0" line="1" column="5" start="4" len="1">x</identifier>
         <parameters />
         <body line="1" column="11" start="10" len="3">
-          <expr id="expr:0" line="1" column="11" start="10" len="3">
+          <expr id="expr:0" type-ref="type:3" line="1" column="11" start="10" len="3">
             <block />
           </expr>
         </body>
       </fn>
     </stmt>
     <stmt id="stmt:1" line="1" column="15" start="14" len="4">
-      <expr id="expr:1" line="1" column="15" start="14" len="3">
+      <expr id="expr:1" type-ref="type:3" line="1" column="15" start="14" len="3">
         <call line="1" column="15" start="14" len="3" ident-ref="ident:0" name="x" target-id="stmt:0" />
       </expr>
     </stmt>

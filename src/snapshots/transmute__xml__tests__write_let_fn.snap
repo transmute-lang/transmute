@@ -42,25 +42,25 @@ expression: "&xml"
         <identifier ident-ref="ident:0" line="1" column="5" start="4" len="1">f</identifier>
         <type ident-ref="ident:2" line="1" column="19" start="18" len="6">number</type>
         <parameters>
-          <parameter id="stmt:1:0" line="1" column="7" start="6" len="9">
+          <parameter id="stmt:1:0" type-ref="type:1" line="1" column="7" start="6" len="9">
             <name ident-ref="ident:1" line="1" column="7" start="6" len="1">n</name>
             <type ident-ref="ident:2" line="1" column="10" start="9" len="6">number</type>
           </parameter>
         </parameters>
         <body line="1" column="28" start="27" len="6">
-          <expr id="expr:3" line="1" column="28" start="27" len="6">
+          <expr id="expr:3" type-ref="type:1" line="1" column="28" start="27" len="6">
             <block>
               <stmt id="stmt:0" line="1" column="28" start="27" len="6">
-                <expr id="expr:2" line="1" column="28" start="27" len="5">
+                <expr id="expr:2" type-ref="type:1" line="1" column="28" start="27" len="5">
                   <call line="1" column="28" start="27" len="5" ident-ref="ident:10" name="mul" target-id="native:mul:number:number:number">
                     <parameters>
                       <parameter>
-                        <expr id="expr:0" line="1" column="28" start="27" len="1">
+                        <expr id="expr:0" type-ref="type:1" line="1" column="28" start="27" len="1">
                           <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:1:0">n</identifier-ref>
                         </expr>
                       </parameter>
                       <parameter>
-                        <expr id="expr:1" line="1" column="32" start="31" len="1">
+                        <expr id="expr:1" type-ref="type:1" line="1" column="32" start="31" len="1">
                           <number>2</number>
                         </expr>
                       </parameter>

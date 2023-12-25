@@ -1,6 +1,6 @@
 ---
 source: src/resolver.rs
-expression: "XmlWriter::new(&ast, &symbols, &types).serialize()"
+expression: "XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize()"
 ---
 <?xml version="1.0" encoding="utf-8"?>
 <unit>
@@ -43,20 +43,20 @@ expression: "XmlWriter::new(&ast, &symbols, &types).serialize()"
         <type ident-ref="ident:1" line="1" column="10" start="9" len="6">number</type>
         <parameters />
         <body line="1" column="19" start="18" len="17">
-          <expr id="expr:2" line="1" column="19" start="18" len="17">
+          <expr id="expr:2" type-ref="type:1" line="1" column="19" start="18" len="17">
             <block>
               <stmt id="stmt:0" line="1" column="21" start="20" len="10">
                 <let>
-                  <identifier ref="ident:2" line="1" column="25" start="24" len="1">n</identifier>
+                  <identifier ident-ref="ident:2" line="1" column="25" start="24" len="1">n</identifier>
                   <expression line="1" column="29" start="28" len="1">
-                    <expr id="expr:0" line="1" column="29" start="28" len="1">
+                    <expr id="expr:0" type-ref="type:1" line="1" column="29" start="28" len="1">
                       <number>0</number>
                     </expr>
                   </expression>
                 </let>
               </stmt>
               <stmt id="stmt:1" line="1" column="32" start="31" len="2">
-                <expr id="expr:1" line="1" column="32" start="31" len="1">
+                <expr id="expr:1" type-ref="type:1" line="1" column="32" start="31" len="1">
                   <identifier-ref id="ident-ref:0" ident-ref="ident:2" target-id="stmt:0">n</identifier-ref>
                 </expr>
               </stmt>
