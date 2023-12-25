@@ -1,12 +1,11 @@
 use crate::ast::expression::{Expression, ExpressionKind};
 use crate::ast::identifier::Identifier;
-use crate::ast::ids::{ExprId, IdentRefId, StmtId, TypeId};
+use crate::ast::ids::{ExprId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Field, Parameter, Statement, StatementKind};
 use crate::ast::Ast;
-use crate::resolver::{Symbol, SymbolKind, Type, Typed};
-use std::collections::HashMap;
+use crate::resolver::{Symbol, SymbolKind, Type, Types};
 use std::io;
 use std::io::Write;
 use xml::writer::XmlEvent;
@@ -15,18 +14,12 @@ use xml::{EmitterConfig, EventWriter};
 pub struct XmlWriter<'a> {
     ast: &'a Ast,
     symbols: &'a Vec<Symbol>,
-    types: &'a Vec<Type>,
-    type_bindings: &'a HashMap<Typed, TypeId>,
+    types: &'a Types,
     writer: EventWriter<Vec<u8>>,
 }
 
 impl<'a> XmlWriter<'a> {
-    pub fn new(
-        ast: &'a Ast,
-        symbols: &'a Vec<Symbol>,
-        types: &'a Vec<Type>,
-        type_bindings: &'a HashMap<Typed, TypeId>,
-    ) -> Self {
+    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>, types: &'a Types) -> Self {
         let writer = EmitterConfig::new()
             .perform_indent(true)
             .create_writer(vec![]);
@@ -34,7 +27,6 @@ impl<'a> XmlWriter<'a> {
             ast,
             symbols,
             types,
-            type_bindings,
             writer,
         }
     }
@@ -165,10 +157,7 @@ impl<'a> XmlWriter<'a> {
                     "type-ref",
                     &format!(
                         "type:{}",
-                        self.type_bindings
-                            .get(&Typed::Expression(expr.id()))
-                            .unwrap()
-                            .id()
+                        self.types.expression_type(expr.id()).unwrap().id()
                     ),
                 )
                 .attr("line", &expr.span().line().to_string())
@@ -381,10 +370,10 @@ impl<'a> XmlWriter<'a> {
                         self.ast.identifier(*ident),
                         params
                             .iter()
-                            .map(|t| { self.types[t.id()].to_string() })
+                            .map(|t| { self.types.get(*t).unwrap().to_string() })
                             .collect::<Vec<String>>()
                             .join(":"),
-                        self.types[ret.id()],
+                        self.types.get(*ret).unwrap(),
                     )
                 }
             })
@@ -540,10 +529,7 @@ impl<'a> XmlWriter<'a> {
                         "type-ref",
                         &format!(
                             "type:{}",
-                            self.type_bindings
-                                .get(&Typed::Parameter(stmt_id, index))
-                                .unwrap()
-                                .id()
+                            self.types.parameter_type(stmt_id, index).unwrap().id()
                         ),
                     )
                     .attr("line", &param.span().line().to_string())
@@ -639,10 +625,7 @@ impl<'a> XmlWriter<'a> {
                         "type-ref",
                         &format!(
                             "type-ref:{}",
-                            self.type_bindings
-                                .get(&Typed::Field(stmt_id, index))
-                                .unwrap()
-                                .id()
+                            self.types.field_type(stmt_id, index).unwrap().id()
                         ),
                     )
                     .attr("line", &field.ty().span().line().to_string())
@@ -677,11 +660,11 @@ mod tests {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
+                let (ast, symbols, types) = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("no error expected");
 
-                let xml = XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize();
+                let xml = XmlWriter::new(&ast, &symbols, &types).serialize();
                 assert_snapshot!(&xml);
             }
         };

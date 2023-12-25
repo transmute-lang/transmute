@@ -1,6 +1,6 @@
 ---
 source: src/resolver.rs
-expression: "XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize()"
+expression: "XmlWriter::new(&ast, &symbols, &types).serialize()"
 ---
 <?xml version="1.0" encoding="utf-8"?>
 <unit>

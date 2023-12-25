@@ -314,7 +314,7 @@ mod tests {
                 let (ast, diagnostics) = parser.parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols, _, _) = Resolver::new(ast, Natives::default())
+                let (ast, symbols, _) = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
 
@@ -330,7 +330,7 @@ mod tests {
                 let (ast, diagnostics) = parser.parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols, _, _) = Resolver::new(ast, Natives::default())
+                let (ast, symbols, _) = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
 

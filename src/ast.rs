@@ -418,16 +418,14 @@ impl Display for AstNodePrettyPrint<'_, StmtId> {
                 writeln!(f, "{indent}}}")
             }
             StatementKind::Struct(ident, fields) => {
-                writeln!(
-                    f,
-                    "{indent}struct {} {{",
-                    self.ast.identifier(ident.id())
-                )?;
+                writeln!(f, "{indent}struct {} {{", self.ast.identifier(ident.id()))?;
 
                 for field in fields {
-                    writeln!(f, "{indent}  {}: {},",
+                    writeln!(
+                        f,
+                        "{indent}  {}: {},",
                         self.ast.identifier(field.identifier().id()),
-                             self.ast.identifier(field.ty().id()),
+                        self.ast.identifier(field.ty().id()),
                     )?;
                 }
 
@@ -616,11 +614,11 @@ mod tests {
 
         let ast = ast1.merge(ast2);
 
-        let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        let xml = XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize();
+        let xml = XmlWriter::new(&ast, &symbols, &types).serialize();
 
         assert_snapshot!(&xml);
     }
@@ -635,11 +633,11 @@ mod tests {
 
         let ast = ast1.merge(ast2);
 
-        let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        let xml = XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize();
+        let xml = XmlWriter::new(&ast, &symbols, &types).serialize();
 
         assert_snapshot!(&xml);
     }
@@ -660,11 +658,11 @@ mod tests {
 
         let ast = ast1.merge(ast2);
 
-        let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        let xml = XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize();
+        let xml = XmlWriter::new(&ast, &symbols, &types).serialize();
 
         assert_snapshot!(&xml);
     }
@@ -685,11 +683,11 @@ mod tests {
 
         let ast = ast1.merge(ast2);
 
-        let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        let xml = XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize();
+        let xml = XmlWriter::new(&ast, &symbols, &types).serialize();
 
         assert_snapshot!(&xml);
     }

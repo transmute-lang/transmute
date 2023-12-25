@@ -77,9 +77,7 @@ impl Resolver {
         me
     }
 
-    pub fn resolve(
-        mut self,
-    ) -> Result<(Ast, Vec<Symbol>, Vec<Type>, HashMap<Typed, TypeId>), Diagnostics> {
+    pub fn resolve(mut self) -> Result<(Ast, Vec<Symbol>, Types), Diagnostics> {
         let stmts = self.ast.statements().to_vec();
 
         self.insert_structs(&stmts);
@@ -91,14 +89,16 @@ impl Resolver {
             Ok((
                 self.ast,
                 self.symbols.replace(vec![]),
-                self.types.replace(vec![]),
-                self.type_bindings
-                    .iter()
-                    .filter_map(|(id, t)| match t {
-                        Ok(t) => Some((*id, *t)),
-                        Err(_) => None,
-                    })
-                    .collect::<HashMap<Typed, TypeId>>(),
+                Types::new(
+                    self.types.replace(vec![]),
+                    self.type_bindings
+                        .iter()
+                        .filter_map(|(id, t)| match t {
+                            Ok(t) => Some((*id, *t)),
+                            Err(_) => None,
+                        })
+                        .collect::<HashMap<Typed, TypeId>>(),
+                ),
             ))
         } else {
             Err(self.diagnostics)
@@ -200,7 +200,7 @@ impl Resolver {
     fn visit_expression(&mut self, expr: ExprId) -> Result<TypeId, ()> {
         let expr_id = expr;
         if let Some(ty) = self.type_bindings.get(&Typed::Expression(expr_id)) {
-            return ty.clone();
+            return *ty;
         }
 
         let expr = self.ast.expression(expr);
@@ -881,6 +881,61 @@ pub enum Typed {
     Field(StmtId, usize),
 }
 
+#[derive(Debug)]
+pub struct Types {
+    types: Vec<Type>,
+    bindings: HashMap<Typed, TypeId>,
+}
+
+impl Types {
+    fn new(types: Vec<Type>, bindings: HashMap<Typed, TypeId>) -> Self {
+        Self { types, bindings }
+    }
+
+    pub fn expression_type(&self, expr_id: ExprId) -> Option<TypeId> {
+        self.bindings.get(&Typed::Expression(expr_id)).copied()
+    }
+
+    pub fn parameter_type(&self, stmt_id: StmtId, index: usize) -> Option<TypeId> {
+        self.bindings
+            .get(&Typed::Parameter(stmt_id, index))
+            .copied()
+    }
+
+    pub fn field_type(&self, stmt_id: StmtId, index: usize) -> Option<TypeId> {
+        self.bindings.get(&Typed::Field(stmt_id, index)).copied()
+    }
+
+    pub fn get(&self, id: TypeId) -> Option<&Type> {
+        self.types.get(id.id())
+    }
+
+    pub fn iter(&self) -> Iter {
+        Iter {
+            types: &self.types,
+            index: 0,
+        }
+    }
+}
+
+pub struct Iter<'a> {
+    types: &'a Vec<Type>,
+    index: usize,
+}
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = &'a Type;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index == self.types.len() {
+            None
+        } else {
+            self.index += 1;
+            Some(&self.types[self.index - 1])
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::dot::Dot;
@@ -898,11 +953,11 @@ mod tests {
             Parser::new(Lexer::new("let x(n: number): number = { n; }")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("no error expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize());
+        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types).serialize());
     }
 
     #[test]
@@ -911,11 +966,11 @@ mod tests {
             Parser::new(Lexer::new("let x(): number = { let n = 0; n; }")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize());
+        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types).serialize());
     }
 
     #[test]
@@ -923,11 +978,11 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new("let x() = { } x();")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize());
+        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types).serialize());
     }
 
     #[test]
@@ -938,11 +993,11 @@ mod tests {
         .parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, types, type_bindings) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize());
+        assert_snapshot!(XmlWriter::new(&ast, &symbols, &types).serialize());
     }
 
     #[test]
@@ -973,12 +1028,11 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new("let x = true; let x = 1; x + 1;")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, types, type_bindings) =
-            Resolver::new(ast, Natives::default()).resolve().unwrap();
+        let (ast, symbols, types) = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
         assert_snapshot!(
             "rebinding-xml",
-            XmlWriter::new(&ast, &symbols, &types, &type_bindings).serialize()
+            XmlWriter::new(&ast, &symbols, &types).serialize()
         );
         assert_snapshot!("rebinding-dot", Dot::new(&ast, &symbols).serialize());
     }
