@@ -1,0 +1,21 @@
+---
+source: src/ast.rs
+expression: actual
+---
+let fact(n: number): number = {
+  if n < 0 {
+    ret 0;
+  }
+  let product = 1;
+  while n > 0 {
+    product = product * n;
+    n = n - 1;
+  }
+
+  product;
+  struct Point {
+    x: number,
+    y: number,
+  }
+}
+

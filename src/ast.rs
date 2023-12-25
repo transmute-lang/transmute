@@ -417,8 +417,21 @@ impl Display for AstNodePrettyPrint<'_, StmtId> {
                 }
                 writeln!(f, "{indent}}}")
             }
-            StatementKind::Struct(_, _) => {
-                todo!()
+            StatementKind::Struct(ident, fields) => {
+                writeln!(
+                    f,
+                    "{indent}struct {} {{",
+                    self.ast.identifier(ident.id())
+                )?;
+
+                for field in fields {
+                    writeln!(f, "{indent}  {}: {},",
+                        self.ast.identifier(field.identifier().id()),
+                             self.ast.identifier(field.ty().id()),
+                    )?;
+                }
+
+                writeln!(f, "{indent}}}")
             }
         }
     }
@@ -568,6 +581,11 @@ mod tests {
                 n = n - 1;
             }
             product;
+
+            struct Point {
+                x: number,
+                y: number,
+            }
         }
     "#,
         ))
@@ -578,20 +596,8 @@ mod tests {
             "{}",
             AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
         );
-        let expected = r#"let fact(n: number): number = {
-  if n < 0 {
-    ret 0;
-  }
-  let product = 1;
-  while n > 0 {
-    product = product * n;
-    n = n - 1;
-  }
 
-  product;
-}
-"#;
-        assert_eq!(actual, expected);
+        assert_snapshot!(actual);
     }
 
     #[test]
