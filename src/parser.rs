@@ -1154,6 +1154,7 @@ mod tests {
     test_syntax!(assignment => "forty_two = 42");
     test_syntax!(two_statements => "let forty_two = 42; forty_two;");
     test_syntax!(function_statement => "let times_two(a: number) = a * 2;");
+    test_syntax!(function_statement_trailing_comma => "let times_two(a: number,) = a * 2;");
     test_syntax!(function_statement_with_return_type => "let times_two(a: number): number = a * 2;");
     test_syntax!(function_statements => "let times_two(a: number) = { a * 2; }");
     test_syntax!(function_call => "times_two(21)");
@@ -1163,6 +1164,7 @@ mod tests {
     test_syntax!(if_else_if_else => "if true { 42; } else if false { 43; } else { 44; }");
     test_syntax!(while_loop => "while true { 42; }");
     test_syntax!(struct_statement => "struct MyStruct { a: t_1, b: t_b }");
+    test_syntax!(struct_statement_trailing_comma => "struct MyStruct { a: t_1, b: t_b,}");
     test_syntax!(struct_inside_function => "let f() = { struct MyStruct {} }");
     test_syntax!(err_expression_missing_right_parenthesis => "(42;");
     test_syntax!(err_expression_missing_right_parenthesis_eof => "(42");
