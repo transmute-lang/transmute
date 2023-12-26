@@ -17,5 +17,8 @@ let fact(n: number): number = {
     x: number,
     y: number,
   }
+  let f(p: Point) = {
+      p.x + p.y;
+  }
 }
 

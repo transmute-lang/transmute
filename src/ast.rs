@@ -9,6 +9,7 @@ use crate::ast::expression::{Expression, ExpressionKind};
 use crate::ast::identifier::{Identifier, IdentifierRef};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId};
 use crate::ast::literal::{Literal, LiteralKind};
+use crate::ast::operators::BinaryOperatorKind;
 use crate::ast::statement::{Parameter, Statement, StatementKind};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -490,15 +491,26 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                 }
                 LiteralKind::Number(n) => write!(f, "{n}"),
             },
-            ExpressionKind::Binary(left, op, right) => {
-                write!(
-                    f,
-                    "{} {} {}",
-                    AstNodePrettyPrint::new(self.ast, *left),
-                    op.kind(),
-                    AstNodePrettyPrint::new(self.ast, *right)
-                )
-            }
+            ExpressionKind::Binary(left, op, right) => match op.kind() {
+                BinaryOperatorKind::Access => {
+                    write!(
+                        f,
+                        "{}{}{}",
+                        AstNodePrettyPrint::new(self.ast, *left),
+                        op.kind(),
+                        AstNodePrettyPrint::new(self.ast, *right)
+                    )
+                }
+                _ => {
+                    write!(
+                        f,
+                        "{} {} {}",
+                        AstNodePrettyPrint::new(self.ast, *left),
+                        op.kind(),
+                        AstNodePrettyPrint::new(self.ast, *right)
+                    )
+                }
+            },
             ExpressionKind::FunctionCall(ident, params) => {
                 let ident = self.ast.identifier_ref(*ident).ident();
                 write!(f, "{}(", AstNodePrettyPrint::new(self.ast, ident.id()))?;
@@ -583,6 +595,10 @@ mod tests {
             struct Point {
                 x: number,
                 y: number,
+            }
+
+            let f(p: Point) {
+                p.x + p.y;
             }
         }
     "#,
