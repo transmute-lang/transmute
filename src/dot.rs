@@ -489,18 +489,19 @@ impl<'a> Dot<'a> {
                     .join(" | "),
             )),
             Node::Struct(ident, fields) => Cow::Owned(format!(
-                "{{ {{<struct>{}}} | {} }}",
+                "{{ <struct>{} | {{ {{ {} }} | {{ {} }} }} }}",
                 self.ast.identifier(*ident),
                 fields
                     .iter()
                     .enumerate()
-                    .map(|(i, (p, t))| format!(
-                        "{{ <f{i}>{} | {} }}",
-                        self.ast.identifier(*p),
-                        self.ast.identifier(*t)
-                    ))
+                    .map(|(i, (p, _))| format!("<f{i}>{}", self.ast.identifier(*p),))
                     .collect::<Vec<String>>()
                     .join(" | "),
+                fields
+                    .iter()
+                    .map(|(_, t)| format!("{}", self.ast.identifier(*t),))
+                    .collect::<Vec<String>>()
+                    .join(" | ")
             )),
             Node::Assignment => Cow::Borrowed("set"),
             Node::If => Cow::Borrowed("if"),
@@ -657,6 +658,14 @@ mod tests {
                 y: number
             }
             let dist(from: Point, to: Point) = {}
+        "#
+    );
+    generate!(
+        nested_struct,
+        r#"
+            struct Point { x: number, y: number }
+            struct Segment { from: Point, to: Point }
+            let len(seg: Segment) = {}
         "#
     );
 }
