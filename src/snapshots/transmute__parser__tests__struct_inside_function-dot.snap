@@ -1,0 +1,11 @@
+---
+source: src/parser.rs
+expression: "Dot::new(&ast, &vec![]).serialize()"
+---
+//graphviz file
+digraph ast {
+ordering="out";
+splines=false;
+n0[label="{ <struct>MyStruct | { {  } | {  } } }"][shape="record"][fontcolor="black"]
+n1[label="{ {<fn>f() } | {  } }"][shape="record"][fontcolor="black"]
+n1 -> n0[style="solid"][color="black"][arrowhead="none"]}

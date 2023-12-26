@@ -455,7 +455,7 @@ impl<'a> Dot<'a> {
             .collect::<Vec<String>>()
             .join("\n");
 
-        format!("digraph ast {{\nordering=\"out\";\nsplines=false;\n{nodes}\n{edges}}}")
+        format!("//graphviz file\ndigraph ast {{\nordering=\"out\";\nsplines=false;\n{nodes}\n{edges}}}")
     }
 
     fn serialize_node(&self, index: usize, node: &Node) -> String {

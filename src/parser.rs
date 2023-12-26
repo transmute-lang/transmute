@@ -1134,12 +1134,18 @@ impl<'s> Parser<'s> {
 mod tests {
     use super::*;
     use insta::assert_debug_snapshot;
+    use insta::assert_snapshot;
+    use crate::dot::Dot;
 
     macro_rules! test_syntax {
         ($name:ident => $src:expr) => {
             #[test]
             fn $name() {
-                assert_debug_snapshot!(Parser::new(Lexer::new($src)).parse());
+                let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
+                assert_debug_snapshot!((&ast, &diagnostics));
+                if diagnostics.is_empty() {
+                    assert_snapshot!(format!("{}-dot", stringify!($name)), Dot::new(&ast, &vec![]).serialize());
+                }
             }
         };
     }

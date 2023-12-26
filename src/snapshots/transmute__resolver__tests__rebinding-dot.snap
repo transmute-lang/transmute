@@ -2,6 +2,7 @@
 source: src/resolver.rs
 expression: "Dot::new(&ast, &symbols).serialize()"
 ---
+//graphviz file
 digraph ast {
 ordering="out";
 splines=false;
