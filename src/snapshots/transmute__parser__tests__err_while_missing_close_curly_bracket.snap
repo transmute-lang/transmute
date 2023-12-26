@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"while true {\")).parse()"
+expression: "(&ast, &diagnostics)"
 ---
 (
     Ast {
@@ -72,7 +72,7 @@ expression: "Parser::new(Lexer::new(\"while true {\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    1068,
+                    1163,
                 ),
             },
         ],

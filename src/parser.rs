@@ -222,15 +222,9 @@ impl<'s> Parser<'s> {
                 let id = self.push_statement(StatementKind::Ret(expression), span);
                 Some(&self.statements[id.id()])
             }
-            TokenKind::If | TokenKind::While => {
-                // self.expected.clear();
-                let expression = self.parse_expression();
-                let span = expression.span().extend_to(expression.span());
-                let id = expression.id();
-                let id = self.push_statement(StatementKind::Expression(id), span);
-                Some(&self.statements[id.id()])
-            }
-            TokenKind::False
+            TokenKind::If
+            | TokenKind::While
+            | TokenKind::False
             | TokenKind::Identifier
             | TokenKind::Minus
             | TokenKind::Number(_)
@@ -239,12 +233,25 @@ impl<'s> Parser<'s> {
                 // self.expected.clear();
                 let expression = self.parse_expression();
                 let span = expression.span().clone();
-                let expression = expression.id();
+                let expression_id = expression.id();
 
-                let semicolon = self.parse_semicolon();
-                let span = span.extend_to(semicolon.span());
+                let span = match expression.kind() {
+                    ExpressionKind::Assignment(_, _)
+                    | ExpressionKind::Literal(_)
+                    | ExpressionKind::Binary(_, _, _)
+                    | ExpressionKind::Unary(_, _)
+                    | ExpressionKind::FunctionCall(_, _)
+                    | ExpressionKind::Dummy => {
+                        let semicolon = self.parse_semicolon();
+                        span.extend_to(semicolon.span())
+                    }
+                    // if, while and block expressions don't need to be terminated with `;`
+                    ExpressionKind::If(_, _, _)
+                    | ExpressionKind::While(_, _)
+                    | ExpressionKind::Block(_) => span,
+                };
 
-                let id = self.push_statement(StatementKind::Expression(expression), span);
+                let id = self.push_statement(StatementKind::Expression(expression_id), span);
                 Some(&self.statements[id.id()])
             }
             TokenKind::Struct => {
@@ -546,6 +553,7 @@ impl<'s> Parser<'s> {
 
                 match *token.kind() {
                     // ident '( ...
+                    // fixme this means that if {} else {}() is not accepted
                     TokenKind::OpenParenthesis => self.parse_function_call(identifier).id(),
                     // ident '= ...
                     TokenKind::Equal => {
@@ -697,8 +705,8 @@ impl<'s> Parser<'s> {
             }
         };
 
-        while let Some(operator) = self.parse_binary_operator_with_higher_precedence(precedence) {
-            expression = self.parse_infix_expression(expression, operator).id();
+        while let Some(expr) = self.parse_infix_expression(expression, precedence) {
+            expression = expr;
         }
 
         &self.expressions[expression.id()]
@@ -711,6 +719,13 @@ impl<'s> Parser<'s> {
         let token = self.lexer.next();
 
         match token.kind() {
+            TokenKind::Dot => {
+                // self.expected.clear();
+                Some(BinaryOperator::new(
+                    BinaryOperatorKind::Access,
+                    token.span().clone(),
+                ))
+            }
             TokenKind::EqualEqual => {
                 // self.expected.clear();
                 Some(BinaryOperator::new(
@@ -782,6 +797,7 @@ impl<'s> Parser<'s> {
                 ))
             }
             _ => {
+                self.expected.insert(TokenKind::Dot);
                 self.expected.insert(TokenKind::EqualEqual);
                 self.expected.insert(TokenKind::ExclaimEqual);
                 self.expected.insert(TokenKind::Greater);
@@ -809,16 +825,95 @@ impl<'s> Parser<'s> {
         })
     }
 
-    fn parse_infix_expression(&mut self, left: ExprId, operator: BinaryOperator) -> &Expression {
-        let left_span = self.expressions[left.id()].span().clone();
+    fn parse_infix_expression(&mut self, left: ExprId, precedence: Precedence) -> Option<ExprId> {
+        self.parse_binary_operator_with_higher_precedence(precedence)
+            .map(|operator| {
+                let left_span = self.expressions[left.id()].span().clone();
 
-        let right = self.parse_expression_with_precedence(operator.kind().precedence());
-        let span = left_span.extend_to(right.span());
+                let right = match operator.kind() {
+                    BinaryOperatorKind::Access => {
+                        self.expected.clear();
 
-        let id = right.id();
-        let id = self.push_expression(ExpressionKind::Binary(left, operator, id), span);
+                        let token = self.lexer.next();
 
-        &self.expressions[id.id()]
+                        let mut expression = match token.kind() {
+                            // todo this is a duplicate of the more general parse_expression_with_precedence version.
+                            //  we can pass a boolean or some param to tell parse_expression_with_precedence to
+                            //  only accept to parse an identifier (and the stuff that follows)
+                            TokenKind::Identifier => {
+                                // self.expected.clear();
+                                let identifier = Identifier::new(
+                                    self.push_identifier(token.span()),
+                                    token.span().clone(),
+                                );
+
+                                let token = self.lexer.peek();
+
+                                match *token.kind() {
+                                    // ident '( ...
+                                    // fixme this means that if {} else {}() is not accepted
+                                    TokenKind::OpenParenthesis => {
+                                        self.parse_function_call(identifier).id()
+                                    }
+                                    // ident '= ...
+                                    TokenKind::Equal => {
+                                        self.lexer.next();
+                                        let expression = self.parse_expression();
+                                        let span = identifier.span().extend_to(expression.span());
+                                        let expression = expression.id();
+                                        let ident_ref = self.push_identifier_ref(identifier);
+                                        self.push_expression(
+                                            ExpressionKind::Assignment(ident_ref, expression),
+                                            span,
+                                        )
+                                    }
+                                    _ => {
+                                        // ident '...
+                                        // we just take ident and leave the rest to the next step
+                                        let span = identifier.span().clone();
+
+                                        let ident_ref = self.push_identifier_ref(identifier);
+                                        let literal = Literal::new(
+                                            LiteralKind::Identifier(ident_ref),
+                                            span.clone(),
+                                        );
+
+                                        self.expected.insert(TokenKind::OpenParenthesis);
+                                        self.expected.insert(TokenKind::Equal);
+
+                                        self.push_expression(ExpressionKind::Literal(literal), span)
+                                    }
+                                }
+                            }
+                            _ => {
+                                report_unexpected_token!(self, token, [TokenKind::Identifier,]);
+                                self.take_until_one_of(vec![TokenKind::Semicolon]);
+                                let span = Span::new(
+                                    token.span().line(),
+                                    token.span().column(),
+                                    token.span().start(),
+                                    0,
+                                );
+                                self.push_expression(ExpressionKind::Dummy, span)
+                            }
+                        };
+
+                        while let Some(expr) =
+                            self.parse_infix_expression(expression, operator.kind().precedence())
+                        {
+                            expression = expr;
+                        }
+
+                        &self.expressions[expression.id()]
+                    }
+                    _ => self.parse_expression_with_precedence(operator.kind().precedence()),
+                };
+
+                let span = left_span.extend_to(right.span());
+
+                let id = right.id();
+                self.push_expression(ExpressionKind::Binary(left, operator, id), span)
+            })
     }
 
     /// Parses the following (the if keyword is already consumed):
@@ -1133,19 +1228,22 @@ impl<'s> Parser<'s> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dot::Dot;
     use insta::assert_debug_snapshot;
     use insta::assert_snapshot;
-    use crate::dot::Dot;
 
     macro_rules! test_syntax {
         ($name:ident => $src:expr) => {
             #[test]
             fn $name() {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
-                assert_debug_snapshot!((&ast, &diagnostics));
                 if diagnostics.is_empty() {
-                    assert_snapshot!(format!("{}-dot", stringify!($name)), Dot::new(&ast, &vec![]).serialize());
+                    assert_snapshot!(
+                        format!("{}-dot", stringify!($name)),
+                        Dot::new(&ast, &vec![]).serialize()
+                    );
                 }
+                assert_debug_snapshot!((&ast, &diagnostics));
             }
         };
     }
@@ -1168,10 +1266,23 @@ mod tests {
     test_syntax!(if_simple => "if true { 42; }");
     test_syntax!(if_else => "if true { 42; } else { 43; }");
     test_syntax!(if_else_if_else => "if true { 42; } else if false { 43; } else { 44; }");
+    // fixme uncomment test_syntax!(if_call => "(if true { } else { })();");
+    // fixme uncomment test_syntax!(if_call => "if true { } else { } ();");
+    test_syntax!(field_access => "parent.child;");
+    test_syntax!(nested_field_access => "parent.child.grandchild;");
+    test_syntax!(method_call => "obj.f();");
+    test_syntax!(nested_method_call => "obj.f().g();");
+    test_syntax!(field_and_method_call => "parent.child.f();");
+    test_syntax!(method_call_and_field => "parent.f().child;");
+    test_syntax!(access_if_result_access => "if true { } else { } . a;");
+    test_syntax!(if_result_access_call => "if true { } else { } . f();");
     test_syntax!(while_loop => "while true { 42; }");
     test_syntax!(struct_statement => "struct MyStruct { a: t_1, b: t_b }");
     test_syntax!(struct_statement_trailing_comma => "struct MyStruct { a: t_1, b: t_b,}");
     test_syntax!(struct_inside_function => "let f() = { struct MyStruct {} }");
+    test_syntax!(err_number_field_access => "left.2;");
+    test_syntax!(err_boolean_field_access => "left.true;");
+    test_syntax!(err_expression_field_access => "left.(1 + 1);");
     test_syntax!(err_expression_missing_right_parenthesis => "(42;");
     test_syntax!(err_expression_missing_right_parenthesis_eof => "(42");
     test_syntax!(err_expression_inserted_token_before_expression => "^42;");

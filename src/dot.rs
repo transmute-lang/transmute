@@ -499,7 +499,7 @@ impl<'a> Dot<'a> {
                     .join(" | "),
                 fields
                     .iter()
-                    .map(|(_, t)| format!("{}", self.ast.identifier(*t),))
+                    .map(|(_, t)| self.ast.identifier(*t).to_string())
                     .collect::<Vec<String>>()
                     .join(" | ")
             )),

@@ -1,0 +1,99 @@
+---
+source: src/parser.rs
+expression: "(&ast, &diagnostics)"
+---
+(
+    Ast {
+        identifiers: [
+            "left",
+        ],
+        identifier_refs: [
+            IdentifierRef {
+                id: IdentRefId {
+                    id: 0,
+                },
+                ident: Identifier {
+                    id: IdentId {
+                        id: 0,
+                    },
+                    span: 1:1; [0, 4],
+                },
+                symbol_id: None,
+            },
+        ],
+        expressions: [
+            Expression {
+                id: ExprId {
+                    id: 0,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Identifier(
+                            IdentRefId {
+                                id: 0,
+                            },
+                        ),
+                        span: 1:1; [0, 4],
+                    },
+                ),
+                span: 1:1; [0, 4],
+            },
+            Expression {
+                id: ExprId {
+                    id: 1,
+                },
+                kind: Dummy,
+                span: 1:6; [5, 5],
+            },
+            Expression {
+                id: ExprId {
+                    id: 2,
+                },
+                kind: Binary(
+                    ExprId {
+                        id: 0,
+                    },
+                    BinaryOperator {
+                        kind: Access,
+                        span: 1:5; [4, 5],
+                    },
+                    ExprId {
+                        id: 1,
+                    },
+                ),
+                span: 1:1; [0, 5],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: Expression(
+                    ExprId {
+                        id: 2,
+                    },
+                ),
+                span: 1:1; [0, 13],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 0,
+            },
+        ],
+    },
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `(`, expected one of identifier",
+                span: 1:6; [5, 6],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    889,
+                ),
+            },
+        ],
+    },
+)

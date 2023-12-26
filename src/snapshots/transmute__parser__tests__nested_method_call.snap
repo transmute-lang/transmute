@@ -1,0 +1,150 @@
+---
+source: src/parser.rs
+expression: "(&ast, &diagnostics)"
+---
+(
+    Ast {
+        identifiers: [
+            "obj",
+            "f",
+            "g",
+        ],
+        identifier_refs: [
+            IdentifierRef {
+                id: IdentRefId {
+                    id: 0,
+                },
+                ident: Identifier {
+                    id: IdentId {
+                        id: 0,
+                    },
+                    span: 1:1; [0, 3],
+                },
+                symbol_id: None,
+            },
+            IdentifierRef {
+                id: IdentRefId {
+                    id: 1,
+                },
+                ident: Identifier {
+                    id: IdentId {
+                        id: 1,
+                    },
+                    span: 1:5; [4, 5],
+                },
+                symbol_id: None,
+            },
+            IdentifierRef {
+                id: IdentRefId {
+                    id: 2,
+                },
+                ident: Identifier {
+                    id: IdentId {
+                        id: 2,
+                    },
+                    span: 1:9; [8, 9],
+                },
+                symbol_id: None,
+            },
+        ],
+        expressions: [
+            Expression {
+                id: ExprId {
+                    id: 0,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Identifier(
+                            IdentRefId {
+                                id: 0,
+                            },
+                        ),
+                        span: 1:1; [0, 3],
+                    },
+                ),
+                span: 1:1; [0, 3],
+            },
+            Expression {
+                id: ExprId {
+                    id: 1,
+                },
+                kind: FunctionCall(
+                    IdentRefId {
+                        id: 1,
+                    },
+                    [],
+                ),
+                span: 1:5; [4, 7],
+            },
+            Expression {
+                id: ExprId {
+                    id: 2,
+                },
+                kind: Binary(
+                    ExprId {
+                        id: 0,
+                    },
+                    BinaryOperator {
+                        kind: Access,
+                        span: 1:4; [3, 4],
+                    },
+                    ExprId {
+                        id: 1,
+                    },
+                ),
+                span: 1:1; [0, 7],
+            },
+            Expression {
+                id: ExprId {
+                    id: 3,
+                },
+                kind: FunctionCall(
+                    IdentRefId {
+                        id: 2,
+                    },
+                    [],
+                ),
+                span: 1:9; [8, 11],
+            },
+            Expression {
+                id: ExprId {
+                    id: 4,
+                },
+                kind: Binary(
+                    ExprId {
+                        id: 2,
+                    },
+                    BinaryOperator {
+                        kind: Access,
+                        span: 1:8; [7, 8],
+                    },
+                    ExprId {
+                        id: 3,
+                    },
+                ),
+                span: 1:1; [0, 11],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: Expression(
+                    ExprId {
+                        id: 4,
+                    },
+                ),
+                span: 1:1; [0, 12],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 0,
+            },
+        ],
+    },
+    Diagnostics {
+        diagnostics: [],
+    },
+)

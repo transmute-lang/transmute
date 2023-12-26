@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "(actual_ast, actual_diagnostics)"
+expression: "(&ast, &diagnostics)"
 ---
 (
     Ast {

@@ -23,6 +23,7 @@ impl BinaryOperator {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BinaryOperatorKind {
+    Access,
     Addition,
     Division,
     Equality,
@@ -38,6 +39,7 @@ pub enum BinaryOperatorKind {
 impl BinaryOperatorKind {
     pub fn precedence(&self) -> Precedence {
         match self {
+            BinaryOperatorKind::Access => Precedence::Call,
             BinaryOperatorKind::Addition => Precedence::Sum,
             BinaryOperatorKind::Division => Precedence::Product,
             BinaryOperatorKind::Equality => Precedence::Comparison,
@@ -53,6 +55,7 @@ impl BinaryOperatorKind {
 
     pub fn function_name(&self) -> &'static str {
         match self {
+            BinaryOperatorKind::Access => panic!("access is not a function"),
             BinaryOperatorKind::Addition => "add",
             BinaryOperatorKind::Division => "div",
             BinaryOperatorKind::Equality => "eq",
@@ -68,6 +71,7 @@ impl BinaryOperatorKind {
 
     pub fn as_str(&self) -> &'static str {
         match self {
+            BinaryOperatorKind::Access => ".",
             BinaryOperatorKind::Addition => "+",
             BinaryOperatorKind::Division => "/",
             BinaryOperatorKind::Equality => "==",
@@ -92,10 +96,17 @@ impl Display for BinaryOperatorKind {
 // do not reorder!
 pub enum Precedence {
     Lowest,
+    /// comparison operators, such as `==` or `>`
     Comparison,
+    /// sum operators, such as `+` or `-`
     Sum,
+    /// product operators, such as `*` or `/`
     Product,
+    /// prefix operators, such as `!` or `-`
     Prefix,
+    /// call operators, such as `.`
+    // fixme method call `()` should also be here
+    Call,
 }
 
 #[derive(Debug, Clone, PartialEq)]

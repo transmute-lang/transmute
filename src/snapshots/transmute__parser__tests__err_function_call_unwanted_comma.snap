@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"f(42,,43);\")).parse()"
+expression: "(&ast, &diagnostics)"
 ---
 (
     Ast {
@@ -92,12 +92,12 @@ expression: "Parser::new(Lexer::new(\"f(42,,43);\")).parse()"
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `,`, expected one of identifier, number, `true`, `false`, `if`, `while`, `)`, `(`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                message: "Unexpected `,`, expected one of identifier, number, `true`, `false`, `if`, `while`, `.`, `)`, `(`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
                 span: 1:6; [5, 6],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    992,
+                    1087,
                 ),
             },
         ],

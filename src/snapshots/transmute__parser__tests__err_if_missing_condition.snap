@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"if { }\")).parse()"
+expression: "(&ast, &diagnostics)"
 ---
 (
     Ast {
@@ -66,7 +66,7 @@ expression: "Parser::new(Lexer::new(\"if { }\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    647,
+                    655,
                 ),
             },
         ],

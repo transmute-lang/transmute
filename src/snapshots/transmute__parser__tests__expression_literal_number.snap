@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"42\")).parse()"
+expression: "(&ast, &diagnostics)"
 ---
 (
     Ast {
@@ -44,12 +44,12 @@ expression: "Parser::new(Lexer::new(\"42\")).parse()"
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `eof`, expected one of `;`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                message: "Unexpected `eof`, expected one of `.`, `;`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
                 span: 1:3; [2, 2],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    1035,
+                    1130,
                 ),
             },
         ],

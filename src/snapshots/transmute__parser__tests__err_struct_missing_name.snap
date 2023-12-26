@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "(actual_ast, actual_diagnostics)"
+expression: "(&ast, &diagnostics)"
 ---
 (
     Ast {
@@ -18,7 +18,7 @@ expression: "(actual_ast, actual_diagnostics)"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    259,
+                    266,
                 ),
             },
         ],

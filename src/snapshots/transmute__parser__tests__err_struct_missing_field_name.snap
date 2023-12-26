@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"struct MyStruct { : type }\")).parse()"
+expression: "(&ast, &diagnostics)"
 ---
 (
     Ast {
@@ -40,7 +40,7 @@ expression: "Parser::new(Lexer::new(\"struct MyStruct { : type }\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    335,
+                    342,
                 ),
             },
         ],
