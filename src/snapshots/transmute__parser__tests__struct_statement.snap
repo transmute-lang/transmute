@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"struct MyStruct { a: t_1, b: t_b }\")).parse()"
+expression: "(&ast, &diagnostics)"
 ---
 (
     Ast {

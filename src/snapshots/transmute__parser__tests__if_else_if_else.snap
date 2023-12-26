@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"if true { 42; } else if false { 43; } else { 44; }\")).parse()"
+expression: "(&ast, &diagnostics)"
 ---
 (
     Ast {

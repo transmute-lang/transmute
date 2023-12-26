@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"ret 42;\")).parse()"
+expression: "(&ast, &diagnostics)"
 ---
 (
     Ast {
