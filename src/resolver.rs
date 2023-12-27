@@ -443,7 +443,7 @@ impl Resolver {
             Some(t) => {
                 self.type_bindings.insert(Typed::Expression(child), Ok(t));
                 Ok(t)
-            },
+            }
             None => {
                 self.diagnostics.report_err(
                     format!(

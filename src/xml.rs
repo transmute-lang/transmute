@@ -5,12 +5,12 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, BinaryOperatorKind, UnaryOperator};
 use crate::ast::statement::{Field, Parameter, Statement, StatementKind};
 use crate::ast::Ast;
+use crate::lexer::Span;
 use crate::resolver::{Symbol, SymbolKind, Type, Types};
 use std::io;
 use std::io::Write;
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
-use crate::lexer::Span;
 
 pub struct XmlWriter<'a> {
     ast: &'a Ast,
@@ -344,11 +344,13 @@ impl<'a> XmlWriter<'a> {
     }
 
     fn visit_access(&mut self, full_span: &Span, left: &ExprId, right: &ExprId) {
-        self.emit(XmlEvent::start_element("access")
-            .attr("line", &full_span.line().to_string())
-            .attr("column", &full_span.column().to_string())
-            .attr("start", &full_span.start().to_string())
-            .attr("len", &full_span.len().to_string()));
+        self.emit(
+            XmlEvent::start_element("access")
+                .attr("line", &full_span.line().to_string())
+                .attr("column", &full_span.column().to_string())
+                .attr("start", &full_span.start().to_string())
+                .attr("len", &full_span.len().to_string()),
+        );
 
         self.visit_expression(*left);
 
@@ -365,13 +367,20 @@ impl<'a> XmlWriter<'a> {
             panic!("literal expected")
         };
 
-        self.emit(XmlEvent::start_element("field")
-            .attr("ident-ref", &format!("ident:{}", ident.id()))
-            .attr("type-ref", &format!("type:{}", self.types.expression_type(right.id()).unwrap().id()))
-            .attr("line", &ident.span().line().to_string())
-            .attr("column", &ident.span().column().to_string())
-            .attr("start", &ident.span().start().to_string())
-            .attr("len", &ident.span().len().to_string())
+        self.emit(
+            XmlEvent::start_element("field")
+                .attr("ident-ref", &format!("ident:{}", ident.id()))
+                .attr(
+                    "type-ref",
+                    &format!(
+                        "type:{}",
+                        self.types.expression_type(right.id()).unwrap().id()
+                    ),
+                )
+                .attr("line", &ident.span().line().to_string())
+                .attr("column", &ident.span().column().to_string())
+                .attr("start", &ident.span().start().to_string())
+                .attr("len", &ident.span().len().to_string()),
         );
         self.emit(XmlEvent::Characters(self.ast.identifier(ident.id())));
         self.emit(XmlEvent::end_element());

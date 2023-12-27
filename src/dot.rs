@@ -65,8 +65,12 @@ struct DotBuilder<'a> {
     nodes: Vec<Node>,
     edges: Vec<Edge>,
     stmt_map: HashMap<StmtId, NodeId>,
-    references: Vec<(NodeId, StmtId)>,
-    parameter_references: Vec<(NodeId, StmtId, usize)>,
+    references: Vec<Reference>,
+}
+
+enum Reference {
+    LetBinding(NodeId, StmtId),
+    Parameter(NodeId, StmtId, usize),
 }
 
 impl<'a> DotBuilder<'a> {
@@ -78,7 +82,6 @@ impl<'a> DotBuilder<'a> {
             edges: Default::default(),
             stmt_map: Default::default(),
             references: Default::default(),
-            parameter_references: Default::default(),
         }
     }
 
@@ -88,45 +91,46 @@ impl<'a> DotBuilder<'a> {
             self.stmt_map.insert(*s, node);
         });
 
-        self.references.iter().for_each(|(from, stmt)| {
-            let to = self
-                .stmt_map
-                .get(stmt)
-                .unwrap_or_else(|| panic!("Statement {stmt} not mapped"));
-
-            if matches!(
-                self.ast.statement(*stmt).kind(),
-                StatementKind::LetFn(_, _, _, _)
-            ) {
-                self.edges.push(Edge {
-                    from: *from,
-                    to: *to,
-                    record_label: Some("fn".to_string()),
-                    kind: EdgeKind::Reference,
-                });
-            } else {
-                self.edges.push(Edge {
-                    from: *from,
-                    to: *to,
-                    record_label: None,
-                    kind: EdgeKind::Reference,
-                });
+        for reference in self.references {
+            match reference {
+                Reference::LetBinding(from, stmt) => {
+                    let to = *self
+                        .stmt_map
+                        .get(&stmt)
+                        .unwrap_or_else(|| panic!("Statement {stmt} not mapped"));
+                    if matches!(
+                        self.ast.statement(stmt).kind(),
+                        StatementKind::LetFn(_, _, _, _)
+                    ) {
+                        self.edges.push(Edge {
+                            from,
+                            to,
+                            record_label: Some("fn".to_string()),
+                            kind: EdgeKind::Reference,
+                        });
+                    } else {
+                        self.edges.push(Edge {
+                            from,
+                            to,
+                            record_label: None,
+                            kind: EdgeKind::Reference,
+                        });
+                    }
+                }
+                Reference::Parameter(from, stmt, index) => {
+                    let to = *self
+                        .stmt_map
+                        .get(&stmt)
+                        .unwrap_or_else(|| panic!("Statement {stmt} not mapped"));
+                    self.edges.push(Edge {
+                        from,
+                        to,
+                        record_label: Some(format!("p{index}")),
+                        kind: EdgeKind::Reference,
+                    });
+                }
             }
-        });
-        self.parameter_references
-            .iter()
-            .for_each(|(from, stmt, index)| {
-                let to = self
-                    .stmt_map
-                    .get(stmt)
-                    .unwrap_or_else(|| panic!("Statement {stmt} not mapped"));
-                self.edges.push(Edge {
-                    from: *from,
-                    to: *to,
-                    record_label: Some(format!("p{index}")),
-                    kind: EdgeKind::Reference,
-                });
-            });
+        }
 
         Dot {
             ast: self.ast,
@@ -180,12 +184,13 @@ impl<'a> DotBuilder<'a> {
         if let Some(symbol) = ident.symbol_id() {
             match self.symbols[symbol.id()].kind() {
                 SymbolKind::Let(stmt) | SymbolKind::LetFn(stmt, _, _) => {
-                    self.references.push((ident_node_id, *stmt));
+                    self.references
+                        .push(Reference::LetBinding(ident_node_id, *stmt));
                 }
                 SymbolKind::Parameter(stmt, index) => match self.ast.statement(*stmt).kind() {
                     StatementKind::LetFn(_, _, _, _) => {
-                        self.parameter_references
-                            .push((ident_node_id, *stmt, *index));
+                        self.references
+                            .push(Reference::Parameter(ident_node_id, *stmt, *index));
                     }
                     _ => panic!(),
                 },
@@ -227,7 +232,8 @@ impl<'a> DotBuilder<'a> {
                         SymbolKind::Let(stmt) | SymbolKind::LetFn(stmt, _, _) => {
                             let ident_node_id =
                                 self.insert_node(Node::Identifier(ident.ident().id()));
-                            self.references.push((ident_node_id, *stmt));
+                            self.references
+                                .push(Reference::LetBinding(ident_node_id, *stmt));
                             ident_node_id
                         }
                         SymbolKind::Parameter(stmt, index) => {
@@ -236,8 +242,11 @@ impl<'a> DotBuilder<'a> {
                                     let ident_node_id = self.insert_node(Node::Identifier(
                                         params.get(*index).unwrap().identifier().id(),
                                     ));
-                                    self.parameter_references
-                                        .push((ident_node_id, *stmt, *index));
+                                    self.references.push(Reference::Parameter(
+                                        ident_node_id,
+                                        *stmt,
+                                        *index,
+                                    ));
                                     ident_node_id
                                 }
                                 _ => panic!(),
@@ -280,7 +289,8 @@ impl<'a> DotBuilder<'a> {
             match self.symbols[symbol.id()].kind() {
                 SymbolKind::LetFn(stmt, _, _) => {
                     let call_node_id = self.insert_node(Node::FunctionCall(ident.ident().id()));
-                    self.references.push((call_node_id, *stmt));
+                    self.references
+                        .push(Reference::LetBinding(call_node_id, *stmt));
                     call_node_id
                 }
                 SymbolKind::Parameter(stmt, index) => match self.ast.statement(*stmt).kind() {
@@ -288,8 +298,8 @@ impl<'a> DotBuilder<'a> {
                         let ident_node_id = self.insert_node(Node::FunctionCall(
                             params.get(*index).unwrap().identifier().id(),
                         ));
-                        self.parameter_references
-                            .push((ident_node_id, *stmt, *index));
+                        self.references
+                            .push(Reference::Parameter(ident_node_id, *stmt, *index));
                         ident_node_id
                     }
                     _ => panic!(),
@@ -480,19 +490,13 @@ impl<'a> Dot<'a> {
                 params
                     .iter()
                     .enumerate()
-                    .map(|(i, (p, _))| format!(
-                        "<p{i}>{}",
-                        self.ast.identifier(*p),
-                    ))
+                    .map(|(i, (p, _))| format!("<p{i}>{}", self.ast.identifier(*p),))
                     .collect::<Vec<String>>()
                     .join(" | "),
                 params
                     .iter()
                     .enumerate()
-                    .map(|(i, (_, t))| format!(
-                        "<t{i}>{}",
-                        self.ast.identifier(*t),
-                    ))
+                    .map(|(i, (_, t))| format!("<t{i}>{}", self.ast.identifier(*t),))
                     .collect::<Vec<String>>()
                     .join(" | "),
             )),
