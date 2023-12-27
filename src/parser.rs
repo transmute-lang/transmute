@@ -178,10 +178,24 @@ impl<'s> Parser<'s> {
                 let let_token = self.lexer.next();
                 let identifier_token = self.lexer.next();
                 let identifier = match identifier_token.kind() {
-                    TokenKind::Identifier => Identifier::new(
-                        self.push_identifier(identifier_token.span()),
-                        identifier_token.span().clone(),
-                    ),
+                    TokenKind::Identifier => {
+                        let name = self.lexer.span(identifier_token.span());
+                        let c = name.chars().next().unwrap();
+                        if !c.is_ascii_lowercase() && c != '_' {
+                            self.diagnostics.report_warn(
+                                format!(
+                                    "Variable or function name '{}' must start with a lower case letter or an underscore",
+                                    name
+                                ),
+                                identifier_token.span().clone(),
+                                (file!(), line!()),
+                            );
+                        }
+                        Identifier::new(
+                            self.push_identifier(identifier_token.span()),
+                            identifier_token.span().clone(),
+                        )
+                    }
                     _ => {
                         report_unexpected_token!(self, identifier_token, [TokenKind::Identifier,]);
                         self.take_until_one_of(vec![TokenKind::Semicolon]);
@@ -258,10 +272,23 @@ impl<'s> Parser<'s> {
                 let struct_token = self.lexer.next();
                 let identifier_token = self.lexer.next();
                 let identifier = match identifier_token.kind() {
-                    TokenKind::Identifier => Identifier::new(
-                        self.push_identifier(identifier_token.span()),
-                        identifier_token.span().clone(),
-                    ),
+                    TokenKind::Identifier => {
+                        let name = self.lexer.span(identifier_token.span());
+                        if !name.chars().next().unwrap().is_ascii_uppercase() {
+                            self.diagnostics.report_warn(
+                                format!(
+                                    "Struct name '{}' must start with an upper case letter",
+                                    name
+                                ),
+                                identifier_token.span().clone(),
+                                (file!(), line!()),
+                            );
+                        }
+                        Identifier::new(
+                            self.push_identifier(identifier_token.span()),
+                            identifier_token.span().clone(),
+                        )
+                    }
                     _ => {
                         report_unexpected_token!(self, identifier_token, [TokenKind::Identifier,]);
                         self.take_until_one_of(vec![TokenKind::Semicolon]);
@@ -1328,4 +1355,7 @@ mod tests {
     test_syntax!(err_struct_missing_last_field_type => "struct MyStruct { f0: type0, f1 }");
     test_syntax!(err_struct_missing_colon => "struct MyStruct { f0 t0 }");
     test_syntax!(err_struct_missing_comma => "struct MyStruct { f0: t0 f1: t1 }");
+    test_syntax!(err_struct_name_must_start_with_upper_case => "struct myStruct { f0: t0 }");
+    test_syntax!(err_variable_name_must_start_with_lower_case => "let X = 42;");
+    test_syntax!(err_function_name_must_start_with_lower_case => "let X() = { 42; }");
 }

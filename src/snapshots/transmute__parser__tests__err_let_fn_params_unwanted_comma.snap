@@ -89,7 +89,7 @@ expression: "(&ast, &diagnostics)"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    451,
+                    478,
                 ),
             },
             Diagnostic {
@@ -98,7 +98,7 @@ expression: "(&ast, &diagnostics)"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    451,
+                    478,
                 ),
             },
         ],

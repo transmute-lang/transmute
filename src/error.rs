@@ -51,6 +51,15 @@ impl Diagnostics {
     ) {
         self.push(Diagnostic::new(message, span, Level::Error, generated_at));
     }
+
+    pub fn report_warn<S: Into<String>>(
+        &mut self,
+        message: S,
+        span: Span,
+        generated_at: (&'static str, u32),
+    ) {
+        self.push(Diagnostic::new(message, span, Level::Warning, generated_at));
+    }
 }
 
 impl Display for Diagnostics {
@@ -138,4 +147,5 @@ impl Diagnostic {
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Level {
     Error,
+    Warning,
 }

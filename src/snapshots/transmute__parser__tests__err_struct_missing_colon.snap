@@ -58,7 +58,7 @@ expression: "(&ast, &diagnostics)"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    312,
+                    339,
                 ),
             },
         ],
