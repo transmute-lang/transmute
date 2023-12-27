@@ -2,7 +2,7 @@ use crate::ast::expression::{Expression, ExpressionKind};
 use crate::ast::identifier::Identifier;
 use crate::ast::ids::{ExprId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::operators::{BinaryOperator, UnaryOperator};
+use crate::ast::operators::{BinaryOperator, BinaryOperatorKind, UnaryOperator};
 use crate::ast::statement::{Field, Parameter, Statement, StatementKind};
 use crate::ast::Ast;
 use crate::resolver::{Symbol, SymbolKind, Type, Types};
@@ -10,6 +10,7 @@ use std::io;
 use std::io::Write;
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
+use crate::lexer::Span;
 
 pub struct XmlWriter<'a> {
     ast: &'a Ast,
@@ -317,6 +318,11 @@ impl<'a> XmlWriter<'a> {
         op: &BinaryOperator,
         right: &ExprId,
     ) {
+        if matches!(op.kind(), BinaryOperatorKind::Access) {
+            self.visit_access(expr.span(), left, right);
+            return;
+        }
+
         self.emit(
             XmlEvent::start_element("binary")
                 .attr("operator", &op.kind().to_string())
@@ -332,6 +338,42 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(XmlEvent::start_element("right"));
         self.visit_expression(*right);
+        self.emit(XmlEvent::end_element());
+
+        self.emit(XmlEvent::end_element());
+    }
+
+    fn visit_access(&mut self, full_span: &Span, left: &ExprId, right: &ExprId) {
+        self.emit(XmlEvent::start_element("access")
+            .attr("line", &full_span.line().to_string())
+            .attr("column", &full_span.column().to_string())
+            .attr("start", &full_span.start().to_string())
+            .attr("len", &full_span.len().to_string()));
+
+        self.visit_expression(*left);
+
+        let right = self.ast.expression(*right);
+        // todo if we have a dedicated enum variant for access, we can simplify this by putting the IdentId directly
+        //  in it
+        let ident = if let ExpressionKind::Literal(lit) = right.kind() {
+            if let LiteralKind::Identifier(ident_ref) = lit.kind() {
+                self.ast.identifier_ref(*ident_ref).ident()
+            } else {
+                panic!("identifier expected")
+            }
+        } else {
+            panic!("literal expected")
+        };
+
+        self.emit(XmlEvent::start_element("field")
+            .attr("ident-ref", &format!("ident:{}", ident.id()))
+            .attr("type-ref", &format!("type:{}", self.types.expression_type(right.id()).unwrap().id()))
+            .attr("line", &ident.span().line().to_string())
+            .attr("column", &ident.span().column().to_string())
+            .attr("start", &ident.span().start().to_string())
+            .attr("len", &ident.span().len().to_string())
+        );
+        self.emit(XmlEvent::Characters(self.ast.identifier(ident.id())));
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::end_element());
@@ -719,6 +761,15 @@ mod tests {
             struct Point { x: number, y: number }
             struct Segment { from: Point, to: Point }
             let len(seg: Segment) = {}
+        "#
+    );
+    test_xml_write!(
+        struct_field_access,
+        r#"
+            struct Point { x: number, y: number }
+            let len(p: Point) = {
+                p.x;
+            }
         "#
     );
 }

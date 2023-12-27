@@ -1274,6 +1274,8 @@ mod tests {
     test_syntax!(nested_method_call => "obj.f().g();");
     test_syntax!(field_and_method_call => "parent.child.f();");
     test_syntax!(method_call_and_field => "parent.f().child;");
+    test_syntax!(field_access_in_condition => "if a.b { 1; }");
+    test_syntax!(field_call_in_condition => "if a.b() { 1; }");
     test_syntax!(access_if_result_access => "if true { } else { } . a;");
     test_syntax!(if_result_access_call => "if true { } else { } . f();");
     test_syntax!(while_loop => "while true { 42; }");

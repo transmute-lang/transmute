@@ -2,7 +2,7 @@ use crate::ast::expression::{Expression, ExpressionKind};
 use crate::ast::identifier::Identifier;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use crate::ast::literal::LiteralKind;
-use crate::ast::operators::{BinaryOperator, UnaryOperator};
+use crate::ast::operators::{BinaryOperator, BinaryOperatorKind, UnaryOperator};
 use crate::ast::statement::{Field, Parameter, StatementKind};
 use crate::ast::Ast;
 use crate::error::{Diagnostic, Diagnostics};
@@ -375,6 +375,10 @@ impl Resolver {
         op: BinaryOperator,
         right: ExprId,
     ) -> Result<TypeId, ()> {
+        if matches!(op.kind(), BinaryOperatorKind::Access) {
+            return self.visit_access(left, right);
+        }
+
         let left_type = self.visit_expression(left)?;
         let right_type = self.visit_expression(right)?;
 
@@ -404,6 +408,54 @@ impl Resolver {
         self.ast.replace_expression(expression);
 
         Ok(self.symbols.borrow()[symbol.id()].ty)
+    }
+
+    fn visit_access(&mut self, parent: ExprId, child: ExprId) -> Result<TypeId, ()> {
+        if let Some(ty) = self.type_bindings.get(&Typed::Expression(child)) {
+            return *ty;
+        }
+
+        let parent_type = self.visit_expression(parent)?;
+        let parent_type = &self.types.borrow()[parent_type.id()];
+
+        // todo if we have a dedicated enum variant for access, we can simplify this by putting the IdentId directly
+        //  in it
+        let child_ident_ref =
+            if let ExpressionKind::Literal(lit) = self.ast.expression(child).kind() {
+                if let LiteralKind::Identifier(ident_ref) = lit.kind() {
+                    self.ast.identifier_ref(*ident_ref)
+                } else {
+                    panic!("expected identifier")
+                }
+            } else {
+                panic!("expected literal")
+            };
+
+        let field_type = match parent_type {
+            Type::Struct(fields) => fields
+                .iter()
+                .find(|(name, _)| name == &child_ident_ref.ident().id())
+                .map(|(_, t)| *t),
+            _ => None,
+        };
+
+        match field_type {
+            Some(t) => {
+                self.type_bindings.insert(Typed::Expression(child), Ok(t));
+                Ok(t)
+            },
+            None => {
+                self.diagnostics.report_err(
+                    format!(
+                        "No field '{}' found",
+                        self.ast.identifier(child_ident_ref.ident().id()),
+                    ),
+                    self.ast.expression(parent).span().clone(),
+                    (file!(), line!()),
+                );
+                Err(())
+            }
+        }
     }
 
     fn visit_unary_operator(
@@ -1267,6 +1319,12 @@ mod tests {
         Span::new(1, 32, 31, 1)
     );
     test_type_error!(
+        function_parameter_incorrect_type_when_called,
+        "struct S {} let f(t: S) = { } f(1);",
+        "No function 'f' found for parameters of types (number)",
+        Span::new(1, 31, 30, 1)
+    );
+    test_type_error!(
         function_parameter_incorrect_arity,
         "let f(n: number, b: boolean) = { f(0); }",
         "No function 'f' found for parameters of types (number)",
@@ -1300,6 +1358,18 @@ mod tests {
         "No function 'n' found for parameters of types ()",
         Span::new(1, 13, 12, 1)
     );
+    test_type_error!(
+        invalid_field_access,
+        "let n = 10; n.field;",
+        "No field 'field' found",
+        Span::new(1, 13, 12, 1)
+    );
+    test_type_error!(
+        invalid_field_type,
+        "struct Point { x: number, y: number } let f(p: Point) = { if p.x { } }",
+        "Expected type boolean, got number",
+        Span::new(1, 62, 61, 3)
+    );
     // fixme un-comment the following test
     // test_type_ok!(
     //     assign_from_native,
@@ -1314,5 +1384,9 @@ mod tests {
     test_type_ok!(
         struct_use,
         "struct Point { x: number, y: number } let dist(from: Point, to: Point) = { }"
+    );
+    test_type_ok!(
+        struct_field_access,
+        "struct Point { x: number, y: number } let f(p: Point) = { p.x + 1; }"
     );
 }

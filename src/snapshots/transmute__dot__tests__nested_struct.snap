@@ -9,5 +9,5 @@ splines=false;
 n0[label="{ <struct>Point | { { <f0>x | <f1>y } | { number | number } } }"][shape="record"][fontcolor="black"]
 n1[label="{ <struct>Segment | { { <f0>from | <f1>to } | { Point | Point } } }"][shape="record"][fontcolor="black"]
 n2[label=""][shape="point"][fontcolor="black"]
-n3[label="{ {<fn>len() } | { <p0>seg: Segment } }"][shape="record"][fontcolor="black"]
+n3[label="{ {<fn>len() } | { { <p0>seg } | { <t0>Segment } } }"][shape="record"][fontcolor="black"]
 n3 -> n2[style="solid"][color="black"][arrowhead="none"]}

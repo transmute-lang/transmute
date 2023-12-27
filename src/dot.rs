@@ -473,17 +473,25 @@ impl<'a> Dot<'a> {
             Node::Let(ident) => Cow::Owned(format!("let {}", self.ast.identifier(*ident))),
             Node::Ret => Cow::Borrowed("ret"),
             Node::LetFn(ident, params, ret) => Cow::Owned(format!(
-                "{{ {{<fn>{}(){} }} | {{ {} }} }}",
+                "{{ {{<fn>{}(){} }} | {{ {{ {} }} | {{ {} }} }} }}",
                 self.ast.identifier(*ident),
                 ret.map(|r| format!(": {}", self.ast.identifier(r)))
                     .unwrap_or_default(),
                 params
                     .iter()
                     .enumerate()
-                    .map(|(i, (p, t))| format!(
-                        "<p{i}>{}: {}",
+                    .map(|(i, (p, _))| format!(
+                        "<p{i}>{}",
                         self.ast.identifier(*p),
-                        self.ast.identifier(*t)
+                    ))
+                    .collect::<Vec<String>>()
+                    .join(" | "),
+                params
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (_, t))| format!(
+                        "<t{i}>{}",
+                        self.ast.identifier(*t),
                     ))
                     .collect::<Vec<String>>()
                     .join(" | "),

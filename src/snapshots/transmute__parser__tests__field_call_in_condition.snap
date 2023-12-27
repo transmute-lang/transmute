@@ -1,0 +1,160 @@
+---
+source: src/parser.rs
+expression: "(&ast, &diagnostics)"
+---
+(
+    Ast {
+        identifiers: [
+            "a",
+            "b",
+        ],
+        identifier_refs: [
+            IdentifierRef {
+                id: IdentRefId {
+                    id: 0,
+                },
+                ident: Identifier {
+                    id: IdentId {
+                        id: 0,
+                    },
+                    span: 1:4; [3, 4],
+                },
+                symbol_id: None,
+            },
+            IdentifierRef {
+                id: IdentRefId {
+                    id: 1,
+                },
+                ident: Identifier {
+                    id: IdentId {
+                        id: 1,
+                    },
+                    span: 1:6; [5, 6],
+                },
+                symbol_id: None,
+            },
+        ],
+        expressions: [
+            Expression {
+                id: ExprId {
+                    id: 0,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Identifier(
+                            IdentRefId {
+                                id: 0,
+                            },
+                        ),
+                        span: 1:4; [3, 4],
+                    },
+                ),
+                span: 1:4; [3, 4],
+            },
+            Expression {
+                id: ExprId {
+                    id: 1,
+                },
+                kind: FunctionCall(
+                    IdentRefId {
+                        id: 1,
+                    },
+                    [],
+                ),
+                span: 1:6; [5, 8],
+            },
+            Expression {
+                id: ExprId {
+                    id: 2,
+                },
+                kind: Binary(
+                    ExprId {
+                        id: 0,
+                    },
+                    BinaryOperator {
+                        kind: Access,
+                        span: 1:5; [4, 5],
+                    },
+                    ExprId {
+                        id: 1,
+                    },
+                ),
+                span: 1:4; [3, 8],
+            },
+            Expression {
+                id: ExprId {
+                    id: 3,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Number(
+                            1,
+                        ),
+                        span: 1:12; [11, 12],
+                    },
+                ),
+                span: 1:12; [11, 12],
+            },
+            Expression {
+                id: ExprId {
+                    id: 4,
+                },
+                kind: Block(
+                    [
+                        StmtId {
+                            id: 0,
+                        },
+                    ],
+                ),
+                span: 1:10; [9, 15],
+            },
+            Expression {
+                id: ExprId {
+                    id: 5,
+                },
+                kind: If(
+                    ExprId {
+                        id: 2,
+                    },
+                    ExprId {
+                        id: 4,
+                    },
+                    None,
+                ),
+                span: 1:1; [0, 15],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: Expression(
+                    ExprId {
+                        id: 3,
+                    },
+                ),
+                span: 1:12; [11, 13],
+            },
+            Statement {
+                id: StmtId {
+                    id: 1,
+                },
+                kind: Expression(
+                    ExprId {
+                        id: 5,
+                    },
+                ),
+                span: 1:1; [0, 15],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 1,
+            },
+        ],
+    },
+    Diagnostics {
+        diagnostics: [],
+    },
+)

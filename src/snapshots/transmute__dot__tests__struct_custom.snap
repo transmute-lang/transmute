@@ -8,5 +8,5 @@ ordering="out";
 splines=false;
 n0[label="{ <struct>Point | { { <f0>x | <f1>y } | { number | number } } }"][shape="record"][fontcolor="black"]
 n1[label=""][shape="point"][fontcolor="black"]
-n2[label="{ {<fn>dist() } | { <p0>from: Point | <p1>to: Point } }"][shape="record"][fontcolor="black"]
+n2[label="{ {<fn>dist() } | { { <p0>from | <p1>to } | { <t0>Point | <t1>Point } } }"][shape="record"][fontcolor="black"]
 n2 -> n1[style="solid"][color="black"][arrowhead="none"]}
