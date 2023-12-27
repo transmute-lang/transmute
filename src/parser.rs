@@ -1229,6 +1229,7 @@ impl<'s> Parser<'s> {
 mod tests {
     use super::*;
     use crate::dot::Dot;
+    use crate::resolver::Types;
     use insta::assert_debug_snapshot;
     use insta::assert_snapshot;
 
@@ -1240,7 +1241,7 @@ mod tests {
                 if diagnostics.is_empty() {
                     assert_snapshot!(
                         format!("{}-dot", stringify!($name)),
-                        Dot::new(&ast, &vec![]).serialize()
+                        Dot::new(&ast, &vec![], &Types::empty()).serialize()
                     );
                 }
                 assert_debug_snapshot!((&ast, &diagnostics));

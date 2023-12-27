@@ -432,7 +432,7 @@ impl Resolver {
             };
 
         let field_type = match parent_type {
-            Type::Struct(fields) => fields
+            Type::Struct(_, fields) => fields
                 .iter()
                 .find(|(name, _)| name == &child_ident_ref.ident().id())
                 .map(|(_, t)| *t),
@@ -737,7 +737,7 @@ impl Resolver {
                         return Err(diagnostics);
                     }
 
-                    Ok(self.type_id(Type::Struct(resolved_fields)))
+                    Ok(self.type_id(Type::Struct(*stmt, resolved_fields)))
                 }
                 SymbolKind::NativeType(native) => Ok(self.type_id(native.ty().clone())),
                 _ => panic!("the resolved symbol was not a type"),
@@ -907,7 +907,7 @@ pub enum Type {
     Function,
     Number,
     Void,
-    Struct(Vec<(IdentId, TypeId)>),
+    Struct(StmtId, Vec<(IdentId, TypeId)>),
     /// This value is used when the statement/expression does not return any value. This is the
     /// case of `ret` for instance.
     None,
@@ -919,7 +919,7 @@ impl Display for Type {
             Type::Boolean => write!(f, "{}", natives::TYPE_BOOLEAN),
             Type::Function => write!(f, "function TODO"),
             Type::Number => write!(f, "{}", natives::TYPE_NUMBER),
-            Type::Struct(fields) => write!(f, "struct/{}", fields.len()),
+            Type::Struct(_, fields) => write!(f, "struct/{}", fields.len()),
             Type::Void => write!(f, "{}", natives::TYPE_VOID),
             Type::None => write!(f, "no type"),
         }
@@ -942,6 +942,10 @@ pub struct Types {
 impl Types {
     fn new(types: Vec<Type>, bindings: HashMap<Typed, TypeId>) -> Self {
         Self { types, bindings }
+    }
+
+    pub fn empty() -> Self {
+        Self::new(Default::default(), Default::default())
     }
 
     pub fn expression_type(&self, expr_id: ExprId) -> Option<TypeId> {
@@ -1086,7 +1090,10 @@ mod tests {
             "rebinding-xml",
             XmlWriter::new(&ast, &symbols, &types).serialize()
         );
-        assert_snapshot!("rebinding-dot", Dot::new(&ast, &symbols).serialize());
+        assert_snapshot!(
+            "rebinding-dot",
+            Dot::new(&ast, &symbols, &types).serialize()
+        );
     }
 
     macro_rules! test_type_error {

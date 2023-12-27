@@ -40,13 +40,13 @@ expression: "&xml"
         <void />
       </type>
       <type id="type:4">
-        <struct>
+        <struct stmt-ref="stmt:0">
           <field ident-ref="ident:1" type-ref="type:1" />
           <field ident-ref="ident:3" type-ref="type:1" />
         </struct>
       </type>
       <type id="type:5">
-        <struct>
+        <struct stmt-ref="stmt:1">
           <field ident-ref="ident:5" type-ref="type:4" />
           <field ident-ref="ident:6" type-ref="type:4" />
         </struct>
@@ -61,11 +61,11 @@ expression: "&xml"
         <fields>
           <field id="stmt:0:0" line="2" column="28" start="28" len="9">
             <name ident-ref="ident:1" line="2" column="28" start="28" len="1">x</name>
-            <type ident-ref="ident:2" type-ref="type-ref:1" line="2" column="31" start="31" len="6">number</type>
+            <type ident-ref="ident:2" type-ref="type:1" line="2" column="31" start="31" len="6">number</type>
           </field>
           <field id="stmt:0:1" line="2" column="39" start="39" len="9">
             <name ident-ref="ident:3" line="2" column="39" start="39" len="1">y</name>
-            <type ident-ref="ident:2" type-ref="type-ref:1" line="2" column="42" start="42" len="6">number</type>
+            <type ident-ref="ident:2" type-ref="type:1" line="2" column="42" start="42" len="6">number</type>
           </field>
         </fields>
       </struct>
@@ -76,11 +76,11 @@ expression: "&xml"
         <fields>
           <field id="stmt:1:0" line="3" column="30" start="80" len="11">
             <name ident-ref="ident:5" line="3" column="30" start="80" len="4">from</name>
-            <type ident-ref="ident:0" type-ref="type-ref:4" line="3" column="36" start="86" len="5">Point</type>
+            <type ident-ref="ident:0" type-ref="type:4" line="3" column="36" start="86" len="5">Point</type>
           </field>
           <field id="stmt:1:1" line="3" column="43" start="93" len="9">
             <name ident-ref="ident:6" line="3" column="43" start="93" len="2">to</name>
-            <type ident-ref="ident:0" type-ref="type-ref:4" line="3" column="47" start="97" len="5">Point</type>
+            <type ident-ref="ident:0" type-ref="type:4" line="3" column="47" start="97" len="5">Point</type>
           </field>
         </fields>
       </struct>

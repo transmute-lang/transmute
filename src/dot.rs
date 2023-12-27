@@ -5,7 +5,7 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Field, Parameter, StatementKind};
 use crate::ast::Ast;
-use crate::resolver::{Symbol, SymbolKind};
+use crate::resolver::{Symbol, SymbolKind, Type, Types};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io;
@@ -45,8 +45,9 @@ enum Node {
 
 struct Edge {
     from: NodeId,
+    from_label: Option<String>,
     to: NodeId,
-    record_label: Option<String>,
+    to_label: Option<String>,
     kind: EdgeKind,
 }
 
@@ -57,11 +58,13 @@ enum EdgeKind {
     TrueBranch,
     FalseBranch,
     Reference,
+    TypeReference,
 }
 
 struct DotBuilder<'a> {
     ast: &'a Ast,
     symbols: &'a Vec<Symbol>,
+    types: &'a Types,
     nodes: Vec<Node>,
     edges: Vec<Edge>,
     stmt_map: HashMap<StmtId, NodeId>,
@@ -71,13 +74,15 @@ struct DotBuilder<'a> {
 enum Reference {
     LetBinding(NodeId, StmtId),
     Parameter(NodeId, StmtId, usize),
+    TypeReference(NodeId, usize, StmtId),
 }
 
 impl<'a> DotBuilder<'a> {
-    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>) -> Self {
+    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>, types: &'a Types) -> Self {
         Self {
             ast,
             symbols,
+            types,
             nodes: Default::default(),
             edges: Default::default(),
             stmt_map: Default::default(),
@@ -104,15 +109,17 @@ impl<'a> DotBuilder<'a> {
                     ) {
                         self.edges.push(Edge {
                             from,
+                            from_label: None,
                             to,
-                            record_label: Some("fn".to_string()),
+                            to_label: Some("fn".to_string()),
                             kind: EdgeKind::Reference,
                         });
                     } else {
                         self.edges.push(Edge {
                             from,
+                            from_label: None,
                             to,
-                            record_label: None,
+                            to_label: None,
                             kind: EdgeKind::Reference,
                         });
                     }
@@ -124,9 +131,23 @@ impl<'a> DotBuilder<'a> {
                         .unwrap_or_else(|| panic!("Statement {stmt} not mapped"));
                     self.edges.push(Edge {
                         from,
+                        from_label: None,
                         to,
-                        record_label: Some(format!("p{index}")),
+                        to_label: Some(format!("p{index}")),
                         kind: EdgeKind::Reference,
+                    });
+                }
+                Reference::TypeReference(from, index, stmt) => {
+                    let to = *self
+                        .stmt_map
+                        .get(&stmt)
+                        .unwrap_or_else(|| panic!("Statement {stmt} not mapped"));
+                    self.edges.push(Edge {
+                        from,
+                        from_label: Some(format!("t{index}")),
+                        to,
+                        to_label: None,
+                        kind: EdgeKind::TypeReference,
                     });
                 }
             }
@@ -145,9 +166,9 @@ impl<'a> DotBuilder<'a> {
             StatementKind::Let(ident, expr) => self.visit_let(ident, expr),
             StatementKind::Ret(expr) => self.visit_ret(expr),
             StatementKind::LetFn(ident, params, ret, expr) => {
-                self.visit_function(ident, params, ret, expr)
+                self.visit_function(stmt, ident, params, ret, expr)
             }
-            StatementKind::Struct(ident, fields) => self.visit_struct(ident, fields),
+            StatementKind::Struct(ident, fields) => self.visit_struct(stmt, ident, fields),
         };
 
         self.stmt_map.insert(stmt, node_id);
@@ -279,6 +300,8 @@ impl<'a> DotBuilder<'a> {
         self.insert_edge(op_node_id, left_node_id);
         self.insert_edge(op_node_id, right_node_id);
 
+        // todo add links to types / struct fields?
+
         op_node_id
     }
 
@@ -378,6 +401,7 @@ impl<'a> DotBuilder<'a> {
 
     fn visit_function(
         &mut self,
+        stmt: StmtId,
         ident: &Identifier,
         params: &[Parameter],
         ret: &Option<Identifier>,
@@ -392,20 +416,44 @@ impl<'a> DotBuilder<'a> {
                 .collect::<Vec<(IdentId, IdentId)>>(),
             ret.as_ref().map(|r| r.id()),
         ));
-        // todo insert edges from type params to types, if possible
+
         self.insert_edge(let_fn_node_id, expr_node_id);
+
+        for (index, _) in params.iter().enumerate() {
+            if let Some(Type::Struct(stmt, _)) = self
+                .types
+                .parameter_type(stmt, index)
+                .and_then(|type_id| self.types.get(type_id))
+            {
+                self.references
+                    .push(Reference::TypeReference(let_fn_node_id, index, *stmt));
+            }
+        }
 
         let_fn_node_id
     }
 
-    fn visit_struct(&mut self, ident: &Identifier, fields: &[Field]) -> NodeId {
-        self.insert_node(Node::Struct(
+    fn visit_struct(&mut self, stmt: StmtId, ident: &Identifier, fields: &[Field]) -> NodeId {
+        let node_id = self.insert_node(Node::Struct(
             ident.id(),
             fields
                 .iter()
                 .map(|p| (p.identifier().id(), p.ty().id()))
                 .collect::<Vec<(IdentId, IdentId)>>(),
-        ))
+        ));
+
+        for (index, _) in fields.iter().enumerate() {
+            if let Some(Type::Struct(stmt, _)) = self
+                .types
+                .field_type(stmt, index)
+                .and_then(|t| self.types.get(t))
+            {
+                self.references
+                    .push(Reference::TypeReference(node_id, index, *stmt));
+            }
+        }
+
+        node_id
     }
 
     fn insert_node(&mut self, node: Node) -> NodeId {
@@ -416,8 +464,9 @@ impl<'a> DotBuilder<'a> {
     fn insert_edge(&mut self, from: NodeId, to: NodeId) -> EdgeId {
         self.edges.push(Edge {
             from,
+            from_label: None,
             to,
-            record_label: None,
+            to_label: None,
             kind: Default::default(),
         });
         (self.edges.len() - 1).into()
@@ -426,8 +475,9 @@ impl<'a> DotBuilder<'a> {
     fn insert_edge_with_kind(&mut self, from: NodeId, to: NodeId, kind: EdgeKind) -> EdgeId {
         self.edges.push(Edge {
             from,
+            from_label: None,
             to,
-            record_label: None,
+            to_label: None,
             kind,
         });
         (self.edges.len() - 1).into()
@@ -441,8 +491,8 @@ pub struct Dot<'a> {
 }
 
 impl<'a> Dot<'a> {
-    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>) -> Self {
-        DotBuilder::new(ast, symbols).build()
+    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>, types: &'a Types) -> Self {
+        DotBuilder::new(ast, symbols, types).build()
     }
 
     pub fn write<W: Write>(self, w: &mut W) -> io::Result<()> {
@@ -506,12 +556,13 @@ impl<'a> Dot<'a> {
                 fields
                     .iter()
                     .enumerate()
-                    .map(|(i, (p, _))| format!("<f{i}>{}", self.ast.identifier(*p),))
+                    .map(|(i, (p, _))| format!("<f{i}>{}", self.ast.identifier(*p)))
                     .collect::<Vec<String>>()
                     .join(" | "),
                 fields
                     .iter()
-                    .map(|(_, t)| self.ast.identifier(*t).to_string())
+                    .enumerate()
+                    .map(|(i, (_, t))| format!("<t{i}>{}", self.ast.identifier(*t)))
                     .collect::<Vec<String>>()
                     .join(" | ")
             )),
@@ -555,14 +606,14 @@ impl<'a> Dot<'a> {
             .unwrap_or_default();
 
         format!(
-            "n{} -> n{}{}[style=\"{style}\"][color=\"{color}\"][arrowhead=\"{arrow_head}\"]{constraint}",
-            edge.from, edge.to, edge.record_label.as_ref().map(|l| format!(":{l}")).unwrap_or_default()
+            "n{}{} -> n{}{}[style=\"{style}\"][color=\"{color}\"][arrowhead=\"{arrow_head}\"]{constraint}",
+            edge.from, edge.from_label.as_ref().map(|l| format!(":{l}")).unwrap_or_default(), edge.to, edge.to_label.as_ref().map(|l| format!(":{l}")).unwrap_or_default()
         )
     }
 
     fn edge_style(edge: &Edge) -> &'static str {
         match edge.kind {
-            EdgeKind::Reference => "dotted",
+            EdgeKind::Reference | EdgeKind::TypeReference => "dotted",
             _ => "solid",
         }
     }
@@ -570,6 +621,7 @@ impl<'a> Dot<'a> {
     fn edge_color(edge: &Edge) -> &'static str {
         match edge.kind {
             EdgeKind::Reference => "gray",
+            EdgeKind::TypeReference => "orange",
             EdgeKind::TrueBranch => "green",
             EdgeKind::FalseBranch => "red",
             _ => "black",
@@ -604,11 +656,11 @@ mod tests {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols, _) = Resolver::new(ast, Natives::default())
+                let (ast, symbols, types) = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
 
-                assert_snapshot!(Dot::new(&ast, &symbols).serialize());
+                assert_snapshot!(Dot::new(&ast, &symbols, &types).serialize());
             }
         };
     }
@@ -678,6 +730,15 @@ mod tests {
             struct Point { x: number, y: number }
             struct Segment { from: Point, to: Point }
             let len(seg: Segment) = {}
+        "#
+    );
+    generate!(
+        struct_field_access,
+        r#"
+            struct Point { x: number, y: number }
+            let len(p: Point) = {
+                p.x;
+            }
         "#
     );
 }

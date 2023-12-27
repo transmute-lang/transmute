@@ -1,12 +1,14 @@
 ---
 source: src/dot.rs
-expression: "Dot::new(&ast, &symbols).serialize()"
+expression: "Dot::new(&ast, &symbols, &types).serialize()"
 ---
 //graphviz file
 digraph ast {
 ordering="out";
 splines=false;
-n0[label="{ <struct>Point | { { <f0>x | <f1>y } | { number | number } } }"][shape="record"][fontcolor="black"]
+n0[label="{ <struct>Point | { { <f0>x | <f1>y } | { <t0>number | <t1>number } } }"][shape="record"][fontcolor="black"]
 n1[label=""][shape="point"][fontcolor="black"]
 n2[label="{ {<fn>dist() } | { { <p0>from | <p1>to } | { <t0>Point | <t1>Point } } }"][shape="record"][fontcolor="black"]
-n2 -> n1[style="solid"][color="black"][arrowhead="none"]}
+n2 -> n1[style="solid"][color="black"][arrowhead="none"]
+n2:t0 -> n0[style="dotted"][color="orange"][arrowhead="none"]
+n2:t1 -> n0[style="dotted"][color="orange"][arrowhead="none"]}

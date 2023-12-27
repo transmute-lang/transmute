@@ -50,7 +50,7 @@ fn fibonacci_rec() {
 
     let (ast, symbols, types) = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
-    Dot::new(&ast, &symbols)
+    Dot::new(&ast, &symbols, &types)
         .write(&mut File::create("target/fibonacci_rec.dot").unwrap())
         .unwrap();
     XmlWriter::new(&ast, &symbols, &types)
@@ -103,7 +103,7 @@ fn fibonacci_iter() {
 
     let (ast, symbols, types) = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
-    Dot::new(&ast, &symbols)
+    Dot::new(&ast, &symbols, &types)
         .write(&mut File::create("target/fibonacci_iter.dot").unwrap())
         .unwrap();
     XmlWriter::new(&ast, &symbols, &types)

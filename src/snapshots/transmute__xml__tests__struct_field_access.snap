@@ -37,7 +37,7 @@ expression: "&xml"
         <void />
       </type>
       <type id="type:4">
-        <struct>
+        <struct stmt-ref="stmt:0">
           <field ident-ref="ident:1" type-ref="type:1" />
           <field ident-ref="ident:3" type-ref="type:1" />
         </struct>
@@ -52,11 +52,11 @@ expression: "&xml"
         <fields>
           <field id="stmt:0:0" line="2" column="28" start="28" len="9">
             <name ident-ref="ident:1" line="2" column="28" start="28" len="1">x</name>
-            <type ident-ref="ident:2" type-ref="type-ref:1" line="2" column="31" start="31" len="6">number</type>
+            <type ident-ref="ident:2" type-ref="type:1" line="2" column="31" start="31" len="6">number</type>
           </field>
           <field id="stmt:0:1" line="2" column="39" start="39" len="9">
             <name ident-ref="ident:3" line="2" column="39" start="39" len="1">y</name>
-            <type ident-ref="ident:2" type-ref="type-ref:1" line="2" column="42" start="42" len="6">number</type>
+            <type ident-ref="ident:2" type-ref="type:1" line="2" column="42" start="42" len="6">number</type>
           </field>
         </fields>
       </struct>

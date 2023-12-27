@@ -77,8 +77,11 @@ impl<'a> XmlWriter<'a> {
                     self.emit(XmlEvent::start_element(ty.to_string().as_str()));
                     self.emit(XmlEvent::end_element());
                 }
-                Type::Struct(fields) => {
-                    self.emit(XmlEvent::start_element("struct"));
+                Type::Struct(stmt, fields) => {
+                    self.emit(
+                        XmlEvent::start_element("struct")
+                            .attr("stmt-ref", &format!("stmt:{}", stmt)),
+                    );
                     for (ident, ty) in fields.iter() {
                         self.emit(
                             XmlEvent::start_element("field")
@@ -675,7 +678,7 @@ impl<'a> XmlWriter<'a> {
                     .attr(
                         "type-ref",
                         &format!(
-                            "type-ref:{}",
+                            "type:{}",
                             self.types.field_type(stmt_id, index).unwrap().id()
                         ),
                     )
