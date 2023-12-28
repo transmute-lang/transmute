@@ -12,7 +12,7 @@ use crate::lexer::Span;
 use crate::natives;
 use crate::natives::{NativeType, Natives};
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 
@@ -153,20 +153,78 @@ impl Resolver {
     }
 
     fn insert_structs(&mut self, stmts: &[StmtId]) {
-        for stmt in stmts {
-            // we start by inserting all the structs we find, so that they are available from
-            // everywhere in the current scope.
-            if let StatementKind::Struct(ident, _) = self.ast.statement(*stmt).kind() {
-                self.insert_symbol(
-                    ident.id(),
-                    SymbolKind::Struct(*stmt),
+        // First step: we discover all the structs and reserve a typeId for them. We don't resolve their fields
+        // types in this step. Indeed, some field types may not be  "discovered", yet. This is the case for recursive
+        // structs and structs defined later in the source.
+        let structs = stmts
+            .iter()
+            .copied()
+            .filter_map(|s| match self.ast.statement(s).kind() {
+                StatementKind::Struct(ident, fields) => Some((s, ident.id(), fields)),
+                _ => None,
+            })
+            .enumerate()
+            .map(|(index, (stmt, ident, fields))| {
+                // We'll replace it with an actual type in the second phase
+                let id = self.type_id(Type::None);
+                (ident, (stmt, fields.clone(), id))
+            })
+            .collect::<HashMap<IdentId, (StmtId, Vec<Field>, TypeId)>>();
+
+        // Second step: we resolve all structs fields types
+        for (ident, (stmt, fields, type_id)) in structs.iter() {
+            let mut used_identifiers = HashSet::with_capacity(fields.len());
+            let mut resolved_fields = Vec::with_capacity(fields.len());
+
+            for (index, field) in fields.iter().enumerate() {
+                if used_identifiers.contains(&field.identifier().id()) {
+                    self.diagnostics.report_err(
+                        format!(
+                            "Field '{}' is already defined for '{}'",
+                            self.ast.identifier(field.identifier().id()),
+                            self.ast.identifier(*ident),
+                        ),
+                        field.identifier().span().clone(),
+                        (file!(), line!()),
+                    );
+                } else {
+                    used_identifiers.insert(field.identifier().id());
+                }
+
+                let ty = self
+                    .resolve_type(field.ty().id(), field.ty().span())
+                    .or_else(|d| {
+                        // The type is not known, yet. It may be a sibling struct or the struct itself, in case of a
+                        // recursive struct. In that case, we have to lookup in the temporary types.
+                        match structs.get(&field.ty().id()) {
+                            Some((_, _, ty)) => Ok(*ty),
+                            None => Err(d),
+                        }
+                    });
+
+                match ty {
+                    Ok(ty) => {
+                        resolved_fields.push((field.identifier().id(), ty));
+                        self.type_bindings
+                            .insert(Typed::Field(*stmt, index), Ok(ty));
+                    }
+                    Err(d) => self.diagnostics.push_all(d),
+                }
+            }
+
+            if resolved_fields.len() == fields.len() {
+                let symbol_id = self.insert_symbol(
+                    *ident,
+                    SymbolKind::Struct(*stmt, resolved_fields),
                     self.type_id(Type::Void),
-                )
+                );
+                self.types.borrow_mut()[type_id.id()] = Type::Struct(*stmt, symbol_id);
+                //let type_id = self.type_id(Type::Struct(*stmt, resolved_fields));
             }
         }
     }
 
-    fn insert_symbol(&mut self, ident: IdentId, kind: SymbolKind, ty: TypeId) {
+    fn insert_symbol(&mut self, ident: IdentId, kind: SymbolKind, ty: TypeId) -> SymbolId {
         let id = SymbolId::from(self.symbols.borrow().len());
         self.symbols.borrow_mut().push(Symbol { id, kind, ty });
         self.scope_stack
@@ -176,6 +234,7 @@ impl Resolver {
             .entry(ident)
             .or_default()
             .push(id);
+        id
     }
 
     fn type_id(&self, kind: Type) -> TypeId {
@@ -432,10 +491,13 @@ impl Resolver {
             };
 
         let field_type = match parent_type {
-            Type::Struct(_, fields) => fields
-                .iter()
-                .find(|(name, _)| name == &child_ident_ref.ident().id())
-                .map(|(_, t)| *t),
+            Type::Struct(_, symbol) => match &self.symbols.borrow()[symbol.id()].kind {
+                SymbolKind::Struct(_, fields) => fields
+                    .iter()
+                    .find(|(name, _)| name == &child_ident_ref.ident().id())
+                    .map(|(_, t)| *t),
+                _ => panic!(),
+            },
             _ => None,
         };
 
@@ -536,6 +598,7 @@ impl Resolver {
     fn visit_block(&mut self, stmts: &[StmtId]) -> Result<TypeId, ()> {
         self.push_scope();
 
+        self.insert_structs(stmts);
         self.insert_functions(stmts);
         let ret_type = self.visit_statements(stmts);
 
@@ -565,8 +628,8 @@ impl Resolver {
                     self.visit_function(*stmt, &params.to_vec(), ret_type.clone().as_ref(), *expr);
                     Ok(void_type_id)
                 }
-                StatementKind::Struct(_ident, fields) => {
-                    self.visit_struct(*stmt, &fields.to_vec());
+                StatementKind::Struct(_, _) => {
+                    // already done in insert_structs function
                     Ok(void_type_id)
                 }
             };
@@ -637,7 +700,7 @@ impl Resolver {
                 parameter.identifier().id(),
                 SymbolKind::Parameter(stmt, index),
                 ty,
-            )
+            );
         }
 
         let _ = self.visit_expression(expr);
@@ -686,60 +749,60 @@ impl Resolver {
         self.pop_scope();
     }
 
-    fn visit_struct(&mut self, stmt: StmtId, fields: &[Field]) {
-        let mut used_identifiers = Vec::with_capacity(fields.len());
-
-        for (index, field) in fields.iter().enumerate() {
-            if used_identifiers.contains(&field.identifier().id()) {
-                self.diagnostics.report_err(
-                    format!(
-                        "Field '{}' is already defined",
-                        self.ast.identifier(field.identifier().id())
-                    ),
-                    field.identifier().span().clone(),
-                    (file!(), line!()),
-                );
-            } else {
-                used_identifiers.push(field.identifier().id());
-            }
-
-            match self.resolve_type(field.ty().id(), field.ty().span()) {
-                Ok(ty) => {
-                    self.type_bindings.insert(Typed::Field(stmt, index), Ok(ty));
-                }
-                Err(d) => self.diagnostics.push_all(d),
-            }
-        }
-    }
+    // fn visit_struct(&mut self, stmt: StmtId, fields: &[Field]) {
+    //     // let mut used_identifiers = Vec::with_capacity(fields.len());
+    //     //
+    //     // for (index, field) in fields.iter().enumerate() {
+    //     //     if used_identifiers.contains(&field.identifier().id()) {
+    //     //         self.diagnostics.report_err(
+    //     //             format!(
+    //     //                 "Field '{}' is already defined",
+    //     //                 self.ast.identifier(field.identifier().id())
+    //     //             ),
+    //     //             field.identifier().span().clone(),
+    //     //             (file!(), line!()),
+    //     //         );
+    //     //     } else {
+    //     //         used_identifiers.push(field.identifier().id());
+    //     //     }
+    //     //
+    //     //     match self.resolve_type(field.ty().id(), field.ty().span()) {
+    //     //         Ok(ty) => {
+    //     //             self.type_bindings.insert(Typed::Field(stmt, index), Ok(ty));
+    //     //         }
+    //     //         Err(d) => self.diagnostics.push_all(d),
+    //     //     }
+    //     // }
+    // }
 
     fn resolve_type(&self, ident: IdentId, span: &Span) -> Result<TypeId, Vec<Diagnostic>> {
         self.resolve_ident(ident, IdentKind::Type, span)
             .map_err(|d| vec![d])
-            .and_then(|s| match self.symbols.borrow()[s.id()].kind() {
-                SymbolKind::Struct(stmt) => {
-                    let fields = match self.ast.statement(*stmt).kind() {
-                        StatementKind::Struct(_, fields) => fields,
-                        _ => panic!("expected struct"),
-                    };
+            .map(|s| match self.symbols.borrow()[s.id()].kind() {
+                SymbolKind::Struct(stmt, _) => {
+                    // let fields = match self.ast.statement(*stmt).kind() {
+                    //     StatementKind::Struct(_, fields) => fields,
+                    //     _ => panic!("expected struct"),
+                    // };
+                    //
+                    // let mut resolved_fields = Vec::with_capacity(fields.len());
+                    // let mut diagnostics = Vec::new();
+                    // for field in fields {
+                    //     match self.resolve_type(field.ty().id(), field.ty().span()) {
+                    //         Ok(ty) => resolved_fields.push((field.identifier().id(), ty)),
+                    //         Err(mut d) => {
+                    //             diagnostics.append(&mut d);
+                    //         }
+                    //     }
+                    // }
+                    //
+                    // if !diagnostics.is_empty() {
+                    //     return Err(diagnostics);
+                    // }
 
-                    let mut resolved_fields = Vec::with_capacity(fields.len());
-                    let mut diagnostics = Vec::new();
-                    for field in fields {
-                        match self.resolve_type(field.ty().id(), field.ty().span()) {
-                            Ok(ty) => resolved_fields.push((field.identifier().id(), ty)),
-                            Err(mut d) => {
-                                diagnostics.append(&mut d);
-                            }
-                        }
-                    }
-
-                    if !diagnostics.is_empty() {
-                        return Err(diagnostics);
-                    }
-
-                    Ok(self.type_id(Type::Struct(*stmt, resolved_fields)))
+                    self.type_id(Type::Struct(*stmt, s))
                 }
-                SymbolKind::NativeType(native) => Ok(self.type_id(native.ty().clone())),
+                SymbolKind::NativeType(native) => self.type_id(native.ty().clone()),
                 _ => panic!("the resolved symbol was not a type"),
             })
     }
@@ -863,7 +926,14 @@ impl Scope {
                             IdentKind::Callable(param_types),
                             SymbolKind::NativeFn(_, params, _, _),
                         ) => param_types == params.as_slice(),
-                        (IdentKind::Type, SymbolKind::Struct(_)) => true,
+                        (IdentKind::Callable(t1), SymbolKind::Struct(_, t2)) => {
+                            t1 == t2
+                                .iter()
+                                .map(|(_, t)| *t)
+                                .collect::<Vec<TypeId>>()
+                                .as_slice()
+                        }
+                        (IdentKind::Type, SymbolKind::Struct(_, _)) => true,
                         (IdentKind::Type, SymbolKind::NativeType(_)) => true,
                         (_, _) => false,
                     },
@@ -894,8 +964,7 @@ pub enum SymbolKind {
     LetFn(StmtId, Vec<TypeId>, TypeId),
     // todo could have IdentId, TypeId and usize
     Parameter(StmtId, usize),
-    // todo could have the Vec<...>
-    Struct(StmtId),
+    Struct(StmtId, Vec<(IdentId, TypeId)>),
     NativeFn(IdentId, Vec<TypeId>, TypeId, fn(Vec<Value>) -> Value),
     NativeType(NativeType),
 }
@@ -907,9 +976,9 @@ pub enum Type {
     Function,
     Number,
     Void,
-    Struct(StmtId, Vec<(IdentId, TypeId)>),
+    Struct(StmtId, SymbolId),
     /// This value is used when the statement/expression does not return any value. This is the
-    /// case of `ret` for instance.
+    /// case of `ret` or invalid structs for instance.
     None,
 }
 
@@ -919,7 +988,7 @@ impl Display for Type {
             Type::Boolean => write!(f, "{}", natives::TYPE_BOOLEAN),
             Type::Function => write!(f, "function TODO"),
             Type::Number => write!(f, "{}", natives::TYPE_NUMBER),
-            Type::Struct(_, fields) => write!(f, "struct/{}", fields.len()),
+            Type::Struct(_, _) => write!(f, "struct TODO"),
             Type::Void => write!(f, "{}", natives::TYPE_VOID),
             Type::None => write!(f, "no type"),
         }
@@ -1393,7 +1462,7 @@ mod tests {
     test_type_error!(
         struct_use_same_field_identifier_twice,
         "struct Point { x: number, y: number, x: boolean }",
-        "Field 'x' is already defined",
+        "Field 'x' is already defined for 'Point'",
         Span::new(1, 38, 37, 1)
     );
     test_type_ok!(
@@ -1403,5 +1472,9 @@ mod tests {
     test_type_ok!(
         struct_field_access,
         "struct Point { x: number, y: number } let f(p: Point) = { p.x + 1; }"
+    );
+    test_type_ok!(
+        struct_instantiation,
+        "struct Point { n: number } let point = Point(1);"
     );
 }

@@ -273,7 +273,7 @@ impl<'a> DotBuilder<'a> {
                                 _ => panic!(),
                             }
                         }
-                        SymbolKind::Struct(_) => todo!(),
+                        SymbolKind::Struct(_, _) => todo!(),
                         SymbolKind::NativeType(_) => todo!(),
                         SymbolKind::NativeFn(ident, _, _, _) => {
                             self.insert_node(Node::NativeIdentifier(*ident))

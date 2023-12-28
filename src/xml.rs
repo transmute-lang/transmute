@@ -77,18 +77,23 @@ impl<'a> XmlWriter<'a> {
                     self.emit(XmlEvent::start_element(ty.to_string().as_str()));
                     self.emit(XmlEvent::end_element());
                 }
-                Type::Struct(stmt, fields) => {
+                Type::Struct(stmt, symbol) => {
                     self.emit(
                         XmlEvent::start_element("struct")
                             .attr("stmt-ref", &format!("stmt:{}", stmt)),
                     );
-                    for (ident, ty) in fields.iter() {
-                        self.emit(
-                            XmlEvent::start_element("field")
-                                .attr("ident-ref", &format!("ident:{}", ident.id()))
-                                .attr("type-ref", &format!("type:{}", ty.id())),
-                        );
-                        self.emit(XmlEvent::end_element());
+                    match &self.symbols[symbol.id()].kind() {
+                        SymbolKind::Struct(_, fields) => {
+                            for (ident, ty) in fields.iter() {
+                                self.emit(
+                                    XmlEvent::start_element("field")
+                                        .attr("ident-ref", &format!("ident:{}", ident.id()))
+                                        .attr("type-ref", &format!("type:{}", ty.id())),
+                                );
+                                self.emit(XmlEvent::end_element());
+                            }
+                        }
+                        _ => panic!(),
                     }
                     self.emit(XmlEvent::end_element());
                 }
@@ -215,7 +220,7 @@ impl<'a> XmlWriter<'a> {
                 SymbolKind::Parameter(stmt, index) => {
                     format!("stmt:{}:{}", stmt.id(), index)
                 }
-                SymbolKind::Struct(_) => {
+                SymbolKind::Struct(_, _) => {
                     todo!()
                 }
                 SymbolKind::NativeType(_) => {
@@ -289,7 +294,7 @@ impl<'a> XmlWriter<'a> {
                         SymbolKind::Parameter(stmt, index) => {
                             format!("stmt:{}:{}", stmt.id(), index)
                         }
-                        SymbolKind::Struct(_) => todo!(),
+                        SymbolKind::Struct(_, _) => todo!(),
                         SymbolKind::NativeType(_) => todo!(),
                         SymbolKind::NativeFn(_, _, _, _) => "native".to_string(),
                     })
@@ -416,7 +421,7 @@ impl<'a> XmlWriter<'a> {
                     };
                     format!("ident:{}", param.identifier().id())
                 }
-                SymbolKind::Struct(_) => todo!(),
+                SymbolKind::Struct(_, _) => todo!(),
                 SymbolKind::NativeType(_) => todo!(),
                 SymbolKind::NativeFn(ident, params, ret, _) => {
                     format!(
