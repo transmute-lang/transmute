@@ -1202,7 +1202,7 @@ mod tests {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{}", diagnostics);
 
-                let (_, _, types) = Resolver::new(ast, Natives::default())
+                let (_, symbols, types) = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
 
@@ -1210,7 +1210,7 @@ mod tests {
                 let bindings = BTreeMap::from_iter(types.bindings.iter());
                 let types = types.types;
 
-                assert_debug_snapshot!((types, bindings));
+                assert_debug_snapshot!((symbols, types, bindings));
             }
         };
     }
@@ -1481,5 +1481,13 @@ mod tests {
     test_type_ok!(
         struct_instantiation,
         "struct Point { n: number } let point = Point(1);"
+    );
+    test_type_ok!(
+        struct_ref_other,
+        "struct Second { f: First } struct First { n: number }"
+    );
+    test_type_ok!(
+        struct_ref_self,
+        "struct S { s: S }"
     );
 }
