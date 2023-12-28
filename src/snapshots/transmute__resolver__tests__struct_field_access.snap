@@ -4,34 +4,19 @@ expression: "(types, bindings)"
 ---
 (
     [
-        None,
-        Number,
-        Boolean,
-        Void,
         Struct(
             StmtId {
                 id: 0,
             },
-            [
-                (
-                    IdentId {
-                        id: 1,
-                    },
-                    TypeId {
-                        id: 1,
-                    },
-                ),
-                (
-                    IdentId {
-                        id: 3,
-                    },
-                    TypeId {
-                        id: 1,
-                    },
-                ),
-            ],
+            SymbolId {
+                id: 16,
+            },
         ),
+        Number,
+        Boolean,
+        Void,
         Function,
+        None,
     ],
     {
         Expression(
@@ -39,7 +24,7 @@ expression: "(types, bindings)"
                 id: 0,
             },
         ): TypeId {
-            id: 4,
+            id: 0,
         },
         Expression(
             ExprId {
@@ -82,7 +67,7 @@ expression: "(types, bindings)"
             },
             0,
         ): TypeId {
-            id: 4,
+            id: 0,
         },
         Field(
             StmtId {

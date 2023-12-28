@@ -1,0 +1,410 @@
+---
+source: src/resolver.rs
+expression: "(symbols, types, bindings)"
+---
+(
+    [
+        Symbol {
+            id: SymbolId {
+                id: 0,
+            },
+            kind: NativeType(
+                native-type#void,
+            ),
+            ty: TypeId {
+                id: 0,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 1,
+            },
+            kind: NativeType(
+                native-type#number,
+            ),
+            ty: TypeId {
+                id: 0,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 2,
+            },
+            kind: NativeType(
+                native-type#boolean,
+            ),
+            ty: TypeId {
+                id: 0,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 3,
+            },
+            kind: NativeFn(
+                IdentId {
+                    id: 12,
+                },
+                [
+                    TypeId {
+                        id: 1,
+                    },
+                    TypeId {
+                        id: 1,
+                    },
+                ],
+                TypeId {
+                    id: 1,
+                },
+                0x000055f7a3280740,
+            ),
+            ty: TypeId {
+                id: 1,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 4,
+            },
+            kind: NativeFn(
+                IdentId {
+                    id: 11,
+                },
+                [
+                    TypeId {
+                        id: 1,
+                    },
+                    TypeId {
+                        id: 1,
+                    },
+                ],
+                TypeId {
+                    id: 2,
+                },
+                0x000055f7a3284770,
+            ),
+            ty: TypeId {
+                id: 2,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 5,
+            },
+            kind: NativeFn(
+                IdentId {
+                    id: 11,
+                },
+                [
+                    TypeId {
+                        id: 2,
+                    },
+                    TypeId {
+                        id: 2,
+                    },
+                ],
+                TypeId {
+                    id: 2,
+                },
+                0x000055f7a3281f60,
+            ),
+            ty: TypeId {
+                id: 2,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 6,
+            },
+            kind: NativeFn(
+                IdentId {
+                    id: 10,
+                },
+                [
+                    TypeId {
+                        id: 1,
+                    },
+                ],
+                TypeId {
+                    id: 1,
+                },
+                0x000055f7a3283e50,
+            ),
+            ty: TypeId {
+                id: 1,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 7,
+            },
+            kind: NativeFn(
+                IdentId {
+                    id: 9,
+                },
+                [
+                    TypeId {
+                        id: 1,
+                    },
+                    TypeId {
+                        id: 1,
+                    },
+                ],
+                TypeId {
+                    id: 1,
+                },
+                0x000055f7a32851f0,
+            ),
+            ty: TypeId {
+                id: 1,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 8,
+            },
+            kind: NativeFn(
+                IdentId {
+                    id: 8,
+                },
+                [
+                    TypeId {
+                        id: 1,
+                    },
+                    TypeId {
+                        id: 1,
+                    },
+                ],
+                TypeId {
+                    id: 2,
+                },
+                0x000055f7a3280620,
+            ),
+            ty: TypeId {
+                id: 2,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 9,
+            },
+            kind: NativeFn(
+                IdentId {
+                    id: 7,
+                },
+                [
+                    TypeId {
+                        id: 1,
+                    },
+                    TypeId {
+                        id: 1,
+                    },
+                ],
+                TypeId {
+                    id: 2,
+                },
+                0x000055f7a3282000,
+            ),
+            ty: TypeId {
+                id: 2,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 10,
+            },
+            kind: NativeFn(
+                IdentId {
+                    id: 6,
+                },
+                [
+                    TypeId {
+                        id: 1,
+                    },
+                    TypeId {
+                        id: 1,
+                    },
+                ],
+                TypeId {
+                    id: 2,
+                },
+                0x000055f7a3281b00,
+            ),
+            ty: TypeId {
+                id: 2,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 11,
+            },
+            kind: NativeFn(
+                IdentId {
+                    id: 5,
+                },
+                [
+                    TypeId {
+                        id: 1,
+                    },
+                    TypeId {
+                        id: 1,
+                    },
+                ],
+                TypeId {
+                    id: 2,
+                },
+                0x000055f7a3282ea0,
+            ),
+            ty: TypeId {
+                id: 2,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 12,
+            },
+            kind: NativeFn(
+                IdentId {
+                    id: 4,
+                },
+                [
+                    TypeId {
+                        id: 1,
+                    },
+                    TypeId {
+                        id: 1,
+                    },
+                ],
+                TypeId {
+                    id: 2,
+                },
+                0x000055f7a3282cc0,
+            ),
+            ty: TypeId {
+                id: 2,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 13,
+            },
+            kind: NativeFn(
+                IdentId {
+                    id: 4,
+                },
+                [
+                    TypeId {
+                        id: 2,
+                    },
+                    TypeId {
+                        id: 2,
+                    },
+                ],
+                TypeId {
+                    id: 2,
+                },
+                0x000055f7a3285510,
+            ),
+            ty: TypeId {
+                id: 2,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 14,
+            },
+            kind: NativeFn(
+                IdentId {
+                    id: 3,
+                },
+                [
+                    TypeId {
+                        id: 1,
+                    },
+                    TypeId {
+                        id: 1,
+                    },
+                ],
+                TypeId {
+                    id: 1,
+                },
+                0x000055f7a3281be0,
+            ),
+            ty: TypeId {
+                id: 1,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 15,
+            },
+            kind: NativeFn(
+                IdentId {
+                    id: 2,
+                },
+                [
+                    TypeId {
+                        id: 1,
+                    },
+                    TypeId {
+                        id: 1,
+                    },
+                ],
+                TypeId {
+                    id: 1,
+                },
+                0x000055f7a3285290,
+            ),
+            ty: TypeId {
+                id: 1,
+            },
+        },
+        Symbol {
+            id: SymbolId {
+                id: 16,
+            },
+            kind: Struct(
+                StmtId {
+                    id: 0,
+                },
+                [
+                    (
+                        IdentId {
+                            id: 1,
+                        },
+                        TypeId {
+                            id: 0,
+                        },
+                    ),
+                ],
+            ),
+            ty: TypeId {
+                id: 3,
+            },
+        },
+    ],
+    [
+        Struct(
+            StmtId {
+                id: 0,
+            },
+            SymbolId {
+                id: 16,
+            },
+        ),
+        Number,
+        Boolean,
+        Void,
+        None,
+    ],
+    {
+        Field(
+            StmtId {
+                id: 0,
+            },
+            0,
+        ): TypeId {
+            id: 0,
+        },
+    },
+)
