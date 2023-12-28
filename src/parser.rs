@@ -1310,6 +1310,7 @@ mod tests {
     test_syntax!(struct_statement => "struct MyStruct { a: t_1, b: t_b }");
     test_syntax!(struct_statement_trailing_comma => "struct MyStruct { a: t_1, b: t_b,}");
     test_syntax!(struct_inside_function => "let f() = { struct MyStruct {} }");
+    test_syntax!(struct_instantiation => "struct Point { n: number } let point = Point(1);");
     test_syntax!(err_number_field_access => "left.2;");
     test_syntax!(err_boolean_field_access => "left.true;");
     test_syntax!(err_expression_field_access => "left.(1 + 1);");

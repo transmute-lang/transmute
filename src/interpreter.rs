@@ -149,7 +149,7 @@ impl<'a> Interpreter<'a> {
                     _ => panic!("let fn expected"),
                 }
             }
-            SymbolKind::Struct(_) => todo!(),
+            SymbolKind::Struct(_, _) => todo!(),
             SymbolKind::NativeType(_) => todo!(),
             SymbolKind::NativeFn(_, _, _, body) => {
                 let env = arguments
@@ -433,4 +433,33 @@ mod tests {
         }
         fact(3);
     "# => Number(6));
+    // eval!(field_access, r#"
+    //     struct Point {
+    //         x: number,
+    //         y: number,
+    //     }
+    //     struct Segment {
+    //         a: Point,
+    //         b: Point,
+    //     }
+    //     let start_x(seg: Segment): number = {
+    //         seg.a.x;
+    //     }
+    //     start_x(3);
+    // "# => Number(6));
+
+    // eval!(segment_length, r#"
+    //     struct Point {
+    //         x: number,
+    //         y: number,
+    //     }
+    //     struct Segment {
+    //         a: Point,
+    //         b: Point,
+    //     }
+    //     let length(seg: Segment): number = {
+    //
+    //     }
+    //     segment_length(3);
+    // "# => Number(6));
 }

@@ -284,7 +284,11 @@ impl<'a> HtmlWriter<'a> {
                         .expression_type(left)
                         .and_then(|t| self.types.get(t))
                         .map(|t| match t {
-                            Type::Struct(stmt, fields) => {
+                            Type::Struct(stmt, symbol) => {
+                                let fields = match &self.symbols[symbol.id()].kind() {
+                                    SymbolKind::Struct(_ , fields) => fields,
+                                    _=>panic!("struct expected"),
+                                };
                                 let index = fields
                                     .iter()
                                     .enumerate()
@@ -465,7 +469,7 @@ impl<'a> HtmlWriter<'a> {
                 SymbolKind::Let(stmt) => Self::ident_id(*stmt, None),
                 SymbolKind::LetFn(stmt, _, _) => Self::ident_id(*stmt, None),
                 SymbolKind::Parameter(stmt, index) => Self::ident_id(*stmt, Some(*index)),
-                SymbolKind::Struct(_) => todo!(),
+                SymbolKind::Struct(_, _) => todo!(),
                 SymbolKind::NativeType(_) => todo!(),
                 SymbolKind::NativeFn(ident, params, ret, _) => {
                     format!(
