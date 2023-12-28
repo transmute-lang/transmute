@@ -1,0 +1,104 @@
+---
+source: src/resolver.rs
+expression: "(types, bindings)"
+---
+(
+    [
+        None,
+        Number,
+        Boolean,
+        Void,
+        Struct(
+            StmtId {
+                id: 0,
+            },
+            [
+                (
+                    IdentId {
+                        id: 1,
+                    },
+                    TypeId {
+                        id: 1,
+                    },
+                ),
+                (
+                    IdentId {
+                        id: 3,
+                    },
+                    TypeId {
+                        id: 1,
+                    },
+                ),
+            ],
+        ),
+        Function,
+    ],
+    {
+        Expression(
+            ExprId {
+                id: 0,
+            },
+        ): TypeId {
+            id: 4,
+        },
+        Expression(
+            ExprId {
+                id: 1,
+            },
+        ): TypeId {
+            id: 1,
+        },
+        Expression(
+            ExprId {
+                id: 2,
+            },
+        ): TypeId {
+            id: 1,
+        },
+        Expression(
+            ExprId {
+                id: 3,
+            },
+        ): TypeId {
+            id: 1,
+        },
+        Expression(
+            ExprId {
+                id: 4,
+            },
+        ): TypeId {
+            id: 1,
+        },
+        Expression(
+            ExprId {
+                id: 5,
+            },
+        ): TypeId {
+            id: 1,
+        },
+        Parameter(
+            StmtId {
+                id: 2,
+            },
+            0,
+        ): TypeId {
+            id: 4,
+        },
+        Field(
+            StmtId {
+                id: 0,
+            },
+            0,
+        ): TypeId {
+            id: 1,
+        },
+        Field(
+            StmtId {
+                id: 0,
+            },
+            1,
+        ): TypeId {
+            id: 1,
+        },
+    },
+)

@@ -1,0 +1,50 @@
+---
+source: src/resolver.rs
+expression: "(types, bindings)"
+---
+(
+    [
+        None,
+        Number,
+        Boolean,
+        Function,
+        Void,
+    ],
+    {
+        Expression(
+            ExprId {
+                id: 0,
+            },
+        ): TypeId {
+            id: 1,
+        },
+        Expression(
+            ExprId {
+                id: 1,
+            },
+        ): TypeId {
+            id: 1,
+        },
+        Expression(
+            ExprId {
+                id: 2,
+            },
+        ): TypeId {
+            id: 1,
+        },
+        Expression(
+            ExprId {
+                id: 3,
+            },
+        ): TypeId {
+            id: 1,
+        },
+        Expression(
+            ExprId {
+                id: 4,
+            },
+        ): TypeId {
+            id: 1,
+        },
+    },
+)

@@ -1001,7 +1001,9 @@ mod tests {
     use crate::parser::Parser;
     use crate::resolver::Resolver;
     use crate::xml::XmlWriter;
+    use insta::assert_debug_snapshot;
     use insta::assert_snapshot;
+    use std::collections::BTreeMap;
 
     #[test]
     fn resolve_ref_to_parameter() {
@@ -1126,9 +1128,15 @@ mod tests {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{}", diagnostics);
 
-                let _ = Resolver::new(ast, Natives::default())
+                let (_, _, types) = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
+
+                // we need to ensure the order is consistent accress test executions
+                let bindings = BTreeMap::from_iter(types.bindings.iter());
+                let types = types.types;
+
+                assert_debug_snapshot!((types, bindings));
             }
         };
     }

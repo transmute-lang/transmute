@@ -1,0 +1,44 @@
+---
+source: src/resolver.rs
+expression: "(types, bindings)"
+---
+(
+    [
+        None,
+        Number,
+        Boolean,
+        Function,
+        Void,
+    ],
+    {
+        Expression(
+            ExprId {
+                id: 0,
+            },
+        ): TypeId {
+            id: 1,
+        },
+        Expression(
+            ExprId {
+                id: 1,
+            },
+        ): TypeId {
+            id: 2,
+        },
+        Expression(
+            ExprId {
+                id: 2,
+            },
+        ): TypeId {
+            id: 0,
+        },
+        Parameter(
+            StmtId {
+                id: 2,
+            },
+            0,
+        ): TypeId {
+            id: 1,
+        },
+    },
+)
