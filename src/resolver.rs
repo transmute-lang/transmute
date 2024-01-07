@@ -885,6 +885,10 @@ impl Symbol {
     pub fn kind(&self) -> &SymbolKind {
         &self.kind
     }
+
+    pub fn type_id(&self) -> TypeId {
+        self.ty
+    }
 }
 
 #[derive(Debug)]
@@ -896,6 +900,7 @@ pub enum SymbolKind {
     Parameter(StmtId, usize),
     // todo could have the Vec<...>
     Struct(StmtId),
+    // todo add a StructField (or rather a Field) symbol kind?
     NativeFn(IdentId, Vec<TypeId>, TypeId, fn(Vec<Value>) -> Value),
     NativeType(NativeType),
 }

@@ -15,6 +15,7 @@ mod ast;
 mod dot;
 mod error;
 mod exit_points;
+mod html;
 mod interpreter;
 mod lexer;
 mod natives;
