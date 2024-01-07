@@ -125,16 +125,18 @@ impl Resolver {
 
         let expr = self.ast.expression(expr);
         let ty = match expr.kind() {
-            ExpressionKind::Assignment(ident_ref, expr) => {
-                self.visit_assignment(*ident_ref, *expr)
-            }
+            ExpressionKind::Assignment(ident_ref, expr) => self.visit_assignment(*ident_ref, *expr),
             ExpressionKind::If(cond, true_branch, false_branch) => {
                 self.visit_if(*cond, *true_branch, *false_branch)
             }
             ExpressionKind::Literal(literal) => self.visit_literal(literal.kind().clone()),
-            ExpressionKind::Binary(left, op, right) => {
-                self.visit_binary_operator(expr.id(), expr.span().clone(), *left, op.clone(), *right)
-            }
+            ExpressionKind::Binary(left, op, right) => self.visit_binary_operator(
+                expr.id(),
+                expr.span().clone(),
+                *left,
+                op.clone(),
+                *right,
+            ),
             ExpressionKind::Unary(op, operand) => {
                 self.visit_unary_operator(expr.id(), expr.span().clone(), op.clone(), *operand)
             }
@@ -382,12 +384,7 @@ impl Resolver {
                     Ok(Type::None)
                 }
                 StatementKind::LetFn(_ident, params, ret_type, expr) => {
-                    self.visit_function(
-                        *stmt,
-                        &params.to_vec(),
-                        ret_type.clone().as_ref(),
-                        *expr,
-                    );
+                    self.visit_function(*stmt, &params.to_vec(), ret_type.clone().as_ref(), *expr);
                     Ok(Type::Void)
                 }
             };
@@ -648,6 +645,10 @@ pub struct Symbol {
 impl Symbol {
     pub fn kind(&self) -> &SymbolKind {
         &self.kind
+    }
+
+    pub fn ty(&self) -> Type {
+        self.ty
     }
 }
 

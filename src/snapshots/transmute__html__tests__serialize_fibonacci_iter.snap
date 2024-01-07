@@ -1,0 +1,250 @@
+---
+source: src/html.rs
+expression: "&html"
+---
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background-color: #222;
+        }
+
+        * {
+            font-family: monospace;
+            color: #a9b7c6;
+            cursor: default;
+        }
+
+        .line {
+            position:absolute;
+            left:0;
+        }
+
+        ul {
+            padding: 0;
+        }
+
+        li {
+            list-style: none;
+            padding-left: 2em;
+        }
+
+        span {
+            display: inline-block;
+        }
+
+        .kw {
+            color: #cc7832;
+        }
+
+        .num {
+            color: #6897bb;
+        }
+
+        .ident {
+            cursor: pointer;
+        }
+
+        .ident:hover {
+            background-color: blue;
+            color: white;
+        }
+
+        .to {
+            background-color: green;
+            color: white;
+        }
+
+        .same {
+            background-color: orange;
+            color: black;
+        }
+    </style>
+    <script
+            src="https://code.jquery.com/jquery-3.7.1.slim.min.js"
+            integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8="
+            crossorigin="anonymous"></script>
+    <script>
+        $(document).ready(function () {
+            $("li").filter((_, e) => $(e).children("ul").length === 0).each((i, e) => {
+                $(e).prepend("<span class=\"line\">" + (i + 1) + "</span>");
+            });
+            $("[data-ident-ref],[data-type-ref]")
+                .on("mousemove", (e) => {
+                    let self = $(e.currentTarget);
+
+                    let ref_attr = "data-ident-ref";
+                    if (e.ctrlKey) {
+                        ref_attr = "data-type-ref";
+                    }
+
+                    let ref = self.attr(ref_attr);
+
+                    $(".to").removeClass("to");
+                    $(".same").removeClass("same");
+                    $("[" + ref_attr + "=" + ref + "]").addClass("same");
+                    $("#" + ref).addClass("to");
+
+                    e.stopImmediatePropagation();
+                })
+            .on("mouseout", (e) => {
+                $(".to").removeClass("to");
+                $(".same").removeClass("same");
+            });
+        });
+    </script>
+</head>
+<body>
+<ul>
+  <li>
+    <span class="kw">let</span>
+    <span id="ident__stmt14" class="ident">f</span>
+    <span class="par">(</span>
+    <span id="ident__stmt14_index0" class="ident">n</span>
+    <span class="colon">: </span>
+    <span id="ident__stmt14" class="ident">number</span>
+    <span class="par">)</span>
+    <span class="colon">: </span>
+    <span id="ident__stmt14" class="ident">number</span>
+    <span class="equal"> = </span>
+    <span class="curly">{</span>
+  </li>
+  <li>
+    <ul>
+      <li>
+        <span class="kw">if</span>
+        <span class="ident" data-ident-ref="ident__native_eq_number_number_boolean" data-type-ref="type__native_boolean">eq</span>
+        <span class="par">(</span>
+        <span class="ident" data-ident-ref="ident__stmt14_index0" data-type-ref="type__native_number">n</span>
+        <span class="comma">, </span>
+        <span class="num">0</span>
+        <span class="par">)</span>
+        <span class="curly">{</span>
+      </li>
+      <li>
+        <ul>
+          <li>
+            <span class="kw">ret</span>
+            <span class="num">0</span>
+            <span class="semicolon">;</span>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <span class="curly">}</span>
+      </li>
+      <li>
+        <span class="kw">if</span>
+        <span class="ident" data-ident-ref="ident__native_eq_number_number_boolean" data-type-ref="type__native_boolean">eq</span>
+        <span class="par">(</span>
+        <span class="ident" data-ident-ref="ident__stmt14_index0" data-type-ref="type__native_number">n</span>
+        <span class="comma">, </span>
+        <span class="num">1</span>
+        <span class="par">)</span>
+        <span class="curly">{</span>
+      </li>
+      <li>
+        <ul>
+          <li>
+            <span class="kw">ret</span>
+            <span class="num">1</span>
+            <span class="semicolon">;</span>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <span class="curly">}</span>
+      </li>
+      <li>
+        <span class="kw">let</span>
+        <span id="ident__stmt4" class="ident">prev_prev</span>
+        <span class="equal"> = </span>
+        <span class="num">0</span>
+        <span class="semicolon">;</span>
+      </li>
+      <li>
+        <span class="kw">let</span>
+        <span id="ident__stmt5" class="ident">prev</span>
+        <span class="equal"> = </span>
+        <span class="num">1</span>
+        <span class="semicolon">;</span>
+      </li>
+      <li>
+        <span class="kw">let</span>
+        <span id="ident__stmt6" class="ident">current</span>
+        <span class="equal"> = </span>
+        <span class="num">0</span>
+        <span class="semicolon">;</span>
+      </li>
+      <li>
+        <span class="kw">let</span>
+        <span id="ident__stmt7" class="ident">n</span>
+        <span class="equal"> = </span>
+        <span class="ident" data-ident-ref="ident__stmt14_index0" data-type-ref="type__native_number">n</span>
+        <span class="semicolon">;</span>
+      </li>
+      <li>
+        <span class="kw">while</span>
+        <span class="ident" data-ident-ref="ident__native_gt_number_number_boolean" data-type-ref="type__native_boolean">gt</span>
+        <span class="par">(</span>
+        <span class="ident" data-ident-ref="ident__stmt7" data-type-ref="type__native_number">n</span>
+        <span class="comma">, </span>
+        <span class="num">1</span>
+        <span class="par">)</span>
+        <span class="curly">{</span>
+      </li>
+      <li>
+        <ul>
+          <li>
+            <span class="ident" data-ident-ref="ident__stmt6" data-type-ref="type__native_number">current</span>
+            <span class="equal"> = </span>
+            <span class="ident" data-ident-ref="ident__native_add_number_number_number" data-type-ref="type__native_number">add</span>
+            <span class="par">(</span>
+            <span class="ident" data-ident-ref="ident__stmt4" data-type-ref="type__native_number">prev_prev</span>
+            <span class="comma">, </span>
+            <span class="ident" data-ident-ref="ident__stmt5" data-type-ref="type__native_number">prev</span>
+            <span class="par">)</span>
+            <span class="semicolon">;</span>
+          </li>
+          <li>
+            <span class="ident" data-ident-ref="ident__stmt4" data-type-ref="type__native_number">prev_prev</span>
+            <span class="equal"> = </span>
+            <span class="ident" data-ident-ref="ident__stmt5" data-type-ref="type__native_number">prev</span>
+            <span class="semicolon">;</span>
+          </li>
+          <li>
+            <span class="ident" data-ident-ref="ident__stmt5" data-type-ref="type__native_number">prev</span>
+            <span class="equal"> = </span>
+            <span class="ident" data-ident-ref="ident__stmt6" data-type-ref="type__native_number">current</span>
+            <span class="semicolon">;</span>
+          </li>
+          <li>
+            <span class="ident" data-ident-ref="ident__stmt7" data-type-ref="type__native_number">n</span>
+            <span class="equal"> = </span>
+            <span class="ident" data-ident-ref="ident__native_sub_number_number_number" data-type-ref="type__native_number">sub</span>
+            <span class="par">(</span>
+            <span class="ident" data-ident-ref="ident__stmt7" data-type-ref="type__native_number">n</span>
+            <span class="comma">, </span>
+            <span class="num">1</span>
+            <span class="par">)</span>
+            <span class="semicolon">;</span>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <span class="curly">}</span>
+      </li>
+      <li>
+        <span class="ident" data-ident-ref="ident__stmt6" data-type-ref="type__native_number">current</span>
+        <span class="semicolon">;</span>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <span class="curly">}</span>
+  </li>
+</ul>
+</body>
+</html>
+
