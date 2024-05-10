@@ -257,9 +257,11 @@ expression: "&xml"
                 </expr>
               </stmt>
               <stmt id="stmt:13" line="18" column="17" start="461" len="8">
-                <expr id="expr:33" line="18" column="17" start="461" len="7">
-                  <identifier-ref id="ident-ref:13" ident-ref="ident:5" target-id="stmt:6">current</identifier-ref>
-                </expr>
+                <ret line="18" column="17" start="461" len="8">
+                  <expr id="expr:33" line="18" column="17" start="461" len="7">
+                    <identifier-ref id="ident-ref:13" ident-ref="ident:5" target-id="stmt:6">current</identifier-ref>
+                  </expr>
+                </ret>
               </stmt>
             </block>
           </expr>

@@ -454,7 +454,7 @@ impl Resolver {
 
         let _ = self.visit_expression(expr);
 
-        let exit_points = ExitPoints::new(&self.ast).exit_points(expr);
+        let (exit_points, new_statements) = ExitPoints::new(&self.ast).exit_points(expr);
         if exit_points.is_empty() {
             if ret_type != Type::Void {
                 let stmt = self.ast.statement(stmt);
@@ -486,6 +486,11 @@ impl Resolver {
                 }
             }
         }
+
+        // here, we replace the implicit return statements with explicit ones as a  de-sugar action
+        new_statements
+            .into_iter()
+            .for_each(|s| self.ast.replace_statement(s));
 
         self.pop_scope();
     }

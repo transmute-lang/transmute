@@ -236,6 +236,7 @@ expression: "&html"
         <span class="curly">}</span>
       </li>
       <li>
+        <span class="kw">ret</span>
         <span class="ident" data-ident-ref="ident__stmt6" data-type-ref="type__native_number">current</span>
         <span class="semicolon">;</span>
       </li>

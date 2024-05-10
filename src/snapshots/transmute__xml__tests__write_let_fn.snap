@@ -35,22 +35,24 @@ expression: "&xml"
           <expr id="expr:3" line="1" column="28" start="27" len="6">
             <block>
               <stmt id="stmt:0" line="1" column="28" start="27" len="6">
-                <expr id="expr:2" line="1" column="28" start="27" len="5">
-                  <call line="1" column="28" start="27" len="5" ident-ref="ident:10" name="mul" target-id="native:mul:number:number:number">
-                    <parameters>
-                      <parameter>
-                        <expr id="expr:0" line="1" column="28" start="27" len="1">
-                          <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:1:0">n</identifier-ref>
-                        </expr>
-                      </parameter>
-                      <parameter>
-                        <expr id="expr:1" line="1" column="32" start="31" len="1">
-                          <number>2</number>
-                        </expr>
-                      </parameter>
-                    </parameters>
-                  </call>
-                </expr>
+                <ret line="1" column="28" start="27" len="6">
+                  <expr id="expr:2" line="1" column="28" start="27" len="5">
+                    <call line="1" column="28" start="27" len="5" ident-ref="ident:10" name="mul" target-id="native:mul:number:number:number">
+                      <parameters>
+                        <parameter>
+                          <expr id="expr:0" line="1" column="28" start="27" len="1">
+                            <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:1:0">n</identifier-ref>
+                          </expr>
+                        </parameter>
+                        <parameter>
+                          <expr id="expr:1" line="1" column="32" start="31" len="1">
+                            <number>2</number>
+                          </expr>
+                        </parameter>
+                      </parameters>
+                    </call>
+                  </expr>
+                </ret>
               </stmt>
             </block>
           </expr>
