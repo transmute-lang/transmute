@@ -38,11 +38,15 @@
             color: #6897bb;
         }
 
-        .ident {
+        .ident, .ident_ref {
             cursor: pointer;
         }
 
-        .ident:hover {
+        .ident_ref {
+            text-decoration: underline dotted;
+        }
+
+        .ident:hover, .ident_ref:hover {
             background-color: blue;
             color: white;
         }
@@ -88,6 +92,15 @@
                 $(".to").removeClass("to");
                 $(".same").removeClass("same");
             });
+            $("[data-par-id]")
+                .on("mouseover", (e) => {
+                    let self = $(e.currentTarget);
+                    $("[data-par-id=" + self.attr("data-par-id") + "]").addClass("same");
+                })
+                .on("mouseout", (e) => {
+                    let self = $(e.currentTarget);
+                    $("[data-par-id=" + self.attr("data-par-id") + "]").removeClass("same");
+                });
         });
     </script>
 </head>

@@ -42,11 +42,15 @@ expression: "&html"
             color: #6897bb;
         }
 
-        .ident {
+        .ident, .ident_ref {
             cursor: pointer;
         }
 
-        .ident:hover {
+        .ident_ref {
+            text-decoration: underline dotted;
+        }
+
+        .ident:hover, .ident_ref:hover {
             background-color: blue;
             color: white;
         }
@@ -92,6 +96,15 @@ expression: "&html"
                 $(".to").removeClass("to");
                 $(".same").removeClass("same");
             });
+            $("[data-par-id]")
+                .on("mouseover", (e) => {
+                    let self = $(e.currentTarget);
+                    $("[data-par-id=" + self.attr("data-par-id") + "]").addClass("same");
+                })
+                .on("mouseout", (e) => {
+                    let self = $(e.currentTarget);
+                    $("[data-par-id=" + self.attr("data-par-id") + "]").removeClass("same");
+                });
         });
     </script>
 </head>
@@ -100,70 +113,70 @@ expression: "&html"
   <li>
     <span class="kw" title="number">let</span>
     <span id="ident__stmt3" class="ident">f</span>
-    <span class="par">(</span>
+    <span class="par" data-par-id="par_0">(</span>
     <span id="ident__stmt3_index0" class="ident">n</span>
     <span class="colon">: </span>
     <span id="ident__stmt3" class="ident">number</span>
-    <span class="par">)</span>
+    <span class="par" data-par-id="par_0">)</span>
     <span class="colon">: </span>
     <span id="ident__stmt3" class="ident">number</span>
     <span class="equal"> = </span>
-    <span class="curly">{</span>
+    <span class="curly" data-par-id="par_1">{</span>
   </li>
   <li>
     <ul>
       <li>
         <span class="kw" title="no type">if</span>
-        <span class="ident" title="function" data-ident-ref="ident__native_le_number_number_boolean" data-type-ref="type__function">le</span>
-        <span class="par">(</span>
-        <span class="ident" title="number" data-ident-ref="ident__stmt3_index0" data-type-ref="type__native_number">n</span>
+        <span class="ident_ref" title="function" data-ident-ref="ident__native_le_number_number_boolean" data-type-ref="type__function">le</span>
+        <span class="par" data-par-id="par_2">(</span>
+        <span class="ident_ref" title="number" data-ident-ref="ident__stmt3_index0" data-type-ref="type__native_number">n</span>
         <span class="comma">, </span>
         <span class="num" title="number">1</span>
-        <span class="par">)</span>
-        <span class="curly">{</span>
+        <span class="par" data-par-id="par_2">)</span>
+        <span class="curly" data-par-id="par_3">{</span>
       </li>
       <li>
         <ul>
           <li>
             <span class="kw" title="number">ret</span>
-            <span class="ident" title="number" data-ident-ref="ident__stmt3_index0" data-type-ref="type__native_number">n</span>
+            <span class="ident_ref" title="number" data-ident-ref="ident__stmt3_index0" data-type-ref="type__native_number">n</span>
             <span class="semicolon">;</span>
           </li>
         </ul>
       </li>
       <li>
-        <span class="curly">}</span>
+        <span class="curly" data-par-id="par_3">}</span>
       </li>
       <li>
         <span class="kw" title="number">ret</span>
-        <span class="ident" title="function" data-ident-ref="ident__native_add_number_number_number" data-type-ref="type__function">add</span>
-        <span class="par">(</span>
-        <span class="ident" title="function" data-ident-ref="ident__stmt3" data-type-ref="type__function">f</span>
-        <span class="par">(</span>
-        <span class="ident" title="function" data-ident-ref="ident__native_sub_number_number_number" data-type-ref="type__function">sub</span>
-        <span class="par">(</span>
-        <span class="ident" title="number" data-ident-ref="ident__stmt3_index0" data-type-ref="type__native_number">n</span>
+        <span class="ident_ref" title="function" data-ident-ref="ident__native_add_number_number_number" data-type-ref="type__function">add</span>
+        <span class="par" data-par-id="par_4">(</span>
+        <span class="ident_ref" title="function" data-ident-ref="ident__stmt3" data-type-ref="type__function">f</span>
+        <span class="par" data-par-id="par_5">(</span>
+        <span class="ident_ref" title="function" data-ident-ref="ident__native_sub_number_number_number" data-type-ref="type__function">sub</span>
+        <span class="par" data-par-id="par_6">(</span>
+        <span class="ident_ref" title="number" data-ident-ref="ident__stmt3_index0" data-type-ref="type__native_number">n</span>
         <span class="comma">, </span>
         <span class="num" title="number">1</span>
-        <span class="par">)</span>
-        <span class="par">)</span>
+        <span class="par" data-par-id="par_6">)</span>
+        <span class="par" data-par-id="par_5">)</span>
         <span class="comma">, </span>
-        <span class="ident" title="function" data-ident-ref="ident__stmt3" data-type-ref="type__function">f</span>
-        <span class="par">(</span>
-        <span class="ident" title="function" data-ident-ref="ident__native_sub_number_number_number" data-type-ref="type__function">sub</span>
-        <span class="par">(</span>
-        <span class="ident" title="number" data-ident-ref="ident__stmt3_index0" data-type-ref="type__native_number">n</span>
+        <span class="ident_ref" title="function" data-ident-ref="ident__stmt3" data-type-ref="type__function">f</span>
+        <span class="par" data-par-id="par_7">(</span>
+        <span class="ident_ref" title="function" data-ident-ref="ident__native_sub_number_number_number" data-type-ref="type__function">sub</span>
+        <span class="par" data-par-id="par_8">(</span>
+        <span class="ident_ref" title="number" data-ident-ref="ident__stmt3_index0" data-type-ref="type__native_number">n</span>
         <span class="comma">, </span>
         <span class="num" title="number">2</span>
-        <span class="par">)</span>
-        <span class="par">)</span>
-        <span class="par">)</span>
+        <span class="par" data-par-id="par_8">)</span>
+        <span class="par" data-par-id="par_7">)</span>
+        <span class="par" data-par-id="par_4">)</span>
         <span class="semicolon">;</span>
       </li>
     </ul>
   </li>
   <li>
-    <span class="curly">}</span>
+    <span class="curly" data-par-id="par_1">}</span>
   </li>
 </ul>
 </body>

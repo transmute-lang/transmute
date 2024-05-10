@@ -15,6 +15,7 @@ struct HtmlWriter<'a> {
     ast: &'a Ast,
     symbols: &'a Vec<Symbol>,
     expr_types: &'a Vec<Type>,
+    par_id: usize,
     writer: EventWriter<Vec<u8>>,
 }
 
@@ -38,6 +39,7 @@ impl<'a> HtmlWriter<'a> {
             ast,
             symbols,
             expr_types,
+            par_id: 0,
             writer,
         }
     }
@@ -117,7 +119,9 @@ impl<'a> HtmlWriter<'a> {
         self.emit_keyword("let", self.expr_types[expr.id()]);
         self.emit_identifier(stmt_id, ident, None);
 
-        self.emit_par("(");
+        let par_id = self.par_id();
+
+        self.emit_par("(", &par_id);
 
         for (i, param) in params.iter().enumerate() {
             self.emit_identifier(stmt_id, param.identifier().id(), Some(i));
@@ -130,7 +134,7 @@ impl<'a> HtmlWriter<'a> {
             }
         }
 
-        self.emit_par(")");
+        self.emit_par(")", &par_id);
 
         if let Some(ret_type) = ret_type {
             self.emit_colon();
@@ -140,7 +144,9 @@ impl<'a> HtmlWriter<'a> {
 
         self.emit_equal();
 
-        self.emit_curly("{");
+        let par_id = self.par_id();
+
+        self.emit_curly("{", &par_id);
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::start_element("li"));
@@ -148,7 +154,7 @@ impl<'a> HtmlWriter<'a> {
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::start_element("li"));
-        self.emit_curly("}");
+        self.emit_curly("}", &par_id);
         self.emit(XmlEvent::end_element());
     }
 
@@ -199,7 +205,9 @@ impl<'a> HtmlWriter<'a> {
 
         self.visit_expression(cond);
 
-        self.emit_curly("{");
+        let par_id = self.par_id();
+
+        self.emit_curly("{", &par_id);
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::start_element("li"));
@@ -207,12 +215,15 @@ impl<'a> HtmlWriter<'a> {
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::start_element("li"));
-        self.emit_curly("}");
+        self.emit_curly("}", &par_id);
 
         if let Some(false_branch) = false_branch {
             self.emit(XmlEvent::end_element());
             self.emit(XmlEvent::start_element("li"));
-            self.emit_curly("{");
+
+            let par_id = self.par_id();
+
+            self.emit_curly("{", &par_id);
             self.emit(XmlEvent::end_element());
 
             self.emit(XmlEvent::start_element("li"));
@@ -220,7 +231,7 @@ impl<'a> HtmlWriter<'a> {
             self.emit(XmlEvent::end_element());
 
             self.emit(XmlEvent::start_element("li"));
-            self.emit_curly("}");
+            self.emit_curly("}", &par_id);
         }
     }
 
@@ -234,7 +245,9 @@ impl<'a> HtmlWriter<'a> {
 
     fn visit_function_call(&mut self, ident_ref: IdentRefId, params: &[ExprId]) {
         self.emit_identifier_ref(ident_ref);
-        self.emit_par("(");
+
+        let par_id = self.par_id();
+        self.emit_par("(", &par_id);
 
         for (i, param) in params.iter().enumerate() {
             self.visit_expression(*param);
@@ -243,7 +256,7 @@ impl<'a> HtmlWriter<'a> {
             }
         }
 
-        self.emit_par(")");
+        self.emit_par(")", &par_id);
     }
 
     fn visit_while(&mut self, cond: ExprId, expr: ExprId) {
@@ -252,7 +265,9 @@ impl<'a> HtmlWriter<'a> {
 
         self.visit_expression(cond);
 
-        self.emit_curly("{");
+        let par_id = self.par_id();
+
+        self.emit_curly("{", &par_id);
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::start_element("li"));
@@ -260,7 +275,7 @@ impl<'a> HtmlWriter<'a> {
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::start_element("li"));
-        self.emit_curly("}");
+        self.emit_curly("}", &par_id);
     }
 
     fn visit_block(&mut self, stmts: &[StmtId]) {
@@ -290,14 +305,22 @@ impl<'a> HtmlWriter<'a> {
         self.emit(XmlEvent::end_element());
     }
 
-    fn emit_par(&mut self, symbol: &str) {
-        self.emit(XmlEvent::start_element("span").attr("class", "par"));
+    fn emit_par(&mut self, symbol: &str, id: &str) {
+        self.emit(
+            XmlEvent::start_element("span")
+                .attr("class", "par")
+                .attr("data-par-id", id),
+        );
         self.emit(XmlEvent::Characters(symbol));
         self.emit(XmlEvent::end_element());
     }
 
-    fn emit_curly(&mut self, symbol: &str) {
-        self.emit(XmlEvent::start_element("span").attr("class", "curly"));
+    fn emit_curly(&mut self, symbol: &str, id: &str) {
+        self.emit(
+            XmlEvent::start_element("span")
+                .attr("class", "curly")
+                .attr("data-par-id", id),
+        );
         self.emit(XmlEvent::Characters(symbol));
         self.emit(XmlEvent::end_element());
     }
@@ -338,6 +361,11 @@ impl<'a> HtmlWriter<'a> {
 
     fn type_id(stmt: StmtId) -> String {
         format!("type__stmt{}", stmt)
+    }
+
+    fn par_id(&mut self) -> String {
+        self.par_id += 1;
+        format!("par_{}", self.par_id - 1)
     }
 
     fn emit_identifier(&mut self, stmt_id: StmtId, ident: IdentId, index: Option<usize>) {
@@ -399,7 +427,7 @@ impl<'a> HtmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("span")
-                .attr("class", "ident")
+                .attr("class", "ident_ref")
                 .attr("title", &type_name)
                 .attr("data-ident-ref", &symbol)
                 .attr("data-type-ref", &type_ref),
