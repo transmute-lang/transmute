@@ -37,14 +37,13 @@ impl Resolver {
 
         for native in natives.into_iter() {
             let ident = me.ast.identifier_id(native.name());
-            let ret_type = native.return_type();
-            me.insert_symbol(ident, SymbolKind::Native(native), ret_type);
+            me.insert_symbol(ident, SymbolKind::Native(native), Type::Function);
         }
 
         me
     }
 
-    pub fn resolve(mut self) -> Result<(Ast, Vec<Symbol>), Diagnostics> {
+    pub fn resolve(mut self) -> Result<(Ast, Vec<Symbol>, Vec<Type>), Diagnostics> {
         let stmts = self.ast.statements().to_vec();
 
         self.insert_functions(&stmts);
@@ -52,7 +51,15 @@ impl Resolver {
         let _ = self.visit_statements(&stmts);
 
         if self.diagnostics.is_empty() {
-            Ok((self.ast, self.symbols.replace(vec![])))
+            Ok((
+                self.ast,
+                self.symbols.replace(vec![]),
+                self.expression_types
+                    .into_iter()
+                    .map(|ty| ty.expect("type is resolved"))
+                    .map(|ty| ty.expect("type is resolved successfully"))
+                    .collect::<Vec<Type>>(),
+            ))
         } else {
             Err(self.diagnostics)
         }
@@ -275,19 +282,22 @@ impl Resolver {
             .resolve_ident(ident_id, Some(&[left_type, right_type]), op.span())
             .ok_or(())?;
 
-        // here, we replace the `left op right` with `op_fn(left, right)` in the ast as a first
-        // de-sugar action
         let ident_ref_id = self
             .ast
             .create_identifier_ref(Identifier::new(ident_id, op.span().clone()), symbol);
+        let parameters = vec![left, right];
+        let ret_type = self.visit_function_call(ident_ref_id, &parameters)?;
+
+        // here, we replace the `left op right` with `op_fn(left, right)` in the ast as a de-sugar
+        // action
         let expression = Expression::new(
             expr,
-            ExpressionKind::FunctionCall(ident_ref_id, vec![left, right]),
+            ExpressionKind::FunctionCall(ident_ref_id, parameters),
             expr_span,
         );
         self.ast.replace_expression(expression);
 
-        Ok(self.symbols.borrow()[symbol.id()].ty)
+        Ok(ret_type)
     }
 
     fn visit_unary_operator(
@@ -304,19 +314,21 @@ impl Resolver {
             .resolve_ident(ident_id, Some(&[operand_type]), op.span())
             .ok_or(())?;
 
-        // here, we replace the `op operand` with `op_fn(operand)` in the ast as a first
-        // de-sugar action
         let ident_ref_id = self
             .ast
             .create_identifier_ref(Identifier::new(ident_id, op.span().clone()), symbol);
+        let parameter = vec![operand];
+        let ret_type = self.visit_function_call(ident_ref_id, &parameter)?;
+
+        // here, we replace the `op operand` with `op_fn(operand)` in the ast as a de-sugar action
         let expression = Expression::new(
             expr,
-            ExpressionKind::FunctionCall(ident_ref_id, vec![operand]),
+            ExpressionKind::FunctionCall(ident_ref_id, parameter),
             expr_span,
         );
         self.ast.replace_expression(expression);
 
-        Ok(self.symbols.borrow()[symbol.id()].ty)
+        Ok(ret_type)
     }
 
     fn visit_function_call(
@@ -330,6 +342,7 @@ impl Resolver {
             .collect::<Vec<Type>>();
 
         if param_types.len() != params.len() {
+            // todo better error
             return Err(());
         }
 
@@ -722,11 +735,11 @@ mod tests {
             Parser::new(Lexer::new("let x(n: number): number = { n; }")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("no error expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols).serialize());
+        assert_snapshot!(XmlWriter::new(&ast, &symbols, &expr_types).serialize());
     }
 
     #[test]
@@ -735,11 +748,11 @@ mod tests {
             Parser::new(Lexer::new("let x(): number = { let n = 0; n; }")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols).serialize());
+        assert_snapshot!(XmlWriter::new(&ast, &symbols, &expr_types).serialize());
     }
 
     #[test]
@@ -747,11 +760,11 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new("let x() = { } x();")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols).serialize());
+        assert_snapshot!(XmlWriter::new(&ast, &symbols, &expr_types).serialize());
     }
 
     #[test]
@@ -762,11 +775,11 @@ mod tests {
         .parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols) = Resolver::new(ast, Natives::default())
+        let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols).serialize());
+        assert_snapshot!(XmlWriter::new(&ast, &symbols, &expr_types).serialize());
     }
 
     #[test]
@@ -797,9 +810,12 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new("let x = true; let x = 1; x + 1;")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols) = Resolver::new(ast, Natives::default()).resolve().unwrap();
+        let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
-        assert_snapshot!("rebinding-xml", XmlWriter::new(&ast, &symbols).serialize());
+        assert_snapshot!(
+            "rebinding-xml",
+            XmlWriter::new(&ast, &symbols, &expr_types).serialize()
+        );
         assert_snapshot!("rebinding-dot", Dot::new(&ast, &symbols).serialize());
     }
 

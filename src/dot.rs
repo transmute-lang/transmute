@@ -560,7 +560,7 @@ mod tests {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols) = Resolver::new(ast, Natives::default())
+                let (ast, symbols, _) = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
 

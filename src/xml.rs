@@ -5,7 +5,7 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Parameter, Statement, StatementKind};
 use crate::ast::Ast;
-use crate::resolver::Symbol;
+use crate::resolver::{Symbol, Type};
 use std::io;
 use std::io::Write;
 use xml::writer::XmlEvent;
@@ -14,17 +14,19 @@ use xml::{EmitterConfig, EventWriter};
 pub struct XmlWriter<'a> {
     ast: &'a Ast,
     symbols: &'a Vec<Symbol>,
+    expr_types: &'a Vec<Type>,
     writer: EventWriter<Vec<u8>>,
 }
 
 impl<'a> XmlWriter<'a> {
-    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>) -> Self {
+    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>, expr_types: &'a Vec<Type>) -> Self {
         let writer = EmitterConfig::new()
             .perform_indent(true)
             .create_writer(vec![]);
         Self {
             ast,
             symbols,
+            expr_types,
             writer,
         }
     }
@@ -524,11 +526,11 @@ mod tests {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols) = Resolver::new(ast, Natives::default())
+                let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("no error expected");
 
-                let xml = XmlWriter::new(&ast, &symbols).serialize();
+                let xml = XmlWriter::new(&ast, &symbols, &expr_types).serialize();
                 assert_snapshot!(&xml);
             }
         };

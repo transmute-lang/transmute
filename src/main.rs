@@ -49,12 +49,12 @@ fn fibonacci_rec() {
         return;
     }
 
-    let (ast, symbols) = Resolver::new(ast, Natives::default()).resolve().unwrap();
+    let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
     Dot::new(&ast, &symbols)
         .write(&mut File::create("target/fibonacci_rec.dot").unwrap())
         .unwrap();
-    XmlWriter::new(&ast, &symbols)
+    XmlWriter::new(&ast, &symbols, &expr_types)
         .write(&mut File::create("target/fibonacci_rec.xml").unwrap())
         .unwrap();
 
@@ -102,12 +102,12 @@ fn fibonacci_iter() {
         return;
     }
 
-    let (ast, symbols) = Resolver::new(ast, Natives::default()).resolve().unwrap();
+    let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
     Dot::new(&ast, &symbols)
         .write(&mut File::create("target/fibonacci_iter.dot").unwrap())
         .unwrap();
-    XmlWriter::new(&ast, &symbols)
+    XmlWriter::new(&ast, &symbols, &expr_types)
         .write(&mut File::create("target/fibonacci_iter.xml").unwrap())
         .unwrap();
 

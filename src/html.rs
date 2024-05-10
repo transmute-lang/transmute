@@ -14,6 +14,7 @@ const HTML: &str = include_str!("html/template.html");
 struct HtmlWriter<'a> {
     ast: &'a Ast,
     symbols: &'a Vec<Symbol>,
+    expr_types: &'a Vec<Type>,
     writer: EventWriter<Vec<u8>>,
 }
 
@@ -28,7 +29,7 @@ macro_rules! make_html_symbol {
 }
 
 impl<'a> HtmlWriter<'a> {
-    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>) -> Self {
+    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>, expr_types: &'a Vec<Type>) -> Self {
         let writer = EmitterConfig::new()
             .perform_indent(true)
             .write_document_declaration(false)
@@ -36,7 +37,7 @@ impl<'a> HtmlWriter<'a> {
         Self {
             ast,
             symbols,
-            // types,
+            expr_types,
             writer,
         }
     }
@@ -97,7 +98,7 @@ impl<'a> HtmlWriter<'a> {
 
     fn visit_ret(&mut self, expr: ExprId) {
         self.emit(XmlEvent::start_element("li"));
-        self.emit_keyword("ret");
+        self.emit_keyword("ret", self.expr_types[expr.id()]);
         self.visit_expression(expr);
         self.emit_semicolon();
         self.emit(XmlEvent::end_element());
@@ -113,7 +114,7 @@ impl<'a> HtmlWriter<'a> {
     ) {
         self.emit(XmlEvent::start_element("li"));
 
-        self.emit_keyword("let");
+        self.emit_keyword("let", self.expr_types[expr.id()]);
         self.emit_identifier(stmt_id, ident, None);
 
         self.emit_par("(");
@@ -153,7 +154,7 @@ impl<'a> HtmlWriter<'a> {
 
     fn visit_let(&mut self, stmt: StmtId, ident: IdentId, expr: ExprId) {
         self.emit(XmlEvent::start_element("li"));
-        self.emit_keyword("let");
+        self.emit_keyword("let", self.expr_types[expr.id()]);
         self.emit_identifier(stmt, ident, None);
         self.emit_equal();
         self.visit_expression(expr);
@@ -190,11 +191,11 @@ impl<'a> HtmlWriter<'a> {
     }
 
     fn visit_if(&mut self, cond: ExprId, true_branch: ExprId, false_branch: Option<ExprId>) {
-        // this is a bit tricky here: the <li> is already open in the visit_statement() function...
-        // but, the if conf { ends a line. thus, we close the <li> tag after the {
-        // but as the visit_statement() expects to close one <li> as well, we leave the last one
+        // This is a bit tricky here: the <li> is already open in the visit_statement() function...
+        // but the `if cond {` ends a line. Thus, we close the <li> tag after the `{`. But
+        // as the visit_statement() expects to close one <li> as well, we leave the last one
         // open... This also works with `let a = if cond { ... } else { ... }`. In
-        self.emit_keyword("if");
+        self.emit_keyword("if", self.expr_types[true_branch.id()]);
 
         self.visit_expression(cond);
 
@@ -247,7 +248,7 @@ impl<'a> HtmlWriter<'a> {
 
     fn visit_while(&mut self, cond: ExprId, expr: ExprId) {
         // see explanation on top of visit_id() function
-        self.emit_keyword("while");
+        self.emit_keyword("while", self.expr_types[expr.id()]);
 
         self.visit_expression(cond);
 
@@ -279,8 +280,12 @@ impl<'a> HtmlWriter<'a> {
         self.writer.write(event.into()).unwrap();
     }
 
-    fn emit_keyword(&mut self, keyword: &str) {
-        self.emit(XmlEvent::start_element("span").attr("class", "kw"));
+    fn emit_keyword(&mut self, keyword: &str, ty: Type) {
+        self.emit(
+            XmlEvent::start_element("span")
+                .attr("class", "kw")
+                .attr("title", &ty.to_string()),
+        );
         self.emit(XmlEvent::Characters(keyword));
         self.emit(XmlEvent::end_element());
     }
@@ -304,13 +309,21 @@ impl<'a> HtmlWriter<'a> {
     make_html_symbol!(emit_semicolon, "semicolon", ";");
 
     fn emit_boolean(&mut self, b: bool) {
-        self.emit(XmlEvent::start_element("span").attr("class", "boolean"));
+        self.emit(
+            XmlEvent::start_element("span")
+                .attr("class", "boolean")
+                .attr("title", &Type::Boolean.to_string()),
+        );
         self.emit(XmlEvent::Characters(&format!("{}", b)));
         self.emit(XmlEvent::end_element());
     }
 
     fn emit_number(&mut self, n: i64) {
-        self.emit(XmlEvent::start_element("span").attr("class", "num"));
+        self.emit(
+            XmlEvent::start_element("span")
+                .attr("class", "num")
+                .attr("title", &Type::Number.to_string()),
+        );
         self.emit(XmlEvent::Characters(&format!("{}", n)));
         self.emit(XmlEvent::end_element());
     }
@@ -339,10 +352,9 @@ impl<'a> HtmlWriter<'a> {
     }
 
     fn emit_identifier_ref(&mut self, identifier: IdentRefId) {
-        // todo tooltip with type
         let ident_ref = self.ast.identifier_ref(identifier);
 
-        let ty = ident_ref
+        let type_ref = ident_ref
             .symbol_id()
             .map(|s| &self.symbols[s.id()])
             .map(|s| s.ty())
@@ -353,6 +365,13 @@ impl<'a> HtmlWriter<'a> {
                 Type::Void => Some("type__native_void".to_string()),
                 Type::None => unimplemented!(),
             })
+            .expect("type not found");
+
+        let type_name = ident_ref
+            .symbol_id()
+            .map(|s| &self.symbols[s.id()])
+            .map(|s| s.ty())
+            .map(|ty| ty.to_string())
             .expect("type not found");
 
         let symbol = ident_ref
@@ -381,8 +400,9 @@ impl<'a> HtmlWriter<'a> {
         self.emit(
             XmlEvent::start_element("span")
                 .attr("class", "ident")
+                .attr("title", &type_name)
                 .attr("data-ident-ref", &symbol)
-                .attr("data-type-ref", &ty),
+                .attr("data-type-ref", &type_ref),
         );
         self.emit(XmlEvent::Characters(
             self.ast.identifier(ident_ref.ident().id()),
@@ -407,11 +427,11 @@ mod tests {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols) = Resolver::new(ast, Natives::default())
+                let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
 
-                let html = HtmlWriter::new(&ast, &symbols).serialize();
+                let html = HtmlWriter::new(&ast, &symbols, &expr_types).serialize();
                 assert_snapshot!(&html);
             }
         };
