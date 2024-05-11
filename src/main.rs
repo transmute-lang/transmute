@@ -2,6 +2,7 @@
 extern crate core;
 
 use crate::ast::AstNodePrettyPrint;
+use crate::desugar::ImplicitRet;
 use crate::dot::Dot;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
@@ -12,6 +13,7 @@ use crate::xml::XmlWriter;
 use std::fs::File;
 
 mod ast;
+mod desugar;
 mod dot;
 mod error;
 mod exit_points;
@@ -48,6 +50,8 @@ fn fibonacci_rec() {
         print!("Errors:\n{}", diagnostics);
         return;
     }
+
+    let ast = ImplicitRet::new().desugar(ast);
 
     let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
@@ -101,6 +105,8 @@ fn fibonacci_iter() {
         print!("Errors:\n{}", diagnostics);
         return;
     }
+
+    let ast = ImplicitRet::new().desugar(ast);
 
     let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default()).resolve().unwrap();
 

@@ -61,7 +61,7 @@ impl<'a> Interpreter<'a> {
             StatementKind::LetFn(_, _, _, _) => {
                 Value::Void // todo this is wrong
             }
-            StatementKind::Ret(e) => self.visit_expression(*e),
+            StatementKind::Ret(e, _) => self.visit_expression(*e),
         }
     }
 
@@ -290,7 +290,7 @@ impl Display for Value {
 }
 
 fn is_ret(s: &Statement) -> bool {
-    matches!(s.kind(), &StatementKind::Ret(_))
+    matches!(s.kind(), &StatementKind::Ret(_, _))
 }
 
 #[cfg(test)]

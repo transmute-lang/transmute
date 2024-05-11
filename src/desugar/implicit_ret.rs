@@ -1,0 +1,257 @@
+use crate::ast::expression::ExpressionKind;
+use crate::ast::ids::{ExprId, StmtId};
+use crate::ast::statement::{RetMode, Statement, StatementKind};
+use crate::ast::Ast;
+
+pub struct ImplicitRet {
+    replacements: Vec<Statement>,
+}
+
+impl ImplicitRet {
+    pub fn new() -> Self {
+        Self {
+            replacements: Default::default(),
+        }
+    }
+
+    pub fn desugar(mut self, mut ast: Ast) -> Ast {
+        for expr in ast
+            .statements()
+            .iter()
+            .filter_map(|stmt| match ast.statement(*stmt).kind() {
+                StatementKind::LetFn(_, _, _, expr) => Some(*expr),
+                _ => None,
+            })
+            .filter(|expr| match ast.expression(*expr).kind() {
+                ExpressionKind::Block(_) => true,
+                e => panic!("expected block, got {:?}", e),
+            })
+        {
+            self.visit_expression(&ast, expr, 0, false);
+        }
+
+        for statement in self.replacements {
+            ast.replace_statement(statement);
+        }
+
+        ast
+    }
+
+    /// returns true if all nested paths explicitly return
+    fn visit_expression(
+        &mut self,
+        ast: &Ast,
+        expr: ExprId,
+        depth: usize,
+        unreachable: bool,
+    ) -> bool {
+        if unreachable {
+            return false;
+        }
+
+        match ast.expression(expr).kind() {
+            ExpressionKind::Assignment(_, expr) => {
+                self.visit_expression(ast, *expr, depth + 1, unreachable)
+            }
+            ExpressionKind::If(cond, true_branch, false_branch) => {
+                let condition_always_returns =
+                    self.visit_expression(ast, *cond, depth + 1, unreachable);
+
+                let true_branch_always_return = self.visit_expression(
+                    ast,
+                    *true_branch,
+                    depth + 1,
+                    unreachable || condition_always_returns,
+                );
+
+                let false_branch_always_return = match false_branch {
+                    None => false,
+                    Some(false_branch) => self.visit_expression(
+                        ast,
+                        *false_branch,
+                        depth + 1,
+                        unreachable || condition_always_returns,
+                    ),
+                };
+
+                condition_always_returns
+                    || (true_branch_always_return && false_branch_always_return)
+            }
+            ExpressionKind::Literal(_) => false,
+            ExpressionKind::Binary(left, _, right) => {
+                let left_always_returns = self.visit_expression(ast, *left, depth + 1, unreachable);
+                let right_always_returns = self.visit_expression(
+                    ast,
+                    *right,
+                    depth + 1,
+                    unreachable || left_always_returns,
+                );
+                left_always_returns || right_always_returns
+            }
+            ExpressionKind::FunctionCall(_, params) => {
+                let mut some_param_always_returns = false;
+
+                for param in params {
+                    some_param_always_returns = some_param_always_returns
+                        || self.visit_expression(
+                            ast,
+                            *param,
+                            depth + 1,
+                            unreachable || some_param_always_returns,
+                        );
+                }
+
+                some_param_always_returns
+            }
+            ExpressionKind::Unary(_, expr) => {
+                self.visit_expression(ast, *expr, depth + 1, unreachable)
+            }
+            ExpressionKind::While(cond, expr) => {
+                let condition_always_returns =
+                    self.visit_expression(ast, *cond, depth + 1, unreachable);
+                let while_always_returns = self.visit_expression(
+                    ast,
+                    *expr,
+                    depth + 1,
+                    unreachable || condition_always_returns,
+                );
+                condition_always_returns || while_always_returns
+            }
+            ExpressionKind::Block(stmts) => {
+                let stmts_len = stmts.len();
+                let mut ret = false;
+                for (i, stmt) in stmts.iter().enumerate() {
+                    let last_expr = depth == 0 && i == stmts_len - 1 && !unreachable;
+                    if self.visit_statement(ast, *stmt, depth, unreachable || ret, last_expr) {
+                        ret = true;
+                    }
+                }
+                ret
+            }
+            ExpressionKind::Dummy => {
+                panic!("should not compute exit points of an invalid source code")
+            }
+        }
+    }
+
+    fn visit_statement(
+        &mut self,
+        ast: &Ast,
+        stmt: StmtId,
+        depth: usize,
+        unreachable: bool,
+        last: bool,
+    ) -> bool {
+        match ast.statement(stmt).kind() {
+            StatementKind::Expression(expr) => {
+                let expr = *expr;
+                let always_returns = self.visit_expression(ast, expr, depth + 1, unreachable);
+
+                if last && !always_returns {
+                    self.replacements.push(Statement::new(
+                        stmt,
+                        StatementKind::Ret(expr, RetMode::Implicit),
+                        ast.statement(stmt).span().clone(),
+                    ));
+                }
+
+                always_returns
+            }
+            StatementKind::Let(_, expr) => {
+                self.visit_expression(ast, *expr, depth + 1, unreachable)
+            }
+            StatementKind::Ret(expr, _) => {
+                self.visit_expression(ast, *expr, depth + 1, unreachable);
+                true
+            }
+            StatementKind::LetFn(_, _, _, expr) => {
+                self.visit_expression(ast, *expr, depth + 1, unreachable);
+                false
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ast::AstNodePrettyPrint;
+    use crate::desugar::implicit_ret::ImplicitRet;
+    use crate::lexer::Lexer;
+    use crate::parser::Parser;
+    use insta::assert_snapshot;
+
+    macro_rules! t {
+        ($name:ident, $src:expr) => {
+            #[test]
+            fn $name() {
+                let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
+                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+                let ast = ImplicitRet::new().desugar(ast);
+
+                assert_snapshot!(
+                    AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap()).to_string()
+                );
+            }
+        };
+    }
+
+    t!(
+        explicit_return,
+        r#"
+            let f(): number = {
+                ret 42;
+            }
+        "#
+    );
+
+    t!(
+        implicit_return_simple,
+        r#"
+            let f(): number = {
+                41;
+                42;
+            }
+        "#
+    );
+
+    t!(
+        implicit_return_if_full,
+        r#"
+            let f(): number = {
+                if c {
+                    42;
+                }
+                else {
+                    43;
+                }
+            }
+        "#
+    );
+
+    t!(
+        implicit_return_if_full_with_explicit,
+        r#"
+            let f(): number = {
+                if c {
+                    ret 42;
+                }
+                else {
+                    43;
+                }
+            }
+        "#
+    );
+
+    t!(
+        implicit_return_if,
+        r#"
+            let f(): number = {
+                if c {
+                    42;
+                }
+                43;
+            }
+        "#
+    );
+}

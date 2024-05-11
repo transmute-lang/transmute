@@ -72,7 +72,7 @@ expression: "Parser::new(Lexer::new(\"while true {\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    963,
+                    964,
                 ),
             },
         ],

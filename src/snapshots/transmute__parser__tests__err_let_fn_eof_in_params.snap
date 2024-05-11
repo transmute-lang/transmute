@@ -20,7 +20,7 @@ expression: "Parser::new(Lexer::new(\"let x(\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    331,
+                    332,
                 ),
             },
         ],

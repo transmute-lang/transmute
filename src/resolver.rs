@@ -392,7 +392,7 @@ impl Resolver {
                     self.visit_let(*stmt, ident.id(), *expr);
                     Ok(Type::Void)
                 }
-                StatementKind::Ret(expr) => {
+                StatementKind::Ret(expr, _) => {
                     let _ = self.visit_expression(*expr);
                     Ok(Type::None)
                 }

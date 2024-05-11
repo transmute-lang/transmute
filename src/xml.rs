@@ -3,7 +3,7 @@ use crate::ast::identifier::Identifier;
 use crate::ast::ids::{ExprId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
-use crate::ast::statement::{Parameter, Statement, StatementKind};
+use crate::ast::statement::{Parameter, RetMode, Statement, StatementKind};
 use crate::ast::Ast;
 use crate::resolver::{Symbol, Type};
 use std::io;
@@ -88,8 +88,8 @@ impl<'a> XmlWriter<'a> {
             StatementKind::Let(ident, expr) => {
                 self.visit_let(ident, expr);
             }
-            StatementKind::Ret(expr) => {
-                self.visit_ret(stmt, expr);
+            StatementKind::Ret(expr, mode) => {
+                self.visit_ret(stmt, expr, mode);
             }
             StatementKind::LetFn(ident, params, ty, expr) => {
                 self.visit_function(stmt.id(), ident, params, ty, expr);
@@ -410,9 +410,10 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::end_element());
     }
 
-    fn visit_ret(&mut self, stmt: &Statement, expr: &ExprId) {
+    fn visit_ret(&mut self, stmt: &Statement, expr: &ExprId, mode: &RetMode) {
         self.emit(
             XmlEvent::start_element("ret")
+                .attr("mode", mode.as_str())
                 .attr("line", &stmt.span().line().to_string())
                 .attr("column", &stmt.span().column().to_string())
                 .attr("start", &stmt.span().start().to_string())

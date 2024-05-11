@@ -78,7 +78,7 @@ expression: "Parser::new(Lexer::new(\"forty_two = 42\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    930,
+                    931,
                 ),
             },
         ],

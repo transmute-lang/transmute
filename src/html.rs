@@ -1,7 +1,7 @@
 use crate::ast::expression::ExpressionKind;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::statement::{Parameter, StatementKind};
+use crate::ast::statement::{Parameter, RetMode, StatementKind};
 use crate::ast::Ast;
 use crate::resolver::{Symbol, SymbolKind, Type};
 use std::io;
@@ -85,8 +85,8 @@ impl<'a> HtmlWriter<'a> {
             StatementKind::Let(ident, expr) => {
                 self.visit_let(stmt.id(), ident.id(), *expr);
             }
-            StatementKind::Ret(expr) => {
-                self.visit_ret(*expr);
+            StatementKind::Ret(expr, mode) => {
+                self.visit_ret(*expr, *mode);
             }
             StatementKind::LetFn(ident, params, ret_type, expr) => self.visit_function(
                 stmt.id(),
@@ -98,9 +98,15 @@ impl<'a> HtmlWriter<'a> {
         }
     }
 
-    fn visit_ret(&mut self, expr: ExprId) {
+    fn visit_ret(&mut self, expr: ExprId, mode: RetMode) {
         self.emit(XmlEvent::start_element("li"));
+        if let RetMode::Implicit = mode {
+            self.emit(XmlEvent::start_element("span").attr("class", "implicit"));
+        }
         self.emit_keyword("ret", self.expr_types[expr.id()]);
+        if let RetMode::Implicit = mode {
+            self.emit(XmlEvent::end_element());
+        }
         self.visit_expression(expr);
         self.emit_semicolon();
         self.emit(XmlEvent::end_element());

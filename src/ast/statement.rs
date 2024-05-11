@@ -31,9 +31,24 @@ impl Statement {
 pub enum StatementKind {
     Expression(ExprId),
     Let(Identifier, ExprId),
-    Ret(ExprId),
+    Ret(ExprId, RetMode),
     // todo second Identifier should be a type
     LetFn(Identifier, Vec<Parameter>, Option<Identifier>, ExprId),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RetMode {
+    Explicit,
+    Implicit,
+}
+
+impl RetMode {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            RetMode::Explicit => "explicit",
+            RetMode::Implicit => "implicit",
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

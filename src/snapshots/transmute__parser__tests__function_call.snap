@@ -80,7 +80,7 @@ expression: "Parser::new(Lexer::new(\"times_two(21)\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    930,
+                    931,
                 ),
             },
         ],

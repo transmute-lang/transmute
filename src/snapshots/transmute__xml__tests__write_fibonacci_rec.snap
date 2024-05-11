@@ -59,7 +59,7 @@ expression: "&xml"
                       <expr id="expr:4" line="3" column="27" start="68" len="46">
                         <block>
                           <stmt id="stmt:0" line="4" column="21" start="90" len="6">
-                            <ret line="4" column="21" start="90" len="6">
+                            <ret mode="explicit" line="4" column="21" start="90" len="6">
                               <expr id="expr:3" line="4" column="25" start="94" len="1">
                                 <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="stmt:3:0">n</identifier-ref>
                               </expr>
@@ -72,7 +72,7 @@ expression: "&xml"
                 </expr>
               </stmt>
               <stmt id="stmt:2" line="6" column="17" start="131" len="20">
-                <ret line="6" column="17" start="131" len="20">
+                <ret mode="implicit" line="6" column="17" start="131" len="20">
                   <expr id="expr:14" line="6" column="17" start="131" len="19">
                     <call line="6" column="17" start="131" len="19" ident-ref="ident:3" name="add" target-id="native:add:number:number:number">
                       <parameters>

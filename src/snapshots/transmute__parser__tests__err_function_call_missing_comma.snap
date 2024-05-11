@@ -97,7 +97,7 @@ expression: "Parser::new(Lexer::new(\"f(42 43);\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    909,
+                    910,
                 ),
             },
         ],

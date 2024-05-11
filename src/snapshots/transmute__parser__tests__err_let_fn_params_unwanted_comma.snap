@@ -89,7 +89,7 @@ expression: "Parser::new(Lexer::new(\"let x(,n:i,,m:j,) = { }\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    339,
+                    340,
                 ),
             },
             Diagnostic {
@@ -98,7 +98,7 @@ expression: "Parser::new(Lexer::new(\"let x(,n:i,,m:j,) = { }\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    339,
+                    340,
                 ),
             },
         ],

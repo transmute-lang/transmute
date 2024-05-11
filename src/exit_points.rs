@@ -1,6 +1,6 @@
 use crate::ast::expression::ExpressionKind;
 use crate::ast::ids::{ExprId, StmtId};
-use crate::ast::statement::{Statement, StatementKind};
+use crate::ast::statement::{RetMode, Statement, StatementKind};
 use crate::ast::Ast;
 
 pub struct ExitPoints<'a> {
@@ -142,7 +142,7 @@ impl<'a> ExitPoints<'a> {
                     self.exit_points.push(ExitPoint::Implicit(*expr));
                     self.statements.push(Statement::new(
                         stmt,
-                        StatementKind::Ret(*expr),
+                        StatementKind::Ret(*expr, RetMode::Implicit),
                         self.ast.statement(stmt).span().clone(),
                     ));
                 }
@@ -150,8 +150,15 @@ impl<'a> ExitPoints<'a> {
                 always_returns
             }
             StatementKind::Let(_, expr) => self.visit_expression(*expr, depth + 1, unreachable),
-            StatementKind::Ret(expr) => {
-                self.exit_points.push(ExitPoint::Explicit(*expr));
+            StatementKind::Ret(expr, mode) => {
+                match mode {
+                    RetMode::Explicit => {
+                        self.exit_points.push(ExitPoint::Explicit(*expr));
+                    }
+                    RetMode::Implicit => {
+                        self.exit_points.push(ExitPoint::Implicit(*expr));
+                    }
+                }
                 self.visit_expression(*expr, depth + 1, unreachable);
                 true
             }

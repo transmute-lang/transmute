@@ -35,7 +35,7 @@ expression: "&xml"
           <expr id="expr:3" line="1" column="28" start="27" len="6">
             <block>
               <stmt id="stmt:0" line="1" column="28" start="27" len="6">
-                <ret line="1" column="28" start="27" len="6">
+                <ret mode="implicit" line="1" column="28" start="27" len="6">
                   <expr id="expr:2" line="1" column="28" start="27" len="5">
                     <call line="1" column="28" start="27" len="5" ident-ref="ident:10" name="mul" target-id="native:mul:number:number:number">
                       <parameters>

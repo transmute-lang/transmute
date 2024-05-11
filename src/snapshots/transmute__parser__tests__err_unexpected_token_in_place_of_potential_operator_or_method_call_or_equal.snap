@@ -66,7 +66,7 @@ expression: "Parser::new(Lexer::new(\"f 4;\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    930,
+                    931,
                 ),
             },
         ],

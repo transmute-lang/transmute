@@ -5,7 +5,7 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{
     BinaryOperator, BinaryOperatorKind, Precedence, UnaryOperator, UnaryOperatorKind,
 };
-use crate::ast::statement::{Parameter, Statement, StatementKind};
+use crate::ast::statement::{Parameter, RetMode, Statement, StatementKind};
 use crate::ast::Ast;
 use crate::error::Diagnostics;
 use crate::lexer::{Lexer, PeekableLexer, Span, Token, TokenKind};
@@ -219,7 +219,8 @@ impl<'s> Parser<'s> {
                 let semicolon = self.parse_semicolon();
                 let span = ret_token.span().extend_to(semicolon.span());
 
-                let id = self.push_statement(StatementKind::Ret(expression), span);
+                let id =
+                    self.push_statement(StatementKind::Ret(expression, RetMode::Explicit), span);
                 Some(&self.statements[id.id()])
             }
             TokenKind::If | TokenKind::While => {

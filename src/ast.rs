@@ -164,8 +164,8 @@ impl Ast {
                         ),
                         ExprId::from(expr_base + expr.id()),
                     ),
-                    StatementKind::Ret(expr) => {
-                        StatementKind::Ret(ExprId::from(expr_base + expr.id()))
+                    StatementKind::Ret(expr, mode) => {
+                        StatementKind::Ret(ExprId::from(expr_base + expr.id()), *mode)
                     }
                     StatementKind::LetFn(identifier, parameters, return_type, expr) => {
                         StatementKind::LetFn(
@@ -367,7 +367,7 @@ impl Display for AstNodePrettyPrint<'_, StmtId> {
                     AstNodePrettyPrint::new_with_ident(self.ast, *expr, self.indent),
                 )
             }
-            StatementKind::Ret(expr) => {
+            StatementKind::Ret(expr, _) => {
                 writeln!(
                     f,
                     "{indent}ret {};",

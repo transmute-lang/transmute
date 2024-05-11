@@ -138,7 +138,7 @@ impl<'a> DotBuilder<'a> {
         let node_id = match self.ast.statement(stmt).kind() {
             StatementKind::Expression(expr) => self.visit_expression(*expr),
             StatementKind::Let(ident, expr) => self.visit_let(ident, expr),
-            StatementKind::Ret(expr) => self.visit_ret(expr),
+            StatementKind::Ret(expr, _) => self.visit_ret(expr),
             StatementKind::LetFn(ident, params, ret, expr) => {
                 self.visit_function(ident, params, ret, expr)
             }

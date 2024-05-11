@@ -35,7 +35,12 @@ expression: "&html"
         }
 
         .kw {
+            font-weight: bold;
             color: #cc7832;
+        }
+
+        .implicit .kw {
+            font-weight: normal;
         }
 
         .num {
@@ -249,7 +254,9 @@ expression: "&html"
         <span class="curly" data-par-id="par_7">}</span>
       </li>
       <li>
-        <span class="kw" title="number">ret</span>
+        <span class="implicit">
+          <span class="kw" title="number">ret</span>
+        </span>
         <span class="ident_ref" title="number" data-ident-ref="ident__stmt6" data-type-ref="type__native_number">current</span>
         <span class="semicolon">;</span>
       </li>

@@ -50,7 +50,7 @@ expression: "&xml"
           <expr id="expr:4" line="1" column="46" start="45" len="13">
             <block>
               <stmt id="stmt:1" line="1" column="48" start="47" len="9">
-                <ret line="1" column="48" start="47" len="9">
+                <ret mode="implicit" line="1" column="48" start="47" len="9">
                   <expr id="expr:3" line="1" column="48" start="47" len="8">
                     <call line="1" column="48" start="47" len="8" ident-ref="ident:10" name="eq" target-id="native:eq:number:number:boolean">
                       <parameters>
@@ -111,7 +111,7 @@ expression: "&xml"
           <expr id="expr:11" line="1" column="46" start="45" len="13">
             <block>
               <stmt id="stmt:5" line="1" column="48" start="47" len="9">
-                <ret line="1" column="48" start="47" len="9">
+                <ret mode="implicit" line="1" column="48" start="47" len="9">
                   <expr id="expr:10" line="1" column="48" start="47" len="8">
                     <call line="1" column="48" start="47" len="8" ident-ref="ident:10" name="eq" target-id="native:eq:number:number:boolean">
                       <parameters>
