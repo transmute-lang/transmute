@@ -364,14 +364,14 @@ impl Display for AstNodePrettyPrint<'_, StmtId> {
                     f,
                     "{indent}let {} = {};",
                     AstNodePrettyPrint::new(self.ast, ident.id()),
-                    AstNodePrettyPrint::new(self.ast, *expr),
+                    AstNodePrettyPrint::new_with_ident(self.ast, *expr, self.indent),
                 )
             }
             StatementKind::Ret(expr) => {
                 writeln!(
                     f,
                     "{indent}ret {};",
-                    AstNodePrettyPrint::new(self.ast, *expr)
+                    AstNodePrettyPrint::new_with_ident(self.ast, *expr, self.indent)
                 )
             }
             StatementKind::LetFn(ident, params, ty, expr) => {
@@ -447,8 +447,8 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                     )?;
                 }
                 if let Some(false_branch) = false_branch {
-                    writeln!(f, "}}")?;
-                    writeln!(f, "else {{")?;
+                    writeln!(f, "{indent}}}")?;
+                    writeln!(f, "{indent}else {{")?;
 
                     let false_branch = match self.ast.expression(*false_branch).kind() {
                         ExpressionKind::Block(true_branch) => true_branch,
@@ -554,14 +554,20 @@ mod tests {
             r#"
         let fact(n: number): number = {
             if n < 0 {
-                ret 0;
+                let r = if false {
+                    1;
+                } else {
+                    0;
+                };
+                ret r;
+            } else {
+                let product = 1;
+                while n > 0 {
+                    product = product * n;
+                    n = n - 1;
+                }
+                product;
             }
-            let product = 1;
-            while n > 0 {
-                product = product * n;
-                n = n - 1;
-            }
-            product;
         }
     "#,
         ))
@@ -572,20 +578,8 @@ mod tests {
             "{}",
             AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
         );
-        let expected = r#"let fact(n: number): number = {
-  if n < 0 {
-    ret 0;
-  }
-  let product = 1;
-  while n > 0 {
-    product = product * n;
-    n = n - 1;
-  }
 
-  product;
-}
-"#;
-        assert_eq!(actual, expected);
+        assert_snapshot!(actual);
     }
 
     #[test]
