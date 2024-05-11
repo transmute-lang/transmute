@@ -23,11 +23,13 @@ impl Identifier {
 
 /// Represents an identifier when used as a reference
 #[derive(Debug, Clone, PartialEq)]
-pub struct IdentifierRef {
+pub struct IdentifierRef<S = UnresolvedSymbol> {
+    /// ID of this identifier reference
     id: IdentRefId,
+    /// The referenced symbol identifier
     ident: Identifier,
     /// The referenced symbol id
-    symbol_id: Option<SymbolId>,
+    symbol: S,
 }
 
 impl IdentifierRef {
@@ -35,10 +37,33 @@ impl IdentifierRef {
         Self {
             id,
             ident,
-            symbol_id: None,
+            symbol: UnresolvedSymbol {},
         }
     }
 
+    pub fn resolved(&self, symbol_id: SymbolId) -> IdentifierRef<ResolvedSymbol> {
+        IdentifierRef {
+            id: self.id,
+            ident: self.ident.clone(),
+            symbol: ResolvedSymbol(symbol_id),
+        }
+    }
+}
+
+impl IdentifierRef<ResolvedSymbol> {
+    pub fn new_resolved(id: IdentRefId, ident: Identifier, symbol_id: SymbolId) -> Self {
+        Self {
+            id,
+            ident,
+            symbol: ResolvedSymbol(symbol_id),
+        }
+    }
+    pub fn symbol_id(&self) -> SymbolId {
+        self.symbol.0
+    }
+}
+
+impl<S> IdentifierRef<S> {
     pub fn id(&self) -> IdentRefId {
         self.id
     }
@@ -47,11 +72,13 @@ impl IdentifierRef {
         &self.ident
     }
 
-    pub fn set_symbol_id(&mut self, symbol_id: SymbolId) {
-        self.symbol_id = Some(symbol_id);
-    }
-
-    pub fn symbol_id(&self) -> Option<SymbolId> {
-        self.symbol_id
+    pub fn ident_id(&self) -> IdentId {
+        self.ident.id
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnresolvedSymbol;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResolvedSymbol(SymbolId);

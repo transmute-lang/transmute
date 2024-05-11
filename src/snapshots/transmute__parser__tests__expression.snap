@@ -113,7 +113,7 @@ expression: "Parser::new(Lexer::new(\"2 + 20 * 2\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    931,
+                    932,
                 ),
             },
         ],

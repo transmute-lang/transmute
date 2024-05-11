@@ -2,25 +2,23 @@ use crate::ast::expression::ExpressionKind;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Statement, StatementKind};
-use crate::ast::Ast;
-use crate::resolver::{Symbol, SymbolKind, Type};
+use crate::ast::ResolvedAst;
+use crate::resolver::{SymbolKind, Type};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 pub struct Interpreter<'a> {
-    ast: &'a Ast,
+    ast: &'a ResolvedAst,
     // todo IdentId should be SymbolId
     // todo turn into frame
     variables: Vec<HashMap<IdentId, Value>>,
-    symbols: &'a Vec<Symbol>,
 }
 
 impl<'a> Interpreter<'a> {
-    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>) -> Self {
+    pub fn new(ast: &'a ResolvedAst) -> Self {
         Self {
             ast,
             variables: vec![Default::default()],
-            symbols,
         }
     }
 
@@ -111,8 +109,7 @@ impl<'a> Interpreter<'a> {
 
     fn visit_function_call(&mut self, ident: &IdentRefId, arguments: &[ExprId]) -> Value {
         let ident_ref = self.ast.identifier_ref(*ident);
-        let symbol = ident_ref.symbol_id().expect("function not resolved");
-        let symbol = &self.symbols[symbol.id()];
+        let symbol = self.ast.symbol(ident_ref.symbol_id());
         match symbol.kind() {
             SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => {
                 panic!("let fn expected")
@@ -309,11 +306,11 @@ mod tests {
                 let (ast, diagnostics) = parser.parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols, _) = Resolver::new(ast, Natives::default())
+                let ast = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
 
-                let actual = Interpreter::new(&ast, &symbols).start();
+                let actual = Interpreter::new(&ast).start();
 
                 assert_eq!(actual, super::Value::$kind($value))
             }
@@ -325,11 +322,11 @@ mod tests {
                 let (ast, diagnostics) = parser.parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols, _) = Resolver::new(ast, Natives::default())
+                let ast = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
 
-                let actual = Interpreter::new(&ast, &symbols).start();
+                let actual = Interpreter::new(&ast).start();
 
                 assert_eq!(actual, super::Value::$kind)
             }

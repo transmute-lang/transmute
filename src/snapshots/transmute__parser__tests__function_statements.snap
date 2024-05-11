@@ -20,7 +20,7 @@ expression: "Parser::new(Lexer::new(\"let times_two(a: number) = { a * 2; }\")).
                     },
                     span: 1:30; [29, 30],
                 },
-                symbol_id: None,
+                symbol: UnresolvedSymbol,
             },
         ],
         expressions: [

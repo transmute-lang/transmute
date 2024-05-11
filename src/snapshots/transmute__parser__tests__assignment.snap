@@ -18,7 +18,7 @@ expression: "Parser::new(Lexer::new(\"forty_two = 42\")).parse()"
                     },
                     span: 1:1; [0, 9],
                 },
-                symbol_id: None,
+                symbol: UnresolvedSymbol,
             },
         ],
         expressions: [
@@ -78,7 +78,7 @@ expression: "Parser::new(Lexer::new(\"forty_two = 42\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    931,
+                    932,
                 ),
             },
         ],

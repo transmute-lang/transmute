@@ -1,10 +1,10 @@
 use crate::ast::expression::{Expression, ExpressionKind};
-use crate::ast::identifier::Identifier;
+use crate::ast::identifier::{Identifier, IdentifierRef, ResolvedSymbol};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId};
 use crate::ast::literal::LiteralKind;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Parameter, StatementKind};
-use crate::ast::Ast;
+use crate::ast::{Ast, ResolvedAst};
 use crate::error::Diagnostics;
 use crate::exit_points::{ExitPoint, ExitPoints};
 use crate::lexer::Span;
@@ -16,6 +16,7 @@ use std::rc::Rc;
 
 pub struct Resolver {
     ast: Ast,
+    resolved_identifier_refs: Vec<Option<IdentifierRef<ResolvedSymbol>>>,
     symbols: Rc<RefCell<Vec<Symbol>>>,
     expression_types: Vec<Option<Result<Type, ()>>>,
     diagnostics: Diagnostics,
@@ -26,9 +27,11 @@ impl Resolver {
     pub fn new(ast: Ast, natives: Natives) -> Self {
         let ast = ast.merge(Into::<Ast>::into(&natives));
         let expression_count = ast.expressions_count();
+        let identifier_ref_count = ast.identifier_ref_count();
         let symbols = Rc::new(RefCell::new(Vec::<Symbol>::new()));
         let mut me = Self {
             ast,
+            resolved_identifier_refs: vec![None; identifier_ref_count],
             symbols: symbols.clone(),
             expression_types: vec![None; expression_count],
             diagnostics: Default::default(),
@@ -43,7 +46,7 @@ impl Resolver {
         me
     }
 
-    pub fn resolve(mut self) -> Result<(Ast, Vec<Symbol>, Vec<Type>), Diagnostics> {
+    pub fn resolve(mut self) -> Result<ResolvedAst, Diagnostics> {
         let stmts = self.ast.statements().to_vec();
 
         self.insert_functions(&stmts);
@@ -51,8 +54,11 @@ impl Resolver {
         let _ = self.visit_statements(&stmts);
 
         if self.diagnostics.is_empty() {
-            Ok((
-                self.ast,
+            Ok(self.ast.resolved(
+                self.resolved_identifier_refs
+                    .into_iter()
+                    .map(|id_ref| id_ref.expect("identifier ref is resolved"))
+                    .collect::<Vec<IdentifierRef<ResolvedSymbol>>>(),
                 self.symbols.replace(vec![]),
                 self.expression_types
                     .into_iter()
@@ -282,9 +288,8 @@ impl Resolver {
             .resolve_ident(ident_id, Some(&[left_type, right_type]), op.span())
             .ok_or(())?;
 
-        let ident_ref_id = self
-            .ast
-            .create_identifier_ref(Identifier::new(ident_id, op.span().clone()), symbol);
+        let ident_ref_id =
+            self.create_identifier_ref(Identifier::new(ident_id, op.span().clone()), symbol);
         let parameters = vec![left, right];
         let ret_type = self.visit_function_call(ident_ref_id, &parameters)?;
 
@@ -298,6 +303,13 @@ impl Resolver {
         self.ast.replace_expression(expression);
 
         Ok(ret_type)
+    }
+
+    fn create_identifier_ref(&mut self, identifier: Identifier, symbol: SymbolId) -> IdentRefId {
+        let id = IdentRefId::from(self.resolved_identifier_refs.len());
+        self.resolved_identifier_refs
+            .push(Some(IdentifierRef::new_resolved(id, identifier, symbol)));
+        id
     }
 
     fn visit_unary_operator(
@@ -314,9 +326,8 @@ impl Resolver {
             .resolve_ident(ident_id, Some(&[operand_type]), op.span())
             .ok_or(())?;
 
-        let ident_ref_id = self
-            .ast
-            .create_identifier_ref(Identifier::new(ident_id, op.span().clone()), symbol);
+        let ident_ref_id =
+            self.create_identifier_ref(Identifier::new(ident_id, op.span().clone()), symbol);
         let parameter = vec![operand];
         let ret_type = self.visit_function_call(ident_ref_id, &parameter)?;
 
@@ -375,11 +386,11 @@ impl Resolver {
         self.push_scope();
 
         self.insert_functions(stmts);
-        let ret_type = self.visit_statements(stmts);
+        let ty = self.visit_statements(stmts);
 
         self.pop_scope();
 
-        ret_type
+        ty
     }
 
     fn visit_statements(&mut self, stmts: &[StmtId]) -> Result<Type, ()> {
@@ -513,23 +524,21 @@ impl Resolver {
         ident_ref: IdentRefId,
         param_types: Option<&[Type]>,
     ) -> Option<SymbolId> {
-        let ident_ref = self.ast.identifier_ref(ident_ref);
-
-        if let Some(symbol) = ident_ref.symbol_id() {
-            return Some(symbol);
+        if let Some(ident_ref) = &self.resolved_identifier_refs[ident_ref.id()] {
+            return Some(ident_ref.symbol_id());
         }
 
-        let ident = ident_ref.ident().id();
+        let ident_ref = self.ast.identifier_ref(ident_ref);
+
+        let ident_id = ident_ref.ident_id();
         match self
             .scope_stack
             .iter()
             .rev()
-            .find_map(|scope| scope.find(&ident, param_types))
+            .find_map(|scope| scope.find(&ident_id, param_types))
         {
             Some(s) => {
-                let mut ident_ref = ident_ref.clone();
-                ident_ref.set_symbol_id(s);
-                self.ast.replace_identifier_ref(ident_ref);
+                self.resolved_identifier_refs[ident_ref.id().id()] = Some(ident_ref.resolved(s));
                 Some(s)
             }
             None => {
@@ -538,7 +547,7 @@ impl Resolver {
                     self.diagnostics.report_err(
                         format!(
                             "No function '{}' found for parameters of types ({})",
-                            self.ast.identifier(ident),
+                            self.ast.identifier(ident_id),
                             param_types
                                 .iter()
                                 .map(Type::to_string)
@@ -550,7 +559,7 @@ impl Resolver {
                     );
                 } else {
                     self.diagnostics.report_err(
-                        format!("No variable '{}' found", self.ast.identifier(ident)),
+                        format!("No variable '{}' found", self.ast.identifier(ident_id)),
                         ident_ref.ident().span().clone(),
                         (file!(), line!()),
                     );
@@ -685,10 +694,13 @@ pub enum Type {
     // fixme this is not enough
     Function,
     Number,
+
+    /// This value is used when the statement/expression does not have any value. This is the
+    /// case for `let` and `let fn`.
     Void,
 
     /// This value is used when the statement/expression does not return any value. This is the
-    /// case of `ret` for instance.
+    /// case for `ret`.
     None,
 }
 
@@ -735,11 +747,11 @@ mod tests {
             Parser::new(Lexer::new("let x(n: number): number = { n; }")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default())
+        let ast = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("no error expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols, &expr_types).serialize());
+        assert_snapshot!(XmlWriter::new(&ast).serialize());
     }
 
     #[test]
@@ -748,11 +760,11 @@ mod tests {
             Parser::new(Lexer::new("let x(): number = { let n = 0; n; }")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default())
+        let ast = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols, &expr_types).serialize());
+        assert_snapshot!(XmlWriter::new(&ast).serialize());
     }
 
     #[test]
@@ -760,11 +772,11 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new("let x() = { } x();")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default())
+        let ast = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols, &expr_types).serialize());
+        assert_snapshot!(XmlWriter::new(&ast).serialize());
     }
 
     #[test]
@@ -775,11 +787,11 @@ mod tests {
         .parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default())
+        let ast = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
 
-        assert_snapshot!(XmlWriter::new(&ast, &symbols, &expr_types).serialize());
+        assert_snapshot!(XmlWriter::new(&ast).serialize());
     }
 
     #[test]
@@ -810,13 +822,10 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new("let x = true; let x = 1; x + 1;")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-        let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default()).resolve().unwrap();
+        let ast = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
-        assert_snapshot!(
-            "rebinding-xml",
-            XmlWriter::new(&ast, &symbols, &expr_types).serialize()
-        );
-        assert_snapshot!("rebinding-dot", Dot::new(&ast, &symbols).serialize());
+        assert_snapshot!("rebinding-xml", XmlWriter::new(&ast).serialize());
+        assert_snapshot!("rebinding-dot", Dot::new(&ast).serialize());
     }
 
     macro_rules! test_type_error {

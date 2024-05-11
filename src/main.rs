@@ -29,6 +29,8 @@ mod xml;
 //  let f() = 0:
 //  f = 1;
 
+// todo fix the ident().id() -> ident_id()
+
 fn main() {
     fibonacci_rec();
     println!();
@@ -43,7 +45,7 @@ fn fibonacci_rec() {
 
     print!(
         "Parsed AST:\n{}",
-        AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
+        AstNodePrettyPrint::new_unresolved(&ast, *ast.statements().first().unwrap())
     );
 
     if !diagnostics.is_empty() {
@@ -53,21 +55,21 @@ fn fibonacci_rec() {
 
     let ast = ImplicitRet::new().desugar(ast);
 
-    let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default()).resolve().unwrap();
+    let ast = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
-    Dot::new(&ast, &symbols)
+    Dot::new(&ast)
         .write(&mut File::create("target/fibonacci_rec.dot").unwrap())
         .unwrap();
-    XmlWriter::new(&ast, &symbols, &expr_types)
+    XmlWriter::new(&ast)
         .write(&mut File::create("target/fibonacci_rec.xml").unwrap())
         .unwrap();
 
     print!(
         "Executable AST:\n{}",
-        AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
+        AstNodePrettyPrint::new_resolved(&ast, *ast.statements().first().unwrap())
     );
 
-    let result = Interpreter::new(&ast, &symbols).start();
+    let result = Interpreter::new(&ast).start();
     println!("Result: {}", result);
 }
 
@@ -98,7 +100,7 @@ fn fibonacci_iter() {
 
     print!(
         "Parsed AST:\n{}",
-        AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
+        AstNodePrettyPrint::new_unresolved(&ast, *ast.statements().first().unwrap())
     );
 
     if !diagnostics.is_empty() {
@@ -108,20 +110,20 @@ fn fibonacci_iter() {
 
     let ast = ImplicitRet::new().desugar(ast);
 
-    let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default()).resolve().unwrap();
+    let ast = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
-    Dot::new(&ast, &symbols)
+    Dot::new(&ast)
         .write(&mut File::create("target/fibonacci_iter.dot").unwrap())
         .unwrap();
-    XmlWriter::new(&ast, &symbols, &expr_types)
+    XmlWriter::new(&ast)
         .write(&mut File::create("target/fibonacci_iter.xml").unwrap())
         .unwrap();
 
     print!(
         "Executable AST:\n{}",
-        AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap())
+        AstNodePrettyPrint::new_resolved(&ast, *ast.statements().first().unwrap())
     );
 
-    let result = Interpreter::new(&ast, &symbols).start();
+    let result = Interpreter::new(&ast).start();
     println!("Result: {}", result);
 }

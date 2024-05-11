@@ -73,7 +73,7 @@ expression: "Parser::new(Lexer::new(\"if true }\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    735,
+                    736,
                 ),
             },
         ],

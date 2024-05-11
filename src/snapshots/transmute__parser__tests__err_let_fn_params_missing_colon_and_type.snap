@@ -55,7 +55,7 @@ expression: "Parser::new(Lexer::new(\"let f(n) = { }\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    311,
+                    312,
                 ),
             },
         ],

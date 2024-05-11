@@ -18,7 +18,7 @@ expression: "Parser::new(Lexer::new(\"f(42,,43);\")).parse()"
                     },
                     span: 1:1; [0, 1],
                 },
-                symbol_id: None,
+                symbol: UnresolvedSymbol,
             },
         ],
         expressions: [
@@ -97,7 +97,7 @@ expression: "Parser::new(Lexer::new(\"f(42,,43);\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    888,
+                    889,
                 ),
             },
         ],

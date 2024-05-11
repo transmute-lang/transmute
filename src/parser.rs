@@ -224,6 +224,7 @@ impl<'s> Parser<'s> {
                 Some(&self.statements[id.id()])
             }
             TokenKind::If | TokenKind::While => {
+                // todo could call `parse_if_expression` without going through `parse_expression`
                 // self.expected.clear();
                 let expression = self.parse_expression();
                 let span = expression.span().extend_to(expression.span());

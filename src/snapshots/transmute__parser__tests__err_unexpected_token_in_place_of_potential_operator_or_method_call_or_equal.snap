@@ -18,7 +18,7 @@ expression: "Parser::new(Lexer::new(\"f 4;\")).parse()"
                     },
                     span: 1:1; [0, 1],
                 },
-                symbol_id: None,
+                symbol: UnresolvedSymbol,
             },
         ],
         expressions: [
@@ -66,7 +66,7 @@ expression: "Parser::new(Lexer::new(\"f 4;\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    931,
+                    932,
                 ),
             },
         ],

@@ -4,31 +4,24 @@ use crate::ast::ids::{ExprId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Parameter, RetMode, Statement, StatementKind};
-use crate::ast::Ast;
-use crate::resolver::{Symbol, Type};
+use crate::ast::ResolvedAst;
+use crate::resolver::SymbolKind;
 use std::io;
 use std::io::Write;
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
 
 pub struct XmlWriter<'a> {
-    ast: &'a Ast,
-    symbols: &'a Vec<Symbol>,
-    expr_types: &'a Vec<Type>,
+    ast: &'a ResolvedAst,
     writer: EventWriter<Vec<u8>>,
 }
 
 impl<'a> XmlWriter<'a> {
-    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>, expr_types: &'a Vec<Type>) -> Self {
+    pub fn new(ast: &'a ResolvedAst) -> Self {
         let writer = EmitterConfig::new()
             .perform_indent(true)
             .create_writer(vec![]);
-        Self {
-            ast,
-            symbols,
-            expr_types,
-            writer,
-        }
+        Self { ast, writer }
     }
 
     pub fn write<W: Write>(self, w: &mut W) -> io::Result<()> {
@@ -143,22 +136,19 @@ impl<'a> XmlWriter<'a> {
     fn visit_assignment(&mut self, ident_ref: &IdentRefId, expr: &ExprId) {
         let ident_ref = self.ast.identifier_ref(*ident_ref);
 
-        let symbol = ident_ref
-            .symbol_id()
-            .map(|sid| &self.symbols[sid.id()])
-            .map(|s| match s.kind() {
-                crate::resolver::SymbolKind::Let(stmt) => {
-                    format!("stmt:{stmt}")
-                }
-                crate::resolver::SymbolKind::LetFn(stmt, _, _) => {
-                    format!("stmt:{stmt}")
-                }
-                crate::resolver::SymbolKind::Parameter(stmt, index) => {
-                    format!("stmt:{}:{}", stmt.id(), index)
-                }
-                crate::resolver::SymbolKind::Native(_) => "native".to_string(),
-            })
-            .expect("assignment identifier not found");
+        // todo re-enable
+        let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
+            SymbolKind::Let(stmt) => {
+                format!("stmt:{stmt}")
+            }
+            SymbolKind::LetFn(stmt, _, _) => {
+                format!("stmt:{stmt}")
+            }
+            SymbolKind::Parameter(stmt, index) => {
+                format!("stmt:{}:{}", stmt.id(), index)
+            }
+            SymbolKind::Native(_) => "native".to_string(),
+        };
 
         self.emit(
             XmlEvent::start_element("assign")
@@ -211,22 +201,18 @@ impl<'a> XmlWriter<'a> {
             LiteralKind::Identifier(ident_ref) => {
                 let ident_ref = self.ast.identifier_ref(*ident_ref);
 
-                let symbol = ident_ref
-                    .symbol_id()
-                    .map(|sid| &self.symbols[sid.id()])
-                    .map(|s| match s.kind() {
-                        crate::resolver::SymbolKind::Let(stmt) => {
-                            format!("stmt:{stmt}")
-                        }
-                        crate::resolver::SymbolKind::LetFn(stmt, _, _) => {
-                            format!("stmt:{stmt}")
-                        }
-                        crate::resolver::SymbolKind::Parameter(stmt, index) => {
-                            format!("stmt:{}:{}", stmt.id(), index)
-                        }
-                        crate::resolver::SymbolKind::Native(_) => "native".to_string(),
-                    })
-                    .expect("literal identifier not found");
+                let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
+                    SymbolKind::Let(stmt) => {
+                        format!("stmt:{stmt}")
+                    }
+                    SymbolKind::LetFn(stmt, _, _) => {
+                        format!("stmt:{stmt}")
+                    }
+                    SymbolKind::Parameter(stmt, index) => {
+                        format!("stmt:{}:{}", stmt.id(), index)
+                    }
+                    SymbolKind::Native(_) => "native".to_string(),
+                };
 
                 self.emit(
                     XmlEvent::start_element("identifier-ref")
@@ -282,38 +268,34 @@ impl<'a> XmlWriter<'a> {
     ) {
         let ident_ref = self.ast.identifier_ref(*ident_ref);
 
-        let symbol = ident_ref
-            .symbol_id()
-            .map(|sid| &self.symbols[sid.id()])
-            .map(|s| match s.kind() {
-                crate::resolver::SymbolKind::Let(stmt) => {
-                    format!("stmt:{stmt}")
-                }
-                crate::resolver::SymbolKind::LetFn(stmt, _, _) => {
-                    format!("stmt:{stmt}")
-                }
-                crate::resolver::SymbolKind::Parameter(stmt, index) => {
-                    let param = match self.ast.statement(*stmt).kind() {
-                        StatementKind::LetFn(_, params, _, _) => &params[*index],
-                        _ => panic!(),
-                    };
-                    format!("ident:{}", param.identifier().id())
-                }
-                crate::resolver::SymbolKind::Native(native) => {
-                    format!(
-                        "native:{}:{}:{}",
-                        native.name(),
-                        native
-                            .parameters()
-                            .iter()
-                            .map(|t| t.to_string())
-                            .collect::<Vec<String>>()
-                            .join(":"),
-                        native.return_type()
-                    )
-                }
-            })
-            .expect("function identifier not found");
+        let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
+            SymbolKind::Let(stmt) => {
+                format!("stmt:{stmt}")
+            }
+            SymbolKind::LetFn(stmt, _, _) => {
+                format!("stmt:{stmt}")
+            }
+            SymbolKind::Parameter(stmt, index) => {
+                let param = match self.ast.statement(*stmt).kind() {
+                    StatementKind::LetFn(_, params, _, _) => &params[*index],
+                    _ => panic!(),
+                };
+                format!("ident:{}", param.identifier().id())
+            }
+            SymbolKind::Native(native) => {
+                format!(
+                    "native:{}:{}:{}",
+                    native.name(),
+                    native
+                        .parameters()
+                        .iter()
+                        .map(|t| t.to_string())
+                        .collect::<Vec<String>>()
+                        .join(":"),
+                    native.return_type()
+                )
+            }
+        };
 
         self.emit(
             XmlEvent::start_element("call")
@@ -527,11 +509,11 @@ mod tests {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default())
+                let ast = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("no error expected");
 
-                let xml = XmlWriter::new(&ast, &symbols, &expr_types).serialize();
+                let xml = XmlWriter::new(&ast).serialize();
                 assert_snapshot!(&xml);
             }
         };

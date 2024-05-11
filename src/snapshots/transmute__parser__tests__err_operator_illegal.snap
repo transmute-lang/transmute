@@ -49,7 +49,7 @@ expression: "Parser::new(Lexer::new(\"41 $ 1;\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    931,
+                    932,
                 ),
             },
         ],

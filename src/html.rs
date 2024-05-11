@@ -2,8 +2,8 @@ use crate::ast::expression::ExpressionKind;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Parameter, RetMode, StatementKind};
-use crate::ast::Ast;
-use crate::resolver::{Symbol, SymbolKind, Type};
+use crate::ast::ResolvedAst;
+use crate::resolver::{SymbolKind, Type};
 use std::io;
 use std::io::Write;
 use xml::writer::XmlEvent;
@@ -12,9 +12,7 @@ use xml::{EmitterConfig, EventWriter};
 const HTML: &str = include_str!("html/template.html");
 
 struct HtmlWriter<'a> {
-    ast: &'a Ast,
-    symbols: &'a Vec<Symbol>,
-    expr_types: &'a Vec<Type>,
+    ast: &'a ResolvedAst,
     par_id: usize,
     writer: EventWriter<Vec<u8>>,
 }
@@ -30,15 +28,13 @@ macro_rules! make_html_symbol {
 }
 
 impl<'a> HtmlWriter<'a> {
-    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>, expr_types: &'a Vec<Type>) -> Self {
+    pub fn new(ast: &'a ResolvedAst) -> Self {
         let writer = EmitterConfig::new()
             .perform_indent(true)
             .write_document_declaration(false)
             .create_writer(vec![]);
         Self {
             ast,
-            symbols,
-            expr_types,
             par_id: 0,
             writer,
         }
@@ -103,7 +99,9 @@ impl<'a> HtmlWriter<'a> {
         if let RetMode::Implicit = mode {
             self.emit(XmlEvent::start_element("span").attr("class", "implicit"));
         }
-        self.emit_keyword("ret", self.expr_types[expr.id()]);
+
+        //fixme ret dont have type
+        self.emit_keyword("ret", self.ast.expression_type(expr));
         if let RetMode::Implicit = mode {
             self.emit(XmlEvent::end_element());
         }
@@ -122,7 +120,8 @@ impl<'a> HtmlWriter<'a> {
     ) {
         self.emit(XmlEvent::start_element("li"));
 
-        self.emit_keyword("let", self.expr_types[expr.id()]);
+        // fixme let dont have type
+        self.emit_keyword("let", self.ast.expression_type(expr));
         self.emit_identifier(stmt_id, ident, None);
 
         let par_id = self.par_id();
@@ -166,7 +165,8 @@ impl<'a> HtmlWriter<'a> {
 
     fn visit_let(&mut self, stmt: StmtId, ident: IdentId, expr: ExprId) {
         self.emit(XmlEvent::start_element("li"));
-        self.emit_keyword("let", self.expr_types[expr.id()]);
+        // fixme let dont have types
+        self.emit_keyword("let", self.ast.expression_type(expr));
         self.emit_identifier(stmt, ident, None);
         self.emit_equal();
         self.visit_expression(expr);
@@ -207,7 +207,7 @@ impl<'a> HtmlWriter<'a> {
         // but the `if cond {` ends a line. Thus, we close the <li> tag after the `{`. But
         // as the visit_statement() expects to close one <li> as well, we leave the last one
         // open... This also works with `let a = if cond { ... } else { ... }`. In
-        self.emit_keyword("if", self.expr_types[true_branch.id()]);
+        self.emit_keyword("if", self.ast.expression_type(true_branch));
 
         self.visit_expression(cond);
 
@@ -267,7 +267,7 @@ impl<'a> HtmlWriter<'a> {
 
     fn visit_while(&mut self, cond: ExprId, expr: ExprId) {
         // see explanation on top of visit_id() function
-        self.emit_keyword("while", self.expr_types[expr.id()]);
+        self.emit_keyword("while", self.ast.expression_type(expr));
 
         self.visit_expression(cond);
 
@@ -301,7 +301,7 @@ impl<'a> HtmlWriter<'a> {
         self.writer.write(event.into()).unwrap();
     }
 
-    fn emit_keyword(&mut self, keyword: &str, ty: Type) {
+    fn emit_keyword(&mut self, keyword: &str, ty: &Type) {
         self.emit(
             XmlEvent::start_element("span")
                 .attr("class", "kw")
@@ -388,55 +388,41 @@ impl<'a> HtmlWriter<'a> {
     fn emit_identifier_ref(&mut self, identifier: IdentRefId) {
         let ident_ref = self.ast.identifier_ref(identifier);
 
-        let type_ref = ident_ref
-            .symbol_id()
-            .map(|s| &self.symbols[s.id()])
-            .map(|s| s.ty())
-            .and_then(|t| match t {
-                Type::Boolean => Some("type__native_boolean".to_string()),
-                Type::Function => Some("type__function".to_string()),
-                Type::Number => Some("type__native_number".to_string()),
-                Type::Void => Some("type__native_void".to_string()),
-                Type::None => unimplemented!(),
-            })
-            .expect("type not found");
+        let type_name = self.ast.symbol(ident_ref.symbol_id()).ty().to_string();
 
-        let type_name = ident_ref
-            .symbol_id()
-            .map(|s| &self.symbols[s.id()])
-            .map(|s| s.ty())
-            .map(|ty| ty.to_string())
-            .expect("type not found");
+        let type_ref = match self.ast.symbol(ident_ref.symbol_id()).ty() {
+            Type::Boolean => "type__native_boolean",
+            Type::Function => "type__function",
+            Type::Number => "type__native_number",
+            Type::Void => "type__native_void",
+            Type::None => unimplemented!(),
+        };
 
-        let symbol = ident_ref
-            .symbol_id()
-            .map(|sid| &self.symbols[sid.id()])
-            .map(|s| match s.kind() {
-                SymbolKind::Let(stmt) => Self::ident_id(*stmt, None),
-                SymbolKind::LetFn(stmt, _, _) => Self::ident_id(*stmt, None),
-                SymbolKind::Parameter(stmt, index) => Self::ident_id(*stmt, Some(*index)),
-                SymbolKind::Native(native) => {
-                    format!(
-                        "ident__native_{}_{}_{}",
-                        native.name(),
-                        native
-                            .parameters()
-                            .iter()
-                            .map(Type::to_string)
-                            .collect::<Vec<String>>()
-                            .join("_"),
-                        native.return_type()
-                    )
-                }
-            })
-            .expect("function identifier not found");
+        let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
+            SymbolKind::Let(stmt) => Self::ident_id(*stmt, None),
+            SymbolKind::LetFn(stmt, _, _) => Self::ident_id(*stmt, None),
+            SymbolKind::Parameter(stmt, index) => Self::ident_id(*stmt, Some(*index)),
+            SymbolKind::Native(native) => {
+                format!(
+                    "ident__native_{}_{}_{}",
+                    native.name(),
+                    native
+                        .parameters()
+                        .iter()
+                        .map(Type::to_string)
+                        .collect::<Vec<String>>()
+                        .join("_"),
+                    native.return_type()
+                )
+            }
+        };
 
         self.emit(
             XmlEvent::start_element("span")
                 .attr("class", "ident_ref")
                 .attr("title", &type_name)
                 .attr("data-ident-ref", &symbol)
-                .attr("data-type-ref", &type_ref),
+                .attr("data-type-ref", type_ref)
         );
         self.emit(XmlEvent::Characters(
             self.ast.identifier(ident_ref.ident().id()),
@@ -461,11 +447,11 @@ mod tests {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols, expr_types) = Resolver::new(ast, Natives::default())
+                let ast = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
 
-                let html = HtmlWriter::new(&ast, &symbols, &expr_types).serialize();
+                let html = HtmlWriter::new(&ast).serialize();
                 assert_snapshot!(&html);
             }
         };

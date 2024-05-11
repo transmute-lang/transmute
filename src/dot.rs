@@ -4,8 +4,8 @@ use crate::ast::ids::{make_id, ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Parameter, StatementKind};
-use crate::ast::Ast;
-use crate::resolver::{Symbol, SymbolKind};
+use crate::ast::ResolvedAst;
+use crate::resolver::SymbolKind;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io;
@@ -59,8 +59,7 @@ enum EdgeKind {
 }
 
 struct DotBuilder<'a> {
-    ast: &'a Ast,
-    symbols: &'a Vec<Symbol>,
+    ast: &'a ResolvedAst,
     nodes: Vec<Node>,
     edges: Vec<Edge>,
     stmt_map: HashMap<StmtId, NodeId>,
@@ -69,10 +68,9 @@ struct DotBuilder<'a> {
 }
 
 impl<'a> DotBuilder<'a> {
-    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>) -> Self {
+    pub fn new(ast: &'a ResolvedAst) -> Self {
         Self {
             ast,
-            symbols,
             nodes: Default::default(),
             edges: Default::default(),
             stmt_map: Default::default(),
@@ -175,20 +173,18 @@ impl<'a> DotBuilder<'a> {
         self.insert_edge(assignment_mode_id, ident_node_id);
         self.insert_edge(assignment_mode_id, expr_node_id);
 
-        if let Some(symbol) = ident.symbol_id() {
-            match self.symbols[symbol.id()].kind() {
-                SymbolKind::Let(stmt) | SymbolKind::LetFn(stmt, _, _) => {
-                    self.references.push((ident_node_id, *stmt));
-                }
-                SymbolKind::Parameter(stmt, index) => match self.ast.statement(*stmt).kind() {
-                    StatementKind::LetFn(_, _, _, _) => {
-                        self.parameter_references
-                            .push((ident_node_id, *stmt, *index));
-                    }
-                    _ => panic!(),
-                },
-                _ => panic!(),
+        match self.ast.symbol(ident.symbol_id()).kind() {
+            SymbolKind::Let(stmt) | SymbolKind::LetFn(stmt, _, _) => {
+                self.references.push((ident_node_id, *stmt));
             }
+            SymbolKind::Parameter(stmt, index) => match self.ast.statement(*stmt).kind() {
+                StatementKind::LetFn(_, _, _, _) => {
+                    self.parameter_references
+                        .push((ident_node_id, *stmt, *index));
+                }
+                _ => panic!(),
+            },
+            _ => panic!(),
         }
 
         assignment_mode_id
@@ -220,33 +216,26 @@ impl<'a> DotBuilder<'a> {
             LiteralKind::Identifier(ident) => {
                 let ident = self.ast.identifier_ref(*ident);
 
-                if let Some(symbol) = ident.symbol_id() {
-                    match self.symbols[symbol.id()].kind() {
-                        SymbolKind::Let(stmt) | SymbolKind::LetFn(stmt, _, _) => {
-                            let ident_node_id =
-                                self.insert_node(Node::Identifier(ident.ident().id()));
-                            self.references.push((ident_node_id, *stmt));
+                match self.ast.symbol(ident.symbol_id()).kind() {
+                    SymbolKind::Let(stmt) | SymbolKind::LetFn(stmt, _, _) => {
+                        let ident_node_id = self.insert_node(Node::Identifier(ident.ident().id()));
+                        self.references.push((ident_node_id, *stmt));
+                        ident_node_id
+                    }
+                    SymbolKind::Parameter(stmt, index) => match self.ast.statement(*stmt).kind() {
+                        StatementKind::LetFn(_, params, _, _) => {
+                            let ident_node_id = self.insert_node(Node::Identifier(
+                                params.get(*index).unwrap().identifier().id(),
+                            ));
+                            self.parameter_references
+                                .push((ident_node_id, *stmt, *index));
                             ident_node_id
                         }
-                        SymbolKind::Parameter(stmt, index) => {
-                            match self.ast.statement(*stmt).kind() {
-                                StatementKind::LetFn(_, params, _, _) => {
-                                    let ident_node_id = self.insert_node(Node::Identifier(
-                                        params.get(*index).unwrap().identifier().id(),
-                                    ));
-                                    self.parameter_references
-                                        .push((ident_node_id, *stmt, *index));
-                                    ident_node_id
-                                }
-                                _ => panic!(),
-                            }
-                        }
-                        SymbolKind::Native(native) => self.insert_node(Node::NativeIdentifier(
-                            self.ast.identifier_id(native.name()),
-                        )),
-                    }
-                } else {
-                    self.insert_node(Node::Identifier(ident.ident().id()))
+                        _ => panic!(),
+                    },
+                    SymbolKind::Native(native) => self.insert_node(Node::NativeIdentifier(
+                        self.ast.identifier_id(native.name()),
+                    )),
                 }
             }
             LiteralKind::Number(n) => self.insert_node(Node::Number(*n)),
@@ -272,31 +261,27 @@ impl<'a> DotBuilder<'a> {
     fn visit_function_call(&mut self, ident: &IdentRefId, params: &[ExprId]) -> NodeId {
         let ident = self.ast.identifier_ref(*ident);
 
-        let call_node_id = if let Some(symbol) = ident.symbol_id() {
-            match self.symbols[symbol.id()].kind() {
-                SymbolKind::LetFn(stmt, _, _) => {
-                    let call_node_id = self.insert_node(Node::FunctionCall(ident.ident().id()));
-                    self.references.push((call_node_id, *stmt));
-                    call_node_id
-                }
-                SymbolKind::Parameter(stmt, index) => match self.ast.statement(*stmt).kind() {
-                    StatementKind::LetFn(_, params, _, _) => {
-                        let ident_node_id = self.insert_node(Node::FunctionCall(
-                            params.get(*index).unwrap().identifier().id(),
-                        ));
-                        self.parameter_references
-                            .push((ident_node_id, *stmt, *index));
-                        ident_node_id
-                    }
-                    _ => panic!(),
-                },
-                SymbolKind::Native(native) => self.insert_node(Node::NativeFunctionCall(
-                    self.ast.identifier_id(native.name()),
-                )),
-                _ => panic!(),
+        let call_node_id = match self.ast.symbol(ident.symbol_id()).kind() {
+            SymbolKind::LetFn(stmt, _, _) => {
+                let call_node_id = self.insert_node(Node::FunctionCall(ident.ident().id()));
+                self.references.push((call_node_id, *stmt));
+                call_node_id
             }
-        } else {
-            self.insert_node(Node::FunctionCall(ident.ident().id()))
+            SymbolKind::Parameter(stmt, index) => match self.ast.statement(*stmt).kind() {
+                StatementKind::LetFn(_, params, _, _) => {
+                    let ident_node_id = self.insert_node(Node::FunctionCall(
+                        params.get(*index).unwrap().identifier().id(),
+                    ));
+                    self.parameter_references
+                        .push((ident_node_id, *stmt, *index));
+                    ident_node_id
+                }
+                _ => panic!(),
+            },
+            SymbolKind::Native(native) => self.insert_node(Node::NativeFunctionCall(
+                self.ast.identifier_id(native.name()),
+            )),
+            _ => panic!(),
         };
 
         params.iter().for_each(|e| {
@@ -408,14 +393,14 @@ impl<'a> DotBuilder<'a> {
 }
 
 pub struct Dot<'a> {
-    ast: &'a Ast,
+    ast: &'a ResolvedAst,
     nodes: Vec<Node>,
     edges: Vec<Edge>,
 }
 
 impl<'a> Dot<'a> {
-    pub fn new(ast: &'a Ast, symbols: &'a Vec<Symbol>) -> Self {
-        DotBuilder::new(ast, symbols).build()
+    pub fn new(ast: &'a ResolvedAst) -> Self {
+        DotBuilder::new(ast).build()
     }
 
     pub fn write<W: Write>(self, w: &mut W) -> io::Result<()> {
@@ -560,11 +545,11 @@ mod tests {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
-                let (ast, symbols, _) = Resolver::new(ast, Natives::default())
+                let ast = Resolver::new(ast, Natives::default())
                     .resolve()
                     .expect("ok expected");
 
-                assert_snapshot!(Dot::new(&ast, &symbols).serialize());
+                assert_snapshot!(Dot::new(&ast).serialize());
             }
         };
     }

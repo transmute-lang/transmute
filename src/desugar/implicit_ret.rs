@@ -189,9 +189,11 @@ mod tests {
 
                 let ast = ImplicitRet::new().desugar(ast);
 
-                assert_snapshot!(
-                    AstNodePrettyPrint::new(&ast, *ast.statements().first().unwrap()).to_string()
-                );
+                assert_snapshot!(AstNodePrettyPrint::new_unresolved(
+                    &ast,
+                    *ast.statements().first().unwrap()
+                )
+                .to_string());
             }
         };
     }
