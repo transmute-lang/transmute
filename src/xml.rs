@@ -136,7 +136,6 @@ impl<'a> XmlWriter<'a> {
     fn visit_assignment(&mut self, ident_ref: &IdentRefId, expr: &ExprId) {
         let ident_ref = self.ast.identifier_ref(*ident_ref);
 
-        // todo re-enable
         let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
             SymbolKind::Let(stmt) => {
                 format!("stmt:{stmt}")
