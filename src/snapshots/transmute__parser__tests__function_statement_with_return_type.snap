@@ -146,6 +146,7 @@ expression: "Parser::new(Lexer::new(\"let times_two(a: number): number = a * 2;\
                 id: 1,
             },
         ],
+        implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
     },
     Diagnostics {
         diagnostics: [],

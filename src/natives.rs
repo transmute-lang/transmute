@@ -1,5 +1,6 @@
 use crate::ast::ids::IdentId;
-use crate::ast::Ast;
+use crate::ast::{Ast, WithoutImplicitRet};
+use crate::desugar::ImplicitRet;
 use crate::interpreter::Value;
 use crate::resolver::Type;
 use std::cmp::Ordering;
@@ -172,7 +173,7 @@ impl Natives {
     }
 }
 
-impl From<&Natives> for Ast {
+impl From<&Natives> for Ast<WithoutImplicitRet> {
     fn from(natives: &Natives) -> Self {
         let mut names = natives
             .functions
@@ -199,7 +200,7 @@ impl From<&Natives> for Ast {
             .map(|(ident, _)| ident)
             .collect::<Vec<String>>();
 
-        Ast::new(identifiers, vec![], vec![], vec![], vec![])
+        ImplicitRet::new().desugar(Ast::new(identifiers, vec![], vec![], vec![], vec![]))
     }
 }
 

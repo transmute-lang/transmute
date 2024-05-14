@@ -11,6 +11,7 @@ expression: "Parser::new(Lexer::new(\"let x(\")).parse()"
         expressions: [],
         statements: [],
         root: [],
+        implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
     },
     Diagnostics {
         diagnostics: [

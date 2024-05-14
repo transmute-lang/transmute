@@ -1,7 +1,7 @@
 use crate::ast::expression::ExpressionKind;
 use crate::ast::ids::{ExprId, StmtId};
 use crate::ast::statement::{RetMode, Statement, StatementKind};
-use crate::ast::Ast;
+use crate::ast::{Ast, WithImplicitRet, WithoutImplicitRet};
 
 pub struct ImplicitRet {
     replacements: Vec<Statement>,
@@ -14,7 +14,7 @@ impl ImplicitRet {
         }
     }
 
-    pub fn desugar(mut self, mut ast: Ast) -> Ast {
+    pub fn desugar(mut self, ast: Ast<WithImplicitRet>) -> Ast<WithoutImplicitRet> {
         for expr in ast
             .statements()
             .iter()
@@ -30,17 +30,13 @@ impl ImplicitRet {
             self.visit_expression(&ast, expr, 0, false);
         }
 
-        for statement in self.replacements {
-            ast.replace_statement(statement);
-        }
-
-        ast
+        ast.remove_implicit_ret(self.replacements)
     }
 
     /// returns true if all nested paths explicitly return
     fn visit_expression(
         &mut self,
-        ast: &Ast,
+        ast: &Ast<WithImplicitRet>,
         expr: ExprId,
         depth: usize,
         unreachable: bool,
@@ -136,7 +132,7 @@ impl ImplicitRet {
 
     fn visit_statement(
         &mut self,
-        ast: &Ast,
+        ast: &Ast<WithImplicitRet>,
         stmt: StmtId,
         depth: usize,
         unreachable: bool,

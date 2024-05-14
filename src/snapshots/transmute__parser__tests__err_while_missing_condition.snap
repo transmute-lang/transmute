@@ -56,6 +56,7 @@ expression: "Parser::new(Lexer::new(\"while { }\")).parse()"
                 id: 0,
             },
         ],
+        implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
     },
     Diagnostics {
         diagnostics: [

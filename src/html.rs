@@ -452,6 +452,7 @@ impl<'a> HtmlWriter<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::desugar::ImplicitRet;
     use crate::html::HtmlWriter;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
@@ -465,6 +466,8 @@ mod tests {
             fn $name() {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+                let ast = ImplicitRet::new().desugar(ast);
 
                 let ast = Resolver::new(ast, Natives::default())
                     .resolve()

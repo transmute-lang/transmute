@@ -4,7 +4,7 @@ use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId};
 use crate::ast::literal::LiteralKind;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Parameter, StatementKind};
-use crate::ast::{Ast, ResolvedAst};
+use crate::ast::{Ast, ResolvedAst, WithoutImplicitRet};
 use crate::error::Diagnostics;
 use crate::exit_points::{ExitPoint, ExitPoints};
 use crate::lexer::Span;
@@ -15,7 +15,7 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 
 pub struct Resolver {
-    ast: Ast,
+    ast: Ast<WithoutImplicitRet>,
     resolved_identifier_refs: Vec<Option<IdentifierRef<ResolvedSymbol>>>,
     symbols: Rc<RefCell<Vec<Symbol>>>,
     expression_types: Vec<Option<Result<Type, ()>>>,
@@ -24,8 +24,8 @@ pub struct Resolver {
 }
 
 impl Resolver {
-    pub fn new(ast: Ast, natives: Natives) -> Self {
-        let ast = ast.merge(Into::<Ast>::into(&natives));
+    pub fn new(ast: Ast<WithoutImplicitRet>, natives: Natives) -> Self {
+        let ast = ast.merge(Into::<Ast<WithoutImplicitRet>>::into(&natives));
         let expression_count = ast.expressions_count();
         let identifier_ref_count = ast.identifier_ref_count();
         let symbols = Rc::new(RefCell::new(Vec::<Symbol>::new()));
@@ -478,7 +478,7 @@ impl Resolver {
 
         let _ = self.visit_expression(expr);
 
-        let (exit_points, new_statements) = ExitPoints::new(&self.ast).exit_points(expr);
+        let exit_points = ExitPoints::new(&self.ast).exit_points(expr);
         if exit_points.is_empty() {
             if ret_type != Type::Void {
                 let stmt = self.ast.statement(stmt);
@@ -512,9 +512,9 @@ impl Resolver {
         }
 
         // here, we replace the implicit return statements with explicit ones as a  de-sugar action
-        new_statements
-            .into_iter()
-            .for_each(|s| self.ast.replace_statement(s));
+        // new_statements
+        //     .into_iter()
+        //     .for_each(|s| self.ast.replace_statement(s));
 
         self.pop_scope();
     }
@@ -732,6 +732,7 @@ impl TryFrom<&str> for Type {
 
 #[cfg(test)]
 mod tests {
+    use crate::desugar::ImplicitRet;
     use crate::dot::Dot;
     use crate::error::Level;
     use crate::lexer::{Lexer, Span};
@@ -747,6 +748,8 @@ mod tests {
             Parser::new(Lexer::new("let x(n: number): number = { n; }")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let ast = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("no error expected");
@@ -760,6 +763,8 @@ mod tests {
             Parser::new(Lexer::new("let x(): number = { let n = 0; n; }")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let ast = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
@@ -771,6 +776,8 @@ mod tests {
     fn resolve_ref_to_let_fn() {
         let (ast, diagnostics) = Parser::new(Lexer::new("let x() = { } x();")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+        let ast = ImplicitRet::new().desugar(ast);
 
         let ast = Resolver::new(ast, Natives::default())
             .resolve()
@@ -787,6 +794,8 @@ mod tests {
         .parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let ast = Resolver::new(ast, Natives::default())
             .resolve()
             .expect("ok expected");
@@ -798,6 +807,8 @@ mod tests {
     fn resolve_missing_def() {
         let (ast, diagnostics) = Parser::new(Lexer::new("let x() = { n; }")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+        let ast = ImplicitRet::new().desugar(ast);
 
         let actual_diagnostics = Resolver::new(ast, Natives::default())
             .resolve()
@@ -822,6 +833,8 @@ mod tests {
         let (ast, diagnostics) = Parser::new(Lexer::new("let x = true; let x = 1; x + 1;")).parse();
         assert!(diagnostics.is_empty(), "{:?}", diagnostics);
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let ast = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
         assert_snapshot!("rebinding-xml", XmlWriter::new(&ast).serialize());
@@ -834,6 +847,8 @@ mod tests {
             fn $name() {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{}", diagnostics);
+
+                let ast = ImplicitRet::new().desugar(ast);
 
                 let actual_diagnostics = Resolver::new(ast, Natives::default())
                     .resolve()
@@ -855,10 +870,10 @@ mod tests {
         ($name:ident, $src:expr) => {
             #[test]
             fn $name() {
-                // let natives = Natives::default();
-
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{}", diagnostics);
+
+                let ast = ImplicitRet::new().desugar(ast);
 
                 let _ = Resolver::new(ast, Natives::default())
                     .resolve()

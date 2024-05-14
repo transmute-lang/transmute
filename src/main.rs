@@ -1,6 +1,7 @@
 #![allow(dead_code)] // fixme eventually remove
 extern crate core;
 
+use crate::ast::ids::StmtId;
 use crate::ast::AstNodePrettyPrint;
 use crate::desugar::ImplicitRet;
 use crate::dot::Dot;
@@ -43,6 +44,8 @@ fn fibonacci_rec() {
     ))
     .parse();
 
+    let ast = ImplicitRet::new().desugar(ast);
+
     print!(
         "Parsed AST:\n{}",
         AstNodePrettyPrint::new_unresolved(&ast, *ast.statements().first().unwrap())
@@ -52,8 +55,6 @@ fn fibonacci_rec() {
         print!("Errors:\n{}", diagnostics);
         return;
     }
-
-    let ast = ImplicitRet::new().desugar(ast);
 
     let ast = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
@@ -66,7 +67,7 @@ fn fibonacci_rec() {
 
     print!(
         "Executable AST:\n{}",
-        AstNodePrettyPrint::new_resolved(&ast, *ast.statements().first().unwrap())
+        AstNodePrettyPrint::<(), _>::new_resolved(&ast, *ast.statements().first().unwrap())
     );
 
     let result = Interpreter::new(&ast).start();
@@ -98,6 +99,8 @@ fn fibonacci_iter() {
     ))
     .parse();
 
+    let ast = ImplicitRet::new().desugar(ast);
+
     print!(
         "Parsed AST:\n{}",
         AstNodePrettyPrint::new_unresolved(&ast, *ast.statements().first().unwrap())
@@ -107,8 +110,6 @@ fn fibonacci_iter() {
         print!("Errors:\n{}", diagnostics);
         return;
     }
-
-    let ast = ImplicitRet::new().desugar(ast);
 
     let ast = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
@@ -121,7 +122,7 @@ fn fibonacci_iter() {
 
     print!(
         "Executable AST:\n{}",
-        AstNodePrettyPrint::new_resolved(&ast, *ast.statements().first().unwrap())
+        AstNodePrettyPrint::<(), StmtId>::new_resolved(&ast, *ast.statements().first().unwrap())
     );
 
     let result = Interpreter::new(&ast).start();

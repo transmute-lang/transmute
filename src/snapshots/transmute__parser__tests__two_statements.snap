@@ -91,6 +91,7 @@ expression: "Parser::new(Lexer::new(\"let forty_two = 42; forty_two;\")).parse()
                 id: 1,
             },
         ],
+        implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
     },
     Diagnostics {
         diagnostics: [],

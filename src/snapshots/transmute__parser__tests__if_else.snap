@@ -135,6 +135,7 @@ expression: "Parser::new(Lexer::new(\"if true { 42; } else { 43; }\")).parse()"
                 id: 2,
             },
         ],
+        implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
     },
     Diagnostics {
         diagnostics: [],

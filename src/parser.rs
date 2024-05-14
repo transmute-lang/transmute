@@ -6,7 +6,7 @@ use crate::ast::operators::{
     BinaryOperator, BinaryOperatorKind, Precedence, UnaryOperator, UnaryOperatorKind,
 };
 use crate::ast::statement::{Parameter, RetMode, Statement, StatementKind};
-use crate::ast::Ast;
+use crate::ast::{Ast, WithImplicitRet};
 use crate::error::Diagnostics;
 use crate::lexer::{Lexer, PeekableLexer, Span, Token, TokenKind};
 use std::collections::{HashMap, HashSet};
@@ -125,7 +125,7 @@ impl<'s> Parser<'s> {
         }
     }
 
-    pub fn parse(mut self) -> (Ast, Diagnostics) {
+    pub fn parse(mut self) -> (Ast<WithImplicitRet>, Diagnostics) {
         let mut statements = Vec::new();
 
         while let Some(statement) = self.parse_statement() {

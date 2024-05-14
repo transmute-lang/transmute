@@ -494,6 +494,7 @@ impl<'a> XmlWriter<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::desugar::ImplicitRet;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
     use crate::parser::Parser;
@@ -507,6 +508,8 @@ mod tests {
             fn $name() {
                 let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+                let ast = ImplicitRet::new().desugar(ast);
 
                 let ast = Resolver::new(ast, Natives::default())
                     .resolve()

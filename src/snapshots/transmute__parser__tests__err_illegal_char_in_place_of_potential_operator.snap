@@ -40,6 +40,7 @@ expression: "Parser::new(Lexer::new(\"41 $\")).parse()"
                 id: 0,
             },
         ],
+        implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
     },
     Diagnostics {
         diagnostics: [

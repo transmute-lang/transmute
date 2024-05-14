@@ -1,28 +1,24 @@
 use crate::ast::expression::ExpressionKind;
 use crate::ast::ids::{ExprId, StmtId};
-use crate::ast::statement::{RetMode, Statement, StatementKind};
-use crate::ast::Ast;
+use crate::ast::statement::{RetMode, StatementKind};
+use crate::ast::{Ast, WithoutImplicitRet};
 
 pub struct ExitPoints<'a> {
-    ast: &'a Ast,
+    ast: &'a Ast<WithoutImplicitRet>,
     exit_points: Vec<ExitPoint>,
     unreachable: Vec<ExprId>,
-    /// statements that will replace implicit return statements
-    // todo this is used in the resolver, a distinct de-sugaring phase would be better...
-    statements: Vec<Statement>,
 }
 
 impl<'a> ExitPoints<'a> {
-    pub fn new(ast: &'a Ast) -> Self {
+    pub fn new(ast: &'a Ast<WithoutImplicitRet>) -> Self {
         Self {
             ast,
             exit_points: Default::default(),
             unreachable: Default::default(),
-            statements: Default::default(),
         }
     }
 
-    pub fn exit_points(mut self, expr: ExprId) -> (Vec<ExitPoint>, Vec<Statement>) {
+    pub fn exit_points(mut self, expr: ExprId) -> Vec<ExitPoint> {
         match self.ast.expression(expr).kind() {
             ExpressionKind::Block(_) => {}
             e => panic!("expected block got {:?}", e),
@@ -44,7 +40,7 @@ impl<'a> ExitPoints<'a> {
         exit_points.sort();
         exit_points.dedup();
 
-        (exit_points, self.statements)
+        exit_points
     }
 
     fn visit_expression(&mut self, expr: ExprId, depth: usize, unreachable: bool) -> bool {
@@ -111,9 +107,8 @@ impl<'a> ExitPoints<'a> {
             }
             ExpressionKind::Block(stmts) => {
                 let mut ret = false;
-                for (i, stmt) in stmts.iter().enumerate() {
-                    let last_expr = depth == 0 && i == stmts.len() - 1 && !unreachable;
-                    if self.visit_statement(*stmt, depth, unreachable || ret, last_expr) {
+                for stmt in stmts.iter() {
+                    if self.visit_statement(*stmt, depth, unreachable || ret) {
                         ret = true;
                     }
                 }
@@ -127,28 +122,9 @@ impl<'a> ExitPoints<'a> {
         always_returns
     }
 
-    fn visit_statement(
-        &mut self,
-        stmt: StmtId,
-        depth: usize,
-        unreachable: bool,
-        last: bool,
-    ) -> bool {
+    fn visit_statement(&mut self, stmt: StmtId, depth: usize, unreachable: bool) -> bool {
         match self.ast.statement(stmt).kind() {
-            StatementKind::Expression(expr) => {
-                let always_returns = self.visit_expression(*expr, depth + 1, unreachable);
-
-                if last && !always_returns {
-                    self.exit_points.push(ExitPoint::Implicit(*expr));
-                    self.statements.push(Statement::new(
-                        stmt,
-                        StatementKind::Ret(*expr, RetMode::Implicit),
-                        self.ast.statement(stmt).span().clone(),
-                    ));
-                }
-
-                always_returns
-            }
+            StatementKind::Expression(expr) => self.visit_expression(*expr, depth + 1, unreachable),
             StatementKind::Let(_, expr) => self.visit_expression(*expr, depth + 1, unreachable),
             StatementKind::Ret(expr, mode) => {
                 match mode {
@@ -179,62 +155,51 @@ pub enum ExitPoint {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::desugar::ImplicitRet;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
 
     #[test]
-    fn single_implicit_exit_point_1() {
-        let (ast, diagnostics) = Parser::new(Lexer::new("let f() = 42;")).parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let expr = ExprId::from(1);
-
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
-        let expected = vec![ExitPoint::Implicit(ExprId::from(0))];
-
-        assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 1);
-    }
-
-    #[test]
-    fn single_implicit_exit_point_2() {
-        let (ast, diagnostics) = Parser::new(Lexer::new("let f() = { 42; }")).parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let expr = ExprId::from(1);
-
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
-        let expected = vec![ExitPoint::Implicit(ExprId::from(0))];
-
-        assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 1);
-    }
-
-    #[test]
     fn single_explicit_exit_point() {
-        let (ast, diagnostics) = Parser::new(Lexer::new("let f() = { ret 42; }")).parse();
+        let (ast, diagnostics) = Parser::new(Lexer::new(
+            r#"
+            let f() = {
+                ret 42;
+            }
+            "#,
+        ))
+        .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
+
+        let ast = ImplicitRet::new().desugar(ast);
 
         let expr = ExprId::from(1);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let expected = vec![ExitPoint::Explicit(ExprId::from(0))];
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 
     #[test]
     fn multiple_explicit_exit_points_1() {
         let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let f() = if true { ret 42; } else { ret 43; };",
+            r#"
+            let f() = if true {
+                ret 42;
+            }
+            else {
+                ret 43;
+            };"#,
         ))
         .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let expr = ExprId::from(6);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -242,20 +207,29 @@ mod tests {
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 
     #[test]
     fn multiple_explicit_exit_points_2() {
         let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let f() = { if true { ret 42; } else { ret 43; } }",
+            r#"
+            let f() = {
+                if true {
+                    ret 42;
+                }
+                else {
+                    ret 43;
+                }
+            }"#,
         ))
         .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let expr = ExprId::from(6);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -263,58 +237,31 @@ mod tests {
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
-    }
-
-    #[test]
-    fn multiple_implicit_and_explicit_exit_points_1() {
-        let (ast, diagnostics) =
-            Parser::new(Lexer::new("let f() = if true { 42; } else { ret 43; };")).parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let expr = ExprId::from(6);
-
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
-        let mut expected = vec![
-            ExitPoint::Explicit(ExprId::from(3)),
-            ExitPoint::Implicit(ExprId::from(5)),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 1);
-    }
-
-    #[test]
-    fn multiple_implicit_and_explicit_exit_points_2() {
-        let (ast, diagnostics) =
-            Parser::new(Lexer::new("let f() = { if true { 42; } else { ret 43; } }")).parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let expr = ExprId::from(6);
-
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
-        let mut expected = vec![
-            ExitPoint::Explicit(ExprId::from(3)),
-            ExitPoint::Implicit(ExprId::from(5)),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 1);
     }
 
     #[test]
     fn multiple_explicit_exit_points_masking_later_exit_points() {
         let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let f() = { if true { ret 42; } else { ret 43; } ret 44; }",
+            r#"
+            let f() = {
+                if true {
+                    ret 42;
+                }
+                else {
+                    ret 43;
+                }
+                ret 44;
+            }
+            "#,
         ))
         .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let expr = ExprId::from(7);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -322,20 +269,28 @@ mod tests {
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 
     #[test]
     fn always_returns_from_if_condition() {
         let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let f() = { if if true { ret 42; } else { ret 43; } { ret 44; } ret 45; }",
+            r#"
+            let f() = {
+                if if true { ret 42; } else { ret 43; } {
+                    ret 44;
+                }
+                ret 45;
+            }
+            "#,
         ))
         .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let expr = ExprId::from(10);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -343,52 +298,78 @@ mod tests {
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 
     #[test]
     fn always_returns_from_while() {
-        let (ast, diagnostics) =
-            Parser::new(Lexer::new("let f() = { while true { ret 42; } ret 43; }")).parse();
+        let (ast, diagnostics) = Parser::new(Lexer::new(
+            r#"
+            let f() = {
+                while true {
+                    ret 42;
+                }
+                ret 43;
+            }
+            "#,
+        ))
+        .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
+
+        let ast = ImplicitRet::new().desugar(ast);
 
         let expr = ExprId::from(5);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![ExitPoint::Explicit(ExprId::from(1))];
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 
     #[test]
     fn while_never_returns() {
-        let (ast, diagnostics) =
-            Parser::new(Lexer::new("let f() = { while true { } ret 42; }")).parse();
+        let (ast, diagnostics) = Parser::new(Lexer::new(
+            r#"
+            let f() = {
+                while true { }
+                ret 42;
+            }
+            "#,
+        ))
+        .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
+
+        let ast = ImplicitRet::new().desugar(ast);
 
         let expr = ExprId::from(4);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![ExitPoint::Explicit(ExprId::from(3))];
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 
     #[test]
     fn always_returns_from_while_condition() {
         let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let f() = { while if true { ret 42; } else { ret 43; } { ret 44; } ret 45; }",
+            r#"
+            let f() = {
+                while if true { ret 42; } else { ret 43; } {
+                    ret 44;
+                }
+                ret 45;
+            }
+            "#,
         ))
         .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let expr = ExprId::from(10);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -396,20 +377,26 @@ mod tests {
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 
     #[test]
     fn assignment_always_returns() {
         let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let x() = { let x = 0; x = if true { ret 42; } else { ret 43; }; }",
+            r#"
+            let x() = {
+                let x = 0;
+                x = if true { ret 42; } else { ret 43; };
+            }
+            "#,
         ))
         .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let expr = ExprId::from(8);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(2)),
             ExitPoint::Explicit(ExprId::from(4)),
@@ -417,19 +404,26 @@ mod tests {
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 
     #[test]
     fn left_binary_always_returns() {
         let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let x() = { let a = if true { ret 42; } else { ret 43; } + if false { ret 44; } else { ret 45; }; ret 46; }",
+            r#"
+            let x() = {
+                let a = if true { ret 42; } else { ret 43; }
+                      + if false { ret 44; } else { ret 45; };
+                ret 46;
+            }
+            "#,
         ))
-            .parse();
+        .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
+
+        let ast = ImplicitRet::new().desugar(ast);
         let expr = ExprId::from(14);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -437,20 +431,27 @@ mod tests {
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 
     #[test]
     fn left_binary_sometimes_returns() {
         let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let x() = { let a = if true { 42; } else { ret 43; } + if false { ret 44; } else { ret 45; }; ret 46; }",
+            r#"
+            let x() = {
+                let a = if true { 42; } else { ret 43; }
+                      + if false { ret 44; } else { ret 45; };
+                ret 46;
+            }
+            "#,
         ))
-            .parse();
+        .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
+
+        let ast = ImplicitRet::new().desugar(ast);
 
         let expr = ExprId::from(14);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(3)),
             ExitPoint::Explicit(ExprId::from(7)),
@@ -459,20 +460,26 @@ mod tests {
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 
     #[test]
     fn right_binary_always_returns() {
         let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let x() = { let a = 42 + if false { ret 43; } else { ret 44; }; ret 45; }",
+            r#"
+            let x() = {
+                let a = 42 + if false { ret 43; } else { ret 44; };
+                ret 45;
+            }
+            "#,
         ))
         .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let expr = ExprId::from(9);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(2)),
             ExitPoint::Explicit(ExprId::from(4)),
@@ -480,36 +487,50 @@ mod tests {
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 
     #[test]
     fn binary_never_returns() {
-        let (ast, diagnostics) =
-            Parser::new(Lexer::new("let x() = { let a = 42 + 43; ret 44; }")).parse();
+        let (ast, diagnostics) = Parser::new(Lexer::new(
+            r#"
+            let x() = {
+                let a = 42 + 43;
+                ret 44;
+            }
+            "#,
+        ))
+        .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
+
+        let ast = ImplicitRet::new().desugar(ast);
 
         let expr = ExprId::from(4);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![ExitPoint::Explicit(ExprId::from(3))];
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 
     #[test]
     fn unary_always_returns() {
         let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let x() = { let a = - if true { ret 42; } else { ret 43; }; ret 44; }",
+            r#"
+            let x() = {
+                let a = - if true { ret 42; } else { ret 43; };
+                ret 44;
+            }
+            "#,
         ))
         .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let expr = ExprId::from(8);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -517,20 +538,25 @@ mod tests {
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 
     #[test]
     fn function_call_parameter_always_returns() {
         let (ast, diagnostics) = Parser::new(Lexer::new(
-            "let x(a: number) = { x(if true { ret 42; } else { ret 43; }); ret 44; }",
+            r#"let x(a: number) = {
+                x(if true { ret 42; } else { ret 43; });
+                ret 44;
+            }
+            "#,
         ))
         .parse();
         assert!(diagnostics.is_empty(), "{}", diagnostics);
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let expr = ExprId::from(8);
 
-        let (actual, stmts) = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(&ast).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -538,6 +564,5 @@ mod tests {
         expected.sort();
 
         assert_eq!(actual, expected);
-        assert_eq!(stmts.len(), 0);
     }
 }

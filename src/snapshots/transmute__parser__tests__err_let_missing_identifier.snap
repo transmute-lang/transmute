@@ -1,6 +1,6 @@
 ---
 source: src/parser.rs
-expression: "(actual_ast, actual_diagnostics)"
+expression: "Parser::new(Lexer::new(\"let = 42;\")).parse()"
 ---
 (
     Ast {
@@ -9,6 +9,7 @@ expression: "(actual_ast, actual_diagnostics)"
         expressions: [],
         statements: [],
         root: [],
+        implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
     },
     Diagnostics {
         diagnostics: [

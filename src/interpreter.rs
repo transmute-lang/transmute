@@ -292,6 +292,7 @@ fn is_ret(s: &Statement) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::desugar::ImplicitRet;
     use crate::interpreter::Interpreter;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
@@ -305,6 +306,8 @@ mod tests {
                 let parser = Parser::new(Lexer::new($src));
                 let (ast, diagnostics) = parser.parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+                let ast = ImplicitRet::new().desugar(ast);
 
                 let ast = Resolver::new(ast, Natives::default())
                     .resolve()
@@ -321,6 +324,8 @@ mod tests {
                 let parser = Parser::new(Lexer::new($src));
                 let (ast, diagnostics) = parser.parse();
                 assert!(diagnostics.is_empty(), "{:?}", diagnostics);
+
+                let ast = ImplicitRet::new().desugar(ast);
 
                 let ast = Resolver::new(ast, Natives::default())
                     .resolve()

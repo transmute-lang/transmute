@@ -3,7 +3,7 @@ source: src/ast.rs
 expression: actual
 ---
 let fact(n: number): number = {
-  if n < 0 {
+  ret if n < 0 {
     let r = if false {
       1;
     }
@@ -20,6 +20,6 @@ let fact(n: number): number = {
     }
 
     product;
-  }
+  };
 }
 

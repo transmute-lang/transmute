@@ -13,9 +13,11 @@ use crate::ast::statement::{Parameter, Statement, StatementKind};
 use crate::resolver::{Symbol, Type};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::marker::PhantomData;
+use std::rc::Rc;
 
 #[derive(Debug, PartialEq)]
-pub struct Ast {
+pub struct Ast<S> {
     /// Unique identifiers names
     identifiers: Vec<String>,
     /// Identifier refs
@@ -27,9 +29,16 @@ pub struct Ast {
     /// Root statements
     // todo replace with Statements
     root: Vec<StmtId>,
+    implicit_ret: PhantomData<S>,
 }
 
-impl Ast {
+#[derive(Debug, PartialEq)]
+pub struct WithImplicitRet {}
+
+#[derive(Debug, PartialEq)]
+pub struct WithoutImplicitRet {}
+
+impl Ast<WithImplicitRet> {
     pub fn new(
         identifiers: Vec<String>,
         identifier_refs: Vec<IdentifierRef>,
@@ -43,6 +52,22 @@ impl Ast {
             expressions,
             statements,
             root,
+            implicit_ret: Default::default(),
+        }
+    }
+
+    pub fn remove_implicit_ret(mut self, explicit_ret: Vec<Statement>) -> Ast<WithoutImplicitRet> {
+        for statement in explicit_ret {
+            self.replace_statement(statement);
+        }
+
+        Ast::<WithoutImplicitRet> {
+            identifiers: self.identifiers,
+            identifier_refs: self.identifier_refs,
+            expressions: self.expressions,
+            statements: self.statements,
+            root: self.root,
+            implicit_ret: Default::default(),
         }
     }
 
@@ -63,7 +88,7 @@ impl Ast {
         }
     }
 
-    pub fn merge(self, other: Ast) -> Ast {
+    pub fn merge(self, other: Ast<WithoutImplicitRet>) -> Ast<WithoutImplicitRet> {
         let mut identifiers = self
             .identifiers
             .into_iter()
@@ -237,9 +262,18 @@ impl Ast {
             .map(|(ident, _)| ident)
             .collect::<Vec<String>>();
 
-        Ast::new(identifiers, identifier_refs, expressions, statements, root)
+        Ast::<WithoutImplicitRet> {
+            identifiers,
+            identifier_refs,
+            expressions,
+            statements,
+            root,
+            implicit_ret: Default::default(),
+        }
     }
+}
 
+impl<S> Ast<S> {
     pub fn statements(&self) -> &Vec<StmtId> {
         &self.root
     }
@@ -386,20 +420,19 @@ impl ResolvedAst {
     }
 }
 
-pub struct AstNodePrettyPrint<'a, T> {
+pub struct AstNodePrettyPrint<'a, S, T> {
     indent: usize,
-    ast: AstKind<'a>,
+    ast: Rc<AstKind<'a, S>>,
     id: T,
 }
 
 // todo maybe a trait instead of an enum and manual dispatch....
-#[derive(Clone)]
-enum AstKind<'a> {
-    Unresolved(&'a Ast),
+enum AstKind<'a, S> {
+    Unresolved(&'a Ast<S>),
     Resolved(&'a ResolvedAst),
 }
 
-impl<'a> AstKind<'a> {
+impl<'a, S> AstKind<'a, S> {
     fn identifier(&self, id: IdentId) -> &str {
         match self {
             AstKind::Unresolved(a) => &a.identifiers[id.id()],
@@ -432,11 +465,11 @@ impl<'a> AstKind<'a> {
     }
 }
 
-impl<'a, T> AstNodePrettyPrint<'a, T> {
-    pub fn new_unresolved(ast: &'a Ast, id: T) -> Self {
+impl<'a, S, T> AstNodePrettyPrint<'a, S, T> {
+    pub fn new_unresolved(ast: &'a Ast<S>, id: T) -> Self {
         Self {
             indent: 0,
-            ast: AstKind::Unresolved(ast),
+            ast: Rc::new(AstKind::Unresolved(ast)),
             id,
         }
     }
@@ -444,21 +477,21 @@ impl<'a, T> AstNodePrettyPrint<'a, T> {
     pub fn new_resolved(ast: &'a ResolvedAst, id: T) -> Self {
         Self {
             indent: 0,
-            ast: AstKind::Resolved(ast),
+            ast: Rc::new(AstKind::Resolved(ast)),
             id,
         }
     }
 
-    fn new_with_ident(ast: &'a AstKind, id: T, ident: usize) -> Self {
+    fn new_with_ident(ast: Rc<AstKind<'a, S>>, id: T, ident: usize) -> Self {
         Self {
             indent: ident,
-            ast: ast.clone(),
+            ast,
             id,
         }
     }
 }
 
-impl Display for AstNodePrettyPrint<'_, StmtId> {
+impl<S> Display for AstNodePrettyPrint<'_, S, StmtId> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let indent = "  ".repeat(self.indent);
         match self.ast.statement(self.id).kind() {
@@ -470,41 +503,45 @@ impl Display for AstNodePrettyPrint<'_, StmtId> {
                 writeln!(
                     f,
                     "{indent}{}{semi}",
-                    AstNodePrettyPrint::new_with_ident(&self.ast, *expr, self.indent)
+                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), *expr, self.indent)
                 )
             }
             StatementKind::Let(ident, expr) => {
                 writeln!(
                     f,
                     "{indent}let {} = {};",
-                    AstNodePrettyPrint::new_with_ident(&self.ast, ident.id(), 0),
-                    AstNodePrettyPrint::new_with_ident(&self.ast, *expr, self.indent),
+                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), ident.id(), 0),
+                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), *expr, self.indent),
                 )
             }
             StatementKind::Ret(expr, _) => {
                 writeln!(
                     f,
                     "{indent}ret {};",
-                    AstNodePrettyPrint::new_with_ident(&self.ast, *expr, self.indent)
+                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), *expr, self.indent)
                 )
             }
             StatementKind::LetFn(ident, params, ty, expr) => {
                 write!(
                     f,
                     "{indent}let {}(",
-                    AstNodePrettyPrint::new_with_ident(&self.ast, ident.id(), 0)
+                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), ident.id(), 0)
                 )?;
                 for (i, param) in params.iter().enumerate() {
                     write!(
                         f,
                         "{}",
-                        AstNodePrettyPrint::new_with_ident(&self.ast, param.identifier().id(), 0)
+                        AstNodePrettyPrint::new_with_ident(
+                            self.ast.clone(),
+                            param.identifier().id(),
+                            0
+                        )
                     )?;
                     write!(f, ": ")?;
                     write!(
                         f,
                         "{}",
-                        AstNodePrettyPrint::new_with_ident(&self.ast, param.ty().id(), 0)
+                        AstNodePrettyPrint::new_with_ident(self.ast.clone(), param.ty().id(), 0)
                     )?;
                     if i < params.len() - 1 {
                         write!(f, ", ")?;
@@ -516,7 +553,7 @@ impl Display for AstNodePrettyPrint<'_, StmtId> {
                     .map(|ty| {
                         format!(
                             ": {}",
-                            AstNodePrettyPrint::new_with_ident(&self.ast, ty.id(), 0)
+                            AstNodePrettyPrint::new_with_ident(self.ast.clone(), ty.id(), 0)
                         )
                     })
                     .unwrap_or_default();
@@ -532,7 +569,11 @@ impl Display for AstNodePrettyPrint<'_, StmtId> {
                     write!(
                         f,
                         "{indent}{}",
-                        AstNodePrettyPrint::new_with_ident(&self.ast, *stmt, self.indent + 1)
+                        AstNodePrettyPrint::new_with_ident(
+                            self.ast.clone(),
+                            *stmt,
+                            self.indent + 1
+                        )
                     )?;
                 }
                 writeln!(f, "{indent}}}")
@@ -541,7 +582,7 @@ impl Display for AstNodePrettyPrint<'_, StmtId> {
     }
 }
 
-impl Display for AstNodePrettyPrint<'_, ExprId> {
+impl<S> Display for AstNodePrettyPrint<'_, S, ExprId> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let indent = "  ".repeat(self.indent);
         match self.ast.expression(self.id).kind() {
@@ -550,18 +591,18 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                     f,
                     "{} = {}",
                     AstNodePrettyPrint::new_with_ident(
-                        &self.ast,
+                        self.ast.clone(),
                         self.ast.identifier_ref(*ident).ident().id(),
                         0
                     ),
-                    AstNodePrettyPrint::new_with_ident(&self.ast, *expr, 0)
+                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), *expr, 0)
                 )
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
                 writeln!(
                     f,
                     "if {} {{",
-                    AstNodePrettyPrint::new_with_ident(&self.ast, *cond, 0)
+                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), *cond, 0)
                 )?;
 
                 let true_branch = match self.ast.expression(*true_branch).kind() {
@@ -573,7 +614,11 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                     write!(
                         f,
                         "{}",
-                        AstNodePrettyPrint::new_with_ident(&self.ast, *stmt, self.indent + 1)
+                        AstNodePrettyPrint::new_with_ident(
+                            self.ast.clone(),
+                            *stmt,
+                            self.indent + 1
+                        )
                     )?;
                 }
                 if let Some(false_branch) = false_branch {
@@ -589,7 +634,11 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                         write!(
                             f,
                             "{}",
-                            AstNodePrettyPrint::new_with_ident(&self.ast, *stmt, self.indent + 1)
+                            AstNodePrettyPrint::new_with_ident(
+                                self.ast.clone(),
+                                *stmt,
+                                self.indent + 1
+                            )
                         )?;
                     }
                 }
@@ -602,7 +651,7 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                         f,
                         "{}",
                         AstNodePrettyPrint::new_with_ident(
-                            &self.ast,
+                            self.ast.clone(),
                             self.ast.identifier_ref(*ident).ident().id(),
                             0
                         )
@@ -614,9 +663,9 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                 write!(
                     f,
                     "{} {} {}",
-                    AstNodePrettyPrint::new_with_ident(&self.ast, *left, 0),
+                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), *left, 0),
                     op.kind(),
-                    AstNodePrettyPrint::new_with_ident(&self.ast, *right, 0)
+                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), *right, 0)
                 )
             }
             ExpressionKind::FunctionCall(ident, params) => {
@@ -624,7 +673,7 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                     f,
                     "{}(",
                     AstNodePrettyPrint::new_with_ident(
-                        &self.ast,
+                        self.ast.clone(),
                         self.ast.identifier_ref(*ident).ident().id(),
                         0
                     )
@@ -633,7 +682,7 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                     write!(
                         f,
                         "{}",
-                        AstNodePrettyPrint::new_with_ident(&self.ast, *expr, 0)
+                        AstNodePrettyPrint::new_with_ident(self.ast.clone(), *expr, 0)
                     )?;
                     if i < params.len() - 1 {
                         write!(f, ", ")?;
@@ -646,14 +695,14 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                     f,
                     "{} {}",
                     op.kind(),
-                    AstNodePrettyPrint::new_with_ident(&self.ast, *expr, 0)
+                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), *expr, 0)
                 )
             }
             ExpressionKind::While(cond, expr) => {
                 writeln!(
                     f,
                     "while {} {{",
-                    AstNodePrettyPrint::new_with_ident(&self.ast, *cond, 0)
+                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), *cond, 0)
                 )?;
 
                 let stmts = match self.ast.expression(*expr).kind() {
@@ -665,7 +714,11 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                     write!(
                         f,
                         "{}",
-                        AstNodePrettyPrint::new_with_ident(&self.ast, *stmt, self.indent + 1)
+                        AstNodePrettyPrint::new_with_ident(
+                            self.ast.clone(),
+                            *stmt,
+                            self.indent + 1
+                        )
                     )?;
                 }
                 writeln!(f, "{indent}}}")
@@ -677,7 +730,11 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
                     write!(
                         f,
                         "{}",
-                        AstNodePrettyPrint::new_with_ident(&self.ast, *stmt, self.indent + 1)
+                        AstNodePrettyPrint::new_with_ident(
+                            self.ast.clone(),
+                            *stmt,
+                            self.indent + 1
+                        )
                     )?;
                 }
 
@@ -690,7 +747,7 @@ impl Display for AstNodePrettyPrint<'_, ExprId> {
     }
 }
 
-impl Display for AstNodePrettyPrint<'_, IdentId> {
+impl<S> Display for AstNodePrettyPrint<'_, S, IdentId> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let indent = "  ".repeat(self.indent);
         write!(f, "{indent}{}", self.ast.identifier(self.id))
@@ -700,6 +757,7 @@ impl Display for AstNodePrettyPrint<'_, IdentId> {
 #[cfg(test)]
 mod tests {
     use crate::ast::AstNodePrettyPrint;
+    use crate::desugar::ImplicitRet;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
     use crate::parser::Parser;
@@ -733,6 +791,8 @@ mod tests {
         .parse()
         .0;
 
+        let ast = ImplicitRet::new().desugar(ast);
+
         let actual = format!(
             "{}",
             AstNodePrettyPrint::new_unresolved(&ast, *ast.statements().first().unwrap())
@@ -748,12 +808,14 @@ mod tests {
         ))
         .parse();
         assert!(d.is_empty(), "{:?}", d);
+        let ast1 = ImplicitRet::new().desugar(ast1);
 
         let (ast2, d) = Parser::new(Lexer::new(
             "let x_2 = 0; let f_2(p_2: number): boolean = { p_2 == 2; } f_2(x_2);",
         ))
         .parse();
         assert!(d.is_empty(), "{:?}", d);
+        let ast2 = ImplicitRet::new().desugar(ast2);
 
         let ast = ast1.merge(ast2);
 
@@ -770,9 +832,11 @@ mod tests {
     fn merge_2() {
         let (ast1, d) = Parser::new(Lexer::new("let x_1 = 0; x_1 = -x_1 * 2;")).parse();
         assert!(d.is_empty(), "{:?}", d);
+        let ast1 = ImplicitRet::new().desugar(ast1);
 
         let (ast2, d) = Parser::new(Lexer::new("let x_2 = 0; x_2 = -x_2 * 2;")).parse();
         assert!(d.is_empty(), "{:?}", d);
+        let ast2 = ImplicitRet::new().desugar(ast2);
 
         let ast = ast1.merge(ast2);
 
@@ -792,12 +856,14 @@ mod tests {
         ))
         .parse();
         assert!(d.is_empty(), "{:?}", d);
+        let ast1 = ImplicitRet::new().desugar(ast1);
 
         let (ast2, d) = Parser::new(Lexer::new(
             "let c_2 = true; let t_2 = 1; let f_2 = 0; if c_2 { t_2; } else { f_2; }",
         ))
         .parse();
         assert!(d.is_empty(), "{:?}", d);
+        let ast2 = ImplicitRet::new().desugar(ast2);
 
         let ast = ast1.merge(ast2);
 
@@ -817,12 +883,14 @@ mod tests {
         ))
         .parse();
         assert!(d.is_empty(), "{:?}", d);
+        let ast1 = ImplicitRet::new().desugar(ast1);
 
         let (ast2, d) = Parser::new(Lexer::new(
             "let c_2 = false; let w_2 = 2; while c_2 { w_2; }",
         ))
         .parse();
         assert!(d.is_empty(), "{:?}", d);
+        let ast2 = ImplicitRet::new().desugar(ast2);
 
         let ast = ast1.merge(ast2);
 

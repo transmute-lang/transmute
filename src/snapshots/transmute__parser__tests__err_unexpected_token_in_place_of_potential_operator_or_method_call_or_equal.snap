@@ -57,6 +57,7 @@ expression: "Parser::new(Lexer::new(\"f 4;\")).parse()"
                 id: 0,
             },
         ],
+        implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
     },
     Diagnostics {
         diagnostics: [
