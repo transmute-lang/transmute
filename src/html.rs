@@ -100,9 +100,8 @@ impl<'a> HtmlWriter<'a> {
             self.emit(XmlEvent::start_element("span").attr("class", "implicit"));
         }
 
-        //fixme ret dont have type
-        self.emit_keyword("ret", self.ast.expression_type(expr));
-        if let RetMode::Implicit = mode {
+        self.emit_ret();
+        if mode == RetMode::Implicit {
             self.emit(XmlEvent::end_element());
         }
         self.visit_expression(expr);
@@ -120,8 +119,7 @@ impl<'a> HtmlWriter<'a> {
     ) {
         self.emit(XmlEvent::start_element("li"));
 
-        // fixme let dont have type
-        self.emit_keyword("let", self.ast.expression_type(expr));
+        self.emit_let();
         self.emit_identifier(stmt_id, ident, None);
 
         let par_id = self.par_id();
@@ -165,8 +163,7 @@ impl<'a> HtmlWriter<'a> {
 
     fn visit_let(&mut self, stmt: StmtId, ident: IdentId, expr: ExprId) {
         self.emit(XmlEvent::start_element("li"));
-        // fixme let dont have types
-        self.emit_keyword("let", self.ast.expression_type(expr));
+        self.emit_let();
         self.emit_identifier(stmt, ident, None);
         self.emit_equal();
         self.visit_expression(expr);
@@ -207,7 +204,7 @@ impl<'a> HtmlWriter<'a> {
         // but the `if cond {` ends a line. Thus, we close the <li> tag after the `{`. But
         // as the visit_statement() expects to close one <li> as well, we leave the last one
         // open... This also works with `let a = if cond { ... } else { ... }`. In
-        self.emit_keyword("if", self.ast.expression_type(true_branch));
+        self.emit_if(self.ast.expression_type(true_branch));
 
         self.visit_expression(cond);
 
@@ -267,7 +264,7 @@ impl<'a> HtmlWriter<'a> {
 
     fn visit_while(&mut self, cond: ExprId, expr: ExprId) {
         // see explanation on top of visit_id() function
-        self.emit_keyword("while", self.ast.expression_type(expr));
+        self.emit_while(self.ast.expression_type(expr));
 
         self.visit_expression(cond);
 
@@ -301,13 +298,35 @@ impl<'a> HtmlWriter<'a> {
         self.writer.write(event.into()).unwrap();
     }
 
-    fn emit_keyword(&mut self, keyword: &str, ty: &Type) {
+    fn emit_if(&mut self, ty: &Type) {
         self.emit(
             XmlEvent::start_element("span")
                 .attr("class", "kw")
                 .attr("title", &ty.to_string()),
         );
-        self.emit(XmlEvent::Characters(keyword));
+        self.emit(XmlEvent::Characters("if"));
+        self.emit(XmlEvent::end_element());
+    }
+
+    fn emit_while(&mut self, ty: &Type) {
+        self.emit(
+            XmlEvent::start_element("span")
+                .attr("class", "kw")
+                .attr("title", &ty.to_string()),
+        );
+        self.emit(XmlEvent::Characters("ret"));
+        self.emit(XmlEvent::end_element());
+    }
+
+    fn emit_let(&mut self) {
+        self.emit(XmlEvent::start_element("span").attr("class", "kw"));
+        self.emit(XmlEvent::Characters("let"));
+        self.emit(XmlEvent::end_element());
+    }
+
+    fn emit_ret(&mut self) {
+        self.emit(XmlEvent::start_element("span").attr("class", "kw"));
+        self.emit(XmlEvent::Characters("ret"));
         self.emit(XmlEvent::end_element());
     }
 
@@ -422,7 +441,7 @@ impl<'a> HtmlWriter<'a> {
                 .attr("class", "ident_ref")
                 .attr("title", &type_name)
                 .attr("data-ident-ref", &symbol)
-                .attr("data-type-ref", type_ref)
+                .attr("data-type-ref", type_ref),
         );
         self.emit(XmlEvent::Characters(
             self.ast.identifier(ident_ref.ident().id()),

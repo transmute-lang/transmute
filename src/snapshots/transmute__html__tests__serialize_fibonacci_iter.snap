@@ -116,7 +116,7 @@ expression: "&html"
 <body>
 <ul>
   <li>
-    <span class="kw" title="number">let</span>
+    <span class="kw">let</span>
     <span id="ident__stmt14" class="ident">f</span>
     <span class="par" data-par-id="par_0">(</span>
     <span id="ident__stmt14_index0" class="ident">n</span>
@@ -143,7 +143,7 @@ expression: "&html"
       <li>
         <ul>
           <li>
-            <span class="kw" title="number">ret</span>
+            <span class="kw">ret</span>
             <span class="num" title="number">0</span>
             <span class="semicolon">;</span>
           </li>
@@ -165,7 +165,7 @@ expression: "&html"
       <li>
         <ul>
           <li>
-            <span class="kw" title="number">ret</span>
+            <span class="kw">ret</span>
             <span class="num" title="number">1</span>
             <span class="semicolon">;</span>
           </li>
@@ -175,35 +175,35 @@ expression: "&html"
         <span class="curly" data-par-id="par_5">}</span>
       </li>
       <li>
-        <span class="kw" title="number">let</span>
+        <span class="kw">let</span>
         <span id="ident__stmt4" class="ident">prev_prev</span>
         <span class="equal"> = </span>
         <span class="num" title="number">0</span>
         <span class="semicolon">;</span>
       </li>
       <li>
-        <span class="kw" title="number">let</span>
+        <span class="kw">let</span>
         <span id="ident__stmt5" class="ident">prev</span>
         <span class="equal"> = </span>
         <span class="num" title="number">1</span>
         <span class="semicolon">;</span>
       </li>
       <li>
-        <span class="kw" title="number">let</span>
+        <span class="kw">let</span>
         <span id="ident__stmt6" class="ident">current</span>
         <span class="equal"> = </span>
         <span class="num" title="number">0</span>
         <span class="semicolon">;</span>
       </li>
       <li>
-        <span class="kw" title="number">let</span>
+        <span class="kw">let</span>
         <span id="ident__stmt7" class="ident">n</span>
         <span class="equal"> = </span>
         <span class="ident_ref" title="number" data-ident-ref="ident__stmt14_index0" data-type-ref="type__native_number">n</span>
         <span class="semicolon">;</span>
       </li>
       <li>
-        <span class="kw" title="number">while</span>
+        <span class="kw" title="number">ret</span>
         <span class="ident_ref" title="function" data-ident-ref="ident__native_gt_number_number_boolean" data-type-ref="type__function">gt</span>
         <span class="par" data-par-id="par_6">(</span>
         <span class="ident_ref" title="number" data-ident-ref="ident__stmt7" data-type-ref="type__native_number">n</span>
@@ -255,7 +255,7 @@ expression: "&html"
       </li>
       <li>
         <span class="implicit">
-          <span class="kw" title="number">ret</span>
+          <span class="kw">ret</span>
         </span>
         <span class="ident_ref" title="number" data-ident-ref="ident__stmt6" data-type-ref="type__native_number">current</span>
         <span class="semicolon">;</span>
