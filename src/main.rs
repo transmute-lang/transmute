@@ -1,10 +1,10 @@
 #![allow(dead_code)] // fixme eventually remove
 extern crate core;
 
-use crate::ast::ids::StmtId;
 use crate::ast::AstNodePrettyPrint;
 use crate::desugar::ImplicitRet;
 use crate::dot::Dot;
+use crate::html::HtmlWriter;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
 use crate::natives::Natives;
@@ -34,49 +34,21 @@ mod xml;
 
 fn main() {
     fibonacci_rec();
-    println!();
+    println!(
+        "\n--------------------------------------------------------------------------------\n"
+    );
     fibonacci_iter();
 }
 
 fn fibonacci_rec() {
-    let ast = match Parser::new(Lexer::new(
+    exec(
         "let f(n: number): number = { if n <= 1 { ret n; } f(n - 1) + f(n - 2); } f(9) + 8;",
-    ))
-    .parse()
-    .map(|ast| ast.convert_implicit_ret(ImplicitRet::new()))
-    {
-        Ok(ast) => ast,
-        Err(diagnostics) => {
-            print!("Errors:\n{}", diagnostics);
-            return;
-        }
-    };
-
-    print!(
-        "Parsed AST:\n{}",
-        AstNodePrettyPrint::new_unresolved(&ast, *ast.statements().first().unwrap())
+        "fibonacci_rec",
     );
-
-    let ast = ast.resolve(Resolver::new(), Natives::default()).unwrap();
-
-    Dot::new(&ast)
-        .write(&mut File::create("target/fibonacci_rec.dot").unwrap())
-        .unwrap();
-    XmlWriter::new(&ast)
-        .write(&mut File::create("target/fibonacci_rec.xml").unwrap())
-        .unwrap();
-
-    print!(
-        "Executable AST:\n{}",
-        AstNodePrettyPrint::<(), _>::new_resolved(&ast, *ast.statements().first().unwrap())
-    );
-
-    let result = Interpreter::new(&ast).start();
-    println!("Result: {}", result);
 }
 
 fn fibonacci_iter() {
-    let ast = match Parser::new(Lexer::new(
+    exec(
         r#"
             let f(n: number): number = {
                 if n == 0 { ret 0; }
@@ -97,36 +69,57 @@ fn fibonacci_iter() {
             }
             f(9) + 8;
         "#,
-    ))
-    .parse()
-    .map(|ast| ast.convert_implicit_ret(ImplicitRet::new()))
-    {
-        Ok(ast) => ast,
-        Err(diagnostics) => {
-            print!("Errors:\n{}", diagnostics);
-            return;
+        "fibonacci_iter",
+    );
+}
+
+fn exec(src: &str, name: &str) {
+    let result = Parser::new(Lexer::new(src))
+        .parse()
+        .peek(|ast| {
+            print!(
+                "Parsed AST:\n{}\n",
+                AstNodePrettyPrint::new_unresolved(ast, *ast.statements().first().unwrap())
+            );
+        })
+        .map(|ast| ast.convert_implicit_ret(ImplicitRet::new()))
+        .and_then(|ast| ast.resolve(Resolver::new(), Natives::new()))
+        .peek(move |ast| {
+            print!(
+                "Executable AST:\n{}\n",
+                AstNodePrettyPrint::<(), _>::new_resolved(ast, *ast.statements().first().unwrap())
+            );
+            Dot::new(ast)
+                .write(&mut File::create(format!("target/{name}.dot")).unwrap())
+                .unwrap();
+            XmlWriter::new(ast)
+                .write(&mut File::create(format!("target/{name}.xml")).unwrap())
+                .unwrap();
+            HtmlWriter::new(ast)
+                .write(&mut File::create(format!("target/{name}.html")).unwrap())
+                .unwrap();
+        })
+        .map(|ast| Interpreter::new(&ast).start());
+
+    match result {
+        Ok(res) => {
+            println!("Result: {}", res)
         }
-    };
+        Err(err) => {
+            print!("Errors:\n{}", err)
+        }
+    }
+}
 
-    print!(
-        "Parsed AST:\n{}",
-        AstNodePrettyPrint::new_unresolved(&ast, *ast.statements().first().unwrap())
-    );
+trait Peek<T, E> {
+    fn peek<F: for<'a> Fn(&'a T)>(self, f: F) -> Result<T, E>;
+}
 
-    let ast = ast.resolve(Resolver::new(), Natives::default()).unwrap();
-
-    Dot::new(&ast)
-        .write(&mut File::create("target/fibonacci_iter.dot").unwrap())
-        .unwrap();
-    XmlWriter::new(&ast)
-        .write(&mut File::create("target/fibonacci_iter.xml").unwrap())
-        .unwrap();
-
-    print!(
-        "Executable AST:\n{}",
-        AstNodePrettyPrint::<(), StmtId>::new_resolved(&ast, *ast.statements().first().unwrap())
-    );
-
-    let result = Interpreter::new(&ast).start();
-    println!("Result: {}", result);
+impl<T, E> Peek<T, E> for Result<T, E> {
+    fn peek<F: for<'a> Fn(&'a T)>(self, f: F) -> Result<T, E> {
+        if let Ok(v) = &self {
+            f(v)
+        }
+        self
+    }
 }

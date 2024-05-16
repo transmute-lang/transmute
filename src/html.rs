@@ -11,7 +11,7 @@ use xml::{EmitterConfig, EventWriter};
 
 const HTML: &str = include_str!("html/template.html");
 
-struct HtmlWriter<'a> {
+pub struct HtmlWriter<'a> {
     ast: &'a ResolvedAst,
     par_id: usize,
     writer: EventWriter<Vec<u8>>,
