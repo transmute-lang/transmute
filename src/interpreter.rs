@@ -307,11 +307,9 @@ mod tests {
                 let ast = parser
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new());
-
-                let ast = Resolver::new(ast, Natives::default())
-                    .resolve()
-                    .expect("ok expected");
+                    .convert_implicit_ret(ImplicitRet::new())
+                    .resolve(Resolver::new(), Natives::default())
+                    .unwrap();
 
                 let actual = Interpreter::new(&ast).start();
 
@@ -325,11 +323,9 @@ mod tests {
                 let ast = parser
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new());
-
-                let ast = Resolver::new(ast, Natives::default())
-                    .resolve()
-                    .expect("ok expected");
+                    .convert_implicit_ret(ImplicitRet::new())
+                    .resolve(Resolver::new(), Natives::new())
+                    .unwrap();
 
                 let actual = Interpreter::new(&ast).start();
 

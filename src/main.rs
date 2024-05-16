@@ -57,7 +57,7 @@ fn fibonacci_rec() {
         AstNodePrettyPrint::new_unresolved(&ast, *ast.statements().first().unwrap())
     );
 
-    let ast = Resolver::new(ast, Natives::default()).resolve().unwrap();
+    let ast = ast.resolve(Resolver::new(), Natives::default()).unwrap();
 
     Dot::new(&ast)
         .write(&mut File::create("target/fibonacci_rec.dot").unwrap())
@@ -113,7 +113,7 @@ fn fibonacci_iter() {
         AstNodePrettyPrint::new_unresolved(&ast, *ast.statements().first().unwrap())
     );
 
-    let ast = Resolver::new(ast, Natives::default()).resolve().unwrap();
+    let ast = ast.resolve(Resolver::new(), Natives::default()).unwrap();
 
     Dot::new(&ast)
         .write(&mut File::create("target/fibonacci_iter.dot").unwrap())

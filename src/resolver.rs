@@ -4,7 +4,7 @@ use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId};
 use crate::ast::literal::LiteralKind;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Parameter, StatementKind};
-use crate::ast::{Ast, ResolvedAst, WithoutImplicitRet};
+use crate::ast::{Ast,  WithoutImplicitRet};
 use crate::error::Diagnostics;
 use crate::exit_points::{ExitPoint, ExitPoints};
 use crate::lexer::Span;
@@ -15,72 +15,85 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 
 pub struct Resolver {
-    ast: Ast<WithoutImplicitRet>,
     resolved_identifier_refs: Vec<Option<IdentifierRef<ResolvedSymbol>>>,
+    expression: Vec<Expression>,
     symbols: Rc<RefCell<Vec<Symbol>>>,
     expression_types: Vec<Option<Result<Type, ()>>>,
     diagnostics: Diagnostics,
     scope_stack: Vec<Scope>,
 }
 
+pub struct Resolution {
+    pub identifier_refs: Vec<IdentifierRef<ResolvedSymbol>>,
+    pub symbols: Vec<Symbol>,
+    pub expression_types: Vec<Type>,
+    pub expressions: Vec<Expression>,
+}
+
 impl Resolver {
-    pub fn new(ast: Ast<WithoutImplicitRet>, natives: Natives) -> Self {
-        let ast = ast.merge(Into::<Ast<WithoutImplicitRet>>::into(&natives));
-        let expression_count = ast.expressions_count();
-        let identifier_ref_count = ast.identifier_ref_count();
-        let symbols = Rc::new(RefCell::new(Vec::<Symbol>::new()));
-        let mut me = Self {
-            ast,
-            resolved_identifier_refs: vec![None; identifier_ref_count],
-            symbols: symbols.clone(),
-            expression_types: vec![None; expression_count],
+    pub fn new() -> Self {
+        Self {
+            resolved_identifier_refs: Vec::new(),
+            expression: Vec::new(),
+            symbols: Rc::new(RefCell::new(Vec::<Symbol>::new())),
+            expression_types: Vec::new(),
             diagnostics: Default::default(),
-            scope_stack: vec![Scope::new(symbols)],
-        };
-
-        for native in natives.into_iter() {
-            let ident = me.ast.identifier_id(native.name());
-            me.insert_symbol(ident, SymbolKind::Native(native), Type::Function);
+            scope_stack: Vec::new(),
         }
-
-        me
     }
 
-    pub fn resolve(mut self) -> Result<ResolvedAst, Diagnostics> {
-        let stmts = self.ast.statements().to_vec();
+    pub fn resolve(
+        mut self,
+        ast: &Ast<WithoutImplicitRet>,
+        natives: Natives,
+    ) -> Result<Resolution, Diagnostics> {
+        // let ast = ast.merge(Into::<Ast<WithoutImplicitRet>>::into(&natives));
 
-        self.insert_functions(&stmts);
+        self.resolved_identifier_refs
+            .resize(ast.identifier_ref_count(), None);
+        self.expression_types.resize(ast.expressions_count(), None);
+        self.scope_stack.push(Scope::new(self.symbols.clone()));
 
-        let _ = self.visit_statements(&stmts);
+        for native in natives.into_iter() {
+            let ident = ast.identifier_id(native.name());
+            self.insert_symbol(ast, ident, SymbolKind::Native(native), Type::Function);
+        }
+
+        let stmts = ast.statements().to_vec();
+
+        self.insert_functions(ast, &stmts);
+
+        let _ = self.visit_statements(ast, &stmts);
 
         if self.diagnostics.is_empty() {
-            Ok(self.ast.resolved(
-                self.resolved_identifier_refs
+            Ok(Resolution {
+                identifier_refs: self
+                    .resolved_identifier_refs
                     .into_iter()
                     .map(|id_ref| id_ref.expect("identifier ref is resolved"))
                     .collect::<Vec<IdentifierRef<ResolvedSymbol>>>(),
-                self.symbols.replace(vec![]),
-                self.expression_types
+                symbols: self.symbols.replace(vec![]),
+                expression_types: self
+                    .expression_types
                     .into_iter()
                     .map(|ty| ty.expect("type is resolved"))
                     .map(|ty| ty.expect("type is resolved successfully"))
                     .collect::<Vec<Type>>(),
-            ))
+                expressions: self.expression,
+            })
         } else {
             Err(self.diagnostics)
         }
     }
 
-    fn insert_functions(&mut self, stmts: &[StmtId]) {
+    fn insert_functions(&mut self, ast: &Ast<WithoutImplicitRet>, stmts: &[StmtId]) {
         for stmt in stmts {
             // we start by inserting all the functions we find, so that they are available from
             // everywhere in the current scope.
-            if let StatementKind::LetFn(ident, params, ret_type, _) =
-                self.ast.statement(*stmt).kind()
-            {
+            if let StatementKind::LetFn(ident, params, ret_type, _) = ast.statement(*stmt).kind() {
                 let parameter_types = params
                     .iter()
-                    .filter_map(|p| match Type::try_from(self.ast.identifier(p.ty().id())) {
+                    .filter_map(|p| match Type::try_from(ast.identifier(p.ty().id())) {
                         Ok(t) => Some(t),
                         Err(e) => {
                             self.diagnostics.report_err(
@@ -95,7 +108,7 @@ impl Resolver {
 
                 let ret_type = ret_type
                     .as_ref()
-                    .map(|t| match Type::try_from(self.ast.identifier(t.id())) {
+                    .map(|t| match Type::try_from(ast.identifier(t.id())) {
                         Ok(t) => Some(t),
                         Err(e) => {
                             self.diagnostics
@@ -108,6 +121,7 @@ impl Resolver {
                 if let Some(ret_type) = ret_type {
                     if parameter_types.len() == params.len() {
                         self.insert_symbol(
+                            ast,
                             ident.id(),
                             SymbolKind::LetFn(*stmt, parameter_types, ret_type),
                             Type::Function,
@@ -118,7 +132,13 @@ impl Resolver {
         }
     }
 
-    fn insert_symbol(&mut self, ident: IdentId, kind: SymbolKind, ty: Type) {
+    fn insert_symbol(
+        &mut self,
+        _ast: &Ast<WithoutImplicitRet>,
+        ident: IdentId,
+        kind: SymbolKind,
+        ty: Type,
+    ) {
         let id = SymbolId::from(self.symbols.borrow().len());
         self.symbols.borrow_mut().push(Symbol { id, kind, ty });
         self.scope_stack
@@ -130,20 +150,27 @@ impl Resolver {
             .push(id);
     }
 
-    fn visit_expression(&mut self, expr: ExprId) -> Result<Type, ()> {
+    fn visit_expression(
+        &mut self,
+        ast: &Ast<WithoutImplicitRet>,
+        expr: ExprId,
+    ) -> Result<Type, ()> {
         let expr_id = expr.id();
         if let Some(ty) = self.expression_types[expr_id] {
             return ty;
         }
 
-        let expr = self.ast.expression(expr);
+        let expr = ast.expression(expr);
         let ty = match expr.kind() {
-            ExpressionKind::Assignment(ident_ref, expr) => self.visit_assignment(*ident_ref, *expr),
-            ExpressionKind::If(cond, true_branch, false_branch) => {
-                self.visit_if(*cond, *true_branch, *false_branch)
+            ExpressionKind::Assignment(ident_ref, expr) => {
+                self.visit_assignment(ast, *ident_ref, *expr)
             }
-            ExpressionKind::Literal(literal) => self.visit_literal(literal.kind().clone()),
+            ExpressionKind::If(cond, true_branch, false_branch) => {
+                self.visit_if(ast, *cond, *true_branch, *false_branch)
+            }
+            ExpressionKind::Literal(literal) => self.visit_literal(ast, literal.kind().clone()),
             ExpressionKind::Binary(left, op, right) => self.visit_binary_operator(
+                ast,
                 expr.id(),
                 expr.span().clone(),
                 *left,
@@ -151,13 +178,13 @@ impl Resolver {
                 *right,
             ),
             ExpressionKind::Unary(op, operand) => {
-                self.visit_unary_operator(expr.id(), expr.span().clone(), op.clone(), *operand)
+                self.visit_unary_operator(ast, expr.id(), expr.span().clone(), op.clone(), *operand)
             }
             ExpressionKind::FunctionCall(ident_ref, params) => {
-                self.visit_function_call(*ident_ref, params.to_vec().as_slice())
+                self.visit_function_call(ast, *ident_ref, params.to_vec().as_slice())
             }
-            ExpressionKind::While(cond, expr) => self.visit_while(*cond, *expr),
-            ExpressionKind::Block(stmts) => self.visit_block(&stmts.to_vec()),
+            ExpressionKind::While(cond, expr) => self.visit_while(ast, *cond, *expr),
+            ExpressionKind::Block(stmts) => self.visit_block(ast, &stmts.to_vec()),
             ExpressionKind::Dummy => {
                 panic!()
             }
@@ -167,7 +194,12 @@ impl Resolver {
         ty
     }
 
-    fn visit_assignment(&mut self, ident_ref: IdentRefId, expr: ExprId) -> Result<Type, ()> {
+    fn visit_assignment(
+        &mut self,
+        ast: &Ast<WithoutImplicitRet>,
+        ident_ref: IdentRefId,
+        expr: ExprId,
+    ) -> Result<Type, ()> {
         // If we have the following:
         //   let add(a: number, b: number): number = {}
         //   let add(a: boolean, b: boolean): boolean = {}
@@ -190,21 +222,21 @@ impl Resolver {
         // todo some things to check:
         //  - assign to a let fn
 
-        let expr_type = self.visit_expression(expr)?;
+        let expr_type = self.visit_expression(ast, expr)?;
 
         let expected_type = self
             // todo: to search for method, we need to extract the parameter types from the
             //  expr_type, it it corresponds to a function type. We don't have this
             //  information yet and this we cannot assign to a variable holding a function
             //  (yet).
-            .resolve_ident_ref(ident_ref, None)
+            .resolve_ident_ref(ast, ident_ref, None)
             .map(|s| self.symbols.borrow()[s.id()].ty)
             .ok_or(())?;
 
         if expr_type != expected_type {
             self.diagnostics.report_err(
                 format!("Expected type {}, got {}", expected_type, expr_type),
-                self.ast.expression(expr).span().clone(),
+                ast.expression(expr).span().clone(),
                 (file!(), line!()),
             );
             return Err(());
@@ -215,23 +247,24 @@ impl Resolver {
 
     fn visit_if(
         &mut self,
+        ast: &Ast<WithoutImplicitRet>,
         cond: ExprId,
         true_branch: ExprId,
         false_branch: Option<ExprId>,
     ) -> Result<Type, ()> {
-        let cond_type = self.visit_expression(cond)?;
+        let cond_type = self.visit_expression(ast, cond)?;
 
         if cond_type != Type::Boolean {
             self.diagnostics.report_err(
                 format!("Expected type {}, got {}", Type::Boolean, cond_type),
-                self.ast.expression(cond).span().clone(),
+                ast.expression(cond).span().clone(),
                 (file!(), line!()),
             );
         }
 
-        let true_branch_type = self.visit_expression(true_branch)?;
+        let true_branch_type = self.visit_expression(ast, true_branch)?;
         let false_branch_type = false_branch
-            .map(|e| self.visit_expression(e))
+            .map(|e| self.visit_expression(ast, e))
             .unwrap_or(Ok(Type::Void))?;
 
         match (true_branch_type, false_branch_type) {
@@ -243,9 +276,7 @@ impl Resolver {
             }
             (tt, ft) if tt == ft => Ok(tt),
             (tt, ft) => {
-                let false_branch = self
-                    .ast
-                    .expression(false_branch.expect("false branch exists"));
+                let false_branch = ast.expression(false_branch.expect("false branch exists"));
                 self.diagnostics.report_err(
                     format!("Expected type {tt}, got {ft}"),
                     false_branch.span().clone(),
@@ -256,7 +287,11 @@ impl Resolver {
         }
     }
 
-    fn visit_literal(&mut self, literal: LiteralKind) -> Result<Type, ()> {
+    fn visit_literal(
+        &mut self,
+        ast: &Ast<WithoutImplicitRet>,
+        literal: LiteralKind,
+    ) -> Result<Type, ()> {
         match literal {
             LiteralKind::Boolean(_) => Ok(Type::Boolean),
             LiteralKind::Number(_) => Ok(Type::Number),
@@ -265,7 +300,7 @@ impl Resolver {
                 //  - behaviour when target is let fn
                 //  - behaviour when target is a native
                 // todo resolve function ref, see comment in resolve_assignment
-                self.resolve_ident_ref(ident_ref, None)
+                self.resolve_ident_ref(ast, ident_ref, None)
                     .map(|s| self.symbols.borrow()[s.id()].ty)
                     .ok_or(())
             }
@@ -274,24 +309,25 @@ impl Resolver {
 
     fn visit_binary_operator(
         &mut self,
+        ast: &Ast<WithoutImplicitRet>,
         expr: ExprId,
         expr_span: Span,
         left: ExprId,
         op: BinaryOperator,
         right: ExprId,
     ) -> Result<Type, ()> {
-        let left_type = self.visit_expression(left)?;
-        let right_type = self.visit_expression(right)?;
+        let left_type = self.visit_expression(ast, left)?;
+        let right_type = self.visit_expression(ast, right)?;
 
-        let ident_id = self.ast.identifier_id(op.kind().function_name());
+        let ident_id = ast.identifier_id(op.kind().function_name());
         let symbol = self
-            .resolve_ident(ident_id, Some(&[left_type, right_type]), op.span())
+            .resolve_ident(ast, ident_id, Some(&[left_type, right_type]), op.span())
             .ok_or(())?;
 
         let ident_ref_id =
-            self.create_identifier_ref(Identifier::new(ident_id, op.span().clone()), symbol);
+            self.create_identifier_ref(ast, Identifier::new(ident_id, op.span().clone()), symbol);
         let parameters = vec![left, right];
-        let ret_type = self.visit_function_call(ident_ref_id, &parameters)?;
+        let ret_type = self.visit_function_call(ast, ident_ref_id, &parameters)?;
 
         // here, we replace the `left op right` with `op_fn(left, right)` in the ast as a de-sugar
         // action
@@ -300,12 +336,17 @@ impl Resolver {
             ExpressionKind::FunctionCall(ident_ref_id, parameters),
             expr_span,
         );
-        self.ast.replace_expression(expression);
+        self.expression.push(expression);
 
         Ok(ret_type)
     }
 
-    fn create_identifier_ref(&mut self, identifier: Identifier, symbol: SymbolId) -> IdentRefId {
+    fn create_identifier_ref(
+        &mut self,
+        _ast: &Ast<WithoutImplicitRet>,
+        identifier: Identifier,
+        symbol: SymbolId,
+    ) -> IdentRefId {
         let id = IdentRefId::from(self.resolved_identifier_refs.len());
         self.resolved_identifier_refs
             .push(Some(IdentifierRef::new_resolved(id, identifier, symbol)));
@@ -314,22 +355,23 @@ impl Resolver {
 
     fn visit_unary_operator(
         &mut self,
+        ast: &Ast<WithoutImplicitRet>,
         expr: ExprId,
         expr_span: Span,
         op: UnaryOperator,
         operand: ExprId,
     ) -> Result<Type, ()> {
-        let operand_type = self.visit_expression(operand)?;
+        let operand_type = self.visit_expression(ast, operand)?;
 
-        let ident_id = self.ast.identifier_id(op.kind().function_name());
+        let ident_id = ast.identifier_id(op.kind().function_name());
         let symbol = self
-            .resolve_ident(ident_id, Some(&[operand_type]), op.span())
+            .resolve_ident(ast, ident_id, Some(&[operand_type]), op.span())
             .ok_or(())?;
 
         let ident_ref_id =
-            self.create_identifier_ref(Identifier::new(ident_id, op.span().clone()), symbol);
+            self.create_identifier_ref(ast, Identifier::new(ident_id, op.span().clone()), symbol);
         let parameter = vec![operand];
-        let ret_type = self.visit_function_call(ident_ref_id, &parameter)?;
+        let ret_type = self.visit_function_call(ast, ident_ref_id, &parameter)?;
 
         // here, we replace the `op operand` with `op_fn(operand)` in the ast as a de-sugar action
         let expression = Expression::new(
@@ -337,19 +379,20 @@ impl Resolver {
             ExpressionKind::FunctionCall(ident_ref_id, parameter),
             expr_span,
         );
-        self.ast.replace_expression(expression);
+        self.expression.push(expression);
 
         Ok(ret_type)
     }
 
     fn visit_function_call(
         &mut self,
+        ast: &Ast<WithoutImplicitRet>,
         ident_ref: IdentRefId,
         params: &[ExprId],
     ) -> Result<Type, ()> {
         let param_types = params
             .iter()
-            .filter_map(|e| self.visit_expression(*e).ok())
+            .filter_map(|e| self.visit_expression(ast, *e).ok())
             .collect::<Vec<Type>>();
 
         if param_types.len() != params.len() {
@@ -357,7 +400,7 @@ impl Resolver {
             return Err(());
         }
 
-        self.resolve_ident_ref(ident_ref, Some(&param_types))
+        self.resolve_ident_ref(ast, ident_ref, Some(&param_types))
             .map(|s| match &self.symbols.borrow()[s.id()].kind {
                 SymbolKind::LetFn(_, _, ret_type) => Ok(*ret_type),
                 SymbolKind::Native(native) => Ok(native.return_type()),
@@ -368,47 +411,62 @@ impl Resolver {
             .ok_or(())?
     }
 
-    fn visit_while(&mut self, cond: ExprId, expr: ExprId) -> Result<Type, ()> {
-        let cond_type = self.visit_expression(cond)?;
+    fn visit_while(
+        &mut self,
+        ast: &Ast<WithoutImplicitRet>,
+        cond: ExprId,
+        expr: ExprId,
+    ) -> Result<Type, ()> {
+        let cond_type = self.visit_expression(ast, cond)?;
 
         if cond_type != Type::Boolean {
             self.diagnostics.report_err(
                 format!("Expected type {}, got {}", Type::Boolean, cond_type),
-                self.ast.expression(cond).span().clone(),
+                ast.expression(cond).span().clone(),
                 (file!(), line!()),
             );
         }
 
-        self.visit_expression(expr)
+        self.visit_expression(ast, expr)
     }
 
-    fn visit_block(&mut self, stmts: &[StmtId]) -> Result<Type, ()> {
+    fn visit_block(&mut self, ast: &Ast<WithoutImplicitRet>, stmts: &[StmtId]) -> Result<Type, ()> {
         self.push_scope();
 
-        self.insert_functions(stmts);
-        let ty = self.visit_statements(stmts);
+        self.insert_functions(ast, stmts);
+        let ty = self.visit_statements(ast, stmts);
 
         self.pop_scope();
 
         ty
     }
 
-    fn visit_statements(&mut self, stmts: &[StmtId]) -> Result<Type, ()> {
+    fn visit_statements(
+        &mut self,
+        ast: &Ast<WithoutImplicitRet>,
+        stmts: &[StmtId],
+    ) -> Result<Type, ()> {
         let mut ret_type = Ok(Type::Void);
 
         for stmt in stmts.iter() {
-            let stmt_type = match self.ast.statement(*stmt).kind() {
-                StatementKind::Expression(expr) => self.visit_expression(*expr),
+            let stmt_type = match ast.statement(*stmt).kind() {
+                StatementKind::Expression(expr) => self.visit_expression(ast, *expr),
                 StatementKind::Let(ident, expr) => {
-                    self.visit_let(*stmt, ident.id(), *expr);
+                    self.visit_let(ast, *stmt, ident.id(), *expr);
                     Ok(Type::Void)
                 }
                 StatementKind::Ret(expr, _) => {
-                    let _ = self.visit_expression(*expr);
+                    let _ = self.visit_expression(ast, *expr);
                     Ok(Type::None)
                 }
                 StatementKind::LetFn(_ident, params, ret_type, expr) => {
-                    self.visit_function(*stmt, &params.to_vec(), ret_type.clone().as_ref(), *expr);
+                    self.visit_function(
+                        ast,
+                        *stmt,
+                        &params.to_vec(),
+                        ret_type.clone().as_ref(),
+                        *expr,
+                    );
                     Ok(Type::Void)
                 }
             };
@@ -424,10 +482,16 @@ impl Resolver {
         ret_type
     }
 
-    fn visit_let(&mut self, stmt: StmtId, ident: IdentId, expr: ExprId) {
-        match self.visit_expression(expr) {
+    fn visit_let(
+        &mut self,
+        ast: &Ast<WithoutImplicitRet>,
+        stmt: StmtId,
+        ident: IdentId,
+        expr: ExprId,
+    ) {
+        match self.visit_expression(ast, expr) {
             Ok(Type::None) => {
-                let expr = self.ast.expression(expr);
+                let expr = ast.expression(expr);
                 self.diagnostics.report_err(
                     format!("Expected some type, got {}", Type::None),
                     expr.span().clone(),
@@ -435,7 +499,7 @@ impl Resolver {
                 );
             }
             Ok(t) => {
-                self.insert_symbol(ident, SymbolKind::Let(stmt), t);
+                self.insert_symbol(ast, ident, SymbolKind::Let(stmt), t);
             }
             Err(_) => {}
         }
@@ -443,6 +507,7 @@ impl Resolver {
 
     fn visit_function(
         &mut self,
+        ast: &Ast<WithoutImplicitRet>,
         stmt: StmtId,
         params: &[Parameter],
         ret_type: Option<&Identifier>,
@@ -451,7 +516,7 @@ impl Resolver {
         self.push_scope();
 
         let ret_type = ret_type
-            .map(|t| match Type::try_from(self.ast.identifier(t.id())) {
+            .map(|t| match Type::try_from(ast.identifier(t.id())) {
                 Ok(t) => t,
                 Err(_) => {
                     // no need to report error here, it was already reported in insert_functions
@@ -461,7 +526,7 @@ impl Resolver {
             .unwrap_or(Type::Void);
 
         for (index, parameter) in params.iter().enumerate() {
-            let ty = match Type::try_from(self.ast.identifier(parameter.ty().id())) {
+            let ty = match Type::try_from(ast.identifier(parameter.ty().id())) {
                 Ok(ty) => ty,
                 Err(_) => {
                     // no need to report error here, it was already reported in insert_functions
@@ -470,18 +535,19 @@ impl Resolver {
             };
 
             self.insert_symbol(
+                ast,
                 parameter.identifier().id(),
                 SymbolKind::Parameter(stmt, index),
                 ty,
             )
         }
 
-        let _ = self.visit_expression(expr);
+        let _ = self.visit_expression(ast, expr);
 
-        let exit_points = ExitPoints::new(&self.ast).exit_points(expr);
+        let exit_points = ExitPoints::new(ast).exit_points(expr);
         if exit_points.is_empty() {
             if ret_type != Type::Void {
-                let stmt = self.ast.statement(stmt);
+                let stmt = ast.statement(stmt);
                 self.diagnostics.report_err(
                     format!("Expected type {ret_type}, got void"),
                     stmt.span().clone(),
@@ -494,11 +560,11 @@ impl Resolver {
                     ExitPoint::Explicit(e) => (e, true),
                     ExitPoint::Implicit(e) => (e, false),
                 };
-                match self.visit_expression(expr) {
+                match self.visit_expression(ast, expr) {
                     Ok(Type::None) => panic!("functions must not return {}", Type::None),
                     Ok(expr_type) => {
                         if expr_type != ret_type && (ret_type != Type::Void || explicit) {
-                            let expr = self.ast.expression(expr);
+                            let expr = ast.expression(expr);
                             self.diagnostics.report_err(
                                 format!("Expected type {ret_type}, got {expr_type}"),
                                 expr.span().clone(),
@@ -514,13 +580,14 @@ impl Resolver {
         // here, we replace the implicit return statements with explicit ones as a  de-sugar action
         // new_statements
         //     .into_iter()
-        //     .for_each(|s| self.ast.replace_statement(s));
+        //     .for_each(|s| ast.replace_statement(s));
 
         self.pop_scope();
     }
 
     fn resolve_ident_ref(
         &mut self,
+        ast: &Ast<WithoutImplicitRet>,
         ident_ref: IdentRefId,
         param_types: Option<&[Type]>,
     ) -> Option<SymbolId> {
@@ -528,7 +595,7 @@ impl Resolver {
             return Some(ident_ref.symbol_id());
         }
 
-        let ident_ref = self.ast.identifier_ref(ident_ref);
+        let ident_ref = ast.identifier_ref(ident_ref);
 
         let ident_id = ident_ref.ident_id();
         match self
@@ -547,7 +614,7 @@ impl Resolver {
                     self.diagnostics.report_err(
                         format!(
                             "No function '{}' found for parameters of types ({})",
-                            self.ast.identifier(ident_id),
+                            ast.identifier(ident_id),
                             param_types
                                 .iter()
                                 .map(Type::to_string)
@@ -559,7 +626,7 @@ impl Resolver {
                     );
                 } else {
                     self.diagnostics.report_err(
-                        format!("No variable '{}' found", self.ast.identifier(ident_id)),
+                        format!("No variable '{}' found", ast.identifier(ident_id)),
                         ident_ref.ident().span().clone(),
                         (file!(), line!()),
                     );
@@ -571,6 +638,7 @@ impl Resolver {
 
     fn resolve_ident(
         &mut self,
+        ast: &Ast<WithoutImplicitRet>,
         ident: IdentId,
         param_types: Option<&[Type]>,
         span: &Span,
@@ -590,7 +658,7 @@ impl Resolver {
                     self.diagnostics.report_err(
                         format!(
                             "No function '{}' found for parameters of types ({})",
-                            self.ast.identifier(ident),
+                            ast.identifier(ident),
                             param_types
                                 .iter()
                                 .map(Type::to_string)
@@ -602,7 +670,7 @@ impl Resolver {
                     );
                 } else {
                     self.diagnostics.report_err(
-                        format!("No variable '{}' found", self.ast.identifier(ident)),
+                        format!("No variable '{}' found", ast.identifier(ident)),
                         span.clone(),
                         (file!(), line!()),
                     );
@@ -747,11 +815,9 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x(n: number): number = { n; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new());
-
-        let ast = Resolver::new(ast, Natives::default())
-            .resolve()
-            .expect("no error expected");
+            .convert_implicit_ret(ImplicitRet::new())
+            .resolve(Resolver::new(), Natives::default())
+            .unwrap();
 
         assert_snapshot!(XmlWriter::new(&ast).serialize());
     }
@@ -761,11 +827,9 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x(): number = { let n = 0; n; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new());
-
-        let ast = Resolver::new(ast, Natives::default())
-            .resolve()
-            .expect("ok expected");
+            .convert_implicit_ret(ImplicitRet::new())
+            .resolve(Resolver::new(), Natives::default())
+            .unwrap();
 
         assert_snapshot!(XmlWriter::new(&ast).serialize());
     }
@@ -775,11 +839,9 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x() = { } x();"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new());
-
-        let ast = Resolver::new(ast, Natives::default())
-            .resolve()
-            .expect("ok expected");
+            .convert_implicit_ret(ImplicitRet::new())
+            .resolve(Resolver::new(), Natives::default())
+            .unwrap();
 
         assert_snapshot!(XmlWriter::new(&ast).serialize());
     }
@@ -791,25 +853,21 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
-
-        let ast = Resolver::new(ast, Natives::default())
-            .resolve()
-            .expect("ok expected");
+        .convert_implicit_ret(ImplicitRet::new())
+        .resolve(Resolver::new(), Natives::default())
+        .unwrap();
 
         assert_snapshot!(XmlWriter::new(&ast).serialize());
     }
 
     #[test]
     fn resolve_missing_def() {
-        let ast = Parser::new(Lexer::new("let x() = { n; }"))
+        let actual_diagnostics = Parser::new(Lexer::new("let x() = { n; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new());
-
-        let actual_diagnostics = Resolver::new(ast, Natives::default())
-            .resolve()
-            .expect_err("err expected");
+            .convert_implicit_ret(ImplicitRet::new())
+            .resolve(Resolver::new(), Natives::default())
+            .unwrap_err();
 
         let actual_diagnostics = actual_diagnostics
             .iter()
@@ -830,9 +888,9 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x = true; let x = 1; x + 1;"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new());
-
-        let ast = Resolver::new(ast, Natives::default()).resolve().unwrap();
+            .convert_implicit_ret(ImplicitRet::new())
+            .resolve(Resolver::new(), Natives::default())
+            .unwrap();
 
         assert_snapshot!("rebinding-xml", XmlWriter::new(&ast).serialize());
         assert_snapshot!("rebinding-dot", Dot::new(&ast).serialize());
@@ -842,14 +900,16 @@ mod tests {
         ($name:ident, $src:expr, $error:expr, $span:expr) => {
             #[test]
             fn $name() {
-                let ast = Parser::new(Lexer::new($src))
+                let actual_diagnostics = Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new());
-
-                let actual_diagnostics = Resolver::new(ast, Natives::default())
-                    .resolve()
-                    .expect_err("err expected");
+                    .convert_implicit_ret(ImplicitRet::new())
+                    .resolve(Resolver::new(), Natives::default())
+                    .unwrap_err();
+                //
+                // let actual_diagnostics = Resolver::new(ast, Natives::default())
+                //     .resolve()
+                //     .expect_err("err expected");
 
                 let actual_diagnostics = actual_diagnostics
                     .iter()
@@ -867,13 +927,11 @@ mod tests {
         ($name:ident, $src:expr) => {
             #[test]
             fn $name() {
-                let ast = Parser::new(Lexer::new($src))
+                Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new());
-
-                let _ = Resolver::new(ast, Natives::default())
-                    .resolve()
+                    .convert_implicit_ret(ImplicitRet::new())
+                    .resolve(Resolver::new(), Natives::new())
                     .expect("ok expected");
             }
         };

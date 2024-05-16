@@ -467,11 +467,9 @@ mod tests {
                 let ast = Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new());
-
-                let ast = Resolver::new(ast, Natives::default())
-                    .resolve()
-                    .expect("ok expected");
+                    .convert_implicit_ret(ImplicitRet::new())
+                    .resolve(Resolver::new(), Natives::default())
+                    .unwrap();
 
                 let html = HtmlWriter::new(&ast).serialize();
                 assert_snapshot!(&html);

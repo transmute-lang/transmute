@@ -11,7 +11,9 @@ use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Parameter, Statement, StatementKind};
 use crate::desugar::ImplicitRet;
-use crate::resolver::{Symbol, Type};
+use crate::error::Diagnostics;
+use crate::natives::Natives;
+use crate::resolver::{Resolver, Symbol, Type};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
@@ -74,24 +76,42 @@ impl Ast<WithImplicitRet> {
 }
 
 impl Ast<WithoutImplicitRet> {
-    pub fn resolved(
-        self,
-        identifier_refs: Vec<IdentifierRef<ResolvedSymbol>>,
-        symbols: Vec<Symbol>,
-        expressions_types: Vec<Type>,
-    ) -> ResolvedAst {
-        ResolvedAst {
-            identifiers: self.identifiers,
-            identifier_refs,
-            expressions: self.expressions,
-            statements: self.statements,
-            root: self.root,
-            symbols,
-            expressions_types,
-        }
+    pub fn resolve(self, resolver: Resolver, natives: Natives) -> Result<ResolvedAst, Diagnostics> {
+        let ast = self.merge(Into::<Ast<WithoutImplicitRet>>::into(&natives));
+        resolver.resolve(&ast, natives).map(|r| {
+            let mut ast = ast;
+            for expression in r.expressions.into_iter() {
+                ast.replace_expression(expression);
+            }
+            ResolvedAst {
+                identifiers: ast.identifiers,
+                identifier_refs: r.identifier_refs,
+                expressions: ast.expressions,
+                statements: ast.statements,
+                root: ast.root,
+                symbols: r.symbols,
+                expressions_types: r.expression_types,
+            }
+        })
     }
+    // pub fn resolved(
+    //     self,
+    //     identifier_refs: Vec<IdentifierRef<ResolvedSymbol>>,
+    //     symbols: Vec<Symbol>,
+    //     expressions_types: Vec<Type>,
+    // ) -> ResolvedAst {
+    //     ResolvedAst {
+    //         identifiers: self.identifiers,
+    //         identifier_refs,
+    //         expressions: self.expressions,
+    //         statements: self.statements,
+    //         root: self.root,
+    //         symbols,
+    //         expressions_types,
+    //     }
+    // }
 
-    pub fn merge(self, other: Ast<WithoutImplicitRet>) -> Ast<WithoutImplicitRet> {
+    fn merge(self, other: Ast<WithoutImplicitRet>) -> Ast<WithoutImplicitRet> {
         let mut identifiers = self
             .identifiers
             .into_iter()
@@ -349,7 +369,7 @@ impl<S> Ast<S> {
         panic!("No statement found at {}", start)
     }
 
-    pub fn replace_expression(&mut self, expression: Expression) {
+    fn replace_expression(&mut self, expression: Expression) {
         let id = expression.id().id();
         self.expressions[id] = expression
     }
@@ -819,11 +839,10 @@ mod tests {
         .unwrap()
         .convert_implicit_ret(ImplicitRet::new());
 
-        let ast = ast1.merge(ast2);
-
-        let ast = Resolver::new(ast, Natives::default())
-            .resolve()
-            .expect("ok expected");
+        let ast = ast1
+            .merge(ast2)
+            .resolve(Resolver::new(), Natives::default())
+            .unwrap();
 
         let xml = XmlWriter::new(&ast).serialize();
 
@@ -842,11 +861,10 @@ mod tests {
             .unwrap()
             .convert_implicit_ret(ImplicitRet::new());
 
-        let ast = ast1.merge(ast2);
-
-        let ast = Resolver::new(ast, Natives::default())
-            .resolve()
-            .expect("ok expected");
+        let ast = ast1
+            .merge(ast2)
+            .resolve(Resolver::new(), Natives::default())
+            .unwrap();
 
         let xml = XmlWriter::new(&ast).serialize();
 
@@ -869,11 +887,10 @@ mod tests {
         .unwrap()
         .convert_implicit_ret(ImplicitRet::new());
 
-        let ast = ast1.merge(ast2);
-
-        let ast = Resolver::new(ast, Natives::default())
-            .resolve()
-            .expect("ok expected");
+        let ast = ast1
+            .merge(ast2)
+            .resolve(Resolver::new(), Natives::default())
+            .unwrap();
 
         let xml = XmlWriter::new(&ast).serialize();
 
@@ -896,11 +913,10 @@ mod tests {
         .unwrap()
         .convert_implicit_ret(ImplicitRet::new());
 
-        let ast = ast1.merge(ast2);
-
-        let ast = Resolver::new(ast, Natives::default())
-            .resolve()
-            .expect("ok expected");
+        let ast = ast1
+            .merge(ast2)
+            .resolve(Resolver::new(), Natives::default())
+            .unwrap();
 
         let xml = XmlWriter::new(&ast).serialize();
 
