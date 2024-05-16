@@ -304,10 +304,10 @@ mod tests {
             #[test]
             fn $name() {
                 let parser = Parser::new(Lexer::new($src));
-                let (ast, diagnostics) = parser.parse();
-                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-                let ast = ImplicitRet::new().desugar(ast);
+                let ast = parser
+                    .parse()
+                    .unwrap()
+                    .convert_implicit_ret(ImplicitRet::new());
 
                 let ast = Resolver::new(ast, Natives::default())
                     .resolve()
@@ -322,10 +322,10 @@ mod tests {
             #[test]
             fn $name() {
                 let parser = Parser::new(Lexer::new($src));
-                let (ast, diagnostics) = parser.parse();
-                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-                let ast = ImplicitRet::new().desugar(ast);
+                let ast = parser
+                    .parse()
+                    .unwrap()
+                    .convert_implicit_ret(ImplicitRet::new());
 
                 let ast = Resolver::new(ast, Natives::default())
                     .resolve()

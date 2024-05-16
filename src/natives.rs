@@ -200,7 +200,8 @@ impl From<&Natives> for Ast<WithoutImplicitRet> {
             .map(|(ident, _)| ident)
             .collect::<Vec<String>>();
 
-        ImplicitRet::new().desugar(Ast::new(identifiers, vec![], vec![], vec![], vec![]))
+        Ast::new(identifiers, vec![], vec![], vec![], vec![])
+            .convert_implicit_ret(ImplicitRet::new())
     }
 }
 

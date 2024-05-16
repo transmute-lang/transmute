@@ -543,10 +543,10 @@ mod tests {
         ($name:ident, $src:expr) => {
             #[test]
             fn $name() {
-                let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
-                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-                let ast = ImplicitRet::new().desugar(ast);
+                let ast = Parser::new(Lexer::new($src))
+                    .parse()
+                    .unwrap()
+                    .convert_implicit_ret(ImplicitRet::new());
 
                 let ast = Resolver::new(ast, Natives::default())
                     .resolve()

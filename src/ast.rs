@@ -10,6 +10,7 @@ use crate::ast::identifier::{Identifier, IdentifierRef, ResolvedSymbol};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Parameter, Statement, StatementKind};
+use crate::desugar::ImplicitRet;
 use crate::resolver::{Symbol, Type};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -56,11 +57,11 @@ impl Ast<WithImplicitRet> {
         }
     }
 
-    pub fn remove_implicit_ret(mut self, explicit_ret: Vec<Statement>) -> Ast<WithoutImplicitRet> {
-        for statement in explicit_ret {
+    pub fn convert_implicit_ret(mut self, converter: ImplicitRet) -> Ast<WithoutImplicitRet> {
+        let statements = converter.convert(&self);
+        for statement in statements {
             self.replace_statement(statement);
         }
-
         Ast::<WithoutImplicitRet> {
             identifiers: self.identifiers,
             identifier_refs: self.identifier_refs,
@@ -70,7 +71,9 @@ impl Ast<WithImplicitRet> {
             implicit_ret: Default::default(),
         }
     }
+}
 
+impl Ast<WithoutImplicitRet> {
     pub fn resolved(
         self,
         identifier_refs: Vec<IdentifierRef<ResolvedSymbol>>,
@@ -351,7 +354,7 @@ impl<S> Ast<S> {
         self.expressions[id] = expression
     }
 
-    pub fn replace_statement(&mut self, statement: Statement) {
+    fn replace_statement(&mut self, statement: Statement) {
         let id = statement.id().id();
         self.statements[id] = statement
     }
@@ -789,9 +792,8 @@ mod tests {
     "#,
         ))
         .parse()
-        .0;
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let actual = format!(
             "{}",
@@ -803,19 +805,19 @@ mod tests {
 
     #[test]
     fn merge_1() {
-        let (ast1, d) = Parser::new(Lexer::new(
+        let ast1 = Parser::new(Lexer::new(
             "let x_1 = 0; let f_1(p_1: number): boolean = { p_1 == 1; } f_1(x_1);",
         ))
-        .parse();
-        assert!(d.is_empty(), "{:?}", d);
-        let ast1 = ImplicitRet::new().desugar(ast1);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
-        let (ast2, d) = Parser::new(Lexer::new(
+        let ast2 = Parser::new(Lexer::new(
             "let x_2 = 0; let f_2(p_2: number): boolean = { p_2 == 2; } f_2(x_2);",
         ))
-        .parse();
-        assert!(d.is_empty(), "{:?}", d);
-        let ast2 = ImplicitRet::new().desugar(ast2);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let ast = ast1.merge(ast2);
 
@@ -830,13 +832,15 @@ mod tests {
 
     #[test]
     fn merge_2() {
-        let (ast1, d) = Parser::new(Lexer::new("let x_1 = 0; x_1 = -x_1 * 2;")).parse();
-        assert!(d.is_empty(), "{:?}", d);
-        let ast1 = ImplicitRet::new().desugar(ast1);
+        let ast1 = Parser::new(Lexer::new("let x_1 = 0; x_1 = -x_1 * 2;"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRet::new());
 
-        let (ast2, d) = Parser::new(Lexer::new("let x_2 = 0; x_2 = -x_2 * 2;")).parse();
-        assert!(d.is_empty(), "{:?}", d);
-        let ast2 = ImplicitRet::new().desugar(ast2);
+        let ast2 = Parser::new(Lexer::new("let x_2 = 0; x_2 = -x_2 * 2;"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRet::new());
 
         let ast = ast1.merge(ast2);
 
@@ -851,19 +855,19 @@ mod tests {
 
     #[test]
     fn merge_if() {
-        let (ast1, d) = Parser::new(Lexer::new(
+        let ast1 = Parser::new(Lexer::new(
             "let c_1 = true; let t_1 = 1; let f_1 = 0; if c_1 { t_1; } else { f_1; }",
         ))
-        .parse();
-        assert!(d.is_empty(), "{:?}", d);
-        let ast1 = ImplicitRet::new().desugar(ast1);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
-        let (ast2, d) = Parser::new(Lexer::new(
+        let ast2 = Parser::new(Lexer::new(
             "let c_2 = true; let t_2 = 1; let f_2 = 0; if c_2 { t_2; } else { f_2; }",
         ))
-        .parse();
-        assert!(d.is_empty(), "{:?}", d);
-        let ast2 = ImplicitRet::new().desugar(ast2);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let ast = ast1.merge(ast2);
 
@@ -878,19 +882,19 @@ mod tests {
 
     #[test]
     fn merge_while() {
-        let (ast1, d) = Parser::new(Lexer::new(
+        let ast1 = Parser::new(Lexer::new(
             "let c_1 = true; let w_1 = 1; while c_1 { w_1; }",
         ))
-        .parse();
-        assert!(d.is_empty(), "{:?}", d);
-        let ast1 = ImplicitRet::new().desugar(ast1);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
-        let (ast2, d) = Parser::new(Lexer::new(
+        let ast2 = Parser::new(Lexer::new(
             "let c_2 = false; let w_2 = 2; while c_2 { w_2; }",
         ))
-        .parse();
-        assert!(d.is_empty(), "{:?}", d);
-        let ast2 = ImplicitRet::new().desugar(ast2);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let ast = ast1.merge(ast2);
 

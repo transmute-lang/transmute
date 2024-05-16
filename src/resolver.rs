@@ -744,11 +744,10 @@ mod tests {
 
     #[test]
     fn resolve_ref_to_parameter() {
-        let (ast, diagnostics) =
-            Parser::new(Lexer::new("let x(n: number): number = { n; }")).parse();
-        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        let ast = Parser::new(Lexer::new("let x(n: number): number = { n; }"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRet::new());
 
         let ast = Resolver::new(ast, Natives::default())
             .resolve()
@@ -759,11 +758,10 @@ mod tests {
 
     #[test]
     fn resolve_ref_to_let() {
-        let (ast, diagnostics) =
-            Parser::new(Lexer::new("let x(): number = { let n = 0; n; }")).parse();
-        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        let ast = Parser::new(Lexer::new("let x(): number = { let n = 0; n; }"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRet::new());
 
         let ast = Resolver::new(ast, Natives::default())
             .resolve()
@@ -774,10 +772,10 @@ mod tests {
 
     #[test]
     fn resolve_ref_to_let_fn() {
-        let (ast, diagnostics) = Parser::new(Lexer::new("let x() = { } x();")).parse();
-        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        let ast = Parser::new(Lexer::new("let x() = { } x();"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRet::new());
 
         let ast = Resolver::new(ast, Natives::default())
             .resolve()
@@ -788,13 +786,12 @@ mod tests {
 
     #[test]
     fn resolve_ref_to_parameter_nested() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             "let x(n: number): number = { while true { ret n; } }",
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let ast = Resolver::new(ast, Natives::default())
             .resolve()
@@ -805,10 +802,10 @@ mod tests {
 
     #[test]
     fn resolve_missing_def() {
-        let (ast, diagnostics) = Parser::new(Lexer::new("let x() = { n; }")).parse();
-        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        let ast = Parser::new(Lexer::new("let x() = { n; }"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRet::new());
 
         let actual_diagnostics = Resolver::new(ast, Natives::default())
             .resolve()
@@ -830,10 +827,10 @@ mod tests {
 
     #[test]
     fn rebinding() {
-        let (ast, diagnostics) = Parser::new(Lexer::new("let x = true; let x = 1; x + 1;")).parse();
-        assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        let ast = Parser::new(Lexer::new("let x = true; let x = 1; x + 1;"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRet::new());
 
         let ast = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
@@ -845,10 +842,10 @@ mod tests {
         ($name:ident, $src:expr, $error:expr, $span:expr) => {
             #[test]
             fn $name() {
-                let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
-                assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-                let ast = ImplicitRet::new().desugar(ast);
+                let ast = Parser::new(Lexer::new($src))
+                    .parse()
+                    .unwrap()
+                    .convert_implicit_ret(ImplicitRet::new());
 
                 let actual_diagnostics = Resolver::new(ast, Natives::default())
                     .resolve()
@@ -870,10 +867,10 @@ mod tests {
         ($name:ident, $src:expr) => {
             #[test]
             fn $name() {
-                let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
-                assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-                let ast = ImplicitRet::new().desugar(ast);
+                let ast = Parser::new(Lexer::new($src))
+                    .parse()
+                    .unwrap()
+                    .convert_implicit_ret(ImplicitRet::new());
 
                 let _ = Resolver::new(ast, Natives::default())
                     .resolve()

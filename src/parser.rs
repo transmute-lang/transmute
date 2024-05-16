@@ -125,7 +125,7 @@ impl<'s> Parser<'s> {
         }
     }
 
-    pub fn parse(mut self) -> (Ast<WithImplicitRet>, Diagnostics) {
+    pub fn parse(mut self) -> Result<Ast<WithImplicitRet>, Diagnostics> {
         let mut statements = Vec::new();
 
         while let Some(statement) = self.parse_statement() {
@@ -144,16 +144,17 @@ impl<'s> Parser<'s> {
             .map(|(ident, _)| ident)
             .collect::<Vec<String>>();
 
-        (
-            Ast::new(
+        if self.diagnostics.is_empty() {
+            Ok(Ast::new(
                 identifiers,
                 self.identifier_refs,
                 self.expressions,
                 self.statements,
                 statements,
-            ),
-            self.diagnostics,
-        )
+            ))
+        } else {
+            Err(self.diagnostics)
+        }
     }
 
     /// Parses the following:

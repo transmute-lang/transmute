@@ -2,7 +2,7 @@
 source: src/parser.rs
 expression: "Parser::new(Lexer::new(\"if true { 42; }\")).parse()"
 ---
-(
+Ok(
     Ast {
         identifiers: [],
         identifier_refs: [],
@@ -94,8 +94,5 @@ expression: "Parser::new(Lexer::new(\"if true { 42; }\")).parse()"
             },
         ],
         implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
-    },
-    Diagnostics {
-        diagnostics: [],
     },
 )

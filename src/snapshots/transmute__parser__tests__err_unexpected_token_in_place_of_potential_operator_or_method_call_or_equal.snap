@@ -2,63 +2,7 @@
 source: src/parser.rs
 expression: "Parser::new(Lexer::new(\"f 4;\")).parse()"
 ---
-(
-    Ast {
-        identifiers: [
-            "f",
-        ],
-        identifier_refs: [
-            IdentifierRef {
-                id: IdentRefId {
-                    id: 0,
-                },
-                ident: Identifier {
-                    id: IdentId {
-                        id: 0,
-                    },
-                    span: 1:1; [0, 1],
-                },
-                symbol: UnresolvedSymbol,
-            },
-        ],
-        expressions: [
-            Expression {
-                id: ExprId {
-                    id: 0,
-                },
-                kind: Literal(
-                    Literal {
-                        kind: Identifier(
-                            IdentRefId {
-                                id: 0,
-                            },
-                        ),
-                        span: 1:1; [0, 1],
-                    },
-                ),
-                span: 1:1; [0, 1],
-            },
-        ],
-        statements: [
-            Statement {
-                id: StmtId {
-                    id: 0,
-                },
-                kind: Expression(
-                    ExprId {
-                        id: 0,
-                    },
-                ),
-                span: 1:1; [0, 2],
-            },
-        ],
-        root: [
-            StmtId {
-                id: 0,
-            },
-        ],
-        implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
-    },
+Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
@@ -67,7 +11,7 @@ expression: "Parser::new(Lexer::new(\"f 4;\")).parse()"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    932,
+                    933,
                 ),
             },
         ],

@@ -161,17 +161,16 @@ mod tests {
 
     #[test]
     fn single_explicit_exit_point() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let f() = {
                 ret 42;
             }
             "#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(1);
 
@@ -183,7 +182,7 @@ mod tests {
 
     #[test]
     fn multiple_explicit_exit_points_1() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let f() = if true {
                 ret 42;
@@ -192,10 +191,9 @@ mod tests {
                 ret 43;
             };"#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(6);
 
@@ -211,7 +209,7 @@ mod tests {
 
     #[test]
     fn multiple_explicit_exit_points_2() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let f() = {
                 if true {
@@ -222,10 +220,9 @@ mod tests {
                 }
             }"#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(6);
 
@@ -241,7 +238,7 @@ mod tests {
 
     #[test]
     fn multiple_explicit_exit_points_masking_later_exit_points() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let f() = {
                 if true {
@@ -254,10 +251,9 @@ mod tests {
             }
             "#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(7);
 
@@ -273,7 +269,7 @@ mod tests {
 
     #[test]
     fn always_returns_from_if_condition() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let f() = {
                 if if true { ret 42; } else { ret 43; } {
@@ -283,10 +279,9 @@ mod tests {
             }
             "#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(10);
 
@@ -302,7 +297,7 @@ mod tests {
 
     #[test]
     fn always_returns_from_while() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let f() = {
                 while true {
@@ -312,10 +307,9 @@ mod tests {
             }
             "#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(5);
 
@@ -328,7 +322,7 @@ mod tests {
 
     #[test]
     fn while_never_returns() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let f() = {
                 while true { }
@@ -336,10 +330,9 @@ mod tests {
             }
             "#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(4);
 
@@ -352,7 +345,7 @@ mod tests {
 
     #[test]
     fn always_returns_from_while_condition() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let f() = {
                 while if true { ret 42; } else { ret 43; } {
@@ -362,10 +355,9 @@ mod tests {
             }
             "#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(10);
 
@@ -381,7 +373,7 @@ mod tests {
 
     #[test]
     fn assignment_always_returns() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let x() = {
                 let x = 0;
@@ -389,10 +381,9 @@ mod tests {
             }
             "#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(8);
 
@@ -408,7 +399,7 @@ mod tests {
 
     #[test]
     fn left_binary_always_returns() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let x() = {
                 let a = if true { ret 42; } else { ret 43; }
@@ -417,10 +408,9 @@ mod tests {
             }
             "#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
         let expr = ExprId::from(14);
 
         let actual = ExitPoints::new(&ast).exit_points(expr);
@@ -435,7 +425,7 @@ mod tests {
 
     #[test]
     fn left_binary_sometimes_returns() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let x() = {
                 let a = if true { 42; } else { ret 43; }
@@ -444,10 +434,9 @@ mod tests {
             }
             "#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(14);
 
@@ -464,7 +453,7 @@ mod tests {
 
     #[test]
     fn right_binary_always_returns() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let x() = {
                 let a = 42 + if false { ret 43; } else { ret 44; };
@@ -472,10 +461,9 @@ mod tests {
             }
             "#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(9);
 
@@ -491,7 +479,7 @@ mod tests {
 
     #[test]
     fn binary_never_returns() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let x() = {
                 let a = 42 + 43;
@@ -499,10 +487,9 @@ mod tests {
             }
             "#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(4);
 
@@ -515,7 +502,7 @@ mod tests {
 
     #[test]
     fn unary_always_returns() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"
             let x() = {
                 let a = - if true { ret 42; } else { ret 43; };
@@ -523,10 +510,9 @@ mod tests {
             }
             "#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(8);
 
@@ -542,17 +528,16 @@ mod tests {
 
     #[test]
     fn function_call_parameter_always_returns() {
-        let (ast, diagnostics) = Parser::new(Lexer::new(
+        let ast = Parser::new(Lexer::new(
             r#"let x(a: number) = {
                 x(if true { ret 42; } else { ret 43; });
                 ret 44;
             }
             "#,
         ))
-        .parse();
-        assert!(diagnostics.is_empty(), "{}", diagnostics);
-
-        let ast = ImplicitRet::new().desugar(ast);
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRet::new());
 
         let expr = ExprId::from(8);
 

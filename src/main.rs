@@ -39,22 +39,23 @@ fn main() {
 }
 
 fn fibonacci_rec() {
-    let (ast, diagnostics) = Parser::new(Lexer::new(
+    let ast = match Parser::new(Lexer::new(
         "let f(n: number): number = { if n <= 1 { ret n; } f(n - 1) + f(n - 2); } f(9) + 8;",
     ))
-    .parse();
-
-    let ast = ImplicitRet::new().desugar(ast);
+    .parse()
+    .map(|ast| ast.convert_implicit_ret(ImplicitRet::new()))
+    {
+        Ok(ast) => ast,
+        Err(diagnostics) => {
+            print!("Errors:\n{}", diagnostics);
+            return;
+        }
+    };
 
     print!(
         "Parsed AST:\n{}",
         AstNodePrettyPrint::new_unresolved(&ast, *ast.statements().first().unwrap())
     );
-
-    if !diagnostics.is_empty() {
-        print!("Errors:\n{}", diagnostics);
-        return;
-    }
 
     let ast = Resolver::new(ast, Natives::default()).resolve().unwrap();
 
@@ -75,7 +76,7 @@ fn fibonacci_rec() {
 }
 
 fn fibonacci_iter() {
-    let (ast, diagnostics) = Parser::new(Lexer::new(
+    let ast = match Parser::new(Lexer::new(
         r#"
             let f(n: number): number = {
                 if n == 0 { ret 0; }
@@ -97,19 +98,20 @@ fn fibonacci_iter() {
             f(9) + 8;
         "#,
     ))
-    .parse();
-
-    let ast = ImplicitRet::new().desugar(ast);
+    .parse()
+    .map(|ast| ast.convert_implicit_ret(ImplicitRet::new()))
+    {
+        Ok(ast) => ast,
+        Err(diagnostics) => {
+            print!("Errors:\n{}", diagnostics);
+            return;
+        }
+    };
 
     print!(
         "Parsed AST:\n{}",
         AstNodePrettyPrint::new_unresolved(&ast, *ast.statements().first().unwrap())
     );
-
-    if !diagnostics.is_empty() {
-        print!("Errors:\n{}", diagnostics);
-        return;
-    }
 
     let ast = Resolver::new(ast, Natives::default()).resolve().unwrap();
 

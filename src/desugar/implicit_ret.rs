@@ -1,8 +1,9 @@
 use crate::ast::expression::ExpressionKind;
 use crate::ast::ids::{ExprId, StmtId};
 use crate::ast::statement::{RetMode, Statement, StatementKind};
-use crate::ast::{Ast, WithImplicitRet, WithoutImplicitRet};
+use crate::ast::{Ast, WithImplicitRet};
 
+// todo rename ImplicitRetConverter
 pub struct ImplicitRet {
     replacements: Vec<Statement>,
 }
@@ -14,7 +15,7 @@ impl ImplicitRet {
         }
     }
 
-    pub fn desugar(mut self, ast: Ast<WithImplicitRet>) -> Ast<WithoutImplicitRet> {
+    pub fn convert(mut self, ast: &Ast<WithImplicitRet>) -> Vec<Statement> {
         for expr in ast
             .statements()
             .iter()
@@ -27,10 +28,9 @@ impl ImplicitRet {
                 e => panic!("expected block, got {:?}", e),
             })
         {
-            self.visit_expression(&ast, expr, 0, false);
+            self.visit_expression(ast, expr, 0, false);
         }
-
-        ast.remove_implicit_ret(self.replacements)
+        self.replacements
     }
 
     /// returns true if all nested paths explicitly return
@@ -180,10 +180,10 @@ mod tests {
         ($name:ident, $src:expr) => {
             #[test]
             fn $name() {
-                let (ast, diagnostics) = Parser::new(Lexer::new($src)).parse();
-                assert!(diagnostics.is_empty(), "{:?}", diagnostics);
-
-                let ast = ImplicitRet::new().desugar(ast);
+                let ast = Parser::new(Lexer::new($src))
+                    .parse()
+                    .unwrap()
+                    .convert_implicit_ret(ImplicitRet::new());
 
                 assert_snapshot!(AstNodePrettyPrint::new_unresolved(
                     &ast,

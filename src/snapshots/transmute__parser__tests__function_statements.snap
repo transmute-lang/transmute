@@ -2,7 +2,7 @@
 source: src/parser.rs
 expression: "Parser::new(Lexer::new(\"let times_two(a: number) = { a * 2; }\")).parse()"
 ---
-(
+Ok(
     Ast {
         identifiers: [
             "times_two",
@@ -140,8 +140,5 @@ expression: "Parser::new(Lexer::new(\"let times_two(a: number) = { a * 2; }\")).
             },
         ],
         implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
-    },
-    Diagnostics {
-        diagnostics: [],
     },
 )
