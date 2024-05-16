@@ -4,7 +4,7 @@ use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId};
 use crate::ast::literal::LiteralKind;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Parameter, StatementKind};
-use crate::ast::{Ast,  WithoutImplicitRet};
+use crate::ast::{Ast, WithoutImplicitRet};
 use crate::error::Diagnostics;
 use crate::exit_points::{ExitPoint, ExitPoints};
 use crate::lexer::Span;
@@ -576,11 +576,6 @@ impl Resolver {
                 }
             }
         }
-
-        // here, we replace the implicit return statements with explicit ones as a  de-sugar action
-        // new_statements
-        //     .into_iter()
-        //     .for_each(|s| ast.replace_statement(s));
 
         self.pop_scope();
     }

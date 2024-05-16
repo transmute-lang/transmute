@@ -94,22 +94,6 @@ impl Ast<WithoutImplicitRet> {
             }
         })
     }
-    // pub fn resolved(
-    //     self,
-    //     identifier_refs: Vec<IdentifierRef<ResolvedSymbol>>,
-    //     symbols: Vec<Symbol>,
-    //     expressions_types: Vec<Type>,
-    // ) -> ResolvedAst {
-    //     ResolvedAst {
-    //         identifiers: self.identifiers,
-    //         identifier_refs,
-    //         expressions: self.expressions,
-    //         statements: self.statements,
-    //         root: self.root,
-    //         symbols,
-    //         expressions_types,
-    //     }
-    // }
 
     fn merge(self, other: Ast<WithoutImplicitRet>) -> Ast<WithoutImplicitRet> {
         let mut identifiers = self
