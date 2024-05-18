@@ -233,9 +233,9 @@ impl<'a> DotBuilder<'a> {
                         }
                         _ => panic!(),
                     },
-                    SymbolKind::Native(native) => self.insert_node(Node::NativeIdentifier(
-                        self.ast.identifier_id(native.name()),
-                    )),
+                    SymbolKind::Native(ident, _, _, _) => {
+                        self.insert_node(Node::NativeIdentifier(*ident))
+                    }
                 }
             }
             LiteralKind::Number(n) => self.insert_node(Node::Number(*n)),
@@ -278,9 +278,9 @@ impl<'a> DotBuilder<'a> {
                 }
                 _ => panic!(),
             },
-            SymbolKind::Native(native) => self.insert_node(Node::NativeFunctionCall(
-                self.ast.identifier_id(native.name()),
-            )),
+            SymbolKind::Native(ident, _, _, _) => {
+                self.insert_node(Node::NativeFunctionCall(*ident))
+            }
             _ => panic!(),
         };
 

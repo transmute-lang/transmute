@@ -248,13 +248,17 @@ impl Native {
         &self.parameters
     }
 
-    pub fn return_type(&self) -> Type {
-        self.return_type
+    pub fn return_type(&self) -> &Type {
+        &self.return_type
     }
 
-    pub fn apply(&self, parameters: Vec<Value>) -> Value {
-        (self.body)(parameters)
+    pub fn body(self) -> fn(Vec<Value>) -> Value {
+        self.body
     }
+
+    // pub fn apply(&self, parameters: Vec<Value>) -> Value {
+    //     (self.body)(parameters)
+    // }
 }
 
 impl PartialEq<Self> for Native {
@@ -319,9 +323,9 @@ mod tests {
                     None
                 };
 
-                let actual = f
+                let actual = (f
                     .unwrap()
-                    .apply(values);
+                    .body)(values);
 
                 assert_eq!(actual, $expected);
             }

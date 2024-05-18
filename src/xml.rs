@@ -146,7 +146,7 @@ impl<'a> XmlWriter<'a> {
             SymbolKind::Parameter(stmt, index) => {
                 format!("stmt:{}:{}", stmt.id(), index)
             }
-            SymbolKind::Native(_) => "native".to_string(),
+            SymbolKind::Native(..) => "native".to_string(),
         };
 
         self.emit(
@@ -210,7 +210,7 @@ impl<'a> XmlWriter<'a> {
                     SymbolKind::Parameter(stmt, index) => {
                         format!("stmt:{}:{}", stmt.id(), index)
                     }
-                    SymbolKind::Native(_) => "native".to_string(),
+                    SymbolKind::Native(..) => "native".to_string(),
                 };
 
                 self.emit(
@@ -281,17 +281,16 @@ impl<'a> XmlWriter<'a> {
                 };
                 format!("ident:{}", param.identifier().id())
             }
-            SymbolKind::Native(native) => {
+            SymbolKind::Native(ident, parameters, ret_type, _) => {
                 format!(
                     "native:{}:{}:{}",
-                    native.name(),
-                    native
-                        .parameters()
+                    self.ast.identifier(*ident),
+                    parameters
                         .iter()
-                        .map(|t| t.to_string())
+                        .map(|p| self.ast.ty(*p).to_string())
                         .collect::<Vec<String>>()
                         .join(":"),
-                    native.return_type()
+                    self.ast.ty(*ret_type)
                 )
             }
         };

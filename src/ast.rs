@@ -13,7 +13,7 @@ use crate::ast::statement::{Parameter, Statement, StatementKind};
 use crate::desugar::ImplicitRet;
 use crate::error::Diagnostics;
 use crate::natives::Natives;
-use crate::resolver::{Resolver, Symbol, Type};
+use crate::resolver::{Resolver, Symbol, Type, TypeId};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
@@ -90,6 +90,7 @@ impl Ast<WithoutImplicitRet> {
                 statements: ast.statements,
                 root: ast.root,
                 symbols: r.symbols,
+                types: r.types,
                 expressions_types: r.expression_types,
             }
         })
@@ -379,8 +380,10 @@ pub struct ResolvedAst {
     root: Vec<StmtId>,
     /// All symbols
     symbols: Vec<Symbol>,
+    /// All types
+    types: Vec<Type>,
     /// Types of all expressions
-    expressions_types: Vec<Type>,
+    expressions_types: Vec<TypeId>,
 }
 
 impl ResolvedAst {
@@ -411,7 +414,7 @@ impl ResolvedAst {
     }
 
     pub fn expression_type(&self, id: ExprId) -> &Type {
-        &self.expressions_types[id.id()]
+        &self.types[self.expressions_types[id.id()].id()]
     }
 
     pub fn statements(&self) -> &Vec<StmtId> {
@@ -424,6 +427,10 @@ impl ResolvedAst {
 
     pub fn symbol(&self, id: SymbolId) -> &Symbol {
         &self.symbols[id.id()]
+    }
+
+    pub fn ty(&self, id: TypeId) -> &Type {
+        &self.types[id.id()]
     }
 }
 

@@ -143,13 +143,13 @@ impl<'a> Interpreter<'a> {
                     _ => panic!("let fn expected"),
                 }
             }
-            SymbolKind::Native(native) => {
+            SymbolKind::Native(_, _, _, body) => {
                 let env = arguments
                     .iter()
                     .map(|expr| self.visit_expression(*expr))
                     .collect::<Vec<Value>>();
 
-                native.apply(env)
+                body(env)
             }
         }
     }

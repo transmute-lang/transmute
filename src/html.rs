@@ -407,31 +407,31 @@ impl<'a> HtmlWriter<'a> {
     fn emit_identifier_ref(&mut self, identifier: IdentRefId) {
         let ident_ref = self.ast.identifier_ref(identifier);
 
-        let type_name = self.ast.symbol(ident_ref.symbol_id()).ty().to_string();
+        let type_name = self
+            .ast
+            .ty(self.ast.symbol(ident_ref.symbol_id()).ty())
+            .to_string();
 
-        let type_ref = match self.ast.symbol(ident_ref.symbol_id()).ty() {
-            Type::Boolean => "type__native_boolean",
-            Type::Function => "type__function",
-            Type::Number => "type__native_number",
-            Type::Void => "type__native_void",
-            Type::None => unimplemented!(),
-        };
+        // todo this might not scale when types become complex...
+        let type_ref = format!(
+            "type__{}",
+            self.ast.ty(self.ast.symbol(ident_ref.symbol_id()).ty())
+        );
 
         let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
             SymbolKind::Let(stmt) => Self::ident_id(*stmt, None),
             SymbolKind::LetFn(stmt, _, _) => Self::ident_id(*stmt, None),
             SymbolKind::Parameter(stmt, index) => Self::ident_id(*stmt, Some(*index)),
-            SymbolKind::Native(native) => {
+            SymbolKind::Native(ident, parameters, ret_type, _) => {
                 format!(
                     "ident__native_{}_{}_{}",
-                    native.name(),
-                    native
-                        .parameters()
+                    self.ast.identifier(*ident),
+                    parameters
                         .iter()
-                        .map(Type::to_string)
+                        .map(|p| self.ast.ty(*p).to_string())
                         .collect::<Vec<String>>()
                         .join("_"),
-                    native.return_type()
+                    self.ast.ty(*ret_type)
                 )
             }
         };
@@ -441,7 +441,7 @@ impl<'a> HtmlWriter<'a> {
                 .attr("class", "ident_ref")
                 .attr("title", &type_name)
                 .attr("data-ident-ref", &symbol)
-                .attr("data-type-ref", type_ref),
+                .attr("data-type-ref", &type_ref),
         );
         self.emit(XmlEvent::Characters(
             self.ast.identifier(ident_ref.ident().id()),

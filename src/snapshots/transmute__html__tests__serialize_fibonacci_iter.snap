@@ -134,7 +134,7 @@ expression: "&html"
         <span class="kw" title="no type">if</span>
         <span class="ident_ref" title="function" data-ident-ref="ident__native_eq_number_number_boolean" data-type-ref="type__function">eq</span>
         <span class="par" data-par-id="par_2">(</span>
-        <span class="ident_ref" title="number" data-ident-ref="ident__stmt14_index0" data-type-ref="type__native_number">n</span>
+        <span class="ident_ref" title="number" data-ident-ref="ident__stmt14_index0" data-type-ref="type__number">n</span>
         <span class="comma">, </span>
         <span class="num" title="number">0</span>
         <span class="par" data-par-id="par_2">)</span>
@@ -156,7 +156,7 @@ expression: "&html"
         <span class="kw" title="no type">if</span>
         <span class="ident_ref" title="function" data-ident-ref="ident__native_eq_number_number_boolean" data-type-ref="type__function">eq</span>
         <span class="par" data-par-id="par_4">(</span>
-        <span class="ident_ref" title="number" data-ident-ref="ident__stmt14_index0" data-type-ref="type__native_number">n</span>
+        <span class="ident_ref" title="number" data-ident-ref="ident__stmt14_index0" data-type-ref="type__number">n</span>
         <span class="comma">, </span>
         <span class="num" title="number">1</span>
         <span class="par" data-par-id="par_4">)</span>
@@ -199,14 +199,14 @@ expression: "&html"
         <span class="kw">let</span>
         <span id="ident__stmt7" class="ident">n</span>
         <span class="equal"> = </span>
-        <span class="ident_ref" title="number" data-ident-ref="ident__stmt14_index0" data-type-ref="type__native_number">n</span>
+        <span class="ident_ref" title="number" data-ident-ref="ident__stmt14_index0" data-type-ref="type__number">n</span>
         <span class="semicolon">;</span>
       </li>
       <li>
         <span class="kw" title="number">ret</span>
         <span class="ident_ref" title="function" data-ident-ref="ident__native_gt_number_number_boolean" data-type-ref="type__function">gt</span>
         <span class="par" data-par-id="par_6">(</span>
-        <span class="ident_ref" title="number" data-ident-ref="ident__stmt7" data-type-ref="type__native_number">n</span>
+        <span class="ident_ref" title="number" data-ident-ref="ident__stmt7" data-type-ref="type__number">n</span>
         <span class="comma">, </span>
         <span class="num" title="number">1</span>
         <span class="par" data-par-id="par_6">)</span>
@@ -215,34 +215,34 @@ expression: "&html"
       <li>
         <ul>
           <li>
-            <span class="ident_ref" title="number" data-ident-ref="ident__stmt6" data-type-ref="type__native_number">current</span>
+            <span class="ident_ref" title="number" data-ident-ref="ident__stmt6" data-type-ref="type__number">current</span>
             <span class="equal"> = </span>
             <span class="ident_ref" title="function" data-ident-ref="ident__native_add_number_number_number" data-type-ref="type__function">add</span>
             <span class="par" data-par-id="par_8">(</span>
-            <span class="ident_ref" title="number" data-ident-ref="ident__stmt4" data-type-ref="type__native_number">prev_prev</span>
+            <span class="ident_ref" title="number" data-ident-ref="ident__stmt4" data-type-ref="type__number">prev_prev</span>
             <span class="comma">, </span>
-            <span class="ident_ref" title="number" data-ident-ref="ident__stmt5" data-type-ref="type__native_number">prev</span>
+            <span class="ident_ref" title="number" data-ident-ref="ident__stmt5" data-type-ref="type__number">prev</span>
             <span class="par" data-par-id="par_8">)</span>
             <span class="semicolon">;</span>
           </li>
           <li>
-            <span class="ident_ref" title="number" data-ident-ref="ident__stmt4" data-type-ref="type__native_number">prev_prev</span>
+            <span class="ident_ref" title="number" data-ident-ref="ident__stmt4" data-type-ref="type__number">prev_prev</span>
             <span class="equal"> = </span>
-            <span class="ident_ref" title="number" data-ident-ref="ident__stmt5" data-type-ref="type__native_number">prev</span>
+            <span class="ident_ref" title="number" data-ident-ref="ident__stmt5" data-type-ref="type__number">prev</span>
             <span class="semicolon">;</span>
           </li>
           <li>
-            <span class="ident_ref" title="number" data-ident-ref="ident__stmt5" data-type-ref="type__native_number">prev</span>
+            <span class="ident_ref" title="number" data-ident-ref="ident__stmt5" data-type-ref="type__number">prev</span>
             <span class="equal"> = </span>
-            <span class="ident_ref" title="number" data-ident-ref="ident__stmt6" data-type-ref="type__native_number">current</span>
+            <span class="ident_ref" title="number" data-ident-ref="ident__stmt6" data-type-ref="type__number">current</span>
             <span class="semicolon">;</span>
           </li>
           <li>
-            <span class="ident_ref" title="number" data-ident-ref="ident__stmt7" data-type-ref="type__native_number">n</span>
+            <span class="ident_ref" title="number" data-ident-ref="ident__stmt7" data-type-ref="type__number">n</span>
             <span class="equal"> = </span>
             <span class="ident_ref" title="function" data-ident-ref="ident__native_sub_number_number_number" data-type-ref="type__function">sub</span>
             <span class="par" data-par-id="par_9">(</span>
-            <span class="ident_ref" title="number" data-ident-ref="ident__stmt7" data-type-ref="type__native_number">n</span>
+            <span class="ident_ref" title="number" data-ident-ref="ident__stmt7" data-type-ref="type__number">n</span>
             <span class="comma">, </span>
             <span class="num" title="number">1</span>
             <span class="par" data-par-id="par_9">)</span>
@@ -257,7 +257,7 @@ expression: "&html"
         <span class="implicit">
           <span class="kw">ret</span>
         </span>
-        <span class="ident_ref" title="number" data-ident-ref="ident__stmt6" data-type-ref="type__native_number">current</span>
+        <span class="ident_ref" title="number" data-ident-ref="ident__stmt6" data-type-ref="type__number">current</span>
         <span class="semicolon">;</span>
       </li>
     </ul>
