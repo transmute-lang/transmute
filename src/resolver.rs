@@ -10,7 +10,7 @@ use crate::exit_points::{ExitPoint, ExitPoints};
 use crate::interpreter::Value;
 use crate::lexer::Span;
 use crate::natives::Natives;
-use bimap::BiBTreeMap;
+use bimap::BiHashMap;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -20,7 +20,7 @@ pub struct Resolver {
     resolved_identifier_refs: Vec<Option<IdentifierRef<ResolvedSymbol>>>,
     expression: Vec<Expression>,
     symbols: Rc<RefCell<Vec<Symbol>>>,
-    types: BiBTreeMap<Type, TypeId>,
+    types: BiHashMap<Type, TypeId>,
     expression_types: Vec<Option<Result<TypeId, ()>>>,
     diagnostics: Diagnostics,
     scope_stack: Vec<Scope>,
@@ -42,7 +42,7 @@ impl Resolver {
             resolved_identifier_refs: Vec::new(),
             expression: Vec::new(),
             symbols: Rc::new(RefCell::new(Vec::<Symbol>::new())),
-            types: BiBTreeMap::new(),
+            types: BiHashMap::new(),
             expression_types: Vec::new(),
             diagnostics: Default::default(),
             scope_stack: Vec::new(),
@@ -864,7 +864,7 @@ pub enum SymbolKind {
 }
 
 // todo think about it being in Native
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Type {
     Boolean,
     Function(Vec<TypeId>, TypeId),
