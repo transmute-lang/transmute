@@ -170,7 +170,8 @@ impl ImplicitRet {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::AstNodePrettyPrint;
+    use crate::ast::ids::StmtId;
+    use crate::ast::{AstNodePrettyPrint, WithoutImplicitRet};
     use crate::desugar::implicit_ret::ImplicitRet;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
@@ -185,11 +186,10 @@ mod tests {
                     .unwrap()
                     .convert_implicit_ret(ImplicitRet::new());
 
-                assert_snapshot!(AstNodePrettyPrint::new_unresolved(
-                    &ast,
-                    *ast.statements().first().unwrap()
-                )
-                .to_string());
+                assert_snapshot!(
+                    AstNodePrettyPrint::<WithoutImplicitRet, StmtId>::new_unresolved(&ast)
+                        .to_string()
+                );
             }
         };
     }

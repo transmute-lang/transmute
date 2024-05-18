@@ -1,7 +1,8 @@
 #![allow(dead_code)] // fixme eventually remove
 extern crate core;
 
-use crate::ast::AstNodePrettyPrint;
+use crate::ast::ids::StmtId;
+use crate::ast::{AstNodePrettyPrint, WithImplicitRet};
 use crate::desugar::ImplicitRet;
 use crate::dot::Dot;
 use crate::html::HtmlWriter;
@@ -79,7 +80,7 @@ fn exec(src: &str, name: &str) {
         .peek(|ast| {
             print!(
                 "Parsed AST:\n{}\n",
-                AstNodePrettyPrint::new_unresolved(ast, *ast.statements().first().unwrap())
+                AstNodePrettyPrint::<WithImplicitRet, StmtId>::new_unresolved(ast)
             );
         })
         .map(|ast| ast.convert_implicit_ret(ImplicitRet::new()))
@@ -87,7 +88,7 @@ fn exec(src: &str, name: &str) {
         .peek(move |ast| {
             print!(
                 "Executable AST:\n{}\n",
-                AstNodePrettyPrint::<(), _>::new_resolved(ast, *ast.statements().first().unwrap())
+                AstNodePrettyPrint::<(), StmtId>::new_resolved(ast)
             );
             Dot::new(ast)
                 .write(&mut File::create(format!("target/{name}.dot")).unwrap())

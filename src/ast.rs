@@ -479,23 +479,25 @@ impl<'a, S> AstKind<'a, S> {
     }
 }
 
-impl<'a, S, T> AstNodePrettyPrint<'a, S, T> {
-    pub fn new_unresolved(ast: &'a Ast<S>, id: T) -> Self {
+impl<'a, S> AstNodePrettyPrint<'a, S, StmtId> {
+    pub fn new_unresolved(ast: &'a Ast<S>) -> Self {
         Self {
             indent: 0,
             ast: Rc::new(AstKind::Unresolved(ast)),
-            id,
+            id: *ast.statements().first().unwrap(),
         }
     }
 
-    pub fn new_resolved(ast: &'a ResolvedAst, id: T) -> Self {
+    pub fn new_resolved(ast: &'a ResolvedAst) -> Self {
         Self {
             indent: 0,
             ast: Rc::new(AstKind::Resolved(ast)),
-            id,
+            id: *ast.statements().first().unwrap(),
         }
     }
+}
 
+impl<'a, S, T> AstNodePrettyPrint<'a, S, T> {
     fn new_with_ident(ast: Rc<AstKind<'a, S>>, id: T, ident: usize) -> Self {
         Self {
             indent: ident,
@@ -770,7 +772,8 @@ impl<S> Display for AstNodePrettyPrint<'_, S, IdentId> {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::AstNodePrettyPrint;
+    use crate::ast::ids::StmtId;
+    use crate::ast::{AstNodePrettyPrint, WithoutImplicitRet};
     use crate::desugar::ImplicitRet;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
@@ -808,7 +811,7 @@ mod tests {
 
         let actual = format!(
             "{}",
-            AstNodePrettyPrint::new_unresolved(&ast, *ast.statements().first().unwrap())
+            AstNodePrettyPrint::<WithoutImplicitRet, StmtId>::new_unresolved(&ast)
         );
 
         assert_snapshot!(actual);
