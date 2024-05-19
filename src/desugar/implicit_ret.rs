@@ -164,6 +164,9 @@ impl ImplicitRet {
                 self.visit_expression(ast, *expr, depth + 1, unreachable);
                 false
             }
+            StatementKind::Struct(_, _) => {
+                todo!()
+            }
         }
     }
 }

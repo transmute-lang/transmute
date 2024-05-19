@@ -1,15 +1,8 @@
 ---
 source: src/parser.rs
-expression: "(actual_ast, actual_diagnostics)"
+expression: "Parser::new(Lexer::new(\"struct { }\")).parse()"
 ---
-(
-    Ast {
-        identifiers: [],
-        identifier_refs: [],
-        expressions: [],
-        statements: [],
-        root: [],
-    },
+Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
@@ -18,7 +11,7 @@ expression: "(actual_ast, actual_diagnostics)"
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    259,
+                    440,
                 ),
             },
         ],

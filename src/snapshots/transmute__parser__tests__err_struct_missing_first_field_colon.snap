@@ -1,17 +1,17 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"let = 42;\")).parse()"
+expression: "Parser::new(Lexer::new(\"struct S { a number, b: number, c: number }\")).parse()"
 ---
 Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `=`, expected one of identifier",
-                span: 1:5; [4, 5],
+                message: "Unexpected identifier, expected one of `:`",
+                span: 1:14; [13, 19],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    197,
+                    488,
                 ),
             },
         ],

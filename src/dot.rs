@@ -140,6 +140,9 @@ impl<'a> DotBuilder<'a> {
             StatementKind::LetFn(ident, params, ret, expr) => {
                 self.visit_function(ident, params, ret, expr)
             }
+            StatementKind::Struct(_, _) => {
+                todo!()
+            }
         };
 
         self.stmt_map.insert(stmt, node_id);

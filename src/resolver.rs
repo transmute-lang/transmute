@@ -553,6 +553,9 @@ impl Resolver {
                     );
                     Ok(self.resolve_type(&Type::Void).unwrap())
                 }
+                StatementKind::Struct(_, _) => {
+                    todo!()
+                }
             };
 
             match ret_type {

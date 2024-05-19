@@ -91,6 +91,9 @@ impl<'a> HtmlWriter<'a> {
                 ret_type.as_ref().map(|i| i.id()),
                 *expr,
             ),
+            StatementKind::Struct(_, _) => {
+                todo!()
+            }
         }
     }
 

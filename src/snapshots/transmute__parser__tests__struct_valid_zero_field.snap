@@ -1,12 +1,11 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"struct MyStruct { field: };\")).parse()"
+expression: "Parser::new(Lexer::new(\"struct S { }\")).parse()"
 ---
-(
+Ok(
     Ast {
         identifiers: [
-            "MyStruct",
-            "field",
+            "S",
         ],
         identifier_refs: [],
         expressions: [],
@@ -20,11 +19,11 @@ expression: "Parser::new(Lexer::new(\"struct MyStruct { field: };\")).parse()"
                         id: IdentId {
                             id: 0,
                         },
-                        span: 1:8; [7, 15],
+                        span: 1:8; [7, 8],
                     },
                     [],
                 ),
-                span: 1:1; [0, 27],
+                span: 1:1; [0, 12],
             },
         ],
         root: [
@@ -32,18 +31,6 @@ expression: "Parser::new(Lexer::new(\"struct MyStruct { field: };\")).parse()"
                 id: 0,
             },
         ],
-    },
-    Diagnostics {
-        diagnostics: [
-            Diagnostic {
-                message: "Unexpected `}`, expected one of identifier",
-                span: 1:26; [25, 26],
-                level: Error,
-                generated_at: (
-                    "src/parser.rs",
-                    313,
-                ),
-            },
-        ],
+        implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
     },
 )

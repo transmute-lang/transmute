@@ -5,7 +5,7 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{
     BinaryOperator, BinaryOperatorKind, Precedence, UnaryOperator, UnaryOperatorKind,
 };
-use crate::ast::statement::{Parameter, RetMode, Statement, StatementKind};
+use crate::ast::statement::{Field, Parameter, RetMode, Statement, StatementKind};
 use crate::ast::{Ast, WithImplicitRet};
 use crate::error::Diagnostics;
 use crate::lexer::{Lexer, PeekableLexer, Span, Token, TokenKind};
@@ -22,6 +22,8 @@ pub struct Parser<'s> {
     eof: bool,
 }
 
+/// Reports an unexpected token, together with the token that were expected. Does not update
+/// the token stream.
 macro_rules! report_unexpected_token {
     ($self:ident, $token:ident, [$($expected:expr,)*]) => {
         if !$self.eof {
@@ -54,6 +56,11 @@ macro_rules! report_unexpected_token {
     };
 }
 
+/// Reports a missing token, together with the token that was found instead. Does not alter the
+/// token stream but evaluates to the expected token
+// todo as we never use the returned token, assess whether this macro is still used (could be
+//   replaced with `report_unexpected_token` instead?
+// todo or, use only use when the next token is the one that comes after the missing expected one
 macro_rules! report_and_insert_missing_token {
     ($self:ident, $token:ident, $expected:expr) => {{
         if !$self.eof {
@@ -79,6 +86,8 @@ macro_rules! report_and_insert_missing_token {
     }};
 }
 
+/// Reports a missing closing token, together with the information about what is the corresponding
+/// opening token and the token that was found instead. Evaluates to the missing token.
 macro_rules! report_and_insert_missing_closing_token {
     ($self:ident, $token:ident, $expected:expr, $open_token:expr, $open_span:expr) => {{
         if !$self.eof {
@@ -162,6 +171,7 @@ impl<'s> Parser<'s> {
     /// 'let ident = expr ;
     /// 'let ident ( expr , ... ) = expr ;
     /// 'let ident ( expr , ... ) = { expr ; ... }
+    /// `struct ident { ident : ident , ... }`
     /// 'expr ;
     /// 'ret expr ;
     /// ```
@@ -250,6 +260,7 @@ impl<'s> Parser<'s> {
                 let id = self.push_statement(StatementKind::Expression(expression), span);
                 Some(&self.statements[id.id()])
             }
+            TokenKind::Struct => self.parse_struct(),
             _ => {
                 report_unexpected_token!(
                     self,
@@ -292,6 +303,7 @@ impl<'s> Parser<'s> {
         let mut next = TokenKind::Identifier;
 
         loop {
+            // todo review parameters parsing (see struct)
             let token = self.lexer.next();
             match token.kind() {
                 TokenKind::CloseParenthesis => {
@@ -412,6 +424,223 @@ impl<'s> Parser<'s> {
             span.extend_to(&end_span),
         );
 
+        Some(&self.statements[id.id()])
+    }
+
+    fn parse_struct(&mut self) -> Option<&Statement> {
+        // 'struct ident { ident : ident , ... }
+        let token_struct = self.lexer.next();
+        let identifier_token = self.lexer.next();
+        let identifier = match identifier_token.kind() {
+            TokenKind::Identifier => Identifier::new(
+                self.push_identifier(identifier_token.span()),
+                identifier_token.span().clone(),
+            ),
+            _ => {
+                report_unexpected_token!(self, identifier_token, [TokenKind::Identifier,]);
+                self.take_until_one_of(vec![TokenKind::CloseCurlyBracket, TokenKind::Semicolon]);
+                return None;
+            }
+        };
+
+        // struct ident '{ ident : ident , ... }
+        let token = self.lexer.next();
+        if token.kind() != &TokenKind::OpenCurlyBracket {
+            report_and_insert_missing_token!(self, token, TokenKind::OpenCurlyBracket);
+            self.lexer.push_next(token);
+        }
+
+        let mut fields = Vec::new();
+        let mut expect_more = true;
+
+        let last_token = loop {
+            // struct ident { ... , 'ident : ident , ... }
+            let token = self.lexer.next();
+            match token.kind() {
+                TokenKind::CloseCurlyBracket => {
+                    // struct ident { ... '}
+                    break token;
+                }
+                TokenKind::Identifier => {
+                    // struct ident { ... , 'ident : ident , ... }
+                    if !expect_more {
+                        // we did not finish the previous field with a comma but got the
+                        // identifier of a new one. report the error and continue as if the comma
+                        // was there
+                        report_unexpected_token!(
+                            self,
+                            token,
+                            [TokenKind::Colon, TokenKind::CloseCurlyBracket,]
+                        );
+                    }
+
+                    let ident =
+                        Identifier::new(self.push_identifier(token.span()), token.span().clone());
+                    expect_more = false;
+
+                    // struct ident { ... , ident ': ident , ... }
+
+                    let token = self.lexer.next();
+                    match token.kind() {
+                        TokenKind::Colon => {}
+                        _ => {
+                            // we missed the colon
+                            report_unexpected_token!(self, token, [TokenKind::Colon,]);
+                            self.take_until_one_of(vec![
+                                TokenKind::Colon,
+                                TokenKind::Identifier,
+                                TokenKind::Comma,
+                                TokenKind::CloseCurlyBracket,
+                            ]);
+
+                            let token = self.lexer.next();
+                            match token.kind() {
+                                TokenKind::Colon => {
+                                    // we finally found a colon, we continue parsing the current
+                                    // field from here, ignoring everything between the field name
+                                    // and the colon we just found
+
+                                    // struct ident { ... , ident ... ': ident , ... }
+                                }
+                                TokenKind::Identifier => {
+                                    // we found an identifier, we'll consider we missed
+                                    // the colon and use it as the field type
+
+                                    // struct ident { ... , ident : ... 'ident , ... }
+                                    self.lexer.push_next(token);
+                                }
+                                TokenKind::Comma => {
+                                    // we found a comma, which means that the current
+                                    // field was not completed. we can start over for the
+                                    // next one
+
+                                    // struct ident { ... , ident ... ', ... }
+                                    expect_more = true;
+                                    continue;
+                                }
+                                TokenKind::CloseCurlyBracket | TokenKind::Eof => {
+                                    // we reached the end of the struct
+                                    break token;
+                                }
+                                _ => unreachable!(),
+                            }
+                        }
+                    }
+
+                    // struct ident { ... , ident : 'ident , ... }
+
+                    let token = self.lexer.next();
+                    match token.kind() {
+                        TokenKind::Identifier => {
+                            // struct ident { ... , ident : 'ident , ... }
+                            let ty = Identifier::new(
+                                self.push_identifier(token.span()),
+                                token.take_span(),
+                            );
+                            let field_span = ident.span().extend_to(ty.span());
+                            fields.push(Field::new(ident, ty, field_span));
+                        }
+                        TokenKind::Comma => {
+                            // we missed the type and got the comma. try to parse next field from
+                            // here
+
+                            // struct ident { ... , ident : ', ... }
+                            report_unexpected_token!(self, token, [TokenKind::Identifier,]);
+                            expect_more = true;
+                            continue;
+                        }
+                        _ => {
+                            // we missed the type
+                            report_unexpected_token!(self, token, [TokenKind::Identifier,]);
+                            self.take_until_one_of(vec![
+                                TokenKind::Identifier,
+                                TokenKind::Comma,
+                                TokenKind::CloseCurlyBracket,
+                            ]);
+
+                            let token = self.lexer.next();
+                            match token.kind() {
+                                TokenKind::Identifier => {
+                                    // struct ident { ... , ident : ... 'ident, ... }
+
+                                    // we found the type, create the field
+                                    let ty = Identifier::new(
+                                        self.push_identifier(token.span()),
+                                        token.take_span(),
+                                    );
+                                    let field_span = ident.span().extend_to(ty.span());
+                                    fields.push(Field::new(ident, ty, field_span));
+                                }
+                                TokenKind::Comma => {
+                                    // we found a comma, abort the current field and parse
+                                    // the next one...
+
+                                    // struct ident { ... , ident : ... ', ... }
+                                    expect_more = true;
+                                    continue;
+                                }
+                                TokenKind::CloseCurlyBracket | TokenKind::Eof => {
+                                    // we reached the end of the struct
+                                    break token;
+                                }
+                                _ => unreachable!(),
+                            }
+                        }
+                    }
+
+                    // finally, if the next token is a comma, we eat it and continue
+                    // processing the next field
+                    let token = self.lexer.peek();
+                    if token.kind() == &TokenKind::Comma {
+                        self.lexer.next();
+                        expect_more = true
+                    }
+                }
+                TokenKind::Eof => {
+                    // we did not find either an identifier or a closing bracket.
+                    if expect_more {
+                        // we expected one mode field (we saw a comma), which means the next token
+                        // would either be a closing bracket or an identifier
+                        report_unexpected_token!(
+                            self,
+                            token,
+                            [TokenKind::CloseCurlyBracket, TokenKind::Identifier,]
+                        );
+                    } else {
+                        // we did not expect one mode field (we did not see a comma), which means
+                        // the next token would either be a closing bracket or a comma
+                        report_unexpected_token!(
+                            self,
+                            token,
+                            [TokenKind::CloseCurlyBracket, TokenKind::Comma,]
+                        );
+                    }
+                    break token;
+                }
+                _ => {
+                    // we did find neither an identifier nor a closing bracket.
+                    // we skip tokens to find one of them
+                    report_unexpected_token!(
+                        self,
+                        token,
+                        [TokenKind::CloseCurlyBracket, TokenKind::Identifier,]
+                    );
+
+                    // and we skip tokens to sync
+                    self.take_until_one_of(vec![TokenKind::Comma, TokenKind::CloseCurlyBracket]);
+                    let token = self.lexer.peek();
+                    if token.kind() == &TokenKind::Comma {
+                        self.lexer.next();
+                        expect_more = true
+                    }
+                }
+            }
+        };
+
+        let id = self.push_statement(
+            StatementKind::Struct(identifier, fields),
+            token_struct.take_span().extend_to(last_token.span()),
+        );
         Some(&self.statements[id.id()])
     }
 
@@ -719,7 +948,7 @@ impl<'s> Parser<'s> {
         &self.expressions[id.id()]
     }
 
-    /// Parses the following (the if keyword is already consumed):
+    /// Parses the following (the `if` keyword is already consumed):
     /// ```
     /// if expr { expr ; ... } else if expr { expr ; } else { expr ; ... }
     /// ```
@@ -1007,24 +1236,30 @@ impl<'s> Parser<'s> {
     }
 
     /// Consumes tokens until one of supplied one is found. It does NOT consume it.
-    fn take_until_one_of(&mut self, mut token_kinds: Vec<TokenKind>) {
+    /// Returns the amount of skipped tokens
+    // todo should return the matched token
+    fn take_until_one_of(&mut self, mut token_kinds: Vec<TokenKind>) -> usize {
         // todo handle case where we are in a ( or in a { block
         //  i.e. if in a `(a + ...` we want to take all until parenthesis?
         token_kinds.push(TokenKind::Eof);
-        self.take_while(|k| !token_kinds.contains(k));
+        self.take_while(|k| !token_kinds.contains(k))
     }
 
-    /// Consumes tokens while `f` returns `true`. It does NOT consumes the last one (i.e. first one
+    /// Consumes tokens while `f` returns `true`. It does NOT consume the last one (i.e. first one
     /// for which `f` returns `false`).
-    fn take_while<F>(&mut self, f: F)
+    /// Returns the amount of skipped tokens
+    fn take_while<F>(&mut self, f: F) -> usize
     where
         F: Fn(&TokenKind) -> bool,
     {
+        let mut skipped = 0;
         let mut token = self.lexer.peek();
         while f(token.kind()) {
             self.lexer.next();
             token = self.lexer.peek();
+            skipped += 1;
         }
+        skipped
     }
 }
 
@@ -1060,6 +1295,10 @@ mod tests {
     test_syntax!(if_else => "if true { 42; } else { 43; }");
     test_syntax!(if_else_if_else => "if true { 42; } else if false { 43; } else { 44; }");
     test_syntax!(while_loop => "while true { 42; }");
+    test_syntax!(struct_valid_zero_field => "struct S { }");
+    test_syntax!(struct_valid_one_field => "struct S { a: number }");
+    test_syntax!(struct_valid_several_fields => "struct S { a: number, b: number }");
+    test_syntax!(struct_valid_trailing_comma => "struct S { a: number, }");
     test_syntax!(err_expression_missing_right_parenthesis => "(42;");
     test_syntax!(err_expression_missing_right_parenthesis_eof => "(42");
     test_syntax!(err_expression_inserted_token_before_expression => "^42;");
@@ -1088,4 +1327,19 @@ mod tests {
     test_syntax!(err_while_missing_close_curly_bracket => "while true {");
     test_syntax!(err_function_call_unwanted_comma => "f(42,,43);");
     test_syntax!(err_function_call_missing_comma => "f(42 43);");
+    test_syntax!(err_struct_missing_name => "struct { }");
+    test_syntax!(err_struct_missing_open_curly_one_field => "struct S a: number }");
+    test_syntax!(err_struct_missing_open_curly_no_fields => "struct S }");
+    test_syntax!(err_struct_missing_close_curly_one_field => "struct S { a: number");
+    test_syntax!(err_struct_missing_close_curly_one_field_trailing_comma => "struct S { a: number,");
+    test_syntax!(err_struct_missing_close_curly_no_fields => "struct S {");
+    test_syntax!(err_struct_missing_first_field_name => "struct S { : number, b: number, c: number }");
+    test_syntax!(err_struct_missing_second_field_name => "struct S { a: number, : number, c: number }");
+    test_syntax!(err_struct_missing_third_field_name => "struct S { a: number, b: number, : number }");
+    test_syntax!(err_struct_missing_first_field_colon => "struct S { a number, b: number, c: number }");
+    test_syntax!(err_struct_missing_second_field_colon => "struct S { a: number, b number, c: number }");
+    test_syntax!(err_struct_missing_third_field_colon => "struct S { a: number, b: number, c number }");
+    test_syntax!(err_struct_missing_first_field_type => "struct S { a: , b: number, c: number }");
+    test_syntax!(err_struct_missing_second_field_type => "struct S { a: number, b: , c: number }");
+    test_syntax!(err_struct_missing_third_field_type => "struct S { a: number, b: number, c: }");
 }

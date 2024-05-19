@@ -142,6 +142,9 @@ impl<'a> ExitPoints<'a> {
                 self.visit_expression(*expr, depth + 1, unreachable);
                 false
             }
+            StatementKind::Struct(_, _) => {
+                todo!()
+            }
         }
     }
 }

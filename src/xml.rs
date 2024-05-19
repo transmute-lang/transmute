@@ -87,6 +87,9 @@ impl<'a> XmlWriter<'a> {
             StatementKind::LetFn(ident, params, ty, expr) => {
                 self.visit_function(stmt.id(), ident, params, ty, expr);
             }
+            StatementKind::Struct(_, _) => {
+                todo!()
+            }
         }
 
         self.emit(XmlEvent::end_element());

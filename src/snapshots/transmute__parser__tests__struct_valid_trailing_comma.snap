@@ -1,13 +1,13 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"struct MyStruct { field: type }\")).parse()"
+expression: "Parser::new(Lexer::new(\"struct S { a: number, }\")).parse()"
 ---
-(
+Ok(
     Ast {
         identifiers: [
-            "MyStruct",
-            "field",
-            "type",
+            "S",
+            "a",
+            "number",
         ],
         identifier_refs: [],
         expressions: [],
@@ -21,7 +21,7 @@ expression: "Parser::new(Lexer::new(\"struct MyStruct { field: type }\")).parse(
                         id: IdentId {
                             id: 0,
                         },
-                        span: 1:8; [7, 15],
+                        span: 1:8; [7, 8],
                     },
                     [
                         Field {
@@ -29,19 +29,19 @@ expression: "Parser::new(Lexer::new(\"struct MyStruct { field: type }\")).parse(
                                 id: IdentId {
                                     id: 1,
                                 },
-                                span: 1:19; [18, 23],
+                                span: 1:12; [11, 12],
                             },
                             ty: Identifier {
                                 id: IdentId {
                                     id: 2,
                                 },
-                                span: 1:26; [25, 29],
+                                span: 1:15; [14, 20],
                             },
-                            span: 1:19; [18, 29],
+                            span: 1:12; [11, 20],
                         },
                     ],
                 ),
-                span: 1:1; [0, 31],
+                span: 1:1; [0, 23],
             },
         ],
         root: [
@@ -49,18 +49,6 @@ expression: "Parser::new(Lexer::new(\"struct MyStruct { field: type }\")).parse(
                 id: 0,
             },
         ],
-    },
-    Diagnostics {
-        diagnostics: [
-            Diagnostic {
-                message: "Unexpected `eof`, expected one of `;`",
-                span: 1:32; [31, 31],
-                level: Error,
-                generated_at: (
-                    "src/parser.rs",
-                    1046,
-                ),
-            },
-        ],
+        implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
     },
 )

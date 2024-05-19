@@ -433,6 +433,10 @@ impl Token {
     pub fn span(&self) -> &Span {
         &self.span
     }
+
+    pub fn take_span(self) -> Span {
+        self.span
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

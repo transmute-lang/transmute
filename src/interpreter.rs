@@ -60,6 +60,9 @@ impl<'a> Interpreter<'a> {
                 Value::Void // todo this is wrong
             }
             StatementKind::Ret(e, _) => self.visit_expression(*e),
+            StatementKind::Struct(_, _) => {
+                todo!()
+            }
         }
     }
 

@@ -249,6 +249,9 @@ impl Ast<WithoutImplicitRet> {
                             ExprId::from(expr_base + expr.id()),
                         )
                     }
+                    StatementKind::Struct(_, _) => {
+                        todo!()
+                    }
                 },
                 statement.span().clone(),
             );
@@ -593,6 +596,9 @@ impl<S> Display for AstNodePrettyPrint<'_, S, StmtId> {
                     )?;
                 }
                 writeln!(f, "{indent}}}")
+            }
+            StatementKind::Struct(_, _) => {
+                todo!()
             }
         }
     }
