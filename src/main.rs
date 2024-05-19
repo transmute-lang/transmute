@@ -39,6 +39,10 @@ fn main() {
         "\n--------------------------------------------------------------------------------\n"
     );
     fibonacci_iter();
+    println!(
+        "\n--------------------------------------------------------------------------------\n"
+    );
+    points();
 }
 
 fn fibonacci_rec() {
@@ -72,6 +76,21 @@ fn fibonacci_iter() {
         "#,
         "fibonacci_iter",
     );
+}
+
+fn points() {
+    exec(
+        r#"
+            struct Point {
+                x: number,
+                y: number
+            }
+            let area(p1: Point, p2: Point): number = {
+                0;
+            }
+        "#,
+        "points",
+    )
 }
 
 fn exec(src: &str, name: &str) {

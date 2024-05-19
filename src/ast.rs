@@ -440,7 +440,7 @@ impl ResolvedAst {
 pub struct AstNodePrettyPrint<'a, S, T> {
     indent: usize,
     ast: Rc<AstKind<'a, S>>,
-    id: T,
+    id: Option<T>,
 }
 
 // todo maybe a trait instead of an enum and manual dispatch....
@@ -487,7 +487,7 @@ impl<'a, S> AstNodePrettyPrint<'a, S, StmtId> {
         Self {
             indent: 0,
             ast: Rc::new(AstKind::Unresolved(ast)),
-            id: *ast.statements().first().unwrap(),
+            id: None,
         }
     }
 
@@ -495,7 +495,7 @@ impl<'a, S> AstNodePrettyPrint<'a, S, StmtId> {
         Self {
             indent: 0,
             ast: Rc::new(AstKind::Resolved(ast)),
-            id: *ast.statements().first().unwrap(),
+            id: None,
         }
     }
 }
@@ -505,7 +505,7 @@ impl<'a, S, T> AstNodePrettyPrint<'a, S, T> {
         Self {
             indent: ident,
             ast,
-            id,
+            id: Some(id),
         }
     }
 }
@@ -513,101 +513,135 @@ impl<'a, S, T> AstNodePrettyPrint<'a, S, T> {
 impl<S> Display for AstNodePrettyPrint<'_, S, StmtId> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let indent = "  ".repeat(self.indent);
-        match self.ast.statement(self.id).kind() {
-            StatementKind::Expression(expr) => {
-                let semi = match self.ast.expression(*expr).kind() {
-                    ExpressionKind::If(_, _, _) | ExpressionKind::While(_, _) => "",
-                    _ => ";",
-                };
-                writeln!(
-                    f,
-                    "{indent}{}{semi}",
-                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), *expr, self.indent)
-                )
-            }
-            StatementKind::Let(ident, expr) => {
-                writeln!(
-                    f,
-                    "{indent}let {} = {};",
-                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), ident.id(), 0),
-                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), *expr, self.indent),
-                )
-            }
-            StatementKind::Ret(expr, _) => {
-                writeln!(
-                    f,
-                    "{indent}ret {};",
-                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), *expr, self.indent)
-                )
-            }
-            StatementKind::LetFn(ident, params, ty, expr) => {
-                write!(
-                    f,
-                    "{indent}let {}(",
-                    AstNodePrettyPrint::new_with_ident(self.ast.clone(), ident.id(), 0)
-                )?;
-                for (i, param) in params.iter().enumerate() {
+
+        let iter: Box<dyn Iterator<Item = &StmtId>> = match &self.id {
+            None => match *self.ast.as_ref() {
+                AstKind::Unresolved(ast) => Box::new(ast.statements().iter()),
+                AstKind::Resolved(ast) => Box::new(ast.statements().iter()),
+            },
+            Some(_) => Box::new(self.id.iter()),
+        };
+
+        for stmt in iter {
+            match self.ast.statement(*stmt).kind() {
+                StatementKind::Expression(expr) => {
+                    let semi = match self.ast.expression(*expr).kind() {
+                        ExpressionKind::If(_, _, _) | ExpressionKind::While(_, _) => "",
+                        _ => ";",
+                    };
+                    writeln!(
+                        f,
+                        "{indent}{}{semi}",
+                        AstNodePrettyPrint::new_with_ident(self.ast.clone(), *expr, self.indent)
+                    )?;
+                }
+                StatementKind::Let(ident, expr) => {
+                    writeln!(
+                        f,
+                        "{indent}let {} = {};",
+                        AstNodePrettyPrint::new_with_ident(self.ast.clone(), ident.id(), 0),
+                        AstNodePrettyPrint::new_with_ident(self.ast.clone(), *expr, self.indent),
+                    )?;
+                }
+                StatementKind::Ret(expr, _) => {
+                    writeln!(
+                        f,
+                        "{indent}ret {};",
+                        AstNodePrettyPrint::new_with_ident(self.ast.clone(), *expr, self.indent)
+                    )?;
+                }
+                StatementKind::LetFn(ident, params, ty, expr) => {
                     write!(
                         f,
-                        "{}",
-                        AstNodePrettyPrint::new_with_ident(
-                            self.ast.clone(),
-                            param.identifier().id(),
-                            0
-                        )
+                        "{indent}let {}(",
+                        AstNodePrettyPrint::new_with_ident(self.ast.clone(), ident.id(), 0)
                     )?;
-                    write!(f, ": ")?;
-                    write!(
-                        f,
-                        "{}",
-                        AstNodePrettyPrint::new_with_ident(self.ast.clone(), param.ty().id(), 0)
-                    )?;
-                    if i < params.len() - 1 {
-                        write!(f, ", ")?;
+                    for (i, param) in params.iter().enumerate() {
+                        write!(
+                            f,
+                            "{name}: {ty}",
+                            name = AstNodePrettyPrint::new_with_ident(
+                                self.ast.clone(),
+                                param.identifier().id(),
+                                0
+                            ),
+                            ty = AstNodePrettyPrint::new_with_ident(
+                                self.ast.clone(),
+                                param.ty().id(),
+                                0
+                            )
+                        )?;
+                        if i < params.len() - 1 {
+                            write!(f, ", ")?;
+                        }
                     }
+
+                    let ty = ty
+                        .as_ref()
+                        .map(|ty| {
+                            format!(
+                                ": {}",
+                                AstNodePrettyPrint::new_with_ident(self.ast.clone(), ty.id(), 0)
+                            )
+                        })
+                        .unwrap_or_default();
+
+                    writeln!(f, "){ty} = {{",)?;
+
+                    let stmts = match self.ast.expression(*expr).kind() {
+                        ExpressionKind::Block(stmts) => stmts,
+                        _ => panic!("block expected"),
+                    };
+
+                    for stmt in stmts {
+                        write!(
+                            f,
+                            "{indent}{}",
+                            AstNodePrettyPrint::new_with_ident(
+                                self.ast.clone(),
+                                *stmt,
+                                self.indent + 1
+                            )
+                        )?;
+                    }
+                    writeln!(f, "{indent}}}")?;
                 }
-
-                let ty = ty
-                    .as_ref()
-                    .map(|ty| {
-                        format!(
-                            ": {}",
-                            AstNodePrettyPrint::new_with_ident(self.ast.clone(), ty.id(), 0)
-                        )
-                    })
-                    .unwrap_or_default();
-
-                writeln!(f, "){ty} = {{",)?;
-
-                let stmts = match self.ast.expression(*expr).kind() {
-                    ExpressionKind::Block(stmts) => stmts,
-                    _ => panic!("block expected"),
-                };
-
-                for stmt in stmts {
-                    write!(
+                StatementKind::Struct(ident, fields) => {
+                    writeln!(
                         f,
-                        "{indent}{}",
-                        AstNodePrettyPrint::new_with_ident(
-                            self.ast.clone(),
-                            *stmt,
-                            self.indent + 1
-                        )
+                        "{indent}struct {} {{",
+                        AstNodePrettyPrint::new_with_ident(self.ast.clone(), ident.id(), 0)
                     )?;
+
+                    for field in fields.iter() {
+                        writeln!(
+                            f,
+                            "{indent}  {name}: {ty},",
+                            name = AstNodePrettyPrint::new_with_ident(
+                                self.ast.clone(),
+                                field.identifier().id(),
+                                0
+                            ),
+                            ty = AstNodePrettyPrint::new_with_ident(
+                                self.ast.clone(),
+                                field.ty().id(),
+                                0
+                            )
+                        )?;
+                    }
+
+                    writeln!(f, "{indent}}}")?;
                 }
-                writeln!(f, "{indent}}}")
-            }
-            StatementKind::Struct(_, _) => {
-                todo!()
             }
         }
+        Ok(())
     }
 }
 
 impl<S> Display for AstNodePrettyPrint<'_, S, ExprId> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let indent = "  ".repeat(self.indent);
-        match self.ast.expression(self.id).kind() {
+        match self.ast.expression(self.id.expect("ExprId exists")).kind() {
             ExpressionKind::Assignment(ident, expr) => {
                 write!(
                     f,
@@ -772,7 +806,11 @@ impl<S> Display for AstNodePrettyPrint<'_, S, ExprId> {
 impl<S> Display for AstNodePrettyPrint<'_, S, IdentId> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let indent = "  ".repeat(self.indent);
-        write!(f, "{indent}{}", self.ast.identifier(self.id))
+        write!(
+            f,
+            "{indent}{}",
+            self.ast.identifier(self.id.expect("IdentId exists"))
+        )
     }
 }
 
