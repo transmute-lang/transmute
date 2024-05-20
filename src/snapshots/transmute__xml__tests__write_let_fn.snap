@@ -10,16 +10,18 @@ expression: "&xml"
       <ident id="ident:1">n</ident>
       <ident id="ident:2">number</ident>
       <ident id="ident:3">add</ident>
-      <ident id="ident:4">div</ident>
-      <ident id="ident:5">eq</ident>
-      <ident id="ident:6">ge</ident>
-      <ident id="ident:7">gt</ident>
-      <ident id="ident:8">le</ident>
-      <ident id="ident:9">lt</ident>
-      <ident id="ident:10">mul</ident>
-      <ident id="ident:11">neg</ident>
-      <ident id="ident:12">neq</ident>
-      <ident id="ident:13">sub</ident>
+      <ident id="ident:4">boolean</ident>
+      <ident id="ident:5">div</ident>
+      <ident id="ident:6">eq</ident>
+      <ident id="ident:7">ge</ident>
+      <ident id="ident:8">gt</ident>
+      <ident id="ident:9">le</ident>
+      <ident id="ident:10">lt</ident>
+      <ident id="ident:11">mul</ident>
+      <ident id="ident:12">neg</ident>
+      <ident id="ident:13">neq</ident>
+      <ident id="ident:14">sub</ident>
+      <ident id="ident:15">void</ident>
     </identifiers>
     <stmt id="stmt:1" line="1" column="1" start="0" len="33">
       <fn>
@@ -37,11 +39,11 @@ expression: "&xml"
               <stmt id="stmt:0" line="1" column="28" start="27" len="6">
                 <ret mode="implicit" line="1" column="28" start="27" len="6">
                   <expr id="expr:2" line="1" column="28" start="27" len="5">
-                    <call line="1" column="28" start="27" len="5" ident-ref="ident:10" name="mul" target-id="native:mul:number:number:number">
+                    <call line="1" column="28" start="27" len="5" ident-ref="ident:11" name="mul" target-id="native:mul:number:number:number">
                       <parameters>
                         <parameter>
                           <expr id="expr:0" line="1" column="28" start="27" len="1">
-                            <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:1:0">n</identifier-ref>
+                            <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:1:0" type-ref="">n</identifier-ref>
                           </expr>
                         </parameter>
                         <parameter>

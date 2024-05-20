@@ -85,7 +85,7 @@ expression: "&html"
 
                     let ref_attr = "data-ident-ref";
                     if (e.ctrlKey) {
-                        ref_attr = "data-type-ref";
+                        ref_attr = "data-type-ident-ref";
                     }
 
                     let ref = self.attr(ref_attr);
@@ -132,9 +132,9 @@ expression: "&html"
     <ul>
       <li>
         <span class="kw" title="no type">if</span>
-        <span class="ident_ref" title="function" data-ident-ref="ident__native_le_number_number_boolean" data-type-ref="type__function">le</span>
+        <span class="ident_ref" title="function" data-ident-ref="ident__native_le_number_number_boolean" data-type-ident-ref="">le</span>
         <span class="par" data-par-id="par_2">(</span>
-        <span class="ident_ref" title="number" data-ident-ref="ident__stmt3_index0" data-type-ref="type__number">n</span>
+        <span class="ident_ref" title="number" data-ident-ref="ident__stmt3_index0" data-type-ident-ref="">n</span>
         <span class="comma">, </span>
         <span class="num" title="number">1</span>
         <span class="par" data-par-id="par_2">)</span>
@@ -144,7 +144,7 @@ expression: "&html"
         <ul>
           <li>
             <span class="kw">ret</span>
-            <span class="ident_ref" title="number" data-ident-ref="ident__stmt3_index0" data-type-ref="type__number">n</span>
+            <span class="ident_ref" title="number" data-ident-ref="ident__stmt3_index0" data-type-ident-ref="">n</span>
             <span class="semicolon">;</span>
           </li>
         </ul>
@@ -156,23 +156,23 @@ expression: "&html"
         <span class="implicit">
           <span class="kw">ret</span>
         </span>
-        <span class="ident_ref" title="function" data-ident-ref="ident__native_add_number_number_number" data-type-ref="type__function">add</span>
+        <span class="ident_ref" title="function" data-ident-ref="ident__native_add_number_number_number" data-type-ident-ref="">add</span>
         <span class="par" data-par-id="par_4">(</span>
-        <span class="ident_ref" title="function" data-ident-ref="ident__stmt3" data-type-ref="type__function">f</span>
+        <span class="ident_ref" title="function" data-ident-ref="ident__stmt3" data-type-ident-ref="">f</span>
         <span class="par" data-par-id="par_5">(</span>
-        <span class="ident_ref" title="function" data-ident-ref="ident__native_sub_number_number_number" data-type-ref="type__function">sub</span>
+        <span class="ident_ref" title="function" data-ident-ref="ident__native_sub_number_number_number" data-type-ident-ref="">sub</span>
         <span class="par" data-par-id="par_6">(</span>
-        <span class="ident_ref" title="number" data-ident-ref="ident__stmt3_index0" data-type-ref="type__number">n</span>
+        <span class="ident_ref" title="number" data-ident-ref="ident__stmt3_index0" data-type-ident-ref="">n</span>
         <span class="comma">, </span>
         <span class="num" title="number">1</span>
         <span class="par" data-par-id="par_6">)</span>
         <span class="par" data-par-id="par_5">)</span>
         <span class="comma">, </span>
-        <span class="ident_ref" title="function" data-ident-ref="ident__stmt3" data-type-ref="type__function">f</span>
+        <span class="ident_ref" title="function" data-ident-ref="ident__stmt3" data-type-ident-ref="">f</span>
         <span class="par" data-par-id="par_7">(</span>
-        <span class="ident_ref" title="function" data-ident-ref="ident__native_sub_number_number_number" data-type-ref="type__function">sub</span>
+        <span class="ident_ref" title="function" data-ident-ref="ident__native_sub_number_number_number" data-type-ident-ref="">sub</span>
         <span class="par" data-par-id="par_8">(</span>
-        <span class="ident_ref" title="number" data-ident-ref="ident__stmt3_index0" data-type-ref="type__number">n</span>
+        <span class="ident_ref" title="number" data-ident-ref="ident__stmt3_index0" data-type-ident-ref="">n</span>
         <span class="comma">, </span>
         <span class="num" title="number">2</span>
         <span class="par" data-par-id="par_8">)</span>

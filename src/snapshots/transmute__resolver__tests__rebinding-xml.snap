@@ -1,6 +1,6 @@
 ---
 source: src/resolver.rs
-expression: "XmlWriter::new(&ast, &symbols).serialize()"
+expression: "XmlWriter::new(&ast).serialize()"
 ---
 <?xml version="1.0" encoding="utf-8"?>
 <unit>
@@ -8,16 +8,19 @@ expression: "XmlWriter::new(&ast, &symbols).serialize()"
     <identifiers>
       <ident id="ident:0">x</ident>
       <ident id="ident:1">add</ident>
-      <ident id="ident:2">div</ident>
-      <ident id="ident:3">eq</ident>
-      <ident id="ident:4">ge</ident>
-      <ident id="ident:5">gt</ident>
-      <ident id="ident:6">le</ident>
-      <ident id="ident:7">lt</ident>
-      <ident id="ident:8">mul</ident>
-      <ident id="ident:9">neg</ident>
-      <ident id="ident:10">neq</ident>
-      <ident id="ident:11">sub</ident>
+      <ident id="ident:2">boolean</ident>
+      <ident id="ident:3">div</ident>
+      <ident id="ident:4">eq</ident>
+      <ident id="ident:5">ge</ident>
+      <ident id="ident:6">gt</ident>
+      <ident id="ident:7">le</ident>
+      <ident id="ident:8">lt</ident>
+      <ident id="ident:9">mul</ident>
+      <ident id="ident:10">neg</ident>
+      <ident id="ident:11">neq</ident>
+      <ident id="ident:12">number</ident>
+      <ident id="ident:13">sub</ident>
+      <ident id="ident:14">void</ident>
     </identifiers>
     <stmt id="stmt:0" line="1" column="1" start="0" len="13">
       <let>
@@ -45,7 +48,7 @@ expression: "XmlWriter::new(&ast, &symbols).serialize()"
           <parameters>
             <parameter>
               <expr id="expr:2" line="1" column="26" start="25" len="1">
-                <identifier-ref id="ident-ref:0" ident-ref="ident:0" target-id="stmt:1">x</identifier-ref>
+                <identifier-ref id="ident-ref:0" ident-ref="ident:0" target-id="stmt:1" type-ref="">x</identifier-ref>
               </expr>
             </parameter>
             <parameter>

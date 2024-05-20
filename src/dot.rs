@@ -239,6 +239,15 @@ impl<'a> DotBuilder<'a> {
                     SymbolKind::Native(ident, _, _, _) => {
                         self.insert_node(Node::NativeIdentifier(*ident))
                     }
+                    SymbolKind::NativeType(_) => {
+                        todo!()
+                    }
+                    SymbolKind::Field(_, _) => {
+                        todo!()
+                    }
+                    SymbolKind::Struct(_) => {
+                        todo!()
+                    }
                 }
             }
             LiteralKind::Number(n) => self.insert_node(Node::Number(*n)),

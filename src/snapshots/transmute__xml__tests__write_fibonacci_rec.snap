@@ -10,16 +10,18 @@ expression: "&xml"
       <ident id="ident:1">n</ident>
       <ident id="ident:2">number</ident>
       <ident id="ident:3">add</ident>
-      <ident id="ident:4">div</ident>
-      <ident id="ident:5">eq</ident>
-      <ident id="ident:6">ge</ident>
-      <ident id="ident:7">gt</ident>
-      <ident id="ident:8">le</ident>
-      <ident id="ident:9">lt</ident>
-      <ident id="ident:10">mul</ident>
-      <ident id="ident:11">neg</ident>
-      <ident id="ident:12">neq</ident>
-      <ident id="ident:13">sub</ident>
+      <ident id="ident:4">boolean</ident>
+      <ident id="ident:5">div</ident>
+      <ident id="ident:6">eq</ident>
+      <ident id="ident:7">ge</ident>
+      <ident id="ident:8">gt</ident>
+      <ident id="ident:9">le</ident>
+      <ident id="ident:10">lt</ident>
+      <ident id="ident:11">mul</ident>
+      <ident id="ident:12">neg</ident>
+      <ident id="ident:13">neq</ident>
+      <ident id="ident:14">sub</ident>
+      <ident id="ident:15">void</ident>
     </identifiers>
     <stmt id="stmt:3" line="2" column="13" start="13" len="152">
       <fn>
@@ -39,11 +41,11 @@ expression: "&xml"
                   <if>
                     <condition>
                       <expr id="expr:2" line="3" column="20" start="61" len="6">
-                        <call line="3" column="20" start="61" len="6" ident-ref="ident:8" name="le" target-id="native:le:number:number:boolean">
+                        <call line="3" column="20" start="61" len="6" ident-ref="ident:9" name="le" target-id="native:le:number:number:boolean">
                           <parameters>
                             <parameter>
                               <expr id="expr:0" line="3" column="20" start="61" len="1">
-                                <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:3:0">n</identifier-ref>
+                                <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:3:0" type-ref="">n</identifier-ref>
                               </expr>
                             </parameter>
                             <parameter>
@@ -61,7 +63,7 @@ expression: "&xml"
                           <stmt id="stmt:0" line="4" column="21" start="90" len="6">
                             <ret mode="explicit" line="4" column="21" start="90" len="6">
                               <expr id="expr:3" line="4" column="25" start="94" len="1">
-                                <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="stmt:3:0">n</identifier-ref>
+                                <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="stmt:3:0" type-ref="">n</identifier-ref>
                               </expr>
                             </ret>
                           </stmt>
@@ -82,11 +84,11 @@ expression: "&xml"
                               <parameters>
                                 <parameter>
                                   <expr id="expr:8" line="6" column="19" start="133" len="5">
-                                    <call line="6" column="19" start="133" len="5" ident-ref="ident:13" name="sub" target-id="native:sub:number:number:number">
+                                    <call line="6" column="19" start="133" len="5" ident-ref="ident:14" name="sub" target-id="native:sub:number:number:number">
                                       <parameters>
                                         <parameter>
                                           <expr id="expr:6" line="6" column="19" start="133" len="1">
-                                            <identifier-ref id="ident-ref:2" ident-ref="ident:1" target-id="stmt:3:0">n</identifier-ref>
+                                            <identifier-ref id="ident-ref:2" ident-ref="ident:1" target-id="stmt:3:0" type-ref="">n</identifier-ref>
                                           </expr>
                                         </parameter>
                                         <parameter>
@@ -108,11 +110,11 @@ expression: "&xml"
                               <parameters>
                                 <parameter>
                                   <expr id="expr:12" line="6" column="30" start="144" len="5">
-                                    <call line="6" column="30" start="144" len="5" ident-ref="ident:13" name="sub" target-id="native:sub:number:number:number">
+                                    <call line="6" column="30" start="144" len="5" ident-ref="ident:14" name="sub" target-id="native:sub:number:number:number">
                                       <parameters>
                                         <parameter>
                                           <expr id="expr:10" line="6" column="30" start="144" len="1">
-                                            <identifier-ref id="ident-ref:4" ident-ref="ident:1" target-id="stmt:3:0">n</identifier-ref>
+                                            <identifier-ref id="ident-ref:4" ident-ref="ident:1" target-id="stmt:3:0" type-ref="">n</identifier-ref>
                                           </expr>
                                         </parameter>
                                         <parameter>

@@ -3,7 +3,7 @@ use crate::ast::identifier::{Identifier, IdentifierRef, ResolvedSymbol};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId};
 use crate::ast::literal::LiteralKind;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
-use crate::ast::statement::{Parameter, StatementKind};
+use crate::ast::statement::{Field, Parameter, StatementKind};
 use crate::ast::{ids, Ast, WithoutImplicitRet};
 use crate::error::Diagnostics;
 use crate::exit_points::{ExitPoint, ExitPoints};
@@ -18,12 +18,15 @@ use std::rc::Rc;
 
 pub struct Resolver {
     resolved_identifier_refs: Vec<Option<IdentifierRef<ResolvedSymbol>>>,
+    /// transforms unary/binary operations to function calls
     expression: Vec<Expression>,
     symbols: Rc<RefCell<Vec<Symbol>>>,
     types: BiHashMap<Type, TypeId>,
+    /// maps a `TypeId` to each expression
     expression_types: Vec<Option<Result<TypeId, ()>>>,
     diagnostics: Diagnostics,
     scope_stack: Vec<Scope>,
+    stmts_to_symbol: HashMap<StmtId, SymbolId>,
 }
 
 ids::make_id!(TypeId);
@@ -38,22 +41,16 @@ pub struct Resolution {
 
 impl Resolver {
     pub fn new() -> Self {
-        let mut me = Self {
-            resolved_identifier_refs: Vec::new(),
-            expression: Vec::new(),
+        Self {
+            resolved_identifier_refs: Default::default(),
+            expression: Default::default(),
             symbols: Rc::new(RefCell::new(Vec::<Symbol>::new())),
             types: BiHashMap::new(),
-            expression_types: Vec::new(),
+            expression_types: Default::default(),
             diagnostics: Default::default(),
-            scope_stack: Vec::new(),
-        };
-
-        me.insert_type(Type::None);
-        me.insert_type(Type::Void);
-        me.insert_type(Type::Boolean);
-        me.insert_type(Type::Number);
-
-        me
+            scope_stack: Default::default(),
+            stmts_to_symbol: Default::default(),
+        }
     }
 
     pub fn resolve(
@@ -64,25 +61,48 @@ impl Resolver {
         self.resolved_identifier_refs
             .resize(ast.identifier_ref_count(), None);
         self.expression_types.resize(ast.expressions_count(), None);
-        self.scope_stack.push(Scope::new(self.symbols.clone()));
+        self.push_scope();
 
+        // insert native types
+        self.insert_type(Type::None);
+        let void_type_id = self.insert_type(Type::Void);
+        let boolean_type_id = self.insert_type(Type::Boolean);
+        let number_type_id = self.insert_type(Type::Number);
+
+        // insert native types symbols
+        self.insert_symbol(
+            ast.identifier_id(&Type::Void.to_string()),
+            SymbolKind::NativeType(Type::Void),
+            void_type_id,
+        );
+        self.insert_symbol(
+            ast.identifier_id(&Type::Boolean.to_string()),
+            SymbolKind::NativeType(Type::Boolean),
+            boolean_type_id,
+        );
+        self.insert_symbol(
+            ast.identifier_id(&Type::Number.to_string()),
+            SymbolKind::NativeType(Type::Number),
+            number_type_id,
+        );
+
+        // insert native functions
         for native in natives.into_iter() {
             let ident = ast.identifier_id(native.name());
             let parameters = native
                 .parameters()
                 .iter()
                 .map(|t| {
-                    self.resolve_type(t)
+                    self.ty_id(t)
                         .expect("native function use known native type")
                 })
                 .collect::<Vec<TypeId>>();
             let ret_type = self
-                .resolve_type(native.return_type())
+                .ty_id(native.return_type())
                 .expect("native function use known native type");
             let fn_type_id = self.insert_type(Type::Function(parameters.clone(), ret_type));
 
             self.insert_symbol(
-                ast,
                 ident,
                 SymbolKind::Native(ident, parameters, ret_type, native.body()),
                 fn_type_id,
@@ -91,7 +111,12 @@ impl Resolver {
 
         let stmts = ast.statements().to_vec();
 
+        self.insert_structs(ast, &stmts);
         self.insert_functions(ast, &stmts);
+
+        if !self.diagnostics.is_empty() {
+            return Err(self.diagnostics);
+        }
 
         let _ = self.visit_statements(ast, &stmts);
 
@@ -135,64 +160,50 @@ impl Resolver {
             if let StatementKind::LetFn(ident, params, ret_type, _) = ast.statement(*stmt).kind() {
                 let parameter_types = params
                     .iter()
-                    .filter_map(|p| match Type::try_from(ast.identifier(p.ty().id())) {
-                        Ok(t) => Some(t),
-                        Err(e) => {
-                            self.diagnostics.report_err(
-                                e,
-                                p.ty().span().clone(),
-                                (file!(), line!()),
-                            );
-                            None
-                        }
-                    })
-                    .collect::<Vec<Type>>();
+                    .filter_map(|p| self.resolve_type(ast, p.ty()))
+                    .collect::<Vec<TypeId>>();
 
-                let ret_type = ret_type
-                    .as_ref()
-                    .map(|t| match Type::try_from(ast.identifier(t.id())) {
-                        Ok(t) => Some(t),
-                        Err(e) => {
-                            self.diagnostics
-                                .report_err(e, t.span().clone(), (file!(), line!()));
-                            None
-                        }
-                    })
-                    .unwrap_or(Some(Type::Void));
+                let ret_type = match ret_type {
+                    None => self.ty_id(&Type::Void).expect("void is known"),
+                    Some(t) => self.resolve_type_or_default(ast, t),
+                };
 
-                if let Some(ret_type) = ret_type {
-                    if parameter_types.len() == params.len() {
-                        // todo error handing when resolve_type returns None
-                        let parameter_types = parameter_types
-                            .iter()
-                            .map(|t| self.resolve_type(t).unwrap())
-                            .collect::<Vec<TypeId>>();
+                // `parameters_types` does not have the same length as `params` when one or more
+                // types could not be resolved. In that case the diagnostic was reported already
+                // (in `resolve_type`) and we skip inserting the function
+                if parameter_types.len() == params.len() {
+                    let fn_type_id =
+                        self.insert_type(Type::Function(parameter_types.clone(), ret_type));
 
-                        // todo error handing when resolve_type returns None
-                        let ret_type = self.resolve_type(&ret_type).unwrap();
+                    let symbol_id = self.insert_symbol(
+                        ident.id(),
+                        SymbolKind::LetFn(*stmt, parameter_types, ret_type),
+                        fn_type_id,
+                    );
 
-                        let fn_type_id =
-                            self.insert_type(Type::Function(parameter_types.clone(), ret_type));
-
-                        self.insert_symbol(
-                            ast,
-                            ident.id(),
-                            SymbolKind::LetFn(*stmt, parameter_types, ret_type),
-                            fn_type_id,
-                        );
-                    }
+                    self.stmts_to_symbol.insert(*stmt, symbol_id);
                 }
             }
         }
     }
 
-    fn insert_symbol(
-        &mut self,
-        _ast: &Ast<WithoutImplicitRet>,
-        ident: IdentId,
-        kind: SymbolKind,
-        ty: TypeId,
-    ) {
+    fn insert_structs(&mut self, ast: &Ast<WithoutImplicitRet>, stmts: &[StmtId]) {
+        for stmt in stmts {
+            // we start by inserting all the structs we find, so that the types are available from
+            // everywhere in the current scope.
+            if let StatementKind::Struct(ident, _) = ast.statement(*stmt).kind() {
+                let struct_type_id = self.insert_type(Type::Struct(*stmt));
+                let symbol_id =
+                    self.insert_symbol(ident.id(), SymbolKind::Struct(*stmt), struct_type_id);
+
+                // todo remove if not useful
+                self.stmts_to_symbol.insert(*stmt, symbol_id);
+            }
+        }
+    }
+
+    /// Inserts a new symbol in the current scope and returns its `SymbolId`.
+    fn insert_symbol(&mut self, ident: IdentId, kind: SymbolKind, ty: TypeId) -> SymbolId {
         let id = SymbolId::from(self.symbols.borrow().len());
         self.symbols.borrow_mut().push(Symbol { id, kind, ty });
         self.scope_stack
@@ -202,6 +213,7 @@ impl Resolver {
             .entry(ident)
             .or_default()
             .push(id);
+        id
     }
 
     fn visit_expression(
@@ -291,8 +303,8 @@ impl Resolver {
             self.diagnostics.report_err(
                 format!(
                     "Expected type {}, got {}",
-                    self.lookup_type(expected_type),
-                    self.lookup_type(expr_type)
+                    self.ty(expected_type),
+                    self.ty(expr_type)
                 ),
                 ast.expression(expr).span().clone(),
                 (file!(), line!()),
@@ -312,12 +324,12 @@ impl Resolver {
     ) -> Result<TypeId, ()> {
         let cond_type = self.visit_expression(ast, cond)?;
 
-        if cond_type != self.resolve_type(&Type::Boolean).expect("boolean is known") {
+        if cond_type != self.ty_id(&Type::Boolean).expect("boolean is known") {
             self.diagnostics.report_err(
                 format!(
                     "Expected type {}, got {}",
                     Type::Boolean,
-                    self.lookup_type(cond_type)
+                    self.ty(cond_type)
                 ),
                 ast.expression(cond).span().clone(),
                 (file!(), line!()),
@@ -327,18 +339,18 @@ impl Resolver {
         let true_branch_type_id = self.visit_expression(ast, true_branch)?;
         let false_branch_type_id = false_branch
             .map(|e| self.visit_expression(ast, e))
-            .unwrap_or(Ok(self.resolve_type(&Type::Void).expect("void is known")))?;
+            .unwrap_or(Ok(self.ty_id(&Type::Void).expect("void is known")))?;
 
-        let true_branch_type = self.lookup_type(true_branch_type_id);
-        let false_branch_type = self.lookup_type(false_branch_type_id);
+        let true_branch_type = self.ty(true_branch_type_id);
+        let false_branch_type = self.ty(false_branch_type_id);
 
         match (true_branch_type, false_branch_type) {
             (Type::None, Type::None) => Ok(true_branch_type_id),
             // fixme the following case is not well tested + implement proper error handing
-            (Type::None, t) | (t, Type::None) => Ok(self.resolve_type(t).unwrap()),
+            (Type::None, t) | (t, Type::None) => Ok(self.ty_id(t).unwrap()),
             (_, Type::Void) | (Type::Void, _) => {
                 // todo: option<t>
-                Ok(self.resolve_type(&Type::Void).expect("void is known"))
+                Ok(self.ty_id(&Type::Void).expect("void is known"))
             }
             (tt, ft) if tt == ft => Ok(true_branch_type_id),
             (tt, ft) => {
@@ -359,12 +371,8 @@ impl Resolver {
         literal: LiteralKind,
     ) -> Result<TypeId, ()> {
         match literal {
-            LiteralKind::Boolean(_) => {
-                Ok(self.resolve_type(&Type::Boolean).expect("boolean is known"))
-            }
-            LiteralKind::Number(_) => {
-                Ok(self.resolve_type(&Type::Number).expect("number is known"))
-            }
+            LiteralKind::Boolean(_) => Ok(self.ty_id(&Type::Boolean).expect("boolean is known")),
+            LiteralKind::Number(_) => Ok(self.ty_id(&Type::Number).expect("number is known")),
             LiteralKind::Identifier(ident_ref) => {
                 // todo things to check:
                 //  - behaviour when target is let fn
@@ -474,7 +482,11 @@ impl Resolver {
             .map(|s| match &self.symbols.borrow()[s.id()].kind {
                 SymbolKind::LetFn(_, _, ret_type) => Ok(*ret_type),
                 SymbolKind::Native(_, _, ret_type, _) => Ok(*ret_type),
-                SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => {
+                SymbolKind::Let(_)
+                | SymbolKind::Parameter(_, _)
+                | SymbolKind::Field(_, _)
+                | SymbolKind::Struct(_)
+                | SymbolKind::NativeType(_) => {
                     panic!("the resolved symbol was not a function")
                 }
             })
@@ -489,12 +501,12 @@ impl Resolver {
     ) -> Result<TypeId, ()> {
         let cond_type = self.visit_expression(ast, cond)?;
 
-        if cond_type != self.resolve_type(&Type::Boolean).unwrap() {
+        if cond_type != self.ty_id(&Type::Boolean).unwrap() {
             self.diagnostics.report_err(
                 format!(
                     "Expected type {}, got {}",
                     Type::Boolean,
-                    self.lookup_type(cond_type)
+                    self.ty(cond_type)
                 ),
                 ast.expression(cond).span().clone(),
                 (file!(), line!()),
@@ -524,9 +536,9 @@ impl Resolver {
         ast: &Ast<WithoutImplicitRet>,
         stmts: &[StmtId],
     ) -> Result<TypeId, ()> {
-        let none_type_id = self.resolve_type(&Type::None).expect("none is known");
+        let none_type_id = self.ty_id(&Type::None).expect("none is known");
 
-        let mut ret_type = Ok(self.resolve_type(&Type::Void).unwrap());
+        let mut ret_type = Ok(self.ty_id(&Type::Void).unwrap());
 
         for stmt in stmts.iter() {
             let stmt_type = match ast.statement(*stmt).kind() {
@@ -537,24 +549,19 @@ impl Resolver {
                 }
                 StatementKind::Let(ident, expr) => {
                     self.visit_let(ast, *stmt, ident.id(), *expr);
-                    Ok(self.resolve_type(&Type::Void).unwrap())
+                    Ok(self.ty_id(&Type::Void).unwrap())
                 }
                 StatementKind::Ret(expr, _) => {
                     let _ = self.visit_expression(ast, *expr);
-                    Ok(self.resolve_type(&Type::None).unwrap())
+                    Ok(self.ty_id(&Type::None).unwrap())
                 }
-                StatementKind::LetFn(_ident, params, ret_type, expr) => {
-                    self.visit_function(
-                        ast,
-                        *stmt,
-                        &params.to_vec(),
-                        ret_type.clone().as_ref(),
-                        *expr,
-                    );
-                    Ok(self.resolve_type(&Type::Void).unwrap())
+                StatementKind::LetFn(_ident, params, _ret_type, expr) => {
+                    self.visit_function(ast, *stmt, &params.to_vec(), *expr);
+                    Ok(self.ty_id(&Type::Void).unwrap())
                 }
-                StatementKind::Struct(_, _) => {
-                    todo!()
+                StatementKind::Struct(_, fields) => {
+                    self.visit_struct(ast, *stmt, &fields.to_vec());
+                    Ok(self.ty_id(&Type::Void).unwrap())
                 }
             };
 
@@ -577,7 +584,7 @@ impl Resolver {
         expr: ExprId,
     ) {
         match self.visit_expression(ast, expr) {
-            Ok(t) if self.lookup_type(t) == &Type::None => {
+            Ok(t) if self.ty(t) == &Type::None => {
                 let expr = ast.expression(expr);
                 self.diagnostics.report_err(
                     format!("Expected some type, got {}", Type::None),
@@ -586,7 +593,7 @@ impl Resolver {
                 );
             }
             Ok(t) => {
-                self.insert_symbol(ast, ident, SymbolKind::Let(stmt), t);
+                self.insert_symbol(ident, SymbolKind::Let(stmt), t);
             }
             Err(_) => {}
         }
@@ -597,69 +604,74 @@ impl Resolver {
         ast: &Ast<WithoutImplicitRet>,
         stmt: StmtId,
         params: &[Parameter],
-        ret_type: Option<&Identifier>,
         expr: ExprId,
     ) {
+        let symbol_id = match self.stmts_to_symbol.get(&stmt) {
+            None => {
+                // the function was not inserted, we skip resolving its body
+                return;
+            }
+            Some(s) => *s,
+        };
+
+        let (ret_type_id, param_types) = match &self.symbols.borrow()[symbol_id.id()].kind {
+            SymbolKind::LetFn(_, params, ret_type) => (*ret_type, params.clone()),
+            SymbolKind::Let(_) => panic!("function expected, found Let"),
+            SymbolKind::Parameter(_, _) => panic!("function expected, found Parameter"),
+            SymbolKind::Struct(_) => panic!("function expected, found Struct"),
+            SymbolKind::Field(_, _) => panic!("function expected, found Field"),
+            SymbolKind::NativeType(_) => panic!("function expected, found NativeType"),
+            SymbolKind::Native(_, _, _, _) => panic!("function expected, found Native"),
+        };
+
         self.push_scope();
 
-        let ret_type = ret_type
-            .map(|t| match Type::try_from(ast.identifier(t.id())) {
-                Ok(t) => t,
-                Err(_) => {
-                    // no need to report error here, it was already reported in insert_functions
-                    Type::Void
-                }
-            })
-            .unwrap_or(Type::Void);
-
+        // insert all parameters in current scope
         for (index, parameter) in params.iter().enumerate() {
-            let ty = match Type::try_from(ast.identifier(parameter.ty().id())) {
-                Ok(ty) => ty,
-                Err(_) => {
-                    // no need to report error here, it was already reported in insert_functions
-                    Type::Void
-                }
-            };
-
             self.insert_symbol(
-                ast,
                 parameter.identifier().id(),
                 SymbolKind::Parameter(stmt, index),
-                // todo proper error handling
-                self.resolve_type(&ty).unwrap(),
-            )
+                param_types[index],
+            );
         }
+
+        let void_type_id = self.ty_id(&Type::Void).expect("void exists");
 
         let _ = self.visit_expression(ast, expr);
 
         let exit_points = ExitPoints::new(ast).exit_points(expr);
         if exit_points.is_empty() {
-            if ret_type != Type::Void {
+            if ret_type_id != void_type_id {
                 let stmt = ast.statement(stmt);
                 self.diagnostics.report_err(
-                    format!("Expected type {ret_type}, got void"),
+                    format!(
+                        "Expected type {ret_type}, got void",
+                        ret_type = self.ty(ret_type_id)
+                    ),
                     stmt.span().clone(),
                     (file!(), line!()),
                 );
             }
         } else {
-            // todo proper error handing
-            let ret_type_id = self.resolve_type(&ret_type).unwrap();
             for exit_point in exit_points {
                 let (expr, explicit) = match exit_point {
                     ExitPoint::Explicit(e) => (e, true),
                     ExitPoint::Implicit(e) => (e, false),
                 };
                 match self.visit_expression(ast, expr) {
-                    Ok(expr_type_id) if self.lookup_type(expr_type_id) == &Type::None => {
+                    Ok(expr_type_id) if self.ty(expr_type_id) == &Type::None => {
                         panic!("functions must not return {}", Type::None)
                     }
                     Ok(expr_type_id) => {
-                        if expr_type_id != ret_type_id && (ret_type != Type::Void || explicit) {
+                        if expr_type_id != ret_type_id && (ret_type_id != void_type_id || explicit)
+                        {
                             let expr = ast.expression(expr);
-                            let expr_type = self.lookup_type(expr_type_id);
+                            let expr_type = self.ty(expr_type_id);
                             self.diagnostics.report_err(
-                                format!("Expected type {ret_type}, got {expr_type}"),
+                                format!(
+                                    "Expected type {ret_type}, got {expr_type}",
+                                    ret_type = self.ty(ret_type_id)
+                                ),
                                 expr.span().clone(),
                                 (file!(), line!()),
                             );
@@ -673,6 +685,21 @@ impl Resolver {
         self.pop_scope();
     }
 
+    fn visit_struct(&mut self, ast: &Ast<WithoutImplicitRet>, stmt: StmtId, fields: &[Field]) {
+        for (index, parameter) in fields.iter().enumerate() {
+            let ty = self.resolve_type_or_default(ast, parameter.ty());
+
+            self.insert_symbol(
+                parameter.identifier().id(),
+                SymbolKind::Field(stmt, index),
+                ty,
+            );
+        }
+    }
+
+    /// Resolves an identifier ref by its `IdentRefId` and returns the corresponding `SymbolId`.
+    /// The resolution starts in the current scope and crawls the scopes stack up until the
+    /// identifier is found.
     fn resolve_ident_ref(
         &mut self,
         ast: &Ast<WithoutImplicitRet>,
@@ -685,46 +712,26 @@ impl Resolver {
 
         let ident_ref = ast.identifier_ref(ident_ref);
 
-        let ident_id = ident_ref.ident_id();
-        match self
-            .scope_stack
-            .iter()
-            .rev()
-            .find_map(|scope| scope.find(&ident_id, param_types))
-        {
+        match self.resolve_ident(
+            ast,
+            ident_ref.ident_id(),
+            param_types,
+            ident_ref.ident().span(),
+        ) {
             Some(s) => {
                 self.resolved_identifier_refs[ident_ref.id().id()] = Some(ident_ref.resolved(s));
                 Some(s)
             }
             None => {
-                // todo nice to have: propose known alternatives
-                if let Some(param_types) = param_types {
-                    self.diagnostics.report_err(
-                        format!(
-                            "No function '{}' found for parameters of types ({})",
-                            ast.identifier(ident_id),
-                            param_types
-                                .iter()
-                                .map(|t| self.lookup_type(*t))
-                                .map(Type::to_string)
-                                .collect::<Vec<String>>()
-                                .join(", ")
-                        ),
-                        ident_ref.ident().span().clone(),
-                        (file!(), line!()),
-                    );
-                } else {
-                    self.diagnostics.report_err(
-                        format!("No variable '{}' found", ast.identifier(ident_id)),
-                        ident_ref.ident().span().clone(),
-                        (file!(), line!()),
-                    );
-                }
+                // diagnostics already created in `resolve_ident`
                 None
             }
         }
     }
 
+    /// Resolves an identifier by its `IdentId` and returns the corresponding `SymbolId`. The
+    /// resolution starts in the current scope and crawls the scopes stack up until the identifier
+    /// is found.
     fn resolve_ident(
         &mut self,
         ast: &Ast<WithoutImplicitRet>,
@@ -750,7 +757,7 @@ impl Resolver {
                             ast.identifier(ident),
                             param_types
                                 .iter()
-                                .map(|t| self.lookup_type(*t))
+                                .map(|t| self.ty(*t))
                                 .map(Type::to_string)
                                 .collect::<Vec<String>>()
                                 .join(", ")
@@ -760,7 +767,7 @@ impl Resolver {
                     );
                 } else {
                     self.diagnostics.report_err(
-                        format!("No variable '{}' found", ast.identifier(ident)),
+                        format!("Identifier '{}' not found", ast.identifier(ident)),
                         span.clone(),
                         (file!(), line!()),
                     );
@@ -770,8 +777,8 @@ impl Resolver {
         }
     }
 
-    /// Inserts a `Type` if it does not already exist and returns its `TypeId`. If teh type already
-    /// exists, returns it's `TypeId`
+    /// Inserts a `Type` if it does not already exist and returns its `TypeId`.
+    /// If the type already exists, returns it's `TypeId`
     fn insert_type(&mut self, ty: Type) -> TypeId {
         if let Some(id) = self.types.get_by_left(&ty) {
             *id
@@ -783,12 +790,64 @@ impl Resolver {
     }
 
     /// Lookup a `TypeId` by `Type`, returns `None` if none is found
-    fn resolve_type(&self, ty: &Type) -> Option<TypeId> {
+    fn ty_id(&self, ty: &Type) -> Option<TypeId> {
         self.types.get_by_left(ty).copied()
     }
 
-    fn lookup_type(&self, ty: TypeId) -> &Type {
+    /// Lookup a `Type` by its `TypeIs`
+    fn ty(&self, ty: TypeId) -> &Type {
         self.types.get_by_right(&ty).expect("type exists")
+    }
+
+    /// Resolves the type, reports a diagnostic and returns the default `Type` if resolution failed.
+    fn resolve_type_or_default(
+        &mut self,
+        ast: &Ast<WithoutImplicitRet>,
+        ident: &Identifier,
+    ) -> TypeId {
+        self.resolve_type(ast, ident).unwrap_or_else(|| {
+            self.ty_id(&Type::default())
+                .expect("default type has an id")
+        })
+    }
+
+    /// Resolves the type, reports a diagnostic if resolution failed
+    fn resolve_type(
+        &mut self,
+        ast: &Ast<WithoutImplicitRet>,
+        ident: &Identifier,
+    ) -> Option<TypeId> {
+        match self.resolve_ident(ast, ident.id(), None, ident.span()) {
+            None => {
+                // diagnostic already produced in resolve_ident
+                None
+            }
+            Some(s) => {
+                let symbol = &self.symbols.borrow()[s.id()];
+                match &symbol.kind {
+                    SymbolKind::NativeType(ty) => Some(self.ty_id(ty).expect("native types exist")),
+                    SymbolKind::Struct(stmt) => {
+                        let ty = self.ty_id(&Type::Struct(*stmt));
+                        if ty.is_none() {
+                            self.diagnostics.report_err(
+                                format!("'{}' is not a known type", ast.identifier(ident.id())),
+                                ident.span().clone(),
+                                (file!(), line!()),
+                            )
+                        }
+                        ty
+                    }
+                    _ => {
+                        self.diagnostics.report_err(
+                            format!("'{}' is not a known type", ast.identifier(ident.id())),
+                            ident.span().clone(),
+                            (file!(), line!()),
+                        );
+                        None
+                    }
+                }
+            }
+        }
     }
 
     fn push_scope(&mut self) {
@@ -822,17 +881,29 @@ impl Scope {
                     let symbol = &self.all_symbols.borrow()[s.id()];
                     match param_types {
                         None => match symbol.kind {
+                            // if no params, the symbol cannot be a function
                             SymbolKind::LetFn(_, _, _) | SymbolKind::Native(_, _, _, _) => false,
-                            SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => true,
+                            // but it can be any of the others
+                            SymbolKind::Let(_)
+                            | SymbolKind::Parameter(_, _)
+                            | SymbolKind::NativeType(_)
+                            | SymbolKind::Field(_, _)
+                            | SymbolKind::Struct(_) => true,
                         },
                         Some(param_types) => match &symbol.kind {
-                            SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => false,
+                            // if params, the symbol can be a function
                             SymbolKind::LetFn(_, ref fn_param_type, _) => {
                                 param_types == fn_param_type.as_slice()
                             }
                             SymbolKind::Native(_, parameters, _, _) => {
                                 param_types == parameters.as_slice()
                             }
+                            // but is cannot any of the others
+                            SymbolKind::Let(_)
+                            | SymbolKind::Parameter(_, _)
+                            | SymbolKind::NativeType(_)
+                            | SymbolKind::Field(_, _)
+                            | SymbolKind::Struct(_) => false,
                         },
                     }
                 })
@@ -863,18 +934,23 @@ pub enum SymbolKind {
     Let(StmtId),
     LetFn(StmtId, Vec<TypeId>, TypeId),
     Parameter(StmtId, usize),
+    Struct(StmtId),
+    Field(StmtId, usize),
+    NativeType(Type),
     Native(IdentId, Vec<TypeId>, TypeId, fn(Vec<Value>) -> Value),
 }
 
 // todo think about it being in Native
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub enum Type {
     Boolean,
     Function(Vec<TypeId>, TypeId),
+    Struct(StmtId),
     Number,
 
     /// This value is used when the statement/expression does not have any value. This is the
     /// case for `let` and `let fn`.
+    #[default]
     Void,
 
     /// This value is used when the statement/expression does not return any value. This is the
@@ -887,6 +963,7 @@ impl Display for Type {
         match self {
             Type::Boolean => write!(f, "boolean"),
             Type::Function(..) => write!(f, "function"),
+            Type::Struct(..) => write!(f, "struct"),
             Type::Number => write!(f, "number"),
             Type::Void => write!(f, "void"),
             Type::None => write!(f, "no type"),
@@ -984,7 +1061,7 @@ mod tests {
             .collect::<Vec<(&str, Span, Level)>>();
 
         let expected_diagnostics = vec![(
-            "No variable 'n' found",
+            "Identifier 'n' not found",
             Span::new(1, 13, 12, 1),
             Level::Error,
         )];
@@ -1188,6 +1265,8 @@ mod tests {
         "let forty_two = 0; let f(): number = 42; forty_two = f();"
     );
     test_type_ok!(function_is_allowed_to_return_void, "let f() = { 1; }");
+    test_type_ok!(function_has_struct_params, "struct S {} let f(s: S) = { }");
+    // todo uncomment test_type_ok!(function_returns_struct, "struct S {} let f(): S = { }");
     test_type_error!(
         function_void_cannot_return_number,
         "let f() = { ret 1; }",
@@ -1197,7 +1276,7 @@ mod tests {
     test_type_error!(
         function_invalid_return_type,
         "let f(): unknown = { }",
-        "'unknown' is not a known type",
+        "Identifier 'unknown' not found",
         Span::new(1, 10, 9, 7)
     );
     test_type_error!(

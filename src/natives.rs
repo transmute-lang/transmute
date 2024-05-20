@@ -180,9 +180,14 @@ impl From<&Natives> for Ast<WithoutImplicitRet> {
             .keys()
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
+
+        // todo maybe do it somewhere else?
+        names.push(Type::Void.to_string());
+        names.push(Type::Boolean.to_string());
+        names.push(Type::Number.to_string());
         names.sort();
 
-        let mut identifiers = HashMap::<String, IdentId>::with_capacity(natives.functions.len());
+        let mut identifiers = HashMap::<String, IdentId>::with_capacity(names.len());
 
         for name in names {
             if !identifiers.contains_key(&name) {

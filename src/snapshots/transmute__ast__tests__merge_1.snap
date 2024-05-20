@@ -25,6 +25,7 @@ expression: "&xml"
       <ident id="ident:16">neg</ident>
       <ident id="ident:17">neq</ident>
       <ident id="ident:18">sub</ident>
+      <ident id="ident:19">void</ident>
     </identifiers>
     <stmt id="stmt:0" line="1" column="1" start="0" len="12">
       <let>
@@ -56,7 +57,7 @@ expression: "&xml"
                       <parameters>
                         <parameter>
                           <expr id="expr:1" line="1" column="48" start="47" len="3">
-                            <identifier-ref id="ident-ref:0" ident-ref="ident:2" target-id="stmt:2:0">p_1</identifier-ref>
+                            <identifier-ref id="ident-ref:0" ident-ref="ident:2" target-id="stmt:2:0" type-ref="">p_1</identifier-ref>
                           </expr>
                         </parameter>
                         <parameter>
@@ -80,7 +81,7 @@ expression: "&xml"
           <parameters>
             <parameter>
               <expr id="expr:5" line="1" column="64" start="63" len="3">
-                <identifier-ref id="ident-ref:1" ident-ref="ident:0" target-id="stmt:0">x_1</identifier-ref>
+                <identifier-ref id="ident-ref:1" ident-ref="ident:0" target-id="stmt:0" type-ref="">x_1</identifier-ref>
               </expr>
             </parameter>
           </parameters>
@@ -117,7 +118,7 @@ expression: "&xml"
                       <parameters>
                         <parameter>
                           <expr id="expr:8" line="1" column="48" start="47" len="3">
-                            <identifier-ref id="ident-ref:3" ident-ref="ident:7" target-id="stmt:6:0">p_2</identifier-ref>
+                            <identifier-ref id="ident-ref:3" ident-ref="ident:7" target-id="stmt:6:0" type-ref="">p_2</identifier-ref>
                           </expr>
                         </parameter>
                         <parameter>
@@ -141,7 +142,7 @@ expression: "&xml"
           <parameters>
             <parameter>
               <expr id="expr:12" line="1" column="64" start="63" len="3">
-                <identifier-ref id="ident-ref:4" ident-ref="ident:5" target-id="stmt:4">x_2</identifier-ref>
+                <identifier-ref id="ident-ref:4" ident-ref="ident:5" target-id="stmt:4" type-ref="">x_2</identifier-ref>
               </expr>
             </parameter>
           </parameters>

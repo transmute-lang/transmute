@@ -4,7 +4,6 @@ extern crate core;
 use crate::ast::ids::StmtId;
 use crate::ast::{AstNodePrettyPrint, WithImplicitRet};
 use crate::desugar::ImplicitRet;
-use crate::dot::Dot;
 use crate::html::HtmlWriter;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
@@ -79,14 +78,16 @@ fn fibonacci_iter() {
 }
 
 fn points() {
+    // todo return Point
     exec(
         r#"
             struct Point {
                 x: number,
                 y: number
             }
-            let area(p1: Point, p2: Point): number = {
-                0;
+            let area(n: number, p: Point) = {
+                n;
+                p;
             }
         "#,
         "points",
@@ -109,14 +110,15 @@ fn exec(src: &str, name: &str) {
                 "Executable AST:\n{}\n",
                 AstNodePrettyPrint::<(), StmtId>::new_resolved(ast)
             );
-            Dot::new(ast)
-                .write(&mut File::create(format!("target/{name}.dot")).unwrap())
-                .unwrap();
+            // todo re-enable
+            // Dot::new(ast)
+            //     .write(&mut File::create(format!("target/{name}.dot")).unwrap())
+            //     .unwrap();
             XmlWriter::new(ast)
-                .write(&mut File::create(format!("target/{name}.xml")).unwrap())
+                .write(&mut File::create(format!("target/run__{name}.xml")).unwrap())
                 .unwrap();
             HtmlWriter::new(ast)
-                .write(&mut File::create(format!("target/{name}.html")).unwrap())
+                .write(&mut File::create(format!("target/html/run__{name}.html")).unwrap())
                 .unwrap();
         })
         .map(|ast| Interpreter::new(&ast).start());

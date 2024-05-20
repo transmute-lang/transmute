@@ -1,9 +1,9 @@
 use crate::ast::expression::ExpressionKind;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::statement::{Parameter, RetMode, StatementKind};
+use crate::ast::statement::{Field, Parameter, RetMode, StatementKind};
 use crate::ast::ResolvedAst;
-use crate::resolver::{SymbolKind, Type};
+use crate::resolver::{SymbolKind, Type, TypeId};
 use std::io;
 use std::io::Write;
 use xml::writer::XmlEvent;
@@ -91,8 +91,8 @@ impl<'a> HtmlWriter<'a> {
                 ret_type.as_ref().map(|i| i.id()),
                 *expr,
             ),
-            StatementKind::Struct(_, _) => {
-                todo!()
+            StatementKind::Struct(ident, fields) => {
+                self.visit_struct(stmt.id(), ident.id(), fields)
             }
         }
     }
@@ -132,7 +132,7 @@ impl<'a> HtmlWriter<'a> {
         for (i, param) in params.iter().enumerate() {
             self.emit_identifier(stmt_id, param.identifier().id(), Some(i));
             self.emit_colon();
-            // fixme should be an emit_identifier_ref
+            // fixme should be an emit_identifier_ref (or at least some emit_type_identifier)
             self.emit_identifier(stmt_id, param.ty().id(), None);
 
             if i < params.len() - 1 {
@@ -144,7 +144,7 @@ impl<'a> HtmlWriter<'a> {
 
         if let Some(ret_type) = ret_type {
             self.emit_colon();
-            // fixme should be an emit_identifier_ref
+            // fixme should be an emit_identifier_ref (or at least some emit_type_identifier)
             self.emit_identifier(stmt_id, ret_type, None);
         }
 
@@ -157,6 +157,39 @@ impl<'a> HtmlWriter<'a> {
 
         self.emit(XmlEvent::start_element("li"));
         self.visit_expression(expr);
+        self.emit(XmlEvent::end_element());
+
+        self.emit(XmlEvent::start_element("li"));
+        self.emit_curly("}", &par_id);
+        self.emit(XmlEvent::end_element());
+    }
+
+    fn visit_struct(&mut self, stmt_id: StmtId, ident: IdentId, fields: &[Field]) {
+        self.emit(XmlEvent::start_element("li"));
+
+        self.emit_struct();
+        self.emit_identifier(stmt_id, ident, None);
+
+        let par_id = self.par_id();
+
+        self.emit_curly("{", &par_id);
+
+        self.emit(XmlEvent::end_element());
+
+        self.emit(XmlEvent::start_element("li"));
+        self.emit(XmlEvent::start_element("ul"));
+
+        for (i, field) in fields.iter().enumerate() {
+            self.emit(XmlEvent::start_element("li"));
+            self.emit_identifier(stmt_id, field.identifier().id(), Some(i));
+            self.emit_colon();
+            // fixme should be an emit_identifier_ref (or at least some emit_type_identifier)
+            self.emit_identifier(stmt_id, field.ty().id(), None);
+            self.emit_comma();
+            self.emit(XmlEvent::end_element());
+        }
+
+        self.emit(XmlEvent::end_element());
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::start_element("li"));
@@ -301,23 +334,29 @@ impl<'a> HtmlWriter<'a> {
         self.writer.write(event.into()).unwrap();
     }
 
-    fn emit_if(&mut self, ty: &Type) {
+    fn emit_if(&mut self, type_id: TypeId) {
         self.emit(
             XmlEvent::start_element("span")
                 .attr("class", "kw")
-                .attr("title", &ty.to_string()),
+                .attr("title", &self.ast.ty(type_id).to_string()),
         );
         self.emit(XmlEvent::Characters("if"));
         self.emit(XmlEvent::end_element());
     }
 
-    fn emit_while(&mut self, ty: &Type) {
+    fn emit_while(&mut self, type_id: TypeId) {
         self.emit(
             XmlEvent::start_element("span")
                 .attr("class", "kw")
-                .attr("title", &ty.to_string()),
+                .attr("title", &self.ast.ty(type_id).to_string()),
         );
         self.emit(XmlEvent::Characters("ret"));
+        self.emit(XmlEvent::end_element());
+    }
+
+    fn emit_struct(&mut self) {
+        self.emit(XmlEvent::start_element("span").attr("class", "kw"));
+        self.emit(XmlEvent::Characters("struct"));
         self.emit(XmlEvent::end_element());
     }
 
@@ -410,17 +449,6 @@ impl<'a> HtmlWriter<'a> {
     fn emit_identifier_ref(&mut self, identifier: IdentRefId) {
         let ident_ref = self.ast.identifier_ref(identifier);
 
-        let type_name = self
-            .ast
-            .ty(self.ast.symbol(ident_ref.symbol_id()).ty())
-            .to_string();
-
-        // todo this might not scale when types become complex...
-        let type_ref = format!(
-            "type__{}",
-            self.ast.ty(self.ast.symbol(ident_ref.symbol_id()).ty())
-        );
-
         let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
             SymbolKind::Let(stmt) => Self::ident_id(*stmt, None),
             SymbolKind::LetFn(stmt, _, _) => Self::ident_id(*stmt, None),
@@ -437,6 +465,27 @@ impl<'a> HtmlWriter<'a> {
                     self.ast.ty(*ret_type)
                 )
             }
+            SymbolKind::NativeType(_) => {
+                todo!()
+            }
+            SymbolKind::Field(_, _) => {
+                todo!()
+            }
+            SymbolKind::Struct(_) => {
+                todo!()
+            }
+        };
+
+        let ty = self.ast.ty(self.ast.symbol(ident_ref.symbol_id()).ty());
+        let (type_ref, type_name) = match ty {
+            Type::Struct(stmt) => {
+                let name = match self.ast.statement(*stmt).kind() {
+                    StatementKind::Struct(ident, _) => self.ast.identifier(ident.id()),
+                    _ => unreachable!("must be a struct statement"),
+                };
+                (Some(format!("ident__stmt{stmt}")), format!("struct {name}"))
+            }
+            t => (None, t.to_string()),
         };
 
         self.emit(
@@ -444,7 +493,7 @@ impl<'a> HtmlWriter<'a> {
                 .attr("class", "ident_ref")
                 .attr("title", &type_name)
                 .attr("data-ident-ref", &symbol)
-                .attr("data-type-ref", &type_ref),
+                .attr("data-type-ident-ref", &type_ref.unwrap_or_default()),
         );
         self.emit(XmlEvent::Characters(
             self.ast.identifier(ident_ref.ident().id()),
@@ -516,6 +565,7 @@ mod tests {
         "#
     );
 
+    test_html_write!(serialize_struct, "struct Point { x: number, y: number }");
     // test_html_write!(
     //     serialize_struct,
     //     r#"

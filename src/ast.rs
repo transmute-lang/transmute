@@ -83,6 +83,7 @@ impl Ast<WithoutImplicitRet> {
             for expression in r.expressions.into_iter() {
                 ast.replace_expression(expression);
             }
+            // todo resolved ast use dedicated structs/enums to avoid tons of lookup
             ResolvedAst {
                 identifiers: ast.identifiers,
                 identifier_refs: r.identifier_refs,
@@ -416,8 +417,8 @@ impl ResolvedAst {
         &self.expressions[id.id()]
     }
 
-    pub fn expression_type(&self, id: ExprId) -> &Type {
-        &self.types[self.expressions_types[id.id()].id()]
+    pub fn expression_type(&self, id: ExprId) -> TypeId {
+        self.expressions_types[id.id()]
     }
 
     pub fn statements(&self) -> &Vec<StmtId> {
@@ -434,6 +435,10 @@ impl ResolvedAst {
 
     pub fn ty(&self, id: TypeId) -> &Type {
         &self.types[id.id()]
+    }
+
+    pub fn x(&self) -> &Type {
+        todo!()
     }
 }
 

@@ -11,16 +11,19 @@ expression: "&xml"
       <ident id="ident:2">c_2</ident>
       <ident id="ident:3">w_2</ident>
       <ident id="ident:4">add</ident>
-      <ident id="ident:5">div</ident>
-      <ident id="ident:6">eq</ident>
-      <ident id="ident:7">ge</ident>
-      <ident id="ident:8">gt</ident>
-      <ident id="ident:9">le</ident>
-      <ident id="ident:10">lt</ident>
-      <ident id="ident:11">mul</ident>
-      <ident id="ident:12">neg</ident>
-      <ident id="ident:13">neq</ident>
-      <ident id="ident:14">sub</ident>
+      <ident id="ident:5">boolean</ident>
+      <ident id="ident:6">div</ident>
+      <ident id="ident:7">eq</ident>
+      <ident id="ident:8">ge</ident>
+      <ident id="ident:9">gt</ident>
+      <ident id="ident:10">le</ident>
+      <ident id="ident:11">lt</ident>
+      <ident id="ident:12">mul</ident>
+      <ident id="ident:13">neg</ident>
+      <ident id="ident:14">neq</ident>
+      <ident id="ident:15">number</ident>
+      <ident id="ident:16">sub</ident>
+      <ident id="ident:17">void</ident>
     </identifiers>
     <stmt id="stmt:0" line="1" column="1" start="0" len="15">
       <let>
@@ -47,7 +50,7 @@ expression: "&xml"
         <while>
           <condition line="1" column="36" start="35" len="3">
             <expr id="expr:2" line="1" column="36" start="35" len="3">
-              <identifier-ref id="ident-ref:0" ident-ref="ident:0" target-id="stmt:0">c_1</identifier-ref>
+              <identifier-ref id="ident-ref:0" ident-ref="ident:0" target-id="stmt:0" type-ref="">c_1</identifier-ref>
             </expr>
           </condition>
           <body>
@@ -55,7 +58,7 @@ expression: "&xml"
               <block>
                 <stmt id="stmt:2" line="1" column="42" start="41" len="4">
                   <expr id="expr:3" line="1" column="42" start="41" len="3">
-                    <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="stmt:1">w_1</identifier-ref>
+                    <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="stmt:1" type-ref="">w_1</identifier-ref>
                   </expr>
                 </stmt>
               </block>
@@ -89,7 +92,7 @@ expression: "&xml"
         <while>
           <condition line="1" column="37" start="36" len="3">
             <expr id="expr:8" line="1" column="37" start="36" len="3">
-              <identifier-ref id="ident-ref:2" ident-ref="ident:2" target-id="stmt:4">c_2</identifier-ref>
+              <identifier-ref id="ident-ref:2" ident-ref="ident:2" target-id="stmt:4" type-ref="">c_2</identifier-ref>
             </expr>
           </condition>
           <body>
@@ -97,7 +100,7 @@ expression: "&xml"
               <block>
                 <stmt id="stmt:6" line="1" column="43" start="42" len="4">
                   <expr id="expr:9" line="1" column="43" start="42" len="3">
-                    <identifier-ref id="ident-ref:3" ident-ref="ident:3" target-id="stmt:5">w_2</identifier-ref>
+                    <identifier-ref id="ident-ref:3" ident-ref="ident:3" target-id="stmt:5" type-ref="">w_2</identifier-ref>
                   </expr>
                 </stmt>
               </block>

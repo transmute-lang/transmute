@@ -13,16 +13,19 @@ expression: "&xml"
       <ident id="ident:4">t_2</ident>
       <ident id="ident:5">f_2</ident>
       <ident id="ident:6">add</ident>
-      <ident id="ident:7">div</ident>
-      <ident id="ident:8">eq</ident>
-      <ident id="ident:9">ge</ident>
-      <ident id="ident:10">gt</ident>
-      <ident id="ident:11">le</ident>
-      <ident id="ident:12">lt</ident>
-      <ident id="ident:13">mul</ident>
-      <ident id="ident:14">neg</ident>
-      <ident id="ident:15">neq</ident>
-      <ident id="ident:16">sub</ident>
+      <ident id="ident:7">boolean</ident>
+      <ident id="ident:8">div</ident>
+      <ident id="ident:9">eq</ident>
+      <ident id="ident:10">ge</ident>
+      <ident id="ident:11">gt</ident>
+      <ident id="ident:12">le</ident>
+      <ident id="ident:13">lt</ident>
+      <ident id="ident:14">mul</ident>
+      <ident id="ident:15">neg</ident>
+      <ident id="ident:16">neq</ident>
+      <ident id="ident:17">number</ident>
+      <ident id="ident:18">sub</ident>
+      <ident id="ident:19">void</ident>
     </identifiers>
     <stmt id="stmt:0" line="1" column="1" start="0" len="15">
       <let>
@@ -59,7 +62,7 @@ expression: "&xml"
         <if>
           <condition>
             <expr id="expr:3" line="1" column="46" start="45" len="3">
-              <identifier-ref id="ident-ref:0" ident-ref="ident:0" target-id="stmt:0">c_1</identifier-ref>
+              <identifier-ref id="ident-ref:0" ident-ref="ident:0" target-id="stmt:0" type-ref="">c_1</identifier-ref>
             </expr>
           </condition>
           <true>
@@ -67,7 +70,7 @@ expression: "&xml"
               <block>
                 <stmt id="stmt:3" line="1" column="52" start="51" len="4">
                   <expr id="expr:4" line="1" column="52" start="51" len="3">
-                    <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="stmt:1">t_1</identifier-ref>
+                    <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="stmt:1" type-ref="">t_1</identifier-ref>
                   </expr>
                 </stmt>
               </block>
@@ -78,7 +81,7 @@ expression: "&xml"
               <block>
                 <stmt id="stmt:4" line="1" column="66" start="65" len="4">
                   <expr id="expr:6" line="1" column="66" start="65" len="3">
-                    <identifier-ref id="ident-ref:2" ident-ref="ident:2" target-id="stmt:2">f_1</identifier-ref>
+                    <identifier-ref id="ident-ref:2" ident-ref="ident:2" target-id="stmt:2" type-ref="">f_1</identifier-ref>
                   </expr>
                 </stmt>
               </block>
@@ -122,7 +125,7 @@ expression: "&xml"
         <if>
           <condition>
             <expr id="expr:12" line="1" column="46" start="45" len="3">
-              <identifier-ref id="ident-ref:3" ident-ref="ident:3" target-id="stmt:6">c_2</identifier-ref>
+              <identifier-ref id="ident-ref:3" ident-ref="ident:3" target-id="stmt:6" type-ref="">c_2</identifier-ref>
             </expr>
           </condition>
           <true>
@@ -130,7 +133,7 @@ expression: "&xml"
               <block>
                 <stmt id="stmt:9" line="1" column="52" start="51" len="4">
                   <expr id="expr:13" line="1" column="52" start="51" len="3">
-                    <identifier-ref id="ident-ref:4" ident-ref="ident:4" target-id="stmt:7">t_2</identifier-ref>
+                    <identifier-ref id="ident-ref:4" ident-ref="ident:4" target-id="stmt:7" type-ref="">t_2</identifier-ref>
                   </expr>
                 </stmt>
               </block>
@@ -141,7 +144,7 @@ expression: "&xml"
               <block>
                 <stmt id="stmt:10" line="1" column="66" start="65" len="4">
                   <expr id="expr:15" line="1" column="66" start="65" len="3">
-                    <identifier-ref id="ident-ref:5" ident-ref="ident:5" target-id="stmt:8">f_2</identifier-ref>
+                    <identifier-ref id="ident-ref:5" ident-ref="ident:5" target-id="stmt:8" type-ref="">f_2</identifier-ref>
                   </expr>
                 </stmt>
               </block>

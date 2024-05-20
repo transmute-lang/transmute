@@ -3,9 +3,9 @@ use crate::ast::identifier::Identifier;
 use crate::ast::ids::{ExprId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
-use crate::ast::statement::{Parameter, RetMode, Statement, StatementKind};
+use crate::ast::statement::{Field, Parameter, RetMode, Statement, StatementKind};
 use crate::ast::ResolvedAst;
-use crate::resolver::SymbolKind;
+use crate::resolver::{SymbolKind, Type};
 use std::io;
 use std::io::Write;
 use xml::writer::XmlEvent;
@@ -87,8 +87,8 @@ impl<'a> XmlWriter<'a> {
             StatementKind::LetFn(ident, params, ty, expr) => {
                 self.visit_function(stmt.id(), ident, params, ty, expr);
             }
-            StatementKind::Struct(_, _) => {
-                todo!()
+            StatementKind::Struct(ident, fields) => {
+                self.visit_struct(stmt.id(), ident, fields);
             }
         }
 
@@ -150,6 +150,15 @@ impl<'a> XmlWriter<'a> {
                 format!("stmt:{}:{}", stmt.id(), index)
             }
             SymbolKind::Native(..) => "native".to_string(),
+            SymbolKind::NativeType(_) => {
+                unreachable!("cannot assign to NativeType")
+            }
+            SymbolKind::Field(_, _) => {
+                unreachable!("cannot assign to Field")
+            }
+            SymbolKind::Struct(_) => {
+                unreachable!("cannot assign to Struct")
+            }
         };
 
         self.emit(
@@ -214,13 +223,32 @@ impl<'a> XmlWriter<'a> {
                         format!("stmt:{}:{}", stmt.id(), index)
                     }
                     SymbolKind::Native(..) => "native".to_string(),
+                    SymbolKind::NativeType(_) => {
+                        unreachable!("NativeType is not a literal")
+                    }
+                    SymbolKind::Field(_, _) => {
+                        unreachable!("Field is not a literal")
+                    }
+                    SymbolKind::Struct(_) => {
+                        unreachable!("Struct is not a literal")
+                    }
+                };
+
+                let ty = self.ast.ty(self.ast.symbol(ident_ref.symbol_id()).ty());
+                let type_ref = match ty {
+                    Type::Struct(stmt) => match self.ast.statement(*stmt).kind() {
+                        StatementKind::Struct(_, _) => Some(format!("stmt:{stmt}")),
+                        _ => unreachable!("must be a struct statement"),
+                    },
+                    _ => None,
                 };
 
                 self.emit(
                     XmlEvent::start_element("identifier-ref")
                         .attr("id", &format!("ident-ref:{}", ident_ref.id()))
                         .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
-                        .attr("target-id", &symbol),
+                        .attr("target-id", &symbol)
+                        .attr("type-ref", &type_ref.unwrap_or_default()),
                 );
                 self.emit(XmlEvent::characters(
                     self.ast.identifier(ident_ref.ident().id()),
@@ -296,6 +324,15 @@ impl<'a> XmlWriter<'a> {
                     self.ast.ty(*ret_type)
                 )
             }
+            SymbolKind::NativeType(_) => {
+                unreachable!("method call cannot be applied to NativeType")
+            }
+            SymbolKind::Field(_, _) => {
+                unreachable!("method call cannot be applied to Field")
+            }
+            SymbolKind::Struct(_) => {
+                unreachable!("method call cannot be applied to Struct")
+            }
         };
 
         self.emit(
@@ -369,6 +406,7 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("identifier")
+                // todo not sure this is really useful, we have the ull name in the tag anyway
                 .attr("ref", &format!("ident:{}", ident.id()))
                 .attr("line", &ident.span().line().to_string())
                 .attr("column", &ident.span().column().to_string())
@@ -418,6 +456,7 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("identifier")
+                // todo not sure this is really useful, we have the ull name in the tag anyway
                 .attr("ref", &format!("ident:{}", ident.id()))
                 .attr("line", &ident.span().line().to_string())
                 .attr("column", &ident.span().column().to_string())
@@ -430,6 +469,7 @@ impl<'a> XmlWriter<'a> {
         if let Some(ty) = ty {
             self.emit(
                 XmlEvent::start_element("type")
+                    // todo add ref to actual type
                     .attr("ref", &format!("ident:{}", ty.id()))
                     .attr("line", &ty.span().line().to_string())
                     .attr("column", &ty.span().column().to_string())
@@ -466,6 +506,7 @@ impl<'a> XmlWriter<'a> {
 
             self.emit(
                 XmlEvent::start_element("type")
+                    // todo add ref to actual type
                     .attr("ref", &format!("ident:{}", param.ty().id()))
                     .attr("line", &param.ty().span().line().to_string())
                     .attr("column", &param.ty().span().column().to_string())
@@ -488,6 +529,64 @@ impl<'a> XmlWriter<'a> {
                 .attr("len", &expr.span().len().to_string()),
         );
         self.visit_expression(expr.id());
+        self.emit(XmlEvent::end_element());
+
+        self.emit(XmlEvent::end_element());
+    }
+
+    fn visit_struct(&mut self, stmt_id: StmtId, ident: &Identifier, fields: &[Field]) {
+        self.emit(XmlEvent::start_element("struct"));
+
+        self.emit(
+            XmlEvent::start_element("identifier")
+                // todo not sure this is really useful, we have the ull name in the tag anyway
+                .attr("ref", &format!("ident:{}", ident.id()))
+                .attr("line", &ident.span().line().to_string())
+                .attr("column", &ident.span().column().to_string())
+                .attr("start", &ident.span().start().to_string())
+                .attr("len", &ident.span().len().to_string()),
+        );
+        self.emit(XmlEvent::characters(self.ast.identifier(ident.id())));
+        self.emit(XmlEvent::end_element());
+
+        self.emit(XmlEvent::start_element("fields"));
+        for (index, param) in fields.iter().enumerate() {
+            self.emit(
+                XmlEvent::start_element("field")
+                    .attr("id", &format!("stmt:{stmt_id}:{index}"))
+                    .attr("line", &param.span().line().to_string())
+                    .attr("column", &param.span().column().to_string())
+                    .attr("start", &param.span().start().to_string())
+                    .attr("len", &param.span().len().to_string()),
+            );
+
+            self.emit(
+                XmlEvent::start_element("name")
+                    .attr("ref", &format!("ident:{}", param.identifier().id()))
+                    .attr("line", &param.identifier().span().line().to_string())
+                    .attr("column", &param.identifier().span().column().to_string())
+                    .attr("start", &param.identifier().span().start().to_string())
+                    .attr("len", &param.identifier().span().len().to_string()),
+            );
+            self.emit(XmlEvent::characters(
+                self.ast.identifier(param.identifier().id()),
+            ));
+            self.emit(XmlEvent::end_element());
+
+            self.emit(
+                XmlEvent::start_element("type")
+                    // todo add ref to actual type
+                    .attr("ref", &format!("ident:{}", param.ty().id()))
+                    .attr("line", &param.ty().span().line().to_string())
+                    .attr("column", &param.ty().span().column().to_string())
+                    .attr("start", &param.ty().span().start().to_string())
+                    .attr("len", &param.ty().span().len().to_string()),
+            );
+            self.emit(XmlEvent::characters(self.ast.identifier(param.ty().id())));
+            self.emit(XmlEvent::end_element());
+
+            self.emit(XmlEvent::end_element());
+        }
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::end_element());
@@ -530,6 +629,14 @@ mod tests {
     test_xml_write!(write_assignment, "let n = 0; n = 42;");
     test_xml_write!(write_if, "if true { 42; } else if false { 0; } else { 1; }");
     test_xml_write!(write_while, "while true { 42; }");
+    test_xml_write!(write_struct, "struct S { a: number, b: number }");
+    test_xml_write!(
+        // todo type should be resolved and we should have a type_ref_id to point to to the ref
+        //   type
+        // todo also have struct as return type
+        write_struct_as_type,
+        "struct S { a: number, b: number } let f(s: S) = { s; }"
+    );
     test_xml_write!(
         write_fibonacci_rec,
         r#"

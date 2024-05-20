@@ -61,7 +61,8 @@ impl<'a> Interpreter<'a> {
             }
             StatementKind::Ret(e, _) => self.visit_expression(*e),
             StatementKind::Struct(_, _) => {
-                todo!()
+                // todo assert if really nothing to do
+                Value::Void
             }
         }
     }
@@ -114,7 +115,11 @@ impl<'a> Interpreter<'a> {
         let ident_ref = self.ast.identifier_ref(*ident);
         let symbol = self.ast.symbol(ident_ref.symbol_id());
         match symbol.kind() {
-            SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => {
+            SymbolKind::Let(_)
+            | SymbolKind::Parameter(_, _)
+            | SymbolKind::Field(_, _)
+            | SymbolKind::Struct(_)
+            | SymbolKind::NativeType(_) => {
                 panic!("let fn expected")
             }
             SymbolKind::LetFn(stmt, _, _) => {
