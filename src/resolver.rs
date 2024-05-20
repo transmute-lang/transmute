@@ -907,7 +907,6 @@ impl TryFrom<&str> for Type {
 #[cfg(test)]
 mod tests {
     use crate::desugar::ImplicitRet;
-    use crate::dot::Dot;
     use crate::error::Level;
     use crate::lexer::{Lexer, Span};
     use crate::natives::Natives;
@@ -999,7 +998,6 @@ mod tests {
             .unwrap();
 
         assert_snapshot!("rebinding-xml", XmlWriter::new(&ast).serialize());
-        assert_snapshot!("rebinding-dot", Dot::new(&ast).serialize());
     }
 
     macro_rules! test_type_error {

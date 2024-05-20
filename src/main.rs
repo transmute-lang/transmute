@@ -4,7 +4,6 @@ extern crate core;
 use crate::ast::ids::StmtId;
 use crate::ast::{AstNodePrettyPrint, WithImplicitRet};
 use crate::desugar::ImplicitRet;
-use crate::dot::Dot;
 use crate::html::HtmlWriter;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
@@ -16,7 +15,6 @@ use std::fs::File;
 
 mod ast;
 mod desugar;
-mod dot;
 mod error;
 mod exit_points;
 mod html;
@@ -90,9 +88,6 @@ fn exec(src: &str, name: &str) {
                 "Executable AST:\n{}\n",
                 AstNodePrettyPrint::<(), StmtId>::new_resolved(ast)
             );
-            Dot::new(ast)
-                .write(&mut File::create(format!("target/{name}.dot")).unwrap())
-                .unwrap();
             XmlWriter::new(ast)
                 .write(&mut File::create(format!("target/{name}.xml")).unwrap())
                 .unwrap();
