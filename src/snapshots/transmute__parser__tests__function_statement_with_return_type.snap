@@ -20,7 +20,7 @@ Ok(
                     },
                     span: 1:36; [35, 36],
                 },
-                symbol: UnresolvedSymbol,
+                symbol: Unresolved,
             },
         ],
         expressions: [

@@ -58,7 +58,7 @@ expression: "Parser::new(Lexer::new(\"struct MyStruct { : type, f2: type2 };\"))
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    344,
+                    624,
                 ),
             },
         ],

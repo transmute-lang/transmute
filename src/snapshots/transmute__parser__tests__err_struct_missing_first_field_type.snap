@@ -59,7 +59,7 @@ expression: "Parser::new(Lexer::new(\"struct MyStruct { f1, f2: type2 };\")).par
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    305,
+                    549,
                 ),
             },
         ],

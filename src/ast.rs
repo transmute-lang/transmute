@@ -1,12 +1,14 @@
 pub mod expression;
 pub mod identifier;
+pub mod identifier_ref;
 pub mod ids;
 pub mod literal;
 pub mod operators;
 pub mod statement;
 
 use crate::ast::expression::{Expression, ExpressionKind};
-use crate::ast::identifier::{Identifier, IdentifierRef, ResolvedSymbol};
+use crate::ast::identifier::Identifier;
+use crate::ast::identifier_ref::Unresolved;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Parameter, Statement, StatementKind};
@@ -14,6 +16,7 @@ use crate::desugar::ImplicitRet;
 use crate::error::Diagnostics;
 use crate::natives::Natives;
 use crate::resolver::{Resolver, Symbol, Type, TypeId};
+use identifier_ref::{IdentifierRef, Resolved};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
@@ -24,7 +27,7 @@ pub struct Ast<S> {
     /// Unique identifiers names
     identifiers: Vec<String>,
     /// Identifier refs
-    identifier_refs: Vec<IdentifierRef>,
+    identifier_refs: Vec<IdentifierRef<Unresolved>>,
     /// All expressions
     expressions: Vec<Expression>,
     /// All statements
@@ -44,7 +47,7 @@ pub struct WithoutImplicitRet {}
 impl Ast<WithImplicitRet> {
     pub fn new(
         identifiers: Vec<String>,
-        identifier_refs: Vec<IdentifierRef>,
+        identifier_refs: Vec<IdentifierRef<Unresolved>>,
         expressions: Vec<Expression>,
         statements: Vec<Statement>,
         root: Vec<StmtId>,
@@ -304,7 +307,7 @@ impl<S> Ast<S> {
         panic!("Identifier {} not found", name)
     }
 
-    pub fn identifier_ref(&self, id: IdentRefId) -> &IdentifierRef {
+    pub fn identifier_ref(&self, id: IdentRefId) -> &IdentifierRef<Unresolved> {
         &self.identifier_refs[id.id()]
     }
 
@@ -370,7 +373,7 @@ pub struct ResolvedAst {
     /// Unique identifiers names
     identifiers: Vec<String>,
     /// Identifier refs
-    identifier_refs: Vec<IdentifierRef<ResolvedSymbol>>,
+    identifier_refs: Vec<IdentifierRef<Resolved>>,
     /// All expressions
     expressions: Vec<Expression>,
     /// All statements
@@ -405,7 +408,7 @@ impl ResolvedAst {
         panic!("Identifier {} not found", name)
     }
 
-    pub fn identifier_ref(&self, id: IdentRefId) -> &IdentifierRef<ResolvedSymbol> {
+    pub fn identifier_ref(&self, id: IdentRefId) -> &IdentifierRef<Resolved> {
         &self.identifier_refs[id.id()]
     }
 
@@ -454,7 +457,7 @@ impl<'a, S> AstKind<'a, S> {
         }
     }
 
-    fn identifier_ref(&self, id: IdentRefId) -> IdentifierRef {
+    fn identifier_ref(&self, id: IdentRefId) -> IdentifierRef<Unresolved> {
         match self {
             AstKind::Unresolved(a) => a.identifier_refs[id.id()].clone(),
             AstKind::Resolved(a) => {

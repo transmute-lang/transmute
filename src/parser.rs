@@ -1,5 +1,6 @@
 use crate::ast::expression::{Expression, ExpressionKind};
-use crate::ast::identifier::{Identifier, IdentifierRef};
+use crate::ast::identifier::Identifier;
+use crate::ast::identifier_ref::{IdentifierRef, Unresolved};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{
@@ -14,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 pub struct Parser<'s> {
     lexer: PeekableLexer<'s>,
     identifiers: HashMap<String, IdentId>,
-    identifier_refs: Vec<IdentifierRef>,
+    identifier_refs: Vec<IdentifierRef<Unresolved>>,
     expressions: Vec<Expression>,
     statements: Vec<Statement>,
     diagnostics: Diagnostics,
