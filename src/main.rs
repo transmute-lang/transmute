@@ -15,7 +15,6 @@ use std::fs::File;
 
 mod ast;
 mod desugar;
-mod dot;
 mod error;
 mod exit_points;
 mod html;
@@ -110,10 +109,6 @@ fn exec(src: &str, name: &str) {
                 "Executable AST:\n{}\n",
                 AstNodePrettyPrint::<(), StmtId>::new_resolved(ast)
             );
-            // todo re-enable
-            // Dot::new(ast)
-            //     .write(&mut File::create(format!("target/{name}.dot")).unwrap())
-            //     .unwrap();
             XmlWriter::new(ast)
                 .write(&mut File::create(format!("target/run__{name}.xml")).unwrap())
                 .unwrap();
