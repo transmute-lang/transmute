@@ -1,5 +1,6 @@
 use crate::ast::expression::{Expression, ExpressionKind};
-use crate::ast::identifier::{Identifier, IdentifierRef, ResolvedSymbol};
+use crate::ast::identifier::Identifier;
+use crate::ast::identifier_ref::{IdentifierRef, Resolved};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId};
 use crate::ast::literal::LiteralKind;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
@@ -17,7 +18,7 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 
 pub struct Resolver {
-    resolved_identifier_refs: Vec<Option<IdentifierRef<ResolvedSymbol>>>,
+    resolved_identifier_refs: Vec<Option<IdentifierRef<Resolved>>>,
     /// transforms unary/binary operations to function calls
     expression: Vec<Expression>,
     symbols: Rc<RefCell<Vec<Symbol>>>,
@@ -32,7 +33,7 @@ pub struct Resolver {
 ids::make_id!(TypeId);
 
 pub struct Resolution {
-    pub identifier_refs: Vec<IdentifierRef<ResolvedSymbol>>,
+    pub identifier_refs: Vec<IdentifierRef<Resolved>>,
     pub symbols: Vec<Symbol>,
     pub types: Vec<Type>,
     pub expression_types: Vec<TypeId>,
@@ -137,7 +138,7 @@ impl Resolver {
                     .resolved_identifier_refs
                     .into_iter()
                     .map(|id_ref| id_ref.expect("identifier ref is resolved"))
-                    .collect::<Vec<IdentifierRef<ResolvedSymbol>>>(),
+                    .collect::<Vec<IdentifierRef<Resolved>>>(),
                 symbols: self.symbols.replace(vec![]),
                 types,
                 expression_types: self
