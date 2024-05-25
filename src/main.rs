@@ -23,6 +23,7 @@ mod lexer;
 mod natives;
 mod parser;
 mod resolver;
+mod vec_map;
 mod xml;
 
 // todo things to check:
