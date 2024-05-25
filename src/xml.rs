@@ -6,8 +6,7 @@ use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Parameter, RetMode, Statement, StatementKind};
 use crate::ast::ResolvedAst;
 use crate::resolver::SymbolKind;
-use std::io;
-use std::io::Write;
+use std::io::{self, Write};
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
 
@@ -36,7 +35,7 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::start_element("ast"));
 
         self.emit(XmlEvent::start_element("identifiers"));
-        for (id, identifier) in self.ast.identifiers().iter().enumerate() {
+        for (id, identifier) in self.ast.identifiers().iter() {
             self.emit(XmlEvent::start_element("ident").attr("id", &format!("ident:{id}")));
             self.emit(XmlEvent::Characters(identifier));
             self.emit(XmlEvent::end_element());

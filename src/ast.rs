@@ -16,6 +16,7 @@ use crate::desugar::ImplicitRet;
 use crate::error::Diagnostics;
 use crate::natives::Natives;
 use crate::resolver::{Resolver, Symbol, Type, TypeId};
+use crate::vec_map::VecMap;
 use identifier_ref::{IdentifierRef, Resolved};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -25,13 +26,13 @@ use std::rc::Rc;
 #[derive(Debug, PartialEq)]
 pub struct Ast<S> {
     /// Unique identifiers names
-    identifiers: Vec<String>,
+    identifiers: VecMap<IdentId, String>,
     /// Identifier refs
-    identifier_refs: Vec<IdentifierRef<Unresolved>>,
+    identifier_refs: VecMap<IdentRefId, IdentifierRef<Unresolved>>,
     /// All expressions
-    expressions: Vec<Expression>,
+    expressions: VecMap<ExprId, Expression>,
     /// All statements
-    statements: Vec<Statement>,
+    statements: VecMap<StmtId, Statement>,
     /// Root statements
     // todo replace with Statements
     root: Vec<StmtId>,
@@ -53,10 +54,10 @@ impl Ast<WithImplicitRet> {
         root: Vec<StmtId>,
     ) -> Self {
         Self {
-            identifiers,
-            identifier_refs,
-            expressions,
-            statements,
+            identifiers: identifiers.into(),
+            identifier_refs: identifier_refs.into(),
+            expressions: expressions.into(),
+            statements: statements.into(),
             root,
             implicit_ret: Default::default(),
         }
@@ -83,9 +84,10 @@ impl Ast<WithoutImplicitRet> {
         let ast = self.merge(Into::<Ast<WithoutImplicitRet>>::into(&natives));
         resolver.resolve(&ast, natives).map(|r| {
             let mut ast = ast;
-            for expression in r.expressions.into_iter() {
+            for (_id, expression) in r.expressions.into_iter() {
                 ast.replace_expression(expression);
             }
+            // todo remove the into()'s
             ResolvedAst {
                 identifiers: ast.identifiers,
                 identifier_refs: r.identifier_refs,
@@ -100,54 +102,60 @@ impl Ast<WithoutImplicitRet> {
     }
 
     fn merge(self, other: Ast<WithoutImplicitRet>) -> Ast<WithoutImplicitRet> {
-        let mut identifiers = self
-            .identifiers
-            .into_iter()
-            .enumerate()
-            .map(|(i, ident)| (ident, i))
-            .collect::<HashMap<String, usize>>();
+        let mut identifiers = self.identifiers.into_reversed::<HashMap<_, _>>();
 
-        let mut ident_map = Vec::with_capacity(other.identifiers.len());
-        for ident in other.identifiers.into_iter() {
-            if let Some(id) = identifiers.get(&ident) {
-                ident_map.push(*id);
+        // maps from old IdentId (i.e. from the "other" ast) to new IdentId
+        let mut ident_map = HashMap::new();
+
+        for (old_id, ident) in other.identifiers.into_iter() {
+            let new_id = if let Some(id) = identifiers.get(&ident) {
+                *id
             } else {
-                let id = identifiers.len();
-                identifiers.insert(ident, id);
-                ident_map.push(id);
-            }
+                let new_id = IdentId::from(identifiers.len());
+                identifiers.insert(ident, new_id);
+                new_id
+            };
+            ident_map.insert(old_id, new_id);
         }
 
+        debug_assert!(!self.identifier_refs.has_holes());
         let mut identifier_refs = self.identifier_refs;
-        let mut ident_ref_map = Vec::with_capacity(other.identifier_refs.len());
-        for ident_ref in other.identifier_refs.into_iter() {
-            let id = identifier_refs.len();
-            identifier_refs.push(IdentifierRef::new(
-                IdentRefId::from(id),
+
+        // maps from old IdentRefId (i.e. from the "other" ast) to new IdentRefId
+        let mut ident_ref_map = HashMap::new();
+
+        // let mut ident_ref_map = Vec::with_capacity(other.identifier_refs.len());
+        for (old_id, ident_ref) in other.identifier_refs.into_iter() {
+            let new_id = identifier_refs.push(IdentifierRef::new(
+                identifier_refs.next_index(),
                 Identifier::new(
-                    IdentId::from(ident_map[ident_ref.ident().id().id()]),
+                    *ident_map
+                        .get(&ident_ref.ident().id())
+                        .expect("old->new mapping exists"),
                     ident_ref.ident().span().clone(),
                 ),
             ));
-            ident_ref_map.push(id);
+            ident_ref_map.insert(old_id, new_id);
         }
 
         let stmt_base = self.statements.len();
         let expr_base = self.expressions.len();
 
         let mut expressions = self.expressions;
-        for expression in other.expressions {
+        for (id, expression) in other.expressions {
             let expression = Expression::new(
-                ExprId::from(expr_base + expression.id().id()),
+                id + expr_base,
                 match expression.kind() {
                     ExpressionKind::Assignment(ident_ref, expr) => ExpressionKind::Assignment(
-                        IdentRefId::from(ident_ref_map[ident_ref.id()]),
-                        ExprId::from(expr_base + expr.id()),
+                        *ident_ref_map
+                            .get(ident_ref)
+                            .expect("old->new mapping exists"),
+                        expr + expr_base,
                     ),
                     ExpressionKind::If(cond, true_branch, false_branch) => ExpressionKind::If(
-                        ExprId::from(expr_base + cond.id()),
-                        ExprId::from(expr_base + true_branch.id()),
-                        false_branch.map(|expr| ExprId::from(expr_base + expr.id())),
+                        cond + expr_base,
+                        true_branch + expr_base,
+                        false_branch.map(|expr| expr + expr_base),
                     ),
                     ExpressionKind::Literal(lit) => match lit.kind() {
                         LiteralKind::Boolean(b) => ExpressionKind::Literal(Literal::new(
@@ -156,9 +164,11 @@ impl Ast<WithoutImplicitRet> {
                         )),
                         LiteralKind::Identifier(ident_ref) => {
                             ExpressionKind::Literal(Literal::new(
-                                LiteralKind::Identifier(IdentRefId::from(
-                                    ident_ref_map[ident_ref.id()],
-                                )),
+                                LiteralKind::Identifier(
+                                    *ident_ref_map
+                                        .get(ident_ref)
+                                        .expect("old->new mapping exists"),
+                                ),
                                 lit.span().clone(),
                             ))
                         }
@@ -167,32 +177,28 @@ impl Ast<WithoutImplicitRet> {
                             lit.span().clone(),
                         )),
                     },
-                    ExpressionKind::Binary(left, op, right) => ExpressionKind::Binary(
-                        ExprId::from(expr_base + left.id()),
-                        op.clone(),
-                        ExprId::from(expr_base + right.id()),
-                    ),
+                    ExpressionKind::Binary(left, op, right) => {
+                        ExpressionKind::Binary(left + expr_base, op.clone(), right + expr_base)
+                    }
                     ExpressionKind::FunctionCall(ident_ref, parameters) => {
                         ExpressionKind::FunctionCall(
-                            IdentRefId::from(ident_ref_map[ident_ref.id()]),
+                            *ident_ref_map
+                                .get(ident_ref)
+                                .expect("old->new mapping exists"),
                             parameters
                                 .iter()
-                                .map(|e| ExprId::from(expr_base + e.id()))
+                                .map(|e| e + expr_base)
                                 .collect::<Vec<ExprId>>(),
                         )
                     }
                     ExpressionKind::Unary(op, expr) => {
-                        ExpressionKind::Unary(op.clone(), ExprId::from(expr_base + expr.id()))
+                        ExpressionKind::Unary(op.clone(), expr + expr_base)
                     }
-                    ExpressionKind::While(cond, expr) => ExpressionKind::While(
-                        ExprId::from(expr_base + cond.id()),
-                        ExprId::from(expr_base + expr.id()),
-                    ),
+                    ExpressionKind::While(cond, expr) => {
+                        ExpressionKind::While(cond + expr_base, expr + expr_base)
+                    }
                     ExpressionKind::Block(stmts) => ExpressionKind::Block(
-                        stmts
-                            .iter()
-                            .map(|s| StmtId::from(stmt_base + s.id()))
-                            .collect::<Vec<StmtId>>(),
+                        stmts.iter().map(|s| s + stmt_base).collect::<Vec<StmtId>>(),
                     ),
                     ExpressionKind::Dummy => ExpressionKind::Dummy,
                 },
@@ -204,27 +210,27 @@ impl Ast<WithoutImplicitRet> {
 
         let mut statements = self.statements;
 
-        for statement in other.statements {
+        for (id, statement) in other.statements {
             let statement = Statement::new(
-                StmtId::from(stmt_base + statement.id().id()),
+                id + stmt_base,
                 match statement.kind() {
-                    StatementKind::Expression(expr) => {
-                        StatementKind::Expression(ExprId::from(expr_base + expr.id()))
-                    }
+                    StatementKind::Expression(expr) => StatementKind::Expression(expr + expr_base),
                     StatementKind::Let(identifier, expr) => StatementKind::Let(
                         Identifier::new(
-                            IdentId::from(ident_map[identifier.id().id()]),
+                            *ident_map
+                                .get(&identifier.id())
+                                .expect("old->new mapping exists"),
                             identifier.span().clone(),
                         ),
-                        ExprId::from(expr_base + expr.id()),
+                        expr + expr_base,
                     ),
-                    StatementKind::Ret(expr, mode) => {
-                        StatementKind::Ret(ExprId::from(expr_base + expr.id()), *mode)
-                    }
+                    StatementKind::Ret(expr, mode) => StatementKind::Ret(expr + expr_base, *mode),
                     StatementKind::LetFn(identifier, parameters, return_type, expr) => {
                         StatementKind::LetFn(
                             Identifier::new(
-                                IdentId::from(ident_map[identifier.id().id()]),
+                                *ident_map
+                                    .get(&identifier.id())
+                                    .expect("old->new mapping exists"),
                                 identifier.span().clone(),
                             ),
                             parameters
@@ -232,11 +238,15 @@ impl Ast<WithoutImplicitRet> {
                                 .map(|p| {
                                     Parameter::new(
                                         Identifier::new(
-                                            IdentId::from(ident_map[p.identifier().id().id()]),
+                                            *ident_map
+                                                .get(&p.identifier().id())
+                                                .expect("old->new mapping exists"),
                                             p.identifier().span().clone(),
                                         ),
                                         Identifier::new(
-                                            IdentId::from(ident_map[p.ty().id().id()]),
+                                            *ident_map
+                                                .get(&p.ty().id())
+                                                .expect("old->new mapping exists"),
                                             p.ty().span().clone(),
                                         ),
                                         p.span().clone(),
@@ -245,11 +255,11 @@ impl Ast<WithoutImplicitRet> {
                                 .collect::<Vec<Parameter>>(),
                             return_type.as_ref().map(|t| {
                                 Identifier::new(
-                                    IdentId::from(ident_map[t.id().id()]),
+                                    *ident_map.get(&t.id()).expect("old->new mapping exists"),
                                     t.span().clone(),
                                 )
                             }),
-                            ExprId::from(expr_base + expr.id()),
+                            expr + expr_base,
                         )
                     }
                 },
@@ -264,7 +274,7 @@ impl Ast<WithoutImplicitRet> {
             root.push(StmtId::from(stmt_base + stmt.id()));
         }
 
-        let mut identifiers = identifiers.into_iter().collect::<Vec<(String, usize)>>();
+        let mut identifiers = identifiers.into_iter().collect::<Vec<(String, IdentId)>>();
 
         identifiers.sort_by(|(_, id1), (_, id2)| id1.cmp(id2));
 
@@ -274,7 +284,8 @@ impl Ast<WithoutImplicitRet> {
             .collect::<Vec<String>>();
 
         Ast::<WithoutImplicitRet> {
-            identifiers,
+            // todo remove into()?
+            identifiers: identifiers.into(),
             identifier_refs,
             expressions,
             statements,
@@ -289,26 +300,22 @@ impl<S> Ast<S> {
         &self.root
     }
 
-    pub fn identifiers(&self) -> &Vec<String> {
-        &self.identifiers
-    }
-
     pub fn identifier(&self, id: IdentId) -> &str {
-        &self.identifiers[id.id()]
+        &self.identifiers[id]
     }
 
     pub fn identifier_id(&self, name: &str) -> IdentId {
         // todo use a map instead
-        for (id, ident) in self.identifiers.iter().enumerate() {
+        for (id, ident) in self.identifiers.iter() {
             if ident == name {
-                return IdentId::from(id);
+                return id;
             }
         }
         panic!("Identifier {} not found", name)
     }
 
     pub fn identifier_ref(&self, id: IdentRefId) -> &IdentifierRef<Unresolved> {
-        &self.identifier_refs[id.id()]
+        &self.identifier_refs[id]
     }
 
     pub fn identifier_ref_count(&self) -> usize {
@@ -317,23 +324,23 @@ impl<S> Ast<S> {
 
     #[cfg(test)]
     pub fn identifier_ref_id(&self, start: usize) -> IdentRefId {
-        for ident_ref in &self.identifier_refs {
+        for (id, ident_ref) in &self.identifier_refs {
             if ident_ref.ident().span().start() == start {
-                return ident_ref.id();
+                return id;
             }
         }
         panic!("No identifier ref found at {}", start)
     }
 
     pub fn expression(&self, id: ExprId) -> &Expression {
-        &self.expressions[id.id()]
+        &self.expressions[id]
     }
 
     #[cfg(test)]
     pub fn expression_id(&self, start: usize) -> ExprId {
-        for expr in &self.expressions {
+        for (id, expr) in &self.expressions {
             if expr.span().start() == start {
-                return expr.id();
+                return id;
             }
         }
         panic!("No expression found at {}", start)
@@ -344,80 +351,78 @@ impl<S> Ast<S> {
     }
 
     pub fn statement(&self, id: StmtId) -> &Statement {
-        &self.statements[id.id()]
+        &self.statements[id]
     }
 
     #[cfg(test)]
     pub fn statement_id(&self, start: usize) -> StmtId {
-        for stmt in &self.statements {
+        for (id, stmt) in &self.statements {
             if stmt.span().start() == start {
-                return stmt.id();
+                return id;
             }
         }
         panic!("No statement found at {}", start)
     }
 
     fn replace_expression(&mut self, expression: Expression) {
-        let id = expression.id().id();
-        self.expressions[id] = expression
+        self.expressions.insert(expression.id(), expression);
     }
 
     fn replace_statement(&mut self, statement: Statement) {
-        let id = statement.id().id();
-        self.statements[id] = statement
+        self.statements.insert(statement.id(), statement);
     }
 }
 
 #[derive(Debug)]
 pub struct ResolvedAst {
     /// Unique identifiers names
-    identifiers: Vec<String>,
+    identifiers: VecMap<IdentId, String>,
     /// Identifier refs
-    identifier_refs: Vec<IdentifierRef<Resolved>>,
+    identifier_refs: VecMap<IdentRefId, IdentifierRef<Resolved>>,
     /// All expressions
-    expressions: Vec<Expression>,
+    expressions: VecMap<ExprId, Expression>,
     /// All statements
-    statements: Vec<Statement>,
+    statements: VecMap<StmtId, Statement>,
     /// Root statements
     // todo replace with Statements
     root: Vec<StmtId>,
     /// All symbols
-    symbols: Vec<Symbol>,
+    symbols: VecMap<SymbolId, Symbol>,
     /// All types
-    types: Vec<Type>,
+    types: VecMap<TypeId, Type>,
     /// Types of all expressions
-    expressions_types: Vec<TypeId>,
+    expressions_types: VecMap<ExprId, TypeId>,
 }
 
 impl ResolvedAst {
-    pub fn identifiers(&self) -> &Vec<String> {
+    pub fn identifiers(&self) -> &VecMap<IdentId, String> {
         &self.identifiers
     }
 
     pub fn identifier(&self, id: IdentId) -> &str {
-        &self.identifiers[id.id()]
+        &self.identifiers[id]
     }
 
     pub fn identifier_id(&self, name: &str) -> IdentId {
         // todo use a map instead
-        for (id, ident) in self.identifiers.iter().enumerate() {
+        for (id, ident) in self.identifiers.iter() {
             if ident == name {
-                return IdentId::from(id);
+                return id;
             }
         }
         panic!("Identifier {} not found", name)
     }
 
     pub fn identifier_ref(&self, id: IdentRefId) -> &IdentifierRef<Resolved> {
-        &self.identifier_refs[id.id()]
+        &self.identifier_refs[id]
     }
 
     pub fn expression(&self, id: ExprId) -> &Expression {
-        &self.expressions[id.id()]
+        &self.expressions[id]
     }
 
     pub fn expression_type(&self, id: ExprId) -> &Type {
-        &self.types[self.expressions_types[id.id()].id()]
+        &self.types[self.expressions_types[id]]
     }
 
     pub fn statements(&self) -> &Vec<StmtId> {
@@ -425,15 +430,15 @@ impl ResolvedAst {
     }
 
     pub fn statement(&self, id: StmtId) -> &Statement {
-        &self.statements[id.id()]
+        &self.statements[id]
     }
 
     pub fn symbol(&self, id: SymbolId) -> &Symbol {
-        &self.symbols[id.id()]
+        &self.symbols[id]
     }
 
     pub fn ty(&self, id: TypeId) -> &Type {
-        &self.types[id.id()]
+        &self.types[id]
     }
 }
 
@@ -452,16 +457,16 @@ enum AstKind<'a, S> {
 impl<'a, S> AstKind<'a, S> {
     fn identifier(&self, id: IdentId) -> &str {
         match self {
-            AstKind::Unresolved(a) => &a.identifiers[id.id()],
-            AstKind::Resolved(a) => &a.identifiers[id.id()],
+            AstKind::Unresolved(a) => &a.identifiers[id],
+            AstKind::Resolved(a) => &a.identifiers[id],
         }
     }
 
     fn identifier_ref(&self, id: IdentRefId) -> IdentifierRef<Unresolved> {
         match self {
-            AstKind::Unresolved(a) => a.identifier_refs[id.id()].clone(),
+            AstKind::Unresolved(a) => a.identifier_refs[id].clone(),
             AstKind::Resolved(a) => {
-                let ident_ref = &a.identifier_refs[id.id()];
+                let ident_ref = &a.identifier_refs[id];
                 IdentifierRef::new(ident_ref.id(), ident_ref.ident().clone())
             }
         }
@@ -469,15 +474,15 @@ impl<'a, S> AstKind<'a, S> {
 
     fn expression(&self, id: ExprId) -> &Expression {
         match self {
-            AstKind::Unresolved(a) => &a.expressions[id.id()],
-            AstKind::Resolved(a) => &a.expressions[id.id()],
+            AstKind::Unresolved(a) => &a.expressions[id],
+            AstKind::Resolved(a) => &a.expressions[id],
         }
     }
 
     pub fn statement(&self, id: StmtId) -> &Statement {
         match self {
-            AstKind::Unresolved(a) => &a.statements[id.id()],
-            AstKind::Resolved(a) => &a.statements[id.id()],
+            AstKind::Unresolved(a) => &a.statements[id],
+            AstKind::Resolved(a) => &a.statements[id],
         }
     }
 }
@@ -779,11 +784,8 @@ mod tests {
     use crate::ast::{AstNodePrettyPrint, WithoutImplicitRet};
     use crate::desugar::ImplicitRet;
     use crate::lexer::Lexer;
-    use crate::natives::Natives;
     use crate::parser::Parser;
-    use crate::resolver::Resolver;
-    use crate::xml::XmlWriter;
-    use insta::assert_snapshot;
+    use insta::{assert_debug_snapshot, assert_snapshot};
 
     #[test]
     fn pretty_print() {
@@ -836,14 +838,7 @@ mod tests {
         .unwrap()
         .convert_implicit_ret(ImplicitRet::new());
 
-        let ast = ast1
-            .merge(ast2)
-            .resolve(Resolver::new(), Natives::default())
-            .unwrap();
-
-        let xml = XmlWriter::new(&ast).serialize();
-
-        assert_snapshot!(&xml);
+        assert_debug_snapshot!(&ast1.merge(ast2));
     }
 
     #[test]
@@ -858,14 +853,7 @@ mod tests {
             .unwrap()
             .convert_implicit_ret(ImplicitRet::new());
 
-        let ast = ast1
-            .merge(ast2)
-            .resolve(Resolver::new(), Natives::default())
-            .unwrap();
-
-        let xml = XmlWriter::new(&ast).serialize();
-
-        assert_snapshot!(&xml);
+        assert_debug_snapshot!(&ast1.merge(ast2));
     }
 
     #[test]
@@ -884,14 +872,7 @@ mod tests {
         .unwrap()
         .convert_implicit_ret(ImplicitRet::new());
 
-        let ast = ast1
-            .merge(ast2)
-            .resolve(Resolver::new(), Natives::default())
-            .unwrap();
-
-        let xml = XmlWriter::new(&ast).serialize();
-
-        assert_snapshot!(&xml);
+        assert_debug_snapshot!(&ast1.merge(ast2));
     }
 
     #[test]
@@ -910,13 +891,6 @@ mod tests {
         .unwrap()
         .convert_implicit_ret(ImplicitRet::new());
 
-        let ast = ast1
-            .merge(ast2)
-            .resolve(Resolver::new(), Natives::default())
-            .unwrap();
-
-        let xml = XmlWriter::new(&ast).serialize();
-
-        assert_snapshot!(&xml);
+        assert_debug_snapshot!(&ast1.merge(ast2));
     }
 }

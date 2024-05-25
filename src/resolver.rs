@@ -11,6 +11,7 @@ use crate::exit_points::{ExitPoint, ExitPoints};
 use crate::interpreter::Value;
 use crate::lexer::Span;
 use crate::natives::Natives;
+use crate::vec_map::VecMap;
 use bimap::BiHashMap;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -18,11 +19,11 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 
 pub struct Resolver {
-    resolved_identifier_refs: Vec<Option<IdentifierRef<Resolved>>>,
-    expression: Vec<Expression>,
-    symbols: Rc<RefCell<Vec<Symbol>>>,
+    resolved_identifier_refs: VecMap<IdentRefId, IdentifierRef<Resolved>>,
+    expression: VecMap<ExprId, Expression>,
+    symbols: Rc<RefCell<VecMap<SymbolId, Symbol>>>,
     types: BiHashMap<Type, TypeId>,
-    expression_types: Vec<Option<Result<TypeId, ()>>>,
+    expression_types: VecMap<ExprId, Result<TypeId, ()>>,
     diagnostics: Diagnostics,
     scope_stack: Vec<Scope>,
 }
@@ -30,21 +31,21 @@ pub struct Resolver {
 ids::make_id!(TypeId);
 
 pub struct Resolution {
-    pub identifier_refs: Vec<IdentifierRef<Resolved>>,
-    pub symbols: Vec<Symbol>,
-    pub types: Vec<Type>,
-    pub expression_types: Vec<TypeId>,
-    pub expressions: Vec<Expression>,
+    pub identifier_refs: VecMap<IdentRefId, IdentifierRef<Resolved>>,
+    pub symbols: VecMap<SymbolId, Symbol>,
+    pub types: VecMap<TypeId, Type>,
+    pub expression_types: VecMap<ExprId, TypeId>,
+    pub expressions: VecMap<ExprId, Expression>,
 }
 
 impl Resolver {
     pub fn new() -> Self {
         let mut me = Self {
-            resolved_identifier_refs: Vec::new(),
-            expression: Vec::new(),
-            symbols: Rc::new(RefCell::new(Vec::<Symbol>::new())),
+            resolved_identifier_refs: VecMap::new(),
+            expression: VecMap::new(),
+            symbols: Rc::new(RefCell::new(VecMap::new())),
             types: BiHashMap::new(),
-            expression_types: Vec::new(),
+            expression_types: VecMap::new(),
             diagnostics: Default::default(),
             scope_stack: Vec::new(),
         };
@@ -63,8 +64,8 @@ impl Resolver {
         natives: Natives,
     ) -> Result<Resolution, Diagnostics> {
         self.resolved_identifier_refs
-            .resize(ast.identifier_ref_count(), None);
-        self.expression_types.resize(ast.expressions_count(), None);
+            .resize(ast.identifier_ref_count());
+        self.expression_types.resize(ast.expressions_count());
         self.scope_stack.push(Scope::new(self.symbols.clone()));
 
         for native in natives.into_iter() {
@@ -97,31 +98,28 @@ impl Resolver {
         let _ = self.visit_statements(ast, &stmts);
 
         if self.diagnostics.is_empty() {
-            let mut types = Vec::with_capacity(self.types.len());
-            let len = self.types.len();
-            for type_id in 0..len {
-                types.push(
-                    self.types
-                        .remove_by_right(&TypeId::from(type_id))
-                        .expect("type_id exists")
-                        .0,
-                )
-            }
+            let types = self
+                .types
+                .into_iter()
+                .map(|(a, b)| (b, a))
+                .collect::<VecMap<_, _>>();
+
+            debug_assert!(!self.resolved_identifier_refs.has_holes());
+            debug_assert!(!self.expression_types.has_holes());
+            debug_assert!(!self.symbols.borrow().has_holes());
+            debug_assert!(!types.has_holes());
 
             Ok(Resolution {
-                identifier_refs: self
-                    .resolved_identifier_refs
-                    .into_iter()
-                    .map(|id_ref| id_ref.expect("identifier ref is resolved"))
-                    .collect::<Vec<IdentifierRef<Resolved>>>(),
-                symbols: self.symbols.replace(vec![]),
+                identifier_refs: self.resolved_identifier_refs,
+                symbols: self.symbols.replace(VecMap::new()),
                 types,
                 expression_types: self
                     .expression_types
                     .into_iter()
-                    .map(|ty| ty.expect("type is resolved"))
-                    .map(|ty| ty.expect("type is resolved successfully"))
-                    .collect::<Vec<TypeId>>(),
+                    .map(|(expr_id, type_id)| {
+                        (expr_id, type_id.expect("type is resolved successfully"))
+                    })
+                    .collect::<VecMap<ExprId, TypeId>>(),
                 expressions: self.expression,
             })
         } else {
@@ -208,14 +206,13 @@ impl Resolver {
     fn visit_expression(
         &mut self,
         ast: &Ast<WithoutImplicitRet>,
-        expr: ExprId,
+        expr_id: ExprId,
     ) -> Result<TypeId, ()> {
-        let expr_id = expr.id();
-        if let Some(ty) = self.expression_types[expr_id] {
-            return ty;
+        if let Some(ty) = self.expression_types.get(expr_id) {
+            return *ty;
         }
 
-        let expr = ast.expression(expr);
+        let expr = ast.expression(expr_id);
         let ty = match expr.kind() {
             ExpressionKind::Assignment(ident_ref, expr) => {
                 self.visit_assignment(ast, *ident_ref, *expr)
@@ -245,7 +242,7 @@ impl Resolver {
             }
         };
 
-        self.expression_types[expr_id] = Some(ty);
+        self.expression_types.insert(expr_id, ty);
         ty
     }
 
@@ -285,7 +282,7 @@ impl Resolver {
             //  information yet and this we cannot assign to a variable holding a function
             //  (yet).
             .resolve_ident_ref(ast, ident_ref, None)
-            .map(|s| self.symbols.borrow()[s.id()].ty)
+            .map(|s| self.symbols.borrow()[s].ty)
             .ok_or(())?;
 
         if expr_type != expected_type {
@@ -372,7 +369,7 @@ impl Resolver {
                 //  - behaviour when target is a native
                 // todo resolve function ref, see comment in resolve_assignment
                 self.resolve_ident_ref(ast, ident_ref, None)
-                    .map(|s| self.symbols.borrow()[s.id()].ty)
+                    .map(|s| self.symbols.borrow()[s].ty)
                     .ok_or(())
             }
         }
@@ -420,7 +417,7 @@ impl Resolver {
     ) -> IdentRefId {
         let id = IdentRefId::from(self.resolved_identifier_refs.len());
         self.resolved_identifier_refs
-            .push(Some(IdentifierRef::new_resolved(id, identifier, symbol)));
+            .push(IdentifierRef::new_resolved(id, identifier, symbol));
         id
     }
 
@@ -472,7 +469,7 @@ impl Resolver {
         }
 
         self.resolve_ident_ref(ast, ident_ref, Some(&param_types))
-            .map(|s| match &self.symbols.borrow()[s.id()].kind {
+            .map(|s| match &self.symbols.borrow()[s].kind {
                 SymbolKind::LetFn(_, _, ret_type) => Ok(*ret_type),
                 SymbolKind::Native(_, _, ret_type, _) => Ok(*ret_type),
                 SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => {
@@ -677,7 +674,7 @@ impl Resolver {
         ident_ref: IdentRefId,
         param_types: Option<&[TypeId]>,
     ) -> Option<SymbolId> {
-        if let Some(ident_ref) = &self.resolved_identifier_refs[ident_ref.id()] {
+        if let Some(ident_ref) = &self.resolved_identifier_refs.get(ident_ref) {
             return Some(ident_ref.symbol_id());
         }
 
@@ -691,7 +688,8 @@ impl Resolver {
             .find_map(|scope| scope.find(&ident_id, param_types))
         {
             Some(s) => {
-                self.resolved_identifier_refs[ident_ref.id().id()] = Some(ident_ref.resolved(s));
+                self.resolved_identifier_refs
+                    .insert(ident_ref.id(), ident_ref.resolved(s));
                 Some(s)
             }
             None => {
@@ -799,12 +797,12 @@ impl Resolver {
 }
 
 struct Scope {
-    all_symbols: Rc<RefCell<Vec<Symbol>>>,
+    all_symbols: Rc<RefCell<VecMap<SymbolId, Symbol>>>,
     symbols: HashMap<IdentId, Vec<SymbolId>>,
 }
 
 impl Scope {
-    fn new(all_symbols: Rc<RefCell<Vec<Symbol>>>) -> Self {
+    fn new(all_symbols: Rc<RefCell<VecMap<SymbolId, Symbol>>>) -> Self {
         Self {
             all_symbols,
             symbols: Default::default(),
@@ -817,7 +815,7 @@ impl Scope {
                 .iter()
                 .rev()
                 .find(|s| {
-                    let symbol = &self.all_symbols.borrow()[s.id()];
+                    let symbol = &self.all_symbols.borrow()[**s];
                     match param_types {
                         None => match symbol.kind {
                             SymbolKind::LetFn(_, _, _) | SymbolKind::Native(_, _, _, _) => false,

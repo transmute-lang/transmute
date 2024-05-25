@@ -1,152 +1,493 @@
 ---
 source: src/ast.rs
-expression: "&xml"
+expression: "&ast1.merge(ast2)"
 ---
-<?xml version="1.0" encoding="utf-8"?>
-<unit>
-  <ast>
-    <identifiers>
-      <ident id="ident:0">x_1</ident>
-      <ident id="ident:1">f_1</ident>
-      <ident id="ident:2">p_1</ident>
-      <ident id="ident:3">number</ident>
-      <ident id="ident:4">boolean</ident>
-      <ident id="ident:5">x_2</ident>
-      <ident id="ident:6">f_2</ident>
-      <ident id="ident:7">p_2</ident>
-      <ident id="ident:8">add</ident>
-      <ident id="ident:9">div</ident>
-      <ident id="ident:10">eq</ident>
-      <ident id="ident:11">ge</ident>
-      <ident id="ident:12">gt</ident>
-      <ident id="ident:13">le</ident>
-      <ident id="ident:14">lt</ident>
-      <ident id="ident:15">mul</ident>
-      <ident id="ident:16">neg</ident>
-      <ident id="ident:17">neq</ident>
-      <ident id="ident:18">sub</ident>
-    </identifiers>
-    <stmt id="stmt:0" line="1" column="1" start="0" len="12">
-      <let>
-        <identifier ref="ident:0" line="1" column="5" start="4" len="3">x_1</identifier>
-        <expression line="1" column="11" start="10" len="1">
-          <expr id="expr:0" line="1" column="11" start="10" len="1">
-            <number>0</number>
-          </expr>
-        </expression>
-      </let>
-    </stmt>
-    <stmt id="stmt:2" line="1" column="14" start="13" len="45">
-      <fn>
-        <identifier ref="ident:1" line="1" column="18" start="17" len="3">f_1</identifier>
-        <type ref="ident:4" line="1" column="36" start="35" len="7">boolean</type>
-        <parameters>
-          <parameter id="stmt:2:0" line="1" column="22" start="21" len="11">
-            <name ref="ident:2" line="1" column="22" start="21" len="3">p_1</name>
-            <type ref="ident:3" line="1" column="27" start="26" len="6">number</type>
-          </parameter>
-        </parameters>
-        <body line="1" column="46" start="45" len="13">
-          <expr id="expr:4" line="1" column="46" start="45" len="13">
-            <block>
-              <stmt id="stmt:1" line="1" column="48" start="47" len="9">
-                <ret mode="implicit" line="1" column="48" start="47" len="9">
-                  <expr id="expr:3" line="1" column="48" start="47" len="8">
-                    <call line="1" column="48" start="47" len="8" ident-ref="ident:10" name="eq" target-id="native:eq:number:number:boolean">
-                      <parameters>
-                        <parameter>
-                          <expr id="expr:1" line="1" column="48" start="47" len="3">
-                            <identifier-ref id="ident-ref:0" ident-ref="ident:2" target-id="stmt:2:0">p_1</identifier-ref>
-                          </expr>
-                        </parameter>
-                        <parameter>
-                          <expr id="expr:2" line="1" column="55" start="54" len="1">
-                            <number>1</number>
-                          </expr>
-                        </parameter>
-                      </parameters>
-                    </call>
-                  </expr>
-                </ret>
-              </stmt>
-            </block>
-          </expr>
-        </body>
-      </fn>
-    </stmt>
-    <stmt id="stmt:3" line="1" column="60" start="59" len="9">
-      <expr id="expr:6" line="1" column="60" start="59" len="8">
-        <call line="1" column="60" start="59" len="8" ident-ref="ident:1" name="f_1" target-id="stmt:2">
-          <parameters>
-            <parameter>
-              <expr id="expr:5" line="1" column="64" start="63" len="3">
-                <identifier-ref id="ident-ref:1" ident-ref="ident:0" target-id="stmt:0">x_1</identifier-ref>
-              </expr>
-            </parameter>
-          </parameters>
-        </call>
-      </expr>
-    </stmt>
-    <stmt id="stmt:4" line="1" column="1" start="0" len="12">
-      <let>
-        <identifier ref="ident:5" line="1" column="5" start="4" len="3">x_2</identifier>
-        <expression line="1" column="11" start="10" len="1">
-          <expr id="expr:7" line="1" column="11" start="10" len="1">
-            <number>0</number>
-          </expr>
-        </expression>
-      </let>
-    </stmt>
-    <stmt id="stmt:6" line="1" column="14" start="13" len="45">
-      <fn>
-        <identifier ref="ident:6" line="1" column="18" start="17" len="3">f_2</identifier>
-        <type ref="ident:4" line="1" column="36" start="35" len="7">boolean</type>
-        <parameters>
-          <parameter id="stmt:6:0" line="1" column="22" start="21" len="11">
-            <name ref="ident:7" line="1" column="22" start="21" len="3">p_2</name>
-            <type ref="ident:3" line="1" column="27" start="26" len="6">number</type>
-          </parameter>
-        </parameters>
-        <body line="1" column="46" start="45" len="13">
-          <expr id="expr:11" line="1" column="46" start="45" len="13">
-            <block>
-              <stmt id="stmt:5" line="1" column="48" start="47" len="9">
-                <ret mode="implicit" line="1" column="48" start="47" len="9">
-                  <expr id="expr:10" line="1" column="48" start="47" len="8">
-                    <call line="1" column="48" start="47" len="8" ident-ref="ident:10" name="eq" target-id="native:eq:number:number:boolean">
-                      <parameters>
-                        <parameter>
-                          <expr id="expr:8" line="1" column="48" start="47" len="3">
-                            <identifier-ref id="ident-ref:3" ident-ref="ident:7" target-id="stmt:6:0">p_2</identifier-ref>
-                          </expr>
-                        </parameter>
-                        <parameter>
-                          <expr id="expr:9" line="1" column="55" start="54" len="1">
-                            <number>2</number>
-                          </expr>
-                        </parameter>
-                      </parameters>
-                    </call>
-                  </expr>
-                </ret>
-              </stmt>
-            </block>
-          </expr>
-        </body>
-      </fn>
-    </stmt>
-    <stmt id="stmt:7" line="1" column="60" start="59" len="9">
-      <expr id="expr:13" line="1" column="60" start="59" len="8">
-        <call line="1" column="60" start="59" len="8" ident-ref="ident:6" name="f_2" target-id="stmt:6">
-          <parameters>
-            <parameter>
-              <expr id="expr:12" line="1" column="64" start="63" len="3">
-                <identifier-ref id="ident-ref:4" ident-ref="ident:5" target-id="stmt:4">x_2</identifier-ref>
-              </expr>
-            </parameter>
-          </parameters>
-        </call>
-      </expr>
-    </stmt>
-  </ast>
-</unit>
+Ast {
+    identifiers: [
+        "x_1",
+        "f_1",
+        "p_1",
+        "number",
+        "boolean",
+        "x_2",
+        "f_2",
+        "p_2",
+    ],
+    identifier_refs: [
+        IdentifierRef {
+            id: IdentRefId {
+                id: 0,
+            },
+            ident: Identifier {
+                id: IdentId {
+                    id: 2,
+                },
+                span: 1:48; [47, 50],
+            },
+            symbol: Unresolved,
+        },
+        IdentifierRef {
+            id: IdentRefId {
+                id: 1,
+            },
+            ident: Identifier {
+                id: IdentId {
+                    id: 0,
+                },
+                span: 1:64; [63, 66],
+            },
+            symbol: Unresolved,
+        },
+        IdentifierRef {
+            id: IdentRefId {
+                id: 2,
+            },
+            ident: Identifier {
+                id: IdentId {
+                    id: 1,
+                },
+                span: 1:60; [59, 62],
+            },
+            symbol: Unresolved,
+        },
+        IdentifierRef {
+            id: IdentRefId {
+                id: 3,
+            },
+            ident: Identifier {
+                id: IdentId {
+                    id: 7,
+                },
+                span: 1:48; [47, 50],
+            },
+            symbol: Unresolved,
+        },
+        IdentifierRef {
+            id: IdentRefId {
+                id: 4,
+            },
+            ident: Identifier {
+                id: IdentId {
+                    id: 5,
+                },
+                span: 1:64; [63, 66],
+            },
+            symbol: Unresolved,
+        },
+        IdentifierRef {
+            id: IdentRefId {
+                id: 5,
+            },
+            ident: Identifier {
+                id: IdentId {
+                    id: 6,
+                },
+                span: 1:60; [59, 62],
+            },
+            symbol: Unresolved,
+        },
+    ],
+    expressions: [
+        Expression {
+            id: ExprId {
+                id: 0,
+            },
+            kind: Literal(
+                Literal {
+                    kind: Number(
+                        0,
+                    ),
+                    span: 1:11; [10, 11],
+                },
+            ),
+            span: 1:11; [10, 11],
+        },
+        Expression {
+            id: ExprId {
+                id: 1,
+            },
+            kind: Literal(
+                Literal {
+                    kind: Identifier(
+                        IdentRefId {
+                            id: 0,
+                        },
+                    ),
+                    span: 1:48; [47, 50],
+                },
+            ),
+            span: 1:48; [47, 50],
+        },
+        Expression {
+            id: ExprId {
+                id: 2,
+            },
+            kind: Literal(
+                Literal {
+                    kind: Number(
+                        1,
+                    ),
+                    span: 1:55; [54, 55],
+                },
+            ),
+            span: 1:55; [54, 55],
+        },
+        Expression {
+            id: ExprId {
+                id: 3,
+            },
+            kind: Binary(
+                ExprId {
+                    id: 1,
+                },
+                BinaryOperator {
+                    kind: Equality,
+                    span: 1:52; [51, 53],
+                },
+                ExprId {
+                    id: 2,
+                },
+            ),
+            span: 1:48; [47, 55],
+        },
+        Expression {
+            id: ExprId {
+                id: 4,
+            },
+            kind: Block(
+                [
+                    StmtId {
+                        id: 1,
+                    },
+                ],
+            ),
+            span: 1:46; [45, 58],
+        },
+        Expression {
+            id: ExprId {
+                id: 5,
+            },
+            kind: Literal(
+                Literal {
+                    kind: Identifier(
+                        IdentRefId {
+                            id: 1,
+                        },
+                    ),
+                    span: 1:64; [63, 66],
+                },
+            ),
+            span: 1:64; [63, 66],
+        },
+        Expression {
+            id: ExprId {
+                id: 6,
+            },
+            kind: FunctionCall(
+                IdentRefId {
+                    id: 2,
+                },
+                [
+                    ExprId {
+                        id: 5,
+                    },
+                ],
+            ),
+            span: 1:60; [59, 67],
+        },
+        Expression {
+            id: ExprId {
+                id: 7,
+            },
+            kind: Literal(
+                Literal {
+                    kind: Number(
+                        0,
+                    ),
+                    span: 1:11; [10, 11],
+                },
+            ),
+            span: 1:11; [10, 11],
+        },
+        Expression {
+            id: ExprId {
+                id: 8,
+            },
+            kind: Literal(
+                Literal {
+                    kind: Identifier(
+                        IdentRefId {
+                            id: 3,
+                        },
+                    ),
+                    span: 1:48; [47, 50],
+                },
+            ),
+            span: 1:48; [47, 50],
+        },
+        Expression {
+            id: ExprId {
+                id: 9,
+            },
+            kind: Literal(
+                Literal {
+                    kind: Number(
+                        2,
+                    ),
+                    span: 1:55; [54, 55],
+                },
+            ),
+            span: 1:55; [54, 55],
+        },
+        Expression {
+            id: ExprId {
+                id: 10,
+            },
+            kind: Binary(
+                ExprId {
+                    id: 8,
+                },
+                BinaryOperator {
+                    kind: Equality,
+                    span: 1:52; [51, 53],
+                },
+                ExprId {
+                    id: 9,
+                },
+            ),
+            span: 1:48; [47, 55],
+        },
+        Expression {
+            id: ExprId {
+                id: 11,
+            },
+            kind: Block(
+                [
+                    StmtId {
+                        id: 5,
+                    },
+                ],
+            ),
+            span: 1:46; [45, 58],
+        },
+        Expression {
+            id: ExprId {
+                id: 12,
+            },
+            kind: Literal(
+                Literal {
+                    kind: Identifier(
+                        IdentRefId {
+                            id: 4,
+                        },
+                    ),
+                    span: 1:64; [63, 66],
+                },
+            ),
+            span: 1:64; [63, 66],
+        },
+        Expression {
+            id: ExprId {
+                id: 13,
+            },
+            kind: FunctionCall(
+                IdentRefId {
+                    id: 5,
+                },
+                [
+                    ExprId {
+                        id: 12,
+                    },
+                ],
+            ),
+            span: 1:60; [59, 67],
+        },
+    ],
+    statements: [
+        Statement {
+            id: StmtId {
+                id: 0,
+            },
+            kind: Let(
+                Identifier {
+                    id: IdentId {
+                        id: 0,
+                    },
+                    span: 1:5; [4, 7],
+                },
+                ExprId {
+                    id: 0,
+                },
+            ),
+            span: 1:1; [0, 12],
+        },
+        Statement {
+            id: StmtId {
+                id: 1,
+            },
+            kind: Ret(
+                ExprId {
+                    id: 3,
+                },
+                Implicit,
+            ),
+            span: 1:48; [47, 56],
+        },
+        Statement {
+            id: StmtId {
+                id: 2,
+            },
+            kind: LetFn(
+                Identifier {
+                    id: IdentId {
+                        id: 1,
+                    },
+                    span: 1:18; [17, 20],
+                },
+                [
+                    Parameter {
+                        identifier: Identifier {
+                            id: IdentId {
+                                id: 2,
+                            },
+                            span: 1:22; [21, 24],
+                        },
+                        ty: Identifier {
+                            id: IdentId {
+                                id: 3,
+                            },
+                            span: 1:27; [26, 32],
+                        },
+                        span: 1:22; [21, 32],
+                    },
+                ],
+                Some(
+                    Identifier {
+                        id: IdentId {
+                            id: 4,
+                        },
+                        span: 1:36; [35, 42],
+                    },
+                ),
+                ExprId {
+                    id: 4,
+                },
+            ),
+            span: 1:14; [13, 58],
+        },
+        Statement {
+            id: StmtId {
+                id: 3,
+            },
+            kind: Expression(
+                ExprId {
+                    id: 6,
+                },
+            ),
+            span: 1:60; [59, 68],
+        },
+        Statement {
+            id: StmtId {
+                id: 4,
+            },
+            kind: Let(
+                Identifier {
+                    id: IdentId {
+                        id: 5,
+                    },
+                    span: 1:5; [4, 7],
+                },
+                ExprId {
+                    id: 7,
+                },
+            ),
+            span: 1:1; [0, 12],
+        },
+        Statement {
+            id: StmtId {
+                id: 5,
+            },
+            kind: Ret(
+                ExprId {
+                    id: 10,
+                },
+                Implicit,
+            ),
+            span: 1:48; [47, 56],
+        },
+        Statement {
+            id: StmtId {
+                id: 6,
+            },
+            kind: LetFn(
+                Identifier {
+                    id: IdentId {
+                        id: 6,
+                    },
+                    span: 1:18; [17, 20],
+                },
+                [
+                    Parameter {
+                        identifier: Identifier {
+                            id: IdentId {
+                                id: 7,
+                            },
+                            span: 1:22; [21, 24],
+                        },
+                        ty: Identifier {
+                            id: IdentId {
+                                id: 3,
+                            },
+                            span: 1:27; [26, 32],
+                        },
+                        span: 1:22; [21, 32],
+                    },
+                ],
+                Some(
+                    Identifier {
+                        id: IdentId {
+                            id: 4,
+                        },
+                        span: 1:36; [35, 42],
+                    },
+                ),
+                ExprId {
+                    id: 11,
+                },
+            ),
+            span: 1:14; [13, 58],
+        },
+        Statement {
+            id: StmtId {
+                id: 7,
+            },
+            kind: Expression(
+                ExprId {
+                    id: 13,
+                },
+            ),
+            span: 1:60; [59, 68],
+        },
+    ],
+    root: [
+        StmtId {
+            id: 0,
+        },
+        StmtId {
+            id: 2,
+        },
+        StmtId {
+            id: 3,
+        },
+        StmtId {
+            id: 4,
+        },
+        StmtId {
+            id: 6,
+        },
+        StmtId {
+            id: 7,
+        },
+    ],
+    implicit_ret: PhantomData<transmute::ast::WithoutImplicitRet>,
+}

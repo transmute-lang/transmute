@@ -5,6 +5,7 @@ macro_rules! make_id {
             id: usize,
         }
 
+        // todo delete
         impl $name {
             pub fn id(&self) -> usize {
                 self.id
@@ -20,6 +21,28 @@ macro_rules! make_id {
         impl From<usize> for $name {
             fn from(id: usize) -> Self {
                 Self { id }
+            }
+        }
+
+        impl From<$name> for usize {
+            fn from(id: $name) -> Self {
+                id.id()
+            }
+        }
+
+        impl std::ops::Add<usize> for $name {
+            type Output = $name;
+
+            fn add(self, rhs: usize) -> Self::Output {
+                Self::from(self.id + rhs)
+            }
+        }
+
+        impl std::ops::Add<usize> for &$name {
+            type Output = $name;
+
+            fn add(self, rhs: usize) -> Self::Output {
+                $name::from(self.id + rhs)
             }
         }
     };
