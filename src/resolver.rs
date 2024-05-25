@@ -19,7 +19,6 @@ use std::rc::Rc;
 
 pub struct Resolver {
     resolved_identifier_refs: Vec<Option<IdentifierRef<Resolved>>>,
-    /// transforms unary/binary operations to function calls
     expression: Vec<Expression>,
     symbols: Rc<RefCell<Vec<Symbol>>>,
     types: BiHashMap<Type, TypeId>,
