@@ -1,11 +1,12 @@
-use crate::ast::expression::ExpressionKind;
+use crate::ast::expression::{ExpressionKind, Untyped};
+use crate::ast::identifier_ref::Unbound;
 use crate::ast::ids::{ExprId, StmtId};
 use crate::ast::statement::{RetMode, Statement, StatementKind};
 use crate::ast::{Ast, WithImplicitRet};
 
 // todo rename ImplicitRetConverter
 pub struct ImplicitRet {
-    replacements: Vec<Statement>,
+    replacements: Vec<Statement<Unbound>>,
 }
 
 impl ImplicitRet {
@@ -15,9 +16,12 @@ impl ImplicitRet {
         }
     }
 
-    pub fn convert(mut self, ast: &Ast<WithImplicitRet>) -> Vec<Statement> {
+    pub fn convert(
+        mut self,
+        ast: &Ast<WithImplicitRet, Untyped, Unbound>,
+    ) -> Vec<Statement<Unbound>> {
         for expr in ast
-            .statements()
+            .root_statements()
             .iter()
             .filter_map(|stmt| match ast.statement(*stmt).kind() {
                 StatementKind::LetFn(_, _, _, expr) => Some(*expr),
@@ -36,7 +40,7 @@ impl ImplicitRet {
     /// returns true if all nested paths explicitly return
     fn visit_expression(
         &mut self,
-        ast: &Ast<WithImplicitRet>,
+        ast: &Ast<WithImplicitRet, Untyped, Unbound>,
         expr: ExprId,
         depth: usize,
         unreachable: bool,
@@ -132,7 +136,7 @@ impl ImplicitRet {
 
     fn visit_statement(
         &mut self,
-        ast: &Ast<WithImplicitRet>,
+        ast: &Ast<WithImplicitRet, Untyped, Unbound>,
         stmt: StmtId,
         depth: usize,
         unreachable: bool,
@@ -170,11 +174,10 @@ impl ImplicitRet {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::ids::StmtId;
-    use crate::ast::{AstNodePrettyPrint, WithoutImplicitRet};
     use crate::desugar::implicit_ret::ImplicitRet;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
+    use crate::pretty_print::Options;
     use insta::assert_snapshot;
 
     macro_rules! t {
@@ -186,10 +189,12 @@ mod tests {
                     .unwrap()
                     .convert_implicit_ret(ImplicitRet::new());
 
-                assert_snapshot!(
-                    AstNodePrettyPrint::<WithoutImplicitRet, StmtId>::new_unresolved(&ast)
-                        .to_string()
-                );
+                let mut w = String::new();
+                let mut options = Options::default();
+                options.display_implicit_ret = true;
+                ast.pretty_print(&options, &mut w).unwrap();
+
+                assert_snapshot!(w);
             }
         };
     }

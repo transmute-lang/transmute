@@ -20,6 +20,7 @@ Ok(
                     },
                 ),
                 span: 1:7; [6, 10],
+                typed_state: Untyped,
             },
             Expression {
                 id: ExprId {
@@ -34,6 +35,7 @@ Ok(
                     },
                 ),
                 span: 1:14; [13, 15],
+                typed_state: Untyped,
             },
             Expression {
                 id: ExprId {
@@ -47,6 +49,7 @@ Ok(
                     ],
                 ),
                 span: 1:12; [11, 18],
+                typed_state: Untyped,
             },
             Expression {
                 id: ExprId {
@@ -61,6 +64,7 @@ Ok(
                     },
                 ),
                 span: 1:1; [0, 18],
+                typed_state: Untyped,
             },
         ],
         statements: [
@@ -92,6 +96,8 @@ Ok(
                 id: 1,
             },
         ],
+        symbols: [],
+        types: [],
         implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
     },
 )

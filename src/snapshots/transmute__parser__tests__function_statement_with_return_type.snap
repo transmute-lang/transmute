@@ -20,7 +20,7 @@ Ok(
                     },
                     span: 1:36; [35, 36],
                 },
-                symbol: Unresolved,
+                bound_state: Unbound,
             },
         ],
         expressions: [
@@ -39,6 +39,7 @@ Ok(
                     },
                 ),
                 span: 1:36; [35, 36],
+                typed_state: Untyped,
             },
             Expression {
                 id: ExprId {
@@ -53,6 +54,7 @@ Ok(
                     },
                 ),
                 span: 1:40; [39, 40],
+                typed_state: Untyped,
             },
             Expression {
                 id: ExprId {
@@ -71,6 +73,7 @@ Ok(
                     },
                 ),
                 span: 1:36; [35, 40],
+                typed_state: Untyped,
             },
             Expression {
                 id: ExprId {
@@ -84,6 +87,7 @@ Ok(
                     ],
                 ),
                 span: 1:36; [35, 41],
+                typed_state: Untyped,
             },
         ],
         statements: [
@@ -124,16 +128,22 @@ Ok(
                                 span: 1:18; [17, 23],
                             },
                             span: 1:15; [14, 23],
+                            state: Unbound,
                         },
                     ],
-                    Some(
-                        Identifier {
-                            id: IdentId {
-                                id: 2,
-                            },
-                            span: 1:27; [26, 32],
-                        },
-                    ),
+                    Return {
+                        ret: Some(
+                            (
+                                Identifier {
+                                    id: IdentId {
+                                        id: 2,
+                                    },
+                                    span: 1:27; [26, 32],
+                                },
+                                Unbound,
+                            ),
+                        ),
+                    },
                     ExprId {
                         id: 3,
                     },
@@ -146,6 +156,8 @@ Ok(
                 id: 1,
             },
         ],
+        symbols: [],
+        types: [],
         implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
     },
 )

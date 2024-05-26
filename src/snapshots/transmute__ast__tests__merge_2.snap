@@ -18,7 +18,7 @@ Ast {
                 },
                 span: 1:21; [20, 23],
             },
-            symbol: Unresolved,
+            bound_state: Unbound,
         },
         IdentifierRef {
             id: IdentRefId {
@@ -30,7 +30,7 @@ Ast {
                 },
                 span: 1:14; [13, 16],
             },
-            symbol: Unresolved,
+            bound_state: Unbound,
         },
         IdentifierRef {
             id: IdentRefId {
@@ -42,7 +42,7 @@ Ast {
                 },
                 span: 1:21; [20, 23],
             },
-            symbol: Unresolved,
+            bound_state: Unbound,
         },
         IdentifierRef {
             id: IdentRefId {
@@ -54,7 +54,7 @@ Ast {
                 },
                 span: 1:14; [13, 16],
             },
-            symbol: Unresolved,
+            bound_state: Unbound,
         },
     ],
     expressions: [
@@ -71,6 +71,7 @@ Ast {
                 },
             ),
             span: 1:11; [10, 11],
+            typed_state: Untyped,
         },
         Expression {
             id: ExprId {
@@ -87,6 +88,7 @@ Ast {
                 },
             ),
             span: 1:21; [20, 23],
+            typed_state: Untyped,
         },
         Expression {
             id: ExprId {
@@ -102,6 +104,7 @@ Ast {
                 },
             ),
             span: 1:20; [19, 23],
+            typed_state: Untyped,
         },
         Expression {
             id: ExprId {
@@ -116,6 +119,7 @@ Ast {
                 },
             ),
             span: 1:27; [26, 27],
+            typed_state: Untyped,
         },
         Expression {
             id: ExprId {
@@ -134,6 +138,7 @@ Ast {
                 },
             ),
             span: 1:20; [19, 27],
+            typed_state: Untyped,
         },
         Expression {
             id: ExprId {
@@ -148,6 +153,7 @@ Ast {
                 },
             ),
             span: 1:14; [13, 27],
+            typed_state: Untyped,
         },
         Expression {
             id: ExprId {
@@ -162,6 +168,7 @@ Ast {
                 },
             ),
             span: 1:11; [10, 11],
+            typed_state: Untyped,
         },
         Expression {
             id: ExprId {
@@ -178,6 +185,7 @@ Ast {
                 },
             ),
             span: 1:21; [20, 23],
+            typed_state: Untyped,
         },
         Expression {
             id: ExprId {
@@ -193,6 +201,7 @@ Ast {
                 },
             ),
             span: 1:20; [19, 23],
+            typed_state: Untyped,
         },
         Expression {
             id: ExprId {
@@ -207,6 +216,7 @@ Ast {
                 },
             ),
             span: 1:27; [26, 27],
+            typed_state: Untyped,
         },
         Expression {
             id: ExprId {
@@ -225,6 +235,7 @@ Ast {
                 },
             ),
             span: 1:20; [19, 27],
+            typed_state: Untyped,
         },
         Expression {
             id: ExprId {
@@ -239,6 +250,7 @@ Ast {
                 },
             ),
             span: 1:14; [13, 27],
+            typed_state: Untyped,
         },
     ],
     statements: [
@@ -313,5 +325,7 @@ Ast {
             id: 3,
         },
     ],
+    symbols: [],
+    types: [],
     implicit_ret: PhantomData<transmute::ast::WithoutImplicitRet>,
 }

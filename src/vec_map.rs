@@ -4,10 +4,7 @@ use std::marker::PhantomData;
 use std::ops::Index;
 
 #[derive(PartialEq)]
-pub struct VecMap<I, T>
-where
-    I: Into<usize>,
-{
+pub struct VecMap<I, T> {
     vec: Vec<Option<T>>,
     index_type: PhantomData<I>,
 }
@@ -28,6 +25,28 @@ where
     }
 }
 
+impl<I, T> VecMap<I, T> {
+    pub fn is_empty(&self) -> bool {
+        self.vec.iter().all(Option::is_none)
+    }
+
+    pub fn has_holes(&self) -> bool {
+        self.vec.iter().any(|e| e.is_none())
+    }
+
+    /// Returns the number of elements in the vector, also referred to  as its 'length'.
+    pub fn len(&self) -> usize {
+        self.vec.len()
+    }
+
+    /// Make sure the vec can hold as many as `len` elements.
+    pub fn resize(&mut self, len: usize) {
+        if self.vec.len() < len {
+            self.vec.resize_with(len, || None);
+        }
+    }
+}
+
 impl<I, T> VecMap<I, T>
 where
     I: Into<usize> + From<usize>,
@@ -40,13 +59,6 @@ where
         Self {
             vec: Vec::with_capacity(size),
             index_type: PhantomData::<I>,
-        }
-    }
-
-    /// Make sure the vec can hold as many as `len` elements.
-    pub fn resize(&mut self, len: usize) {
-        if self.vec.len() < len {
-            self.vec.resize_with(len, || None);
         }
     }
 
@@ -94,11 +106,6 @@ where
         self.vec.len().into()
     }
 
-    /// Returns the number of elements in the vector, also referred to  as its 'length'.
-    pub fn len(&self) -> usize {
-        self.vec.len()
-    }
-
     pub fn iter(&self) -> Iter<'_, I, T> {
         Iter {
             vec: self,
@@ -112,10 +119,6 @@ where
         T: Hash,
     {
         self.into_iter().map(|(i, ident)| (ident, i)).collect::<B>()
-    }
-
-    pub fn has_holes(&self) -> bool {
-        self.vec.iter().any(|e| e.is_none())
     }
 }
 

@@ -718,6 +718,18 @@ impl Span {
     }
 }
 
+#[cfg(test)]
+impl Default for Span {
+    fn default() -> Self {
+        Self {
+            line: 0,
+            column: 0,
+            start: 0,
+            len: 0,
+        }
+    }
+}
+
 impl PartialEq<Self> for Span {
     fn eq(&self, other: &Self) -> bool {
         self.start == other.start && self.len == other.len

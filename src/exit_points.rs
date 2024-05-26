@@ -1,31 +1,49 @@
-use crate::ast::expression::ExpressionKind;
+use crate::ast::expression::{Expression, ExpressionKind, TypedState};
+use crate::ast::identifier_ref::BoundState;
 use crate::ast::ids::{ExprId, StmtId};
-use crate::ast::statement::{RetMode, StatementKind};
-use crate::ast::{Ast, WithoutImplicitRet};
+use crate::ast::statement::{RetMode, Statement, StatementKind};
+use crate::vec_map::VecMap;
 
-pub struct ExitPoints<'a> {
-    ast: &'a Ast<WithoutImplicitRet>,
+pub struct ExitPoints<'a, T, B>
+where
+    T: TypedState,
+    B: BoundState,
+{
+    expressions: &'a VecMap<ExprId, Expression<T>>,
+    statements: &'a VecMap<StmtId, Statement<B>>,
+}
+
+#[derive(Default)]
+struct Collected {
     exit_points: Vec<ExitPoint>,
     unreachable: Vec<ExprId>,
 }
 
-impl<'a> ExitPoints<'a> {
-    pub fn new(ast: &'a Ast<WithoutImplicitRet>) -> Self {
+impl Collected {
+    fn empty() -> Self {
+        Self::default()
+    }
+
+    fn exit_point(exit_point: ExitPoint) -> Self {
         Self {
-            ast,
-            exit_points: Default::default(),
+            exit_points: vec![exit_point],
             unreachable: Default::default(),
         }
     }
 
-    pub fn exit_points(mut self, expr: ExprId) -> Vec<ExitPoint> {
-        match self.ast.expression(expr).kind() {
-            ExpressionKind::Block(_) => {}
-            e => panic!("expected block got {:?}", e),
-        };
+    fn unreachable(expr_id: ExprId) -> Self {
+        Self {
+            exit_points: Default::default(),
+            unreachable: vec![expr_id],
+        }
+    }
 
-        self.visit_expression(expr, 0, false);
+    fn merge(&mut self, mut other: Self) {
+        self.exit_points.append(&mut other.exit_points);
+        self.unreachable.append(&mut other.unreachable);
+    }
 
+    fn finalize(self) -> Vec<ExitPoint> {
         let mut exit_points = self
             .exit_points
             .into_iter()
@@ -39,108 +57,158 @@ impl<'a> ExitPoints<'a> {
             .collect::<Vec<ExitPoint>>();
         exit_points.sort();
         exit_points.dedup();
-
         exit_points
     }
+}
 
-    fn visit_expression(&mut self, expr: ExprId, depth: usize, unreachable: bool) -> bool {
+impl<'a, T, B> ExitPoints<'a, T, B>
+where
+    T: TypedState,
+    B: BoundState,
+{
+    pub fn new(
+        expressions: &'a VecMap<ExprId, Expression<T>>,
+        statements: &'a VecMap<StmtId, Statement<B>>,
+    ) -> Self {
+        Self {
+            expressions,
+            statements,
+        }
+    }
+
+    pub fn exit_points(&self, expr: ExprId) -> Vec<ExitPoint> {
+        match self.expressions[expr].kind() {
+            ExpressionKind::Block(_) => {}
+            e => panic!("expected block got {:?}", e),
+        };
+
+        self.visit_expression(expr, 0, false).0.finalize()
+    }
+
+    /// return true is the expression returns
+    fn visit_expression(&self, expr: ExprId, depth: usize, unreachable: bool) -> (Collected, bool) {
         if unreachable {
-            self.unreachable.push(expr);
-            return false;
+            return (Collected::unreachable(expr), false);
         }
 
-        let always_returns = match self.ast.expression(expr).kind() {
+        let always_returns = match self.expressions[expr].kind() {
             ExpressionKind::Assignment(_, expr) => {
                 self.visit_expression(*expr, depth + 1, unreachable)
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
-                let condition_always_returns = self.visit_expression(*cond, depth + 1, unreachable);
+                let true_branch = *true_branch;
+                let false_branch = *false_branch;
+                let (mut collected, condition_always_returns) =
+                    self.visit_expression(*cond, depth + 1, unreachable);
 
-                let true_branch_always_return = self.visit_expression(
-                    *true_branch,
+                let (true_branch_collected, true_branch_always_return) = self.visit_expression(
+                    true_branch,
                     depth + 1,
                     unreachable || condition_always_returns,
                 );
 
-                let false_branch_always_return = match false_branch {
-                    None => false,
-                    Some(false_branch) => self.visit_expression(
-                        *false_branch,
-                        depth + 1,
-                        unreachable || condition_always_returns,
-                    ),
+                collected.merge(true_branch_collected);
+
+                let (collected, false_branch_always_return) = match false_branch {
+                    None => (collected, false),
+                    Some(false_branch) => {
+                        let (false_branch_collected, false_branch_always_return) = self
+                            .visit_expression(
+                                false_branch,
+                                depth + 1,
+                                unreachable || condition_always_returns,
+                            );
+                        collected.merge(false_branch_collected);
+                        (collected, false_branch_always_return)
+                    }
                 };
 
-                condition_always_returns
-                    || (true_branch_always_return && false_branch_always_return)
+                (
+                    collected,
+                    condition_always_returns
+                        || (true_branch_always_return && false_branch_always_return),
+                )
             }
-            ExpressionKind::Literal(_) => false,
+            ExpressionKind::Literal(_) => (Collected::empty(), false),
             ExpressionKind::Binary(left, _, right) => {
-                let left_always_returns = self.visit_expression(*left, depth + 1, unreachable);
-                let right_always_returns =
+                let (mut collected, left_always_returns) =
+                    self.visit_expression(*left, depth + 1, unreachable);
+                let (right_collected, right_always_returns) =
                     self.visit_expression(*right, depth + 1, unreachable || left_always_returns);
-                left_always_returns || right_always_returns
+
+                collected.merge(right_collected);
+
+                (collected, left_always_returns || right_always_returns)
             }
             ExpressionKind::FunctionCall(_, params) => {
-                let mut some_param_always_returns = false;
+                let mut always_returns = false;
+                let mut collected = Collected::default();
 
                 for param in params {
-                    some_param_always_returns = some_param_always_returns
-                        || self.visit_expression(
-                            *param,
-                            depth + 1,
-                            unreachable || some_param_always_returns,
-                        );
+                    let (param_collected, param_always_returns) =
+                        self.visit_expression(*param, depth + 1, unreachable || always_returns);
+
+                    always_returns = always_returns || param_always_returns;
+                    collected.merge(param_collected);
                 }
 
-                some_param_always_returns
+                (collected, always_returns)
             }
             ExpressionKind::Unary(_, expr) => self.visit_expression(*expr, depth + 1, unreachable),
             ExpressionKind::While(cond, expr) => {
-                let condition_always_returns = self.visit_expression(*cond, depth + 1, unreachable);
-                let while_always_returns = self.visit_expression(
+                let (mut collected, condition_always_returns) =
+                    self.visit_expression(*cond, depth + 1, unreachable);
+
+                let (expression_collected, while_always_returns) = self.visit_expression(
                     *expr,
                     depth + 1,
                     unreachable || condition_always_returns,
                 );
-                condition_always_returns || while_always_returns
+
+                collected.merge(expression_collected);
+
+                (collected, condition_always_returns || while_always_returns)
             }
             ExpressionKind::Block(stmts) => {
-                let mut ret = false;
+                let mut always_returns = false;
+                let mut collected = Collected::default();
+
                 for stmt in stmts.iter() {
-                    if self.visit_statement(*stmt, depth, unreachable || ret) {
-                        ret = true;
-                    }
+                    let (stmt_collected, stmt_always_returns) =
+                        self.visit_statement(*stmt, depth, unreachable || always_returns);
+
+                    collected.merge(stmt_collected);
+                    always_returns = always_returns || stmt_always_returns;
                 }
-                ret
+
+                (collected, always_returns)
             }
             ExpressionKind::Dummy => {
-                panic!("should not compute exit points of an invalid source code")
+                panic!("cannot compute exit points of an invalid source code")
             }
         };
 
         always_returns
     }
 
-    fn visit_statement(&mut self, stmt: StmtId, depth: usize, unreachable: bool) -> bool {
-        match self.ast.statement(stmt).kind() {
+    fn visit_statement(&self, stmt: StmtId, depth: usize, unreachable: bool) -> (Collected, bool) {
+        match self.statements[stmt].kind() {
             StatementKind::Expression(expr) => self.visit_expression(*expr, depth + 1, unreachable),
             StatementKind::Let(_, expr) => self.visit_expression(*expr, depth + 1, unreachable),
             StatementKind::Ret(expr, mode) => {
-                match mode {
-                    RetMode::Explicit => {
-                        self.exit_points.push(ExitPoint::Explicit(*expr));
-                    }
-                    RetMode::Implicit => {
-                        self.exit_points.push(ExitPoint::Implicit(*expr));
-                    }
-                }
-                self.visit_expression(*expr, depth + 1, unreachable);
-                true
+                let mut collected = match mode {
+                    RetMode::Explicit => Collected::exit_point(ExitPoint::Explicit(*expr)),
+                    RetMode::Implicit => Collected::exit_point(ExitPoint::Implicit(*expr)),
+                };
+
+                let (expr_collected, _) = self.visit_expression(*expr, depth + 1, unreachable);
+
+                collected.merge(expr_collected);
+
+                (collected, true)
             }
             StatementKind::LetFn(_, _, _, expr) => {
-                self.visit_expression(*expr, depth + 1, unreachable);
-                false
+                self.visit_expression(*expr, depth + 1, unreachable)
             }
         }
     }
@@ -174,7 +242,7 @@ mod tests {
 
         let expr = ExprId::from(1);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let expected = vec![ExitPoint::Explicit(ExprId::from(0))];
 
         assert_eq!(actual, expected);
@@ -197,7 +265,7 @@ mod tests {
 
         let expr = ExprId::from(6);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -226,7 +294,7 @@ mod tests {
 
         let expr = ExprId::from(6);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -257,7 +325,7 @@ mod tests {
 
         let expr = ExprId::from(7);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -285,7 +353,7 @@ mod tests {
 
         let expr = ExprId::from(10);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -313,7 +381,7 @@ mod tests {
 
         let expr = ExprId::from(5);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![ExitPoint::Explicit(ExprId::from(1))];
         expected.sort();
 
@@ -336,7 +404,7 @@ mod tests {
 
         let expr = ExprId::from(4);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![ExitPoint::Explicit(ExprId::from(3))];
         expected.sort();
 
@@ -361,7 +429,7 @@ mod tests {
 
         let expr = ExprId::from(10);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -387,7 +455,7 @@ mod tests {
 
         let expr = ExprId::from(8);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(2)),
             ExitPoint::Explicit(ExprId::from(4)),
@@ -413,7 +481,7 @@ mod tests {
         .convert_implicit_ret(ImplicitRet::new());
         let expr = ExprId::from(14);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -440,7 +508,7 @@ mod tests {
 
         let expr = ExprId::from(14);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(3)),
             ExitPoint::Explicit(ExprId::from(7)),
@@ -467,7 +535,7 @@ mod tests {
 
         let expr = ExprId::from(9);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(2)),
             ExitPoint::Explicit(ExprId::from(4)),
@@ -493,7 +561,7 @@ mod tests {
 
         let expr = ExprId::from(4);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![ExitPoint::Explicit(ExprId::from(3))];
         expected.sort();
 
@@ -516,7 +584,7 @@ mod tests {
 
         let expr = ExprId::from(8);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),
@@ -541,7 +609,7 @@ mod tests {
 
         let expr = ExprId::from(8);
 
-        let actual = ExitPoints::new(&ast).exit_points(expr);
+        let actual = ExitPoints::new(ast.expressions(), ast.statements()).exit_points(expr);
         let mut expected = vec![
             ExitPoint::Explicit(ExprId::from(1)),
             ExitPoint::Explicit(ExprId::from(3)),

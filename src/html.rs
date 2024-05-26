@@ -1,4 +1,5 @@
 use crate::ast::expression::ExpressionKind;
+use crate::ast::identifier_ref::Bound;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Parameter, RetMode, StatementKind};
@@ -48,7 +49,7 @@ impl<'a> HtmlWriter<'a> {
         self.emit(XmlEvent::start_element("ul"));
 
         #[allow(clippy::unnecessary_to_owned)]
-        for stmt in self.ast.statements().to_vec() {
+        for stmt in self.ast.root_statements().to_vec() {
             self.visit_statement(stmt);
         }
 
@@ -88,7 +89,7 @@ impl<'a> HtmlWriter<'a> {
                 stmt.id(),
                 ident.id(),
                 params,
-                ret_type.as_ref().map(|i| i.id()),
+                ret_type.identifier().map(|i| i.id()),
                 *expr,
             ),
         }
@@ -113,7 +114,7 @@ impl<'a> HtmlWriter<'a> {
         &mut self,
         stmt_id: StmtId,
         ident: IdentId,
-        params: &[Parameter],
+        params: &[Parameter<Bound>],
         ret_type: Option<IdentId>,
         expr: ExprId,
     ) {
@@ -419,6 +420,7 @@ impl<'a> HtmlWriter<'a> {
         );
 
         let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
+            SymbolKind::NotFound => panic!(),
             SymbolKind::Let(stmt) => Self::ident_id(*stmt, None),
             SymbolKind::LetFn(stmt, _, _) => Self::ident_id(*stmt, None),
             SymbolKind::Parameter(stmt, index) => Self::ident_id(*stmt, Some(*index)),
@@ -433,6 +435,9 @@ impl<'a> HtmlWriter<'a> {
                         .join("_"),
                     self.ast.ty(*ret_type)
                 )
+            }
+            SymbolKind::NativeType(ident) => {
+                format!("ident__native-type_{}", self.ast.identifier(*ident),)
             }
         };
 

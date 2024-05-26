@@ -1,3 +1,5 @@
+use crate::ast::expression::Untyped;
+use crate::ast::identifier_ref::Unbound;
 use crate::ast::ids::IdentId;
 use crate::ast::{Ast, WithoutImplicitRet};
 use crate::desugar::ImplicitRet;
@@ -9,6 +11,7 @@ use std::fmt::{Debug, Formatter};
 
 pub struct Natives {
     functions: HashMap<&'static str, Vec<Native>>,
+    types: Vec<String>,
 }
 
 impl Default for Natives {
@@ -21,6 +24,7 @@ impl Natives {
     pub fn new() -> Natives {
         let mut natives = Self {
             functions: Default::default(),
+            types: Default::default(),
         };
 
         natives.insert_fn(Native {
@@ -155,12 +159,17 @@ impl Natives {
             },
         });
 
+        natives.types.push(Type::Void.to_string());
+        natives.types.push(Type::Boolean.to_string());
+        natives.types.push(Type::Number.to_string());
+
         natives
     }
 
     pub fn empty() -> Natives {
         Self {
             functions: Default::default(),
+            types: Default::default(),
         }
     }
 
@@ -173,7 +182,7 @@ impl Natives {
     }
 }
 
-impl From<&Natives> for Ast<WithoutImplicitRet> {
+impl From<&Natives> for Ast<WithoutImplicitRet, Untyped, Unbound> {
     fn from(natives: &Natives) -> Self {
         let mut names = natives
             .functions
@@ -188,6 +197,13 @@ impl From<&Natives> for Ast<WithoutImplicitRet> {
             if !identifiers.contains_key(&name) {
                 let id = IdentId::from(identifiers.len());
                 identifiers.insert(name, id);
+            }
+        }
+
+        for name in &natives.types {
+            if !identifiers.contains_key(name) {
+                let id = IdentId::from(identifiers.len());
+                identifiers.insert(name.clone(), id);
             }
         }
 

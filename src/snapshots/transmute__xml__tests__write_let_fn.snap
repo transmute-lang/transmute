@@ -20,6 +20,8 @@ expression: "&xml"
       <ident id="ident:11">neg</ident>
       <ident id="ident:12">neq</ident>
       <ident id="ident:13">sub</ident>
+      <ident id="ident:14">void</ident>
+      <ident id="ident:15">boolean</ident>
     </identifiers>
     <stmt id="stmt:1" line="1" column="1" start="0" len="33">
       <fn>

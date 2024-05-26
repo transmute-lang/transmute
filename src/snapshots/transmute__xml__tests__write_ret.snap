@@ -17,6 +17,9 @@ expression: "&xml"
       <ident id="ident:8">neg</ident>
       <ident id="ident:9">neq</ident>
       <ident id="ident:10">sub</ident>
+      <ident id="ident:11">void</ident>
+      <ident id="ident:12">boolean</ident>
+      <ident id="ident:13">number</ident>
     </identifiers>
     <stmt id="stmt:0" line="1" column="1" start="0" len="7">
       <ret mode="explicit" line="1" column="1" start="0" len="7">

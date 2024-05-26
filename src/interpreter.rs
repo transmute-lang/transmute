@@ -1,4 +1,5 @@
 use crate::ast::expression::ExpressionKind;
+use crate::ast::identifier_ref::Bound;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Statement, StatementKind};
@@ -23,7 +24,7 @@ impl<'a> Interpreter<'a> {
     }
 
     pub fn start(&mut self) -> Value {
-        self.visit_statements(self.ast.statements())
+        self.visit_statements(self.ast.root_statements())
     }
 
     fn visit_statements(&mut self, statements: &[StmtId]) -> Value {
@@ -111,7 +112,8 @@ impl<'a> Interpreter<'a> {
         let ident_ref = self.ast.identifier_ref(*ident);
         let symbol = self.ast.symbol(ident_ref.symbol_id());
         match symbol.kind() {
-            SymbolKind::Let(_) | SymbolKind::Parameter(_, _) => {
+            SymbolKind::NotFound => panic!(),
+            SymbolKind::Let(_) | SymbolKind::Parameter(_, _) | SymbolKind::NativeType(_) => {
                 panic!("let fn expected")
             }
             SymbolKind::LetFn(stmt, _, _) => {
@@ -286,7 +288,7 @@ impl Display for Value {
     }
 }
 
-fn is_ret(s: &Statement) -> bool {
+fn is_ret(s: &Statement<Bound>) -> bool {
     matches!(s.kind(), &StatementKind::Ret(_, _))
 }
 
