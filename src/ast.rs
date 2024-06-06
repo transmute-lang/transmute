@@ -14,16 +14,16 @@ use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Parameter, Statement, StatementKind};
 use crate::desugar::ImplicitRet;
 use crate::error::Diagnostics;
+use crate::exit_points::ExitPoint;
 use crate::natives::Natives;
 use crate::resolver::{Resolver, Symbol, Type};
 use crate::vec_map::VecMap;
 use std::collections::HashMap;
-use std::marker::PhantomData;
 
-pub type ResolvedAst = Ast<WithoutImplicitRet, Typed, Bound>;
+pub type ResolvedAst = Ast<ExitPoints, Typed, Bound>;
 
 #[derive(Debug, PartialEq)]
-pub struct Ast<R, T, B>
+pub struct Ast<S, T, B>
 where
     T: TypedState,
     B: BoundState,
@@ -43,7 +43,7 @@ where
     symbols: VecMap<SymbolId, Symbol>,
     /// All types
     types: VecMap<TypeId, Type>,
-    implicit_ret: PhantomData<R>,
+    state: S,
 }
 
 #[derive(Debug, PartialEq)]
@@ -52,7 +52,13 @@ pub struct WithImplicitRet {}
 #[derive(Debug, PartialEq)]
 pub struct WithoutImplicitRet {}
 
-impl<R, T, B> Ast<R, T, B>
+#[derive(Debug, PartialEq)]
+pub struct ExitPoints {
+    exit_points: HashMap<ExprId, Vec<ExitPoint>>,
+    unreachable: Vec<ExprId>,
+}
+
+impl<S, T, B> Ast<S, T, B>
 where
     T: TypedState,
     B: BoundState,
@@ -130,7 +136,7 @@ impl Ast<WithImplicitRet, Untyped, Unbound> {
             root,
             symbols: Default::default(),
             types: Default::default(),
-            implicit_ret: Default::default(),
+            state: WithImplicitRet {},
         }
     }
 
@@ -149,7 +155,7 @@ impl Ast<WithImplicitRet, Untyped, Unbound> {
             root: self.root,
             symbols: self.symbols,
             types: self.types,
-            implicit_ret: Default::default(),
+            state: WithoutImplicitRet {},
         }
     }
 }
@@ -186,7 +192,7 @@ impl Ast<WithoutImplicitRet, Untyped, Unbound> {
                     r.statements.len()
                 );
 
-                Ast::<WithoutImplicitRet, Typed, Bound> {
+                Ast::<ExitPoints, Typed, Bound> {
                     identifiers: r.identifiers,
                     identifier_refs: r.identifier_refs,
                     expressions: r.expressions,
@@ -194,7 +200,10 @@ impl Ast<WithoutImplicitRet, Untyped, Unbound> {
                     root: r.root,
                     symbols: r.symbols,
                     types: r.types,
-                    implicit_ret: PhantomData::<WithoutImplicitRet>,
+                    state: ExitPoints {
+                        exit_points: r.exit_points,
+                        unreachable: r.unreachable,
+                    },
                 }
             })
     }
@@ -394,7 +403,7 @@ impl Ast<WithoutImplicitRet, Untyped, Unbound> {
             root,
             symbols: self.symbols,
             types: self.types,
-            implicit_ret: self.implicit_ret,
+            state: self.state,
         }
     }
 }

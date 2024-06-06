@@ -383,5 +383,5 @@ Ast {
     ],
     symbols: [],
     types: [],
-    implicit_ret: PhantomData<transmute::ast::WithoutImplicitRet>,
+    state: WithoutImplicitRet,
 }

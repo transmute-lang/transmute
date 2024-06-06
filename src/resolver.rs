@@ -6,7 +6,7 @@ use crate::ast::literal::LiteralKind;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Parameter, Return, Statement, StatementKind};
 use crate::error::Diagnostics;
-use crate::exit_points::{ExitPoint, ExitPoints};
+use crate::exit_points::{ExitPoint, ExitPoints, Output};
 use crate::interpreter::Value;
 use crate::lexer::Span;
 use crate::natives::Natives;
@@ -44,6 +44,7 @@ pub struct Resolution {
     pub statements: VecMap<StmtId, Statement<Bound>>,
     pub root: Vec<StmtId>,
     pub exit_points: HashMap<ExprId, Vec<ExitPoint>>,
+    pub unreachable: Vec<ExprId>,
 }
 
 impl Resolver {
@@ -159,6 +160,7 @@ impl Resolver {
 
         let root = self.resolution.root.clone();
         self.insert_functions(&root);
+        self.resolution.unreachable.dedup();
         let _ = self.visit_statements(&root);
 
         if self.diagnostics.is_empty() {
@@ -291,16 +293,9 @@ stmt_count {} == {}"#,
                     _ => None,
                 }
             })
-            .collect::<Vec<(
-                Identifier,
-                StmtId,
-                Vec<TypeId>,
-                TypeId,
-                ExprId,
-                Vec<ExitPoint>,
-            )>>();
+            .collect::<Vec<(Identifier, StmtId, Vec<TypeId>, TypeId, ExprId, Output)>>();
 
-        for (ident, stmt_id, parameter_types, ret_type, expr_id, exit_points) in
+        for (ident, stmt_id, parameter_types, ret_type, expr_id, mut exit_points) in
             functions.into_iter()
         {
             let fn_type_id = self.insert_type(Type::Function(parameter_types.clone(), ret_type));
@@ -310,7 +305,12 @@ stmt_count {} == {}"#,
                 SymbolKind::LetFn(stmt_id, parameter_types, ret_type),
                 fn_type_id,
             );
-            self.resolution.exit_points.insert(expr_id, exit_points);
+            self.resolution
+                .exit_points
+                .insert(expr_id, exit_points.exit_points);
+            self.resolution
+                .unreachable
+                .append(&mut exit_points.unreachable);
         }
     }
 
