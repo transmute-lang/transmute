@@ -294,7 +294,7 @@ fn is_ret(s: &Statement<Bound>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::desugar::ImplicitRet;
+    use crate::desugar::ImplicitRetConverter;
     use crate::interpreter::Interpreter;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
@@ -309,7 +309,7 @@ mod tests {
                 let ast = parser
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new())
+                    .convert_implicit_ret(ImplicitRetConverter::new())
                     .resolve(Resolver::new(), Natives::default())
                     .unwrap();
 
@@ -325,7 +325,7 @@ mod tests {
                 let ast = parser
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new())
+                    .convert_implicit_ret(ImplicitRetConverter::new())
                     .resolve(Resolver::new(), Natives::new())
                     .unwrap();
 

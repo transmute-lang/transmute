@@ -332,7 +332,7 @@ mod tests {
     use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
     use crate::ast::literal::{Literal, LiteralKind};
     use crate::ast::Ast;
-    use crate::desugar::ImplicitRet;
+    use crate::desugar::ImplicitRetConverter;
     use crate::lexer::{Lexer, Span};
     use crate::parser::Parser;
     use crate::pretty_print::{AstState, Options, PrettyPrint, PrettyPrintContext};
@@ -703,7 +703,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let f() = { a; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new());
+            .convert_implicit_ret(ImplicitRetConverter::new());
         let stmt = ast.statement(StmtId::from(0));
 
         let mut ctx = PrettyPrintContext {
@@ -722,7 +722,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let f() = { a; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new());
+            .convert_implicit_ret(ImplicitRetConverter::new());
         let stmt = ast.statement(StmtId::from(1));
 
         let mut ctx = PrettyPrintContext {
@@ -747,7 +747,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let f(): number = { a; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new());
+            .convert_implicit_ret(ImplicitRetConverter::new());
         let stmt = ast.statement(StmtId::from(1));
 
         let mut ctx = PrettyPrintContext {
@@ -772,7 +772,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let f(x: number) = { a; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new());
+            .convert_implicit_ret(ImplicitRetConverter::new());
         let stmt = ast.statement(StmtId::from(1));
 
         let mut ctx = PrettyPrintContext {
@@ -797,7 +797,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let f(x: number, y: number) = { a; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new());
+            .convert_implicit_ret(ImplicitRetConverter::new());
         let stmt = ast.statement(StmtId::from(1));
 
         let mut ctx = PrettyPrintContext {
@@ -824,7 +824,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let mut w = String::new();
 
@@ -838,7 +838,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let f(n: number): number = {if n == 0 { ret 0; }if n == 1 { ret 1; }let prev_prev = 0;let prev = 1;let current = 0;while n > 1 {current = prev_prev + prev;prev_prev = prev;prev = current;n = n - 1;}current;}f(9) + 8;"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new());
+            .convert_implicit_ret(ImplicitRetConverter::new());
 
         let mut w = String::new();
 

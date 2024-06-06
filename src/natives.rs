@@ -1,8 +1,8 @@
 use crate::ast::expression::Untyped;
 use crate::ast::identifier_ref::Unbound;
 use crate::ast::ids::IdentId;
-use crate::ast::{Ast, WithoutImplicitRet};
-use crate::desugar::ImplicitRet;
+use crate::ast::{Ast, ExplicitRet};
+use crate::desugar::ImplicitRetConverter;
 use crate::interpreter::Value;
 use crate::resolver::Type;
 use std::cmp::Ordering;
@@ -182,7 +182,7 @@ impl Natives {
     }
 }
 
-impl From<&Natives> for Ast<WithoutImplicitRet, Untyped, Unbound> {
+impl From<&Natives> for Ast<ExplicitRet, Untyped, Unbound> {
     fn from(natives: &Natives) -> Self {
         let mut names = natives
             .functions
@@ -217,7 +217,7 @@ impl From<&Natives> for Ast<WithoutImplicitRet, Untyped, Unbound> {
             .collect::<Vec<String>>();
 
         Ast::new(identifiers, vec![], vec![], vec![], vec![])
-            .convert_implicit_ret(ImplicitRet::new())
+            .convert_implicit_ret(ImplicitRetConverter::new())
     }
 }
 

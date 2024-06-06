@@ -573,5 +573,5 @@ Ast {
     ],
     symbols: [],
     types: [],
-    state: WithoutImplicitRet,
+    state: ExplicitRet,
 }

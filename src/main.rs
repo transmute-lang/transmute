@@ -1,7 +1,7 @@
 #![allow(dead_code)] // fixme eventually remove
 extern crate core;
 
-use crate::desugar::ImplicitRet;
+use crate::desugar::ImplicitRetConverter;
 use crate::html::HtmlWriter;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
@@ -81,7 +81,7 @@ fn exec(src: &str, name: &str) {
             let _ = ast.pretty_print(&Options::default(), &mut w);
             print!("Parsed AST:\n{w}\n");
         })
-        .map(|ast| ast.convert_implicit_ret(ImplicitRet::new()))
+        .map(|ast| ast.convert_implicit_ret(ImplicitRetConverter::new()))
         .and_then(|ast| ast.resolve(Resolver::new(), Natives::new()))
         .peek(move |ast| {
             let mut w = String::new();

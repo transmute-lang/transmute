@@ -1113,7 +1113,7 @@ impl TryFrom<&str> for Type {
 
 #[cfg(test)]
 mod tests {
-    use crate::desugar::ImplicitRet;
+    use crate::desugar::ImplicitRetConverter;
     use crate::error::Level;
     use crate::lexer::{Lexer, Span};
     use crate::natives::Natives;
@@ -1127,7 +1127,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x(n: number): number = { n; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new())
+            .convert_implicit_ret(ImplicitRetConverter::new())
             .resolve(Resolver::new(), Natives::default())
             .unwrap();
 
@@ -1139,7 +1139,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x(): number = { let n = 0; n; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new())
+            .convert_implicit_ret(ImplicitRetConverter::new())
             .resolve(Resolver::new(), Natives::default())
             .unwrap();
 
@@ -1151,7 +1151,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x() = { } x();"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new())
+            .convert_implicit_ret(ImplicitRetConverter::new())
             .resolve(Resolver::new(), Natives::default())
             .unwrap();
 
@@ -1165,7 +1165,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new())
+        .convert_implicit_ret(ImplicitRetConverter::new())
         .resolve(Resolver::new(), Natives::default())
         .unwrap();
 
@@ -1177,7 +1177,7 @@ mod tests {
         let actual_diagnostics = Parser::new(Lexer::new("let x() = { n; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new())
+            .convert_implicit_ret(ImplicitRetConverter::new())
             .resolve(Resolver::new(), Natives::default())
             .unwrap_err();
 
@@ -1200,7 +1200,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x = true; let x = 1; x + 1;"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new())
+            .convert_implicit_ret(ImplicitRetConverter::new())
             .resolve(Resolver::new(), Natives::default())
             .unwrap();
 
@@ -1214,7 +1214,7 @@ mod tests {
                 let actual_diagnostics = Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new())
+                    .convert_implicit_ret(ImplicitRetConverter::new())
                     .resolve(Resolver::new(), Natives::default())
                     .unwrap_err();
 
@@ -1241,7 +1241,7 @@ mod tests {
                 Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new())
+                    .convert_implicit_ret(ImplicitRetConverter::new())
                     .resolve(Resolver::new(), Natives::new())
                     .expect("ok expected");
             }

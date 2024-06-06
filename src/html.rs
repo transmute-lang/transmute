@@ -457,7 +457,7 @@ impl<'a> HtmlWriter<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::desugar::ImplicitRet;
+    use crate::desugar::ImplicitRetConverter;
     use crate::html::HtmlWriter;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
@@ -472,7 +472,7 @@ mod tests {
                 let ast = Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new())
+                    .convert_implicit_ret(ImplicitRetConverter::new())
                     .resolve(Resolver::new(), Natives::default())
                     .unwrap();
 

@@ -158,6 +158,6 @@ Ok(
         ],
         symbols: [],
         types: [],
-        state: WithImplicitRet,
+        state: ImplicitRet,
     },
 )

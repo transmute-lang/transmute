@@ -12,7 +12,7 @@ use crate::ast::identifier_ref::{Bound, BoundState, IdentifierRef, Unbound};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Parameter, Statement, StatementKind};
-use crate::desugar::ImplicitRet;
+use crate::desugar::ImplicitRetConverter;
 use crate::error::Diagnostics;
 use crate::exit_points::ExitPoint;
 use crate::natives::Natives;
@@ -47,10 +47,10 @@ where
 }
 
 #[derive(Debug, PartialEq)]
-pub struct WithImplicitRet {}
+pub struct ImplicitRet {}
 
 #[derive(Debug, PartialEq)]
-pub struct WithoutImplicitRet {}
+pub struct ExplicitRet {}
 
 #[derive(Debug, PartialEq)]
 pub struct ExitPoints {
@@ -120,7 +120,7 @@ where
     }
 }
 
-impl Ast<WithImplicitRet, Untyped, Unbound> {
+impl Ast<ImplicitRet, Untyped, Unbound> {
     pub fn new(
         identifiers: Vec<String>,
         identifier_refs: Vec<IdentifierRef<Unbound>>,
@@ -136,18 +136,18 @@ impl Ast<WithImplicitRet, Untyped, Unbound> {
             root,
             symbols: Default::default(),
             types: Default::default(),
-            state: WithImplicitRet {},
+            state: ImplicitRet {},
         }
     }
 
     pub fn convert_implicit_ret(
         mut self,
-        converter: ImplicitRet,
-    ) -> Ast<WithoutImplicitRet, Untyped, Unbound> {
+        converter: ImplicitRetConverter,
+    ) -> Ast<ExplicitRet, Untyped, Unbound> {
         for statement in converter.convert(&self) {
             self.statements.insert(statement.id(), statement);
         }
-        Ast::<WithoutImplicitRet, Untyped, Unbound> {
+        Ast::<ExplicitRet, Untyped, Unbound> {
             identifiers: self.identifiers,
             identifier_refs: self.identifier_refs,
             expressions: self.expressions,
@@ -155,19 +155,17 @@ impl Ast<WithImplicitRet, Untyped, Unbound> {
             root: self.root,
             symbols: self.symbols,
             types: self.types,
-            state: WithoutImplicitRet {},
+            state: ExplicitRet {},
         }
     }
 }
 
-impl Ast<WithoutImplicitRet, Untyped, Unbound> {
+impl Ast<ExplicitRet, Untyped, Unbound> {
     pub fn resolve(self, resolver: Resolver, natives: Natives) -> Result<ResolvedAst, Diagnostics> {
         let expressions_count = self.expressions.len();
         let statements_count = self.statements.len();
 
-        let ast = self.merge(Into::<Ast<WithoutImplicitRet, Untyped, Unbound>>::into(
-            &natives,
-        ));
+        let ast = self.merge(Into::<Ast<ExplicitRet, Untyped, Unbound>>::into(&natives));
 
         resolver
             .resolve(
@@ -210,8 +208,8 @@ impl Ast<WithoutImplicitRet, Untyped, Unbound> {
 
     fn merge(
         self,
-        other: Ast<WithoutImplicitRet, Untyped, Unbound>,
-    ) -> Ast<WithoutImplicitRet, Untyped, Unbound> {
+        other: Ast<ExplicitRet, Untyped, Unbound>,
+    ) -> Ast<ExplicitRet, Untyped, Unbound> {
         let mut identifiers = self.identifiers.into_reversed::<HashMap<_, _>>();
 
         // maps from old IdentId (i.e. from the "other" ast) to new IdentId
@@ -394,7 +392,7 @@ impl Ast<WithoutImplicitRet, Untyped, Unbound> {
             .map(|(ident, _)| ident)
             .collect::<Vec<String>>();
 
-        Ast::<WithoutImplicitRet, Untyped, Unbound> {
+        Ast::<ExplicitRet, Untyped, Unbound> {
             // todo remove into()?
             identifiers: identifiers.into(),
             identifier_refs,
@@ -450,7 +448,7 @@ impl<R> Ast<R, Typed, Bound> {
 
 #[cfg(test)]
 mod tests {
-    use crate::desugar::ImplicitRet;
+    use crate::desugar::ImplicitRetConverter;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
     use insta::assert_debug_snapshot;
@@ -462,14 +460,14 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let ast2 = Parser::new(Lexer::new(
             "let x_2 = 0; let f_2(p_2: number): boolean = { p_2 == 2; } f_2(x_2);",
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         assert_debug_snapshot!(&ast1.merge(ast2));
     }
@@ -479,12 +477,12 @@ mod tests {
         let ast1 = Parser::new(Lexer::new("let x_1 = 0; x_1 = -x_1 * 2;"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new());
+            .convert_implicit_ret(ImplicitRetConverter::new());
 
         let ast2 = Parser::new(Lexer::new("let x_2 = 0; x_2 = -x_2 * 2;"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRet::new());
+            .convert_implicit_ret(ImplicitRetConverter::new());
 
         assert_debug_snapshot!(&ast1.merge(ast2));
     }
@@ -496,14 +494,14 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let ast2 = Parser::new(Lexer::new(
             "let c_2 = true; let t_2 = 1; let f_2 = 0; if c_2 { t_2; } else { f_2; }",
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         assert_debug_snapshot!(&ast1.merge(ast2));
     }
@@ -515,14 +513,14 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let ast2 = Parser::new(Lexer::new(
             "let c_2 = false; let w_2 = 2; while c_2 { w_2; }",
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         assert_debug_snapshot!(&ast1.merge(ast2));
     }

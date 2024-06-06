@@ -1,0 +1,8 @@
+---
+source: src/desugar/implicit_ret_converter.rs
+expression: w
+---
+let f(): number = {
+  ret 42;
+}
+

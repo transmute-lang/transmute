@@ -236,7 +236,7 @@ pub enum ExitPoint {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::desugar::ImplicitRet;
+    use crate::desugar::ImplicitRetConverter;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
 
@@ -251,7 +251,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(1);
 
@@ -276,7 +276,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(6);
 
@@ -307,7 +307,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(6);
 
@@ -340,7 +340,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(7);
 
@@ -370,7 +370,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(10);
 
@@ -400,7 +400,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(5);
 
@@ -425,7 +425,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(4);
 
@@ -452,7 +452,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(10);
 
@@ -480,7 +480,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(8);
 
@@ -509,7 +509,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
         let expr = ExprId::from(14);
 
         let actual = ExitPoints::new(ast.expressions(), ast.statements())
@@ -537,7 +537,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(14);
 
@@ -566,7 +566,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(9);
 
@@ -594,7 +594,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(4);
 
@@ -619,7 +619,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(8);
 
@@ -646,7 +646,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(8);
 
@@ -677,7 +677,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRet::new());
+        .convert_implicit_ret(ImplicitRetConverter::new());
 
         let expr = ExprId::from(7);
 
