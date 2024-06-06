@@ -9,7 +9,7 @@ use crate::error::Diagnostics;
 use crate::exit_points::{ExitPoint, ExitPoints, Output};
 use crate::interpreter::Value;
 use crate::lexer::Span;
-use crate::natives::Natives;
+use crate::natives::{Native, Natives};
 use crate::vec_map::VecMap;
 use bimap::BiHashMap;
 use std::cell::RefCell;
@@ -23,14 +23,18 @@ pub struct Resolver {
     statements: VecMap<StmtId, Statement<Unbound>>,
     symbols: Rc<RefCell<VecMap<SymbolId, Symbol>>>,
     types: BiHashMap<Type, TypeId>,
+
     diagnostics: Diagnostics,
     scope_stack: Vec<Scope>,
+
     resolution: Resolution,
+
     invalid_type_id: TypeId,
     void_type_id: TypeId,
     none_type_id: TypeId,
     boolean_type_id: TypeId,
     number_type_id: TypeId,
+
     not_found_symbol_id: SymbolId,
 }
 
@@ -104,12 +108,21 @@ impl Resolver {
         root: Vec<StmtId>,
         natives: Natives,
     ) -> Result<Resolution, Diagnostics> {
+        // just append all native names, if they are missing
+        let mut identifiers = identifiers.into_reversed::<HashMap<_, _>>();
+        for native_name in natives.names().into_iter() {
+            if !identifiers.contains_key(&native_name) {
+                identifiers.insert(native_name, IdentId::from(identifiers.len()));
+            }
+        }
+
         self.identifier_refs = identifier_refs;
         self.expressions = expressions;
         self.statements = statements;
         self.scope_stack.push(Scope::new(self.symbols.clone()));
         self.resolution.root = root;
-        self.resolution.identifiers = identifiers;
+        self.resolution.identifiers =
+            VecMap::from_iter(identifiers.into_iter().map(|(a, b)| (b, a)));
         self.resolution
             .identifier_refs
             .resize(self.identifier_refs.len());
@@ -120,42 +133,34 @@ impl Resolver {
         let expr_count = self.expressions.len();
         let stmt_count = self.statements.len();
 
-        self.insert_symbol(
-            self.identifier_id("number"),
-            SymbolKind::NativeType(self.identifier_id("number")),
-            self.none_type_id,
-        );
-        self.insert_symbol(
-            self.identifier_id("boolean"),
-            SymbolKind::NativeType(self.identifier_id("boolean")),
-            self.none_type_id,
-        );
-        self.insert_symbol(
-            self.identifier_id("void"),
-            SymbolKind::NativeType(self.identifier_id("void")),
-            self.none_type_id,
-        );
-
         for native in natives.into_iter() {
-            let ident = self.identifier_id(native.name());
-            let parameters = native
-                .parameters()
-                .iter()
-                .map(|t| {
-                    self.resolve_type(t)
-                        .expect("native function use known native type")
-                })
-                .collect::<Vec<TypeId>>();
-            let ret_type = self
-                .resolve_type(native.return_type())
-                .expect("native function use known native type");
-            let fn_type_id = self.insert_type(Type::Function(parameters.clone(), ret_type));
+            match native {
+                Native::Fn(native) => {
+                    let ident = self.identifier_id(native.name());
+                    let parameters = native
+                        .parameters()
+                        .iter()
+                        .map(|t| {
+                            self.resolve_type(t)
+                                .expect("native function use known native type")
+                        })
+                        .collect::<Vec<TypeId>>();
+                    let ret_type = self
+                        .resolve_type(native.return_type())
+                        .expect("native function use known native type");
+                    let fn_type_id = self.insert_type(Type::Function(parameters.clone(), ret_type));
 
-            self.insert_symbol(
-                ident,
-                SymbolKind::Native(ident, parameters, ret_type, native.body()),
-                fn_type_id,
-            );
+                    self.insert_symbol(
+                        ident,
+                        SymbolKind::Native(ident, parameters, ret_type, native.body()),
+                        fn_type_id,
+                    );
+                }
+                Native::Type(native) => {
+                    let id = self.identifier_id(native.name());
+                    self.insert_symbol(id, SymbolKind::NativeType(id), self.none_type_id);
+                }
+            }
         }
 
         let root = self.resolution.root.clone();
@@ -1062,7 +1067,7 @@ pub enum SymbolKind {
     Let(StmtId),
     LetFn(StmtId, Vec<TypeId>, TypeId),
     Parameter(StmtId, usize),
-    NativeType(IdentId),
+    NativeType(IdentId), // todo think about having the TypeId or the Type here ...
     Native(IdentId, Vec<TypeId>, TypeId, fn(Vec<Value>) -> Value),
 }
 
