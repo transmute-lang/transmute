@@ -18,23 +18,26 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 
 pub struct Resolver {
+    // in
     identifier_refs: VecMap<IdentRefId, IdentifierRef<Unbound>>,
     expressions: VecMap<ExprId, Expression<Untyped>>,
     statements: VecMap<StmtId, Statement<Unbound>>,
+
+    // work
     symbols: Rc<RefCell<VecMap<SymbolId, Symbol>>>,
+    scope_stack: Vec<Scope>,
     types: BiHashMap<Type, TypeId>,
 
+    // out
     diagnostics: Diagnostics,
-    scope_stack: Vec<Scope>,
-
     resolution: Resolution,
 
+    // cache
     invalid_type_id: TypeId,
     void_type_id: TypeId,
     none_type_id: TypeId,
     boolean_type_id: TypeId,
     number_type_id: TypeId,
-
     not_found_symbol_id: SymbolId,
 }
 
@@ -641,54 +644,7 @@ stmt_count {} == {}"#,
 
         for &stmt_id in stmts {
             let stmt_type = if let Some(stmt) = self.statements.remove(stmt_id) {
-                let span = stmt.span().clone();
-
-                match stmt.take_kind() {
-                    StatementKind::Expression(expr) => {
-                        self.resolution.statements.insert(
-                            stmt_id,
-                            Statement::new(stmt_id, StatementKind::Expression(expr), span),
-                        );
-
-                        self.visit_expression(expr)
-                    }
-                    StatementKind::Let(ident, expr) => {
-                        self.visit_let(stmt_id, ident.id(), expr);
-
-                        self.resolution.statements.insert(
-                            stmt_id,
-                            Statement::new(stmt_id, StatementKind::Let(ident, expr), span),
-                        );
-
-                        self.void_type_id
-                    }
-                    StatementKind::Ret(expr, ret_mode) => {
-                        self.visit_expression(expr);
-
-                        self.resolution.statements.insert(
-                            stmt_id,
-                            Statement::new(stmt_id, StatementKind::Ret(expr, ret_mode), span),
-                        );
-
-                        self.none_type_id
-                    }
-                    StatementKind::LetFn(ident, params, ret_type, expr) => {
-                        if let Ok((parameters, ret_type)) =
-                            self.visit_function(stmt_id, params, ret_type, expr, &span)
-                        {
-                            self.resolution.statements.insert(
-                                stmt_id,
-                                Statement::new(
-                                    stmt_id,
-                                    StatementKind::LetFn(ident, parameters, ret_type, expr),
-                                    span,
-                                ),
-                            );
-                        }
-
-                        self.void_type_id
-                    }
-                }
+                self.visit_statement(stmt)
             } else {
                 let stmt = self
                     .resolution
@@ -714,6 +670,58 @@ stmt_count {} == {}"#,
         }
 
         ret_type
+    }
+
+    fn visit_statement(&mut self, stmt: Statement<Unbound>) -> TypeId {
+        let stmt_id=stmt.id();
+        let span = stmt.span().clone();
+
+        match stmt.take_kind() {
+            StatementKind::Expression(expr) => {
+                self.resolution.statements.insert(
+                    stmt_id,
+                    Statement::new(stmt_id, StatementKind::Expression(expr), span),
+                );
+
+                self.visit_expression(expr)
+            }
+            StatementKind::Let(ident, expr) => {
+                self.visit_let(stmt_id, ident.id(), expr);
+
+                self.resolution.statements.insert(
+                    stmt_id,
+                    Statement::new(stmt_id, StatementKind::Let(ident, expr), span),
+                );
+
+                self.void_type_id
+            }
+            StatementKind::Ret(expr, ret_mode) => {
+                self.visit_expression(expr);
+
+                self.resolution.statements.insert(
+                    stmt_id,
+                    Statement::new(stmt_id, StatementKind::Ret(expr, ret_mode), span),
+                );
+
+                self.none_type_id
+            }
+            StatementKind::LetFn(ident, params, ret_type, expr) => {
+                if let Ok((parameters, ret_type)) =
+                    self.visit_function(stmt_id, params, ret_type, expr, &span)
+                {
+                    self.resolution.statements.insert(
+                        stmt_id,
+                        Statement::new(
+                            stmt_id,
+                            StatementKind::LetFn(ident, parameters, ret_type, expr),
+                            span,
+                        ),
+                    );
+                }
+
+                self.void_type_id
+            }
+        }
     }
 
     fn visit_let(&mut self, stmt: StmtId, ident: IdentId, expr: ExprId) {
