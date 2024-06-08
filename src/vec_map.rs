@@ -39,7 +39,7 @@ impl<I, T> VecMap<I, T> {
         self.vec.len()
     }
 
-    /// Make sure the vec can hold as many as `len` elements.
+    /// Make sure the `VecMap` can hold as many as `len` elements, fill empty slots with `None`.
     pub fn resize(&mut self, len: usize) {
         if self.vec.len() < len {
             self.vec.resize_with(len, || None);
@@ -55,11 +55,18 @@ where
         Self::with_capacity(0)
     }
 
+    /// Create a new `VecMap` of capacity `size`
     pub fn with_capacity(size: usize) -> Self {
         Self {
             vec: Vec::with_capacity(size),
             index_type: PhantomData::<I>,
         }
+    }
+
+    pub fn with_reserved_capacity(size: usize) -> Self {
+        let mut s = Self::with_capacity(size);
+        s.resize(size);
+        s
     }
 
     /// Insert the value at index.
@@ -301,6 +308,12 @@ where
 mod test {
     use super::*;
     use std::collections::HashMap;
+
+    #[test]
+    fn with_capacity() {
+        let vec = VecMap::<usize, i32>::with_reserved_capacity(1);
+        assert_eq!(vec.len(), 1);
+    }
 
     #[test]
     fn resize() {
