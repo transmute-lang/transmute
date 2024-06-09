@@ -10,7 +10,7 @@ where
     B: BoundState,
 {
     expressions: &'a VecMap<ExprId, Expression<T>>,
-    statements: &'a VecMap<StmtId, Statement<B>>,
+    statements: &'a VecMap<StmtId, Statement<T, B>>,
 }
 
 #[derive(Default)]
@@ -81,7 +81,7 @@ where
 {
     pub fn new(
         expressions: &'a VecMap<ExprId, Expression<T>>,
-        statements: &'a VecMap<StmtId, Statement<B>>,
+        statements: &'a VecMap<StmtId, Statement<T, B>>,
     ) -> Self {
         Self {
             expressions,

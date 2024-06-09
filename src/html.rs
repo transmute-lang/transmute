@@ -1,4 +1,4 @@
-use crate::ast::expression::ExpressionKind;
+use crate::ast::expression::{ExpressionKind, Typed};
 use crate::ast::identifier_ref::Bound;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
@@ -165,7 +165,7 @@ impl<'a> HtmlWriter<'a> {
         self.emit(XmlEvent::end_element());
     }
 
-    fn visit_struct(&mut self, stmt_id: StmtId, ident: IdentId, fields: &[Field]) {
+    fn visit_struct(&mut self, stmt_id: StmtId, ident: IdentId, fields: &[Field<Typed>]) {
         self.emit(XmlEvent::start_element("li"));
 
         self.emit_struct();

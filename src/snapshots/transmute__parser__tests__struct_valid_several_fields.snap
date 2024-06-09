@@ -39,6 +39,7 @@ Ok(
                                 span: 1:15; [14, 20],
                             },
                             span: 1:12; [11, 20],
+                            state: Untyped,
                         },
                         Field {
                             identifier: Identifier {
@@ -54,6 +55,7 @@ Ok(
                                 span: 1:26; [25, 31],
                             },
                             span: 1:23; [22, 31],
+                            state: Untyped,
                         },
                     ],
                 ),

@@ -30,7 +30,7 @@ impl Resolver {
         identifiers: VecMap<IdentId, String>,
         identifier_refs: VecMap<IdentRefId, IdentifierRef<Unbound>>,
         expressions: VecMap<ExprId, Expression<Untyped>>,
-        statements: VecMap<StmtId, Statement<Unbound>>,
+        statements: VecMap<StmtId, Statement<Untyped, Unbound>>,
         root: Vec<StmtId>,
         natives: Natives,
     ) -> Result<Output, Diagnostics> {
@@ -397,14 +397,12 @@ impl Resolver {
                             .resolution
                             .types
                             .get_by_right(&param_types[0])
-                            .unwrap()
-                            .to_string(),
+                            .unwrap(),
                         state
                             .resolution
                             .types
                             .get_by_right(&param_types[1])
-                            .unwrap()
-                            .to_string(),
+                            .unwrap(),
                     ),
                     op.span().clone(),
                     (file!(), line!()),
@@ -450,12 +448,7 @@ impl Resolver {
                     format!(
                         "No function '{}' found for parameters of types ({})",
                         state.resolution.identifiers[ident_id],
-                        state
-                            .resolution
-                            .types
-                            .get_by_right(&operand_type)
-                            .unwrap()
-                            .to_string(),
+                        state.resolution.types.get_by_right(&operand_type).unwrap(),
                     ),
                     op.span().clone(),
                     (file!(), line!()),
@@ -592,7 +585,11 @@ impl Resolver {
         (ret_type, state)
     }
 
-    fn visit_statement(&self, mut state: State, stmt: Statement<Unbound>) -> (TypeId, State) {
+    fn visit_statement(
+        &self,
+        mut state: State,
+        stmt: Statement<Untyped, Unbound>,
+    ) -> (TypeId, State) {
         let stmt_id = stmt.id();
         let span = stmt.span().clone();
 
@@ -643,7 +640,7 @@ impl Resolver {
                 (state.void_type_id, state)
             }
             StatementKind::Struct(ident, fields) => {
-                let mut state = self.visit_struct(state, stmt_id, &fields);
+                let (fields, mut state) = self.visit_struct(state, stmt_id, fields);
 
                 state.resolution.statements.insert(
                     stmt_id,
@@ -812,20 +809,31 @@ impl Resolver {
         (ret, state)
     }
 
-    fn visit_struct(&self, mut state: State, stmt: StmtId, fields: &[Field]) -> State {
-        for (index, parameter) in fields.iter().enumerate() {
-            let ty = state
-                .resolve_type_id_by_identifier(parameter.ty())
-                .unwrap_or(state.invalid_type_id);
+    fn visit_struct(
+        &self,
+        mut state: State,
+        stmt: StmtId,
+        fields: Vec<Field<Untyped>>,
+    ) -> (Vec<Field<Typed>>, State) {
+        let fields = fields
+            .into_iter()
+            .map(|field| {
+                let ty = state
+                    .resolve_type_id_by_identifier(field.ty())
+                    .unwrap_or(state.invalid_type_id);
+                field.typed(ty)
+            })
+            .collect::<Vec<Field<Typed>>>();
 
+        for (index, field) in fields.iter().enumerate() {
             state.insert_symbol(
-                parameter.identifier().id(),
+                field.identifier().id(),
                 SymbolKind::Field(stmt, index),
-                ty,
+                field.type_id(),
             );
         }
 
-        state
+        (fields, state)
     }
 }
 
@@ -833,7 +841,7 @@ struct State {
     // in
     identifier_refs: VecMap<IdentRefId, IdentifierRef<Unbound>>,
     expressions: VecMap<ExprId, Expression<Untyped>>,
-    statements: VecMap<StmtId, Statement<Unbound>>,
+    statements: VecMap<StmtId, Statement<Untyped, Unbound>>,
 
     // work
     scope_stack: Vec<Scope>,
@@ -929,18 +937,10 @@ impl State {
     /// is found.
     // todo add coarse-grained kind of expected symbol (var, callable, type)
     fn resolve_ident(&self, ident: IdentId, param_types: Option<&[TypeId]>) -> Option<SymbolId> {
-        match self
-            .scope_stack
+        self.scope_stack
             .iter()
             .rev()
             .find_map(|scope| scope.find(&self.resolution.symbols, &ident, param_types))
-        {
-            Some(s) => Some(s),
-            None => {
-                // todo nice to have: propose known alternatives
-                None
-            }
-        }
     }
 
     fn insert_functions(&mut self, stmts: &[StmtId]) {
@@ -1145,7 +1145,7 @@ pub struct Resolution {
     pub symbols: VecMap<SymbolId, Symbol>,
     pub types: BiHashMap<Type, TypeId>,
     pub expressions: VecMap<ExprId, Expression<Typed>>,
-    pub statements: VecMap<StmtId, Statement<Bound>>,
+    pub statements: VecMap<StmtId, Statement<Typed, Bound>>,
     pub root: Vec<StmtId>,
     pub exit_points: HashMap<ExprId, Vec<ExitPoint>>,
     pub unreachable: Vec<ExprId>,
@@ -1157,7 +1157,7 @@ pub struct Output {
     pub symbols: VecMap<SymbolId, Symbol>,
     pub types: VecMap<TypeId, Type>,
     pub expressions: VecMap<ExprId, Expression<Typed>>,
-    pub statements: VecMap<StmtId, Statement<Bound>>,
+    pub statements: VecMap<StmtId, Statement<Typed, Bound>>,
     pub root: Vec<StmtId>,
     pub exit_points: HashMap<ExprId, Vec<ExitPoint>>,
     pub unreachable: Vec<ExprId>,

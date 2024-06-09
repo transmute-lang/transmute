@@ -438,7 +438,7 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::end_element());
     }
 
-    fn visit_ret(&mut self, stmt: &Statement<Bound>, expr: &ExprId, mode: &RetMode) {
+    fn visit_ret(&mut self, stmt: &Statement<Typed, Bound>, expr: &ExprId, mode: &RetMode) {
         self.emit(
             XmlEvent::start_element("ret")
                 .attr("mode", mode.as_str())
@@ -541,7 +541,7 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::end_element());
     }
 
-    fn visit_struct(&mut self, stmt_id: StmtId, ident: &Identifier, fields: &[Field]) {
+    fn visit_struct(&mut self, stmt_id: StmtId, ident: &Identifier, fields: &[Field<Typed>]) {
         self.emit(XmlEvent::start_element("struct"));
 
         self.emit(

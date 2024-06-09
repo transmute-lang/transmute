@@ -5,7 +5,7 @@ use crate::ast::statement::{RetMode, Statement, StatementKind};
 use crate::ast::{Ast, ImplicitRet};
 
 pub struct ImplicitRetConverter {
-    replacements: Vec<Statement<Unbound>>,
+    replacements: Vec<Statement<Untyped, Unbound>>,
 }
 
 impl ImplicitRetConverter {
@@ -15,7 +15,10 @@ impl ImplicitRetConverter {
         }
     }
 
-    pub fn convert(mut self, ast: &Ast<ImplicitRet, Untyped, Unbound>) -> Vec<Statement<Unbound>> {
+    pub fn convert(
+        mut self,
+        ast: &Ast<ImplicitRet, Untyped, Unbound>,
+    ) -> Vec<Statement<Untyped, Unbound>> {
         for expr in ast
             .root_statements()
             .iter()

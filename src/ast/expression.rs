@@ -85,5 +85,5 @@ pub struct Untyped;
 impl TypedState for Untyped {}
 
 #[derive(Debug, Clone)]
-pub struct Typed(TypeId);
+pub struct Typed(pub TypeId);
 impl TypedState for Typed {}

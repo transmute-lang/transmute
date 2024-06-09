@@ -149,8 +149,9 @@ where
     }
 }
 
-impl<B> PrettyPrint for Statement<B>
+impl<T, B> PrettyPrint for Statement<T, B>
 where
+    T: TypedState,
     B: BoundState,
 {
     fn pretty_print<W, R>(
@@ -226,7 +227,24 @@ where
                 ctx.level -= 1;
                 writeln!(f, "{indent}}}")
             }
-            StatementKind::Struct(..) => todo!(),
+            StatementKind::Struct(ident, fields) => {
+                let indent = ctx.indent();
+                writeln!(
+                    f,
+                    "{indent}struct {ident} {{",
+                    ident = ctx.identifier(ident.id())
+                )?;
+
+                for field in fields.iter() {
+                    writeln!(
+                        f,
+                        "{indent}  {ident}: {ty},",
+                        ident = ctx.identifier(field.identifier().id()),
+                        ty = ctx.identifier(field.ty().id())
+                    )?;
+                }
+                writeln!(f, "{indent}}}")
+            }
         }
     }
 }

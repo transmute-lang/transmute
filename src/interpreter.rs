@@ -1,4 +1,4 @@
-use crate::ast::expression::ExpressionKind;
+use crate::ast::expression::{ExpressionKind, Typed};
 use crate::ast::identifier_ref::Bound;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
@@ -296,7 +296,7 @@ impl Display for Value {
     }
 }
 
-fn is_ret(s: &Statement<Bound>) -> bool {
+fn is_ret(s: &Statement<Typed, Bound>) -> bool {
     matches!(s.kind(), &StatementKind::Ret(_, _))
 }
 

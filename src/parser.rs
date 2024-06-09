@@ -14,7 +14,7 @@ use crate::lexer::{Lexer, PeekableLexer, Span, Token, TokenKind};
 use std::collections::{HashMap, HashSet};
 
 type Expression = ast::expression::Expression<Untyped>;
-type Statement = ast::statement::Statement<Unbound>;
+type Statement = ast::statement::Statement<Untyped, Unbound>;
 
 pub struct Parser<'s> {
     lexer: PeekableLexer<'s>,
@@ -1234,7 +1234,7 @@ impl<'s> Parser<'s> {
         id
     }
 
-    fn push_statement(&mut self, kind: StatementKind<Unbound>, span: Span) -> StmtId {
+    fn push_statement(&mut self, kind: StatementKind<Untyped, Unbound>, span: Span) -> StmtId {
         let id = StmtId::from(self.statements.len());
         self.statements.push(Statement::new(id, kind, span));
         id
