@@ -1,3 +1,3 @@
-mod implicit_ret;
+mod implicit_ret_converter;
 
-pub use implicit_ret::ImplicitRet;
+pub use implicit_ret_converter::ImplicitRetConverter;

@@ -108,6 +108,14 @@ impl Diagnostic {
         }
     }
 
+    pub fn error<S: Into<String>>(
+        message: S,
+        span: Span,
+        generated_at: (&'static str, u32),
+    ) -> Self {
+        Self::new(message, span, Level::Error, generated_at)
+    }
+
     pub fn message(&self) -> &str {
         &self.message
     }

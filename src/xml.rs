@@ -1,13 +1,13 @@
-use crate::ast::expression::{Expression, ExpressionKind};
+use crate::ast::expression::{Expression, ExpressionKind, Typed};
 use crate::ast::identifier::Identifier;
+use crate::ast::identifier_ref::Bound;
 use crate::ast::ids::{ExprId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
-use crate::ast::statement::{Field, Parameter, RetMode, Statement, StatementKind};
+use crate::ast::statement::{Field, Parameter, RetMode, Return, Statement, StatementKind};
 use crate::ast::ResolvedAst;
 use crate::resolver::{SymbolKind, Type};
-use std::io;
-use std::io::Write;
+use std::io::{self, Write};
 use xml::writer::XmlEvent;
 use xml::{EmitterConfig, EventWriter};
 
@@ -36,7 +36,7 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::start_element("ast"));
 
         self.emit(XmlEvent::start_element("identifiers"));
-        for (id, identifier) in self.ast.identifiers().iter().enumerate() {
+        for (id, identifier) in self.ast.identifiers().iter() {
             self.emit(XmlEvent::start_element("ident").attr("id", &format!("ident:{id}")));
             self.emit(XmlEvent::Characters(identifier));
             self.emit(XmlEvent::end_element());
@@ -44,7 +44,7 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::end_element());
 
         #[allow(clippy::unnecessary_to_owned)]
-        for stmt in self.ast.statements().to_vec() {
+        for stmt in self.ast.root_statements().to_vec() {
             self.visit_statement(stmt);
         }
         self.emit(XmlEvent::end_element()); // ast
@@ -150,7 +150,7 @@ impl<'a> XmlWriter<'a> {
                 format!("stmt:{}:{}", stmt.id(), index)
             }
             SymbolKind::Native(..) => "native".to_string(),
-            SymbolKind::NativeType(_) => {
+            SymbolKind::NativeType(_, _) => {
                 unreachable!("cannot assign to NativeType")
             }
             SymbolKind::Field(_, _) => {
@@ -159,6 +159,7 @@ impl<'a> XmlWriter<'a> {
             SymbolKind::Struct(_) => {
                 unreachable!("cannot assign to Struct")
             }
+            SymbolKind::NotFound => panic!(),
         };
 
         self.emit(
@@ -223,7 +224,7 @@ impl<'a> XmlWriter<'a> {
                         format!("stmt:{}:{}", stmt.id(), index)
                     }
                     SymbolKind::Native(..) => "native".to_string(),
-                    SymbolKind::NativeType(_) => {
+                    SymbolKind::NativeType(_, _) => {
                         unreachable!("NativeType is not a literal")
                     }
                     SymbolKind::Field(_, _) => {
@@ -232,6 +233,7 @@ impl<'a> XmlWriter<'a> {
                     SymbolKind::Struct(_) => {
                         unreachable!("Struct is not a literal")
                     }
+                    SymbolKind::NotFound => panic!(),
                 };
 
                 let ty = self.ast.ty(self.ast.symbol(ident_ref.symbol_id()).ty());
@@ -265,7 +267,7 @@ impl<'a> XmlWriter<'a> {
 
     fn visit_binary_operator(
         &mut self,
-        expr: &Expression,
+        expr: &Expression<Typed>,
         left: &ExprId,
         op: &BinaryOperator,
         right: &ExprId,
@@ -292,7 +294,7 @@ impl<'a> XmlWriter<'a> {
 
     fn visit_function_call(
         &mut self,
-        expr: &Expression,
+        expr: &Expression<Typed>,
         ident_ref: &IdentRefId,
         params: &[ExprId],
     ) {
@@ -324,7 +326,7 @@ impl<'a> XmlWriter<'a> {
                     self.ast.ty(*ret_type)
                 )
             }
-            SymbolKind::NativeType(_) => {
+            SymbolKind::NativeType(_, _) => {
                 unreachable!("method call cannot be applied to NativeType")
             }
             SymbolKind::Field(_, _) => {
@@ -332,6 +334,11 @@ impl<'a> XmlWriter<'a> {
             }
             SymbolKind::Struct(_) => {
                 unreachable!("method call cannot be applied to Struct")
+            }
+            SymbolKind::NotFound => {
+                // todo we dont want to get there... an unresolved symbol must not lead to a
+                //   resolved AST
+                panic!("symbol was not resolved")
             }
         };
 
@@ -431,7 +438,7 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::end_element());
     }
 
-    fn visit_ret(&mut self, stmt: &Statement, expr: &ExprId, mode: &RetMode) {
+    fn visit_ret(&mut self, stmt: &Statement<Bound>, expr: &ExprId, mode: &RetMode) {
         self.emit(
             XmlEvent::start_element("ret")
                 .attr("mode", mode.as_str())
@@ -448,8 +455,8 @@ impl<'a> XmlWriter<'a> {
         &mut self,
         stmt_id: StmtId,
         ident: &Identifier,
-        params: &[Parameter],
-        ty: &Option<Identifier>,
+        params: &[Parameter<Bound>],
+        ty: &Return<Bound>,
         expr: &ExprId,
     ) {
         self.emit(XmlEvent::start_element("fn"));
@@ -466,7 +473,7 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::characters(self.ast.identifier(ident.id())));
         self.emit(XmlEvent::end_element());
 
-        if let Some(ty) = ty {
+        if let Some(ty) = ty.identifier() {
             self.emit(
                 XmlEvent::start_element("type")
                     // todo add ref to actual type
@@ -595,7 +602,7 @@ impl<'a> XmlWriter<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::desugar::ImplicitRet;
+    use crate::desugar::ImplicitRetConverter;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
     use crate::parser::Parser;
@@ -610,7 +617,7 @@ mod tests {
                 let ast = Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new())
+                    .convert_implicit_ret(ImplicitRetConverter::new())
                     .resolve(Resolver::new(), Natives::default())
                     .unwrap();
 

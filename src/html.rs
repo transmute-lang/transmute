@@ -1,9 +1,10 @@
 use crate::ast::expression::ExpressionKind;
+use crate::ast::identifier_ref::Bound;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Field, Parameter, RetMode, StatementKind};
 use crate::ast::ResolvedAst;
-use crate::resolver::{SymbolKind, Type, TypeId};
+use crate::resolver::{SymbolKind, Type};
 use std::io;
 use std::io::Write;
 use xml::writer::XmlEvent;
@@ -48,7 +49,7 @@ impl<'a> HtmlWriter<'a> {
         self.emit(XmlEvent::start_element("ul"));
 
         #[allow(clippy::unnecessary_to_owned)]
-        for stmt in self.ast.statements().to_vec() {
+        for stmt in self.ast.root_statements().to_vec() {
             self.visit_statement(stmt);
         }
 
@@ -88,7 +89,7 @@ impl<'a> HtmlWriter<'a> {
                 stmt.id(),
                 ident.id(),
                 params,
-                ret_type.as_ref().map(|i| i.id()),
+                ret_type.identifier().map(|i| i.id()),
                 *expr,
             ),
             StatementKind::Struct(ident, fields) => {
@@ -116,7 +117,7 @@ impl<'a> HtmlWriter<'a> {
         &mut self,
         stmt_id: StmtId,
         ident: IdentId,
-        params: &[Parameter],
+        params: &[Parameter<Bound>],
         ret_type: Option<IdentId>,
         expr: ExprId,
     ) {
@@ -334,21 +335,21 @@ impl<'a> HtmlWriter<'a> {
         self.writer.write(event.into()).unwrap();
     }
 
-    fn emit_if(&mut self, type_id: TypeId) {
+    fn emit_if(&mut self, ty: &Type) {
         self.emit(
             XmlEvent::start_element("span")
                 .attr("class", "kw")
-                .attr("title", &self.ast.ty(type_id).to_string()),
+                .attr("title", &ty.to_string()),
         );
         self.emit(XmlEvent::Characters("if"));
         self.emit(XmlEvent::end_element());
     }
 
-    fn emit_while(&mut self, type_id: TypeId) {
+    fn emit_while(&mut self, ty: &Type) {
         self.emit(
             XmlEvent::start_element("span")
                 .attr("class", "kw")
-                .attr("title", &self.ast.ty(type_id).to_string()),
+                .attr("title", &ty.to_string()),
         );
         self.emit(XmlEvent::Characters("ret"));
         self.emit(XmlEvent::end_element());
@@ -450,6 +451,7 @@ impl<'a> HtmlWriter<'a> {
         let ident_ref = self.ast.identifier_ref(identifier);
 
         let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
+            SymbolKind::NotFound => panic!(),
             SymbolKind::Let(stmt) => Self::ident_id(*stmt, None),
             SymbolKind::LetFn(stmt, _, _) => Self::ident_id(*stmt, None),
             SymbolKind::Parameter(stmt, index) => Self::ident_id(*stmt, Some(*index)),
@@ -465,7 +467,8 @@ impl<'a> HtmlWriter<'a> {
                     self.ast.ty(*ret_type)
                 )
             }
-            SymbolKind::NativeType(_) => {
+            SymbolKind::NativeType(_, _) => {
+                // was: format!("ident__native-type_{}", self.ast.identifier(*ident),)
                 todo!()
             }
             SymbolKind::Field(_, _) => {
@@ -504,7 +507,7 @@ impl<'a> HtmlWriter<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::desugar::ImplicitRet;
+    use crate::desugar::ImplicitRetConverter;
     use crate::html::HtmlWriter;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
@@ -519,7 +522,7 @@ mod tests {
                 let ast = Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new())
+                    .convert_implicit_ret(ImplicitRetConverter::new())
                     .resolve(Resolver::new(), Natives::default())
                     .unwrap();
 

@@ -1,4 +1,5 @@
 use crate::ast::expression::ExpressionKind;
+use crate::ast::identifier_ref::Bound;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Statement, StatementKind};
@@ -23,7 +24,7 @@ impl<'a> Interpreter<'a> {
     }
 
     pub fn start(&mut self) -> Value {
-        self.visit_statements(self.ast.statements())
+        self.visit_statements(self.ast.root_statements())
     }
 
     fn visit_statements(&mut self, statements: &[StmtId]) -> Value {
@@ -119,7 +120,7 @@ impl<'a> Interpreter<'a> {
             | SymbolKind::Parameter(_, _)
             | SymbolKind::Field(_, _)
             | SymbolKind::Struct(_)
-            | SymbolKind::NativeType(_) => {
+            | SymbolKind::NativeType(_, _) => {
                 panic!("let fn expected")
             }
             SymbolKind::LetFn(stmt, _, _) => {
@@ -159,6 +160,7 @@ impl<'a> Interpreter<'a> {
 
                 body(env)
             }
+            SymbolKind::NotFound => panic!(),
         }
     }
 
@@ -294,13 +296,13 @@ impl Display for Value {
     }
 }
 
-fn is_ret(s: &Statement) -> bool {
+fn is_ret(s: &Statement<Bound>) -> bool {
     matches!(s.kind(), &StatementKind::Ret(_, _))
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::desugar::ImplicitRet;
+    use crate::desugar::ImplicitRetConverter;
     use crate::interpreter::Interpreter;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
@@ -315,7 +317,7 @@ mod tests {
                 let ast = parser
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new())
+                    .convert_implicit_ret(ImplicitRetConverter::new())
                     .resolve(Resolver::new(), Natives::default())
                     .unwrap();
 
@@ -331,7 +333,7 @@ mod tests {
                 let ast = parser
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRet::new())
+                    .convert_implicit_ret(ImplicitRetConverter::new())
                     .resolve(Resolver::new(), Natives::new())
                     .unwrap();
 

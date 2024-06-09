@@ -1,21 +1,25 @@
-use crate::ast::expression::{Expression, ExpressionKind};
+use crate::ast;
+use crate::ast::expression::{ExpressionKind, Untyped};
 use crate::ast::identifier::Identifier;
-use crate::ast::identifier_ref::{IdentifierRef, Unresolved};
+use crate::ast::identifier_ref::{IdentifierRef, Unbound};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{
     BinaryOperator, BinaryOperatorKind, Precedence, UnaryOperator, UnaryOperatorKind,
 };
-use crate::ast::statement::{Field, Parameter, RetMode, Statement, StatementKind};
-use crate::ast::{Ast, WithImplicitRet};
+use crate::ast::statement::{Field, Parameter, RetMode, Return, StatementKind};
+use crate::ast::{Ast, ImplicitRet};
 use crate::error::Diagnostics;
 use crate::lexer::{Lexer, PeekableLexer, Span, Token, TokenKind};
 use std::collections::{HashMap, HashSet};
 
+type Expression = ast::expression::Expression<Untyped>;
+type Statement = ast::statement::Statement<Unbound>;
+
 pub struct Parser<'s> {
     lexer: PeekableLexer<'s>,
     identifiers: HashMap<String, IdentId>,
-    identifier_refs: Vec<IdentifierRef<Unresolved>>,
+    identifier_refs: Vec<IdentifierRef<Unbound>>,
     expressions: Vec<Expression>,
     statements: Vec<Statement>,
     diagnostics: Diagnostics,
@@ -135,7 +139,7 @@ impl<'s> Parser<'s> {
         }
     }
 
-    pub fn parse(mut self) -> Result<Ast<WithImplicitRet>, Diagnostics> {
+    pub fn parse(mut self) -> Result<Ast<ImplicitRet, Untyped, Unbound>, Diagnostics> {
         let mut statements = Vec::new();
 
         while let Some(statement) = self.parse_statement() {
@@ -369,17 +373,17 @@ impl<'s> Parser<'s> {
         let ty = if colon.kind() == &TokenKind::Colon {
             let ty = self.lexer.next();
             if ty.kind() == &TokenKind::Identifier {
-                Some(Identifier::new(
-                    self.push_identifier(ty.span()),
-                    ty.span().clone(),
-                ))
+                Return::some(
+                    Identifier::new(self.push_identifier(ty.span()), ty.span().clone()),
+                    Unbound,
+                )
             } else {
                 self.lexer.push_next(ty);
-                None
+                Return::none()
             }
         } else {
             self.lexer.push_next(colon);
-            None
+            Return::none()
         };
 
         // let name ( param , ... ): type '= expr ;
@@ -1230,7 +1234,7 @@ impl<'s> Parser<'s> {
         id
     }
 
-    fn push_statement(&mut self, kind: StatementKind, span: Span) -> StmtId {
+    fn push_statement(&mut self, kind: StatementKind<Unbound>, span: Span) -> StmtId {
         let id = StmtId::from(self.statements.len());
         self.statements.push(Statement::new(id, kind, span));
         id

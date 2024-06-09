@@ -1,6 +1,3 @@
-use crate::ast::ids::IdentId;
-use crate::ast::{Ast, WithoutImplicitRet};
-use crate::desugar::ImplicitRet;
 use crate::interpreter::Value;
 use crate::resolver::Type;
 use std::cmp::Ordering;
@@ -8,7 +5,8 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 
 pub struct Natives {
-    functions: HashMap<&'static str, Vec<Native>>,
+    functions: HashMap<&'static str, Vec<NativeFn>>,
+    types: Vec<NativeType>,
 }
 
 impl Default for Natives {
@@ -21,9 +19,10 @@ impl Natives {
     pub fn new() -> Natives {
         let mut natives = Self {
             functions: Default::default(),
+            types: Default::default(),
         };
 
-        natives.insert_fn(Native {
+        natives.insert_fn(NativeFn {
             name: "neg",
             parameters: vec![Type::Number],
             return_type: Type::Number,
@@ -33,7 +32,7 @@ impl Natives {
             },
         });
 
-        natives.insert_fn(Native {
+        natives.insert_fn(NativeFn {
             name: "add",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
@@ -43,7 +42,7 @@ impl Natives {
                 Value::Number(left + right)
             },
         });
-        natives.insert_fn(Native {
+        natives.insert_fn(NativeFn {
             name: "sub",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
@@ -53,7 +52,7 @@ impl Natives {
                 Value::Number(left - right)
             },
         });
-        natives.insert_fn(Native {
+        natives.insert_fn(NativeFn {
             name: "mul",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
@@ -63,7 +62,7 @@ impl Natives {
                 Value::Number(left * right)
             },
         });
-        natives.insert_fn(Native {
+        natives.insert_fn(NativeFn {
             name: "div",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
@@ -73,7 +72,7 @@ impl Natives {
                 Value::Number(left / right)
             },
         });
-        natives.insert_fn(Native {
+        natives.insert_fn(NativeFn {
             name: "eq",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
@@ -83,7 +82,7 @@ impl Natives {
                 Value::Boolean(left == right)
             },
         });
-        natives.insert_fn(Native {
+        natives.insert_fn(NativeFn {
             name: "neq",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
@@ -93,7 +92,7 @@ impl Natives {
                 Value::Boolean(left != right)
             },
         });
-        natives.insert_fn(Native {
+        natives.insert_fn(NativeFn {
             name: "gt",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
@@ -103,7 +102,7 @@ impl Natives {
                 Value::Boolean(left > right)
             },
         });
-        natives.insert_fn(Native {
+        natives.insert_fn(NativeFn {
             name: "lt",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
@@ -113,7 +112,7 @@ impl Natives {
                 Value::Boolean(left < right)
             },
         });
-        natives.insert_fn(Native {
+        natives.insert_fn(NativeFn {
             name: "ge",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
@@ -123,7 +122,7 @@ impl Natives {
                 Value::Boolean(left >= right)
             },
         });
-        natives.insert_fn(Native {
+        natives.insert_fn(NativeFn {
             name: "le",
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
@@ -134,7 +133,7 @@ impl Natives {
             },
         });
 
-        natives.insert_fn(Native {
+        natives.insert_fn(NativeFn {
             name: "eq",
             parameters: vec![Type::Boolean, Type::Boolean],
             return_type: Type::Boolean,
@@ -144,7 +143,7 @@ impl Natives {
                 Value::Boolean(left == right)
             },
         });
-        natives.insert_fn(Native {
+        natives.insert_fn(NativeFn {
             name: "neq",
             parameters: vec![Type::Boolean, Type::Boolean],
             return_type: Type::Boolean,
@@ -155,30 +154,47 @@ impl Natives {
             },
         });
 
+        natives.insert_type(NativeType {
+            name: Type::Boolean.identifier(),
+            ty: Type::Boolean,
+        });
+        natives.insert_type(NativeType {
+            name: Type::Number.identifier(),
+            ty: Type::Number,
+        });
+        natives.insert_type(NativeType {
+            name: Type::Void.identifier(),
+            ty: Type::Void,
+        });
+
         natives
     }
 
     pub fn empty() -> Natives {
         Self {
             functions: Default::default(),
+            types: Default::default(),
         }
     }
 
-    fn insert_fn(&mut self, native: Native) {
+    fn insert_fn(&mut self, native: NativeFn) {
         if let Some(v) = self.functions.get_mut(native.name) {
             v.push(native);
         } else {
             self.functions.insert(native.name, vec![native]);
         }
     }
-}
 
-impl From<&Natives> for Ast<WithoutImplicitRet> {
-    fn from(natives: &Natives) -> Self {
-        let mut names = natives
+    fn insert_type(&mut self, native: NativeType) {
+        self.types.push(native);
+    }
+
+    pub fn names(&self) -> Vec<String> {
+        let mut names = self
             .functions
             .keys()
             .map(|s| s.to_string())
+            .chain(self.types.iter().map(|native| native.name.to_string()))
             .collect::<Vec<String>>();
 
         // todo maybe do it somewhere else?
@@ -186,27 +202,8 @@ impl From<&Natives> for Ast<WithoutImplicitRet> {
         names.push(Type::Boolean.to_string());
         names.push(Type::Number.to_string());
         names.sort();
-
-        let mut identifiers = HashMap::<String, IdentId>::with_capacity(names.len());
-
-        for name in names {
-            if !identifiers.contains_key(&name) {
-                let id = IdentId::from(identifiers.len());
-                identifiers.insert(name, id);
-            }
-        }
-
-        let mut identifiers = identifiers.into_iter().collect::<Vec<(String, IdentId)>>();
-
-        identifiers.sort_by(|(_, id1), (_, id2)| id1.id().cmp(&id2.id()));
-
-        let identifiers = identifiers
-            .into_iter()
-            .map(|(ident, _)| ident)
-            .collect::<Vec<String>>();
-
-        Ast::new(identifiers, vec![], vec![], vec![], vec![])
-            .convert_implicit_ret(ImplicitRet::new())
+        names.dedup();
+        names
     }
 }
 
@@ -219,6 +216,8 @@ impl IntoIterator for Natives {
             .functions
             .into_iter()
             .flat_map(|(_, natives)| natives.into_iter())
+            .map(Native::Fn)
+            .chain(self.types.into_iter().map(Native::Type))
             .collect::<Vec<Native>>();
         values.sort();
         NativeIterator { values }
@@ -237,14 +236,20 @@ impl Iterator for NativeIterator {
     }
 }
 
-pub struct Native {
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+pub enum Native {
+    Fn(NativeFn),
+    Type(NativeType),
+}
+
+pub struct NativeFn {
     name: &'static str,
     parameters: Vec<Type>,
     return_type: Type,
     body: fn(Vec<Value>) -> Value,
 }
 
-impl Native {
+impl NativeFn {
     pub fn name(&self) -> &'static str {
         self.name
     }
@@ -260,27 +265,23 @@ impl Native {
     pub fn body(self) -> fn(Vec<Value>) -> Value {
         self.body
     }
-
-    // pub fn apply(&self, parameters: Vec<Value>) -> Value {
-    //     (self.body)(parameters)
-    // }
 }
 
-impl PartialEq<Self> for Native {
+impl PartialEq<Self> for NativeFn {
     fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
 
-impl Eq for Native {}
+impl Eq for NativeFn {}
 
-impl PartialOrd<Self> for Native {
+impl PartialOrd<Self> for NativeFn {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Native {
+impl Ord for NativeFn {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.name.cmp(other.name) {
             Ordering::Equal => {}
@@ -294,7 +295,7 @@ impl Ord for Native {
     }
 }
 
-impl Debug for Native {
+impl Debug for NativeFn {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -307,6 +308,22 @@ impl Debug for Native {
                 .join(", "),
             self.return_type
         )
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+pub struct NativeType {
+    name: &'static str,
+    ty: Type,
+}
+
+impl NativeType {
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
+
+    pub fn ty(&self) -> &Type {
+        &self.ty
     }
 }
 

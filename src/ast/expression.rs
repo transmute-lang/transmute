@@ -1,20 +1,43 @@
-use crate::ast::ids::{ExprId, IdentRefId, StmtId};
+use crate::ast::ids::{ExprId, IdentRefId, StmtId, TypeId};
 use crate::ast::literal::Literal;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::lexer::Span;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Expression {
+pub struct Expression<T>
+where
+    T: TypedState,
+{
     id: ExprId,
     kind: ExpressionKind,
     span: Span,
+    typed_state: T,
 }
 
-impl Expression {
+impl Expression<Untyped> {
     pub fn new(id: ExprId, kind: ExpressionKind, span: Span) -> Self {
-        Self { id, kind, span }
+        Self {
+            id,
+            kind,
+            span,
+            typed_state: Untyped,
+        }
     }
 
+    pub fn typed(self, ty: TypeId) -> Expression<Typed> {
+        Expression {
+            id: self.id,
+            kind: self.kind,
+            span: self.span,
+            typed_state: Typed(ty),
+        }
+    }
+}
+
+impl<T> Expression<T>
+where
+    T: TypedState,
+{
     pub fn id(&self) -> ExprId {
         self.id
     }
@@ -29,6 +52,12 @@ impl Expression {
 
     pub fn span(&self) -> &Span {
         &self.span
+    }
+}
+
+impl Expression<Typed> {
+    pub fn ty_id(&self) -> TypeId {
+        self.typed_state.0
     }
 }
 
@@ -47,3 +76,14 @@ pub enum ExpressionKind {
     // todo probably remove...
     Dummy,
 }
+
+pub trait TypedState {}
+
+#[derive(Debug)]
+pub struct Untyped;
+
+impl TypedState for Untyped {}
+
+#[derive(Debug, Clone)]
+pub struct Typed(TypeId);
+impl TypedState for Typed {}

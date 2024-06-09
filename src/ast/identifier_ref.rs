@@ -3,16 +3,22 @@ use crate::ast::ids::{IdentId, IdentRefId, SymbolId};
 
 /// Represents an identifier when used as a reference
 #[derive(Debug, Clone, PartialEq)]
-pub struct IdentifierRef<S> {
+pub struct IdentifierRef<B>
+where
+    B: BoundState,
+{
     /// ID of this identifier reference
     id: IdentRefId,
     /// The referenced symbol identifier
     ident: Identifier,
     /// The referenced symbol id
-    symbol: S,
+    bound_state: B,
 }
 
-impl<S> IdentifierRef<S> {
+impl<S> IdentifierRef<S>
+where
+    S: BoundState,
+{
     pub fn id(&self) -> IdentRefId {
         self.id
     }
@@ -26,38 +32,45 @@ impl<S> IdentifierRef<S> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Unresolved;
-
-impl IdentifierRef<Unresolved> {
+impl IdentifierRef<Unbound> {
     pub fn new(id: IdentRefId, ident: Identifier) -> Self {
         Self {
             id,
             ident,
-            symbol: Unresolved {},
+            bound_state: Unbound {},
         }
     }
 
-    pub fn resolved(&self, symbol_id: SymbolId) -> IdentifierRef<Resolved> {
+    pub fn resolved(self, symbol_id: SymbolId) -> IdentifierRef<Bound> {
         IdentifierRef {
             id: self.id,
-            ident: self.ident.clone(),
-            symbol: Resolved(symbol_id),
+            ident: self.ident,
+            bound_state: Bound(symbol_id),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Resolved(SymbolId);
-impl IdentifierRef<Resolved> {
+impl IdentifierRef<Bound> {
     pub fn new_resolved(id: IdentRefId, ident: Identifier, symbol_id: SymbolId) -> Self {
         Self {
             id,
             ident,
-            symbol: Resolved(symbol_id),
+            bound_state: Bound(symbol_id),
         }
     }
     pub fn symbol_id(&self) -> SymbolId {
-        self.symbol.0
+        self.bound_state.0
     }
 }
+
+pub trait BoundState {}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Unbound;
+
+impl BoundState for Unbound {}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Bound(pub SymbolId);
+
+impl BoundState for Bound {}

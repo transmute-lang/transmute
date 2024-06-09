@@ -1,14 +1,13 @@
 #![allow(dead_code)] // fixme eventually remove
 extern crate core;
 
-use crate::ast::ids::StmtId;
-use crate::ast::{AstNodePrettyPrint, WithImplicitRet};
-use crate::desugar::ImplicitRet;
+use crate::desugar::ImplicitRetConverter;
 use crate::html::HtmlWriter;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
 use crate::natives::Natives;
 use crate::parser::Parser;
+use crate::pretty_print::Options;
 use crate::resolver::Resolver;
 use crate::xml::XmlWriter;
 use std::fs::File;
@@ -22,7 +21,9 @@ mod interpreter;
 mod lexer;
 mod natives;
 mod parser;
+mod pretty_print;
 mod resolver;
+mod vec_map;
 mod xml;
 
 // todo things to check:
@@ -97,18 +98,16 @@ fn exec(src: &str, name: &str) {
     let result = Parser::new(Lexer::new(src))
         .parse()
         .peek(|ast| {
-            print!(
-                "Parsed AST:\n{}\n",
-                AstNodePrettyPrint::<WithImplicitRet, StmtId>::new_unresolved(ast)
-            );
+            let mut w = String::new();
+            let _ = ast.pretty_print(&Options::default(), &mut w);
+            print!("Parsed AST:\n{w}\n");
         })
-        .map(|ast| ast.convert_implicit_ret(ImplicitRet::new()))
+        .map(|ast| ast.convert_implicit_ret(ImplicitRetConverter::new()))
         .and_then(|ast| ast.resolve(Resolver::new(), Natives::new()))
         .peek(move |ast| {
-            print!(
-                "Executable AST:\n{}\n",
-                AstNodePrettyPrint::<(), StmtId>::new_resolved(ast)
-            );
+            let mut w = String::new();
+            let _ = ast.pretty_print(&Options::default(), &mut w);
+            print!("Executable AST:\n{w}\n");
             XmlWriter::new(ast)
                 .write(&mut File::create(format!("target/run__{name}.xml")).unwrap())
                 .unwrap();

@@ -49,6 +49,8 @@ Ok(
                 id: 0,
             },
         ],
-        implicit_ret: PhantomData<transmute::ast::WithImplicitRet>,
+        symbols: [],
+        types: [],
+        state: ImplicitRet,
     },
 )
