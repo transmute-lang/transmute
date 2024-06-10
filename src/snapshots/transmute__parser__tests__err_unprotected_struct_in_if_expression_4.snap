@@ -1,0 +1,28 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"if (1 + 1) - Point{} {}\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `{`, expected one of identifier, number, `true`, `false`, `let`, `ret`, `if`, `while`, `(`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                span: 1:22; [21, 22],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    271,
+                ),
+            },
+            Diagnostic {
+                message: "Unexpected `}`, expected one of identifier, number, `true`, `false`, `let`, `ret`, `if`, `while`, `(`, `-`",
+                span: 1:23; [22, 23],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    271,
+                ),
+            },
+        ],
+    },
+)

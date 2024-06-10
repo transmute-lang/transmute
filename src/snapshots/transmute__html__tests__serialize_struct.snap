@@ -139,6 +139,21 @@ expression: "&html"
   <li>
     <span class="curly" data-par-id="par_0">}</span>
   </li>
+  <li>
+    <span class="kw">let</span>
+    <span id="ident__stmt1" class="ident">p</span>
+    <span class="equal"> = </span>
+    <span class="ident_ref" title="struct Point" data-ident-ref="ident__stmt0" data-type-ident-ref="ident__stmt0">Point</span>
+    <span class="curly" data-par-id="par_1">{</span>
+    <span class="ident_ref" title="number" data-ident-ref="ident__stmt0_index0" data-type-ident-ref="">x</span>
+    <span class="colon">: </span>
+    <span class="num" title="number">1</span>
+    <span class="ident_ref" title="number" data-ident-ref="ident__stmt0_index1" data-type-ident-ref="">y</span>
+    <span class="colon">: </span>
+    <span class="num" title="number">2</span>
+    <span class="curly" data-par-id="par_1">}</span>
+    <span class="semicolon">;</span>
+  </li>
 </ul>
 </body>
 </html>

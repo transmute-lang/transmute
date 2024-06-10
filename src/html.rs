@@ -12,6 +12,10 @@ use xml::{EmitterConfig, EventWriter};
 
 const HTML: &str = include_str!("html/template.html");
 
+// todo: color unreachable expressions
+// todo: color ret expressions
+// todo: should not use index but symbol IDs
+
 pub struct HtmlWriter<'a> {
     ast: &'a ResolvedAst,
     par_id: usize,
@@ -226,6 +230,21 @@ impl<'a> HtmlWriter<'a> {
             }
             ExpressionKind::While(cond, expr) => self.visit_while(*cond, *expr),
             ExpressionKind::Block(stmts) => self.visit_block(stmts),
+            ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
+                self.emit_identifier_ref(*ident_ref_id);
+
+                let par_id = self.par_id();
+
+                self.emit_curly("{", &par_id);
+
+                for (ident_ref_id, expr_id) in fields {
+                    self.emit_identifier_ref(*ident_ref_id);
+                    self.emit_colon();
+                    self.visit_expression(*expr_id);
+                }
+
+                self.emit_curly("}", &par_id);
+            }
             ExpressionKind::Dummy => unimplemented!("invalid source does not reach that point"),
         }
     }
@@ -471,12 +490,8 @@ impl<'a> HtmlWriter<'a> {
                 // was: format!("ident__native-type_{}", self.ast.identifier(*ident),)
                 todo!()
             }
-            SymbolKind::Field(_, _) => {
-                todo!()
-            }
-            SymbolKind::Struct(_) => {
-                todo!()
-            }
+            SymbolKind::Field(stmt, index) => Self::ident_id(*stmt, Some(*index)),
+            SymbolKind::Struct(stmt) => Self::ident_id(*stmt, None),
         };
 
         let ty = self.ast.ty(self.ast.symbol(ident_ref.symbol_id()).ty());
@@ -568,7 +583,20 @@ mod tests {
         "#
     );
 
-    test_html_write!(serialize_struct, "struct Point { x: number, y: number }");
+    test_html_write!(
+        serialize_struct,
+        r#"
+            struct Point {
+                x: number,
+                y: number
+            }
+
+            let p = Point {
+                x: 1,
+                y: 2
+            };
+        "#
+    );
     // test_html_write!(
     //     serialize_struct,
     //     r#"

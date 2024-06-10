@@ -131,6 +131,9 @@ impl<'a> XmlWriter<'a> {
                 self.visit_block(stmts);
             }
             ExpressionKind::Dummy => {}
+            ExpressionKind::StructInstantiation(_, _) => {
+                todo!()
+            }
         }
 
         self.emit(XmlEvent::end_element());

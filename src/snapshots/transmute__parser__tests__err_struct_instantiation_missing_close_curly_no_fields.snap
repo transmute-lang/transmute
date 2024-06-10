@@ -1,0 +1,19 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"S {\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `eof`, expected one of `,`, `}`",
+                span: 1:4; [3, 3],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    1277,
+                ),
+            },
+        ],
+    },
+)

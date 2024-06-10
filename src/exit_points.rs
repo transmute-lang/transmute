@@ -196,6 +196,20 @@ where
 
                 (collected, always_returns)
             }
+            ExpressionKind::StructInstantiation(_, fields) => {
+                let mut always_returns = false;
+                let mut collected = Collected::default();
+
+                for (_, field) in fields {
+                    let (param_collected, param_always_returns) =
+                        self.visit_expression(*field, depth + 1, unreachable || always_returns);
+
+                    always_returns = always_returns || param_always_returns;
+                    collected.merge(param_collected);
+                }
+
+                (collected, always_returns)
+            }
             ExpressionKind::Dummy => {
                 panic!("cannot compute exit points of an invalid source code")
             }
@@ -666,7 +680,7 @@ mod tests {
     }
 
     #[test]
-    fn unreachable() {
+    fn if_unreachable() {
         let ast = Parser::new(Lexer::new(
             r#"let x(a: number) = {
                 if true {
@@ -688,6 +702,65 @@ mod tests {
             .exit_points(expr)
             .unreachable;
         let mut expected = vec![ExprId::from(2), ExprId::from(6)];
+        expected.sort();
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn struct_always_returns() {
+        let ast = Parser::new(Lexer::new(
+            r#"
+            struct S { x: number, y: number}
+            let x(): number = {
+                S {
+                    x: if 1 == 1 { ret 1; } else { ret 2; },
+                    y: 1
+                };
+            }
+            "#,
+        ))
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRetConverter::new());
+
+        let expr = ExprId::from(10);
+
+        let actual = ExitPoints::new(ast.expressions(), ast.statements())
+            .exit_points(expr)
+            .exit_points;
+        let mut expected = vec![
+            ExitPoint::Explicit(ExprId::from(3)),
+            ExitPoint::Explicit(ExprId::from(5)),
+        ];
+        expected.sort();
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn struct_unreachable() {
+        let ast = Parser::new(Lexer::new(
+            r#"
+            struct S { x: number, y: number}
+            let x(): number = {
+                S {
+                    x: if 1 == 2 { ret 3; } else { ret 4; },
+                    y: 5
+                };
+            }
+            "#,
+        ))
+        .parse()
+        .unwrap()
+        .convert_implicit_ret(ImplicitRetConverter::new());
+
+        let expr = ExprId::from(10);
+
+        let actual = ExitPoints::new(ast.expressions(), ast.statements())
+            .exit_points(expr)
+            .unreachable;
+        let mut expected = vec![ExprId::from(8)];
         expected.sort();
 
         assert_eq!(actual, expected);

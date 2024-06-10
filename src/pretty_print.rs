@@ -144,6 +144,18 @@ where
                 }
                 Ok(())
             }
+            ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
+                write!(f, "{} {{", ctx.identifier_ref(*ident_ref_id))?;
+                for (i, (ident_ref_id, expr_id)) in fields.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " ")?;
+                    }
+                    write!(f, "{}: ", ctx.identifier_ref(*ident_ref_id))?;
+                    ctx.pretty_print_expression(*expr_id, opts, f)?;
+                    write!(f, ",")?;
+                }
+                write!(f, "}}")
+            }
             ExpressionKind::Dummy => unreachable!(),
         }
     }
@@ -855,6 +867,34 @@ mod tests {
     #[test]
     fn fibonacci_iter() {
         let ast = Parser::new(Lexer::new("let f(n: number): number = {if n == 0 { ret 0; }if n == 1 { ret 1; }let prev_prev = 0;let prev = 1;let current = 0;while n > 1 {current = prev_prev + prev;prev_prev = prev;prev = current;n = n - 1;}current;}f(9) + 8;"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRetConverter::new());
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_display_snapshot!(w);
+    }
+
+    #[test]
+    fn struct_declaration() {
+        let ast = Parser::new(Lexer::new("struct Point { x: number, y: number }"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRetConverter::new());
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_display_snapshot!(w);
+    }
+
+    #[test]
+    fn struct_instantiation() {
+        let ast = Parser::new(Lexer::new("Point { x: 1, y: 2 };"))
             .parse()
             .unwrap()
             .convert_implicit_ret(ImplicitRetConverter::new());

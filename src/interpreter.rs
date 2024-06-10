@@ -85,6 +85,9 @@ impl<'a> Interpreter<'a> {
             ExpressionKind::Block(_) => {
                 todo!("implement block expression")
             }
+            ExpressionKind::StructInstantiation(_, _) => {
+                todo!("implement struct instantiation")
+            }
             ExpressionKind::Dummy => {
                 panic!("should not interpret an invalid source code")
             }

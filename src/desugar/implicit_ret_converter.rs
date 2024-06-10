@@ -127,6 +127,19 @@ impl ImplicitRetConverter {
                 }
                 ret
             }
+            ExpressionKind::StructInstantiation(_, fields) => {
+                let mut always_return = false;
+                for (_, expr_id) in fields {
+                    always_return = always_return
+                        || self.visit_expression(
+                            ast,
+                            *expr_id,
+                            depth + 1,
+                            unreachable || always_return,
+                        );
+                }
+                always_return
+            }
             ExpressionKind::Dummy => {
                 panic!("should not compute exit points of an invalid source code")
             }
@@ -167,9 +180,7 @@ impl ImplicitRetConverter {
                 self.visit_expression(ast, *expr, depth + 1, unreachable);
                 false
             }
-            StatementKind::Struct(_, _) => {
-                todo!()
-            }
+            StatementKind::Struct(_, _) => false,
         }
     }
 }
@@ -256,6 +267,19 @@ mod tests {
                     42;
                 }
                 43;
+            }
+        "#
+    );
+
+    t!(
+        implicit_return_struct,
+        r#"
+            struct S { x: number, y: number }
+            let f(): number = {
+                S {
+                    x: if true { ret 1; },
+                    y: 1
+                };
             }
         "#
     );
