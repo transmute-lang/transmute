@@ -63,11 +63,13 @@ impl Expression<Typed> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionKind {
+    // todo add support for (nested) struct field assignment
     Assignment(IdentRefId, ExprId),
     If(ExprId, ExprId, Option<ExprId>),
     Literal(Literal),
     Binary(ExprId, BinaryOperator, ExprId),
     Unary(UnaryOperator, ExprId),
+    Access(ExprId, IdentRefId),
     FunctionCall(IdentRefId, Vec<ExprId>),
     While(ExprId, ExprId),
     // todo: should it be it's own struct and use it like While(ExprId, Block)?

@@ -6,7 +6,7 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `{`, expected one of identifier, number, `true`, `false`, `let`, `ret`, `if`, `while`, `(`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                message: "Unexpected `{`, expected one of identifier, number, `true`, `false`, `let`, `ret`, `if`, `while`, `.`, `(`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
                 span: 1:16; [15, 16],
                 level: Error,
                 generated_at: (

@@ -131,7 +131,7 @@ expression: "&html"
       <li>
         <span id="ident__stmt0_index1" class="ident">y</span>
         <span class="colon">: </span>
-        <span id="ident__stmt0" class="ident">number</span>
+        <span id="ident__stmt0" class="ident">boolean</span>
         <span class="comma">, </span>
       </li>
     </ul>
@@ -148,10 +148,22 @@ expression: "&html"
     <span class="ident_ref" title="number" data-ident-ref="ident__stmt0_index0" data-type-ident-ref="">x</span>
     <span class="colon">: </span>
     <span class="num" title="number">1</span>
-    <span class="ident_ref" title="number" data-ident-ref="ident__stmt0_index1" data-type-ident-ref="">y</span>
+    <span class="ident_ref" title="boolean" data-ident-ref="ident__stmt0_index1" data-type-ident-ref="">y</span>
     <span class="colon">: </span>
-    <span class="num" title="number">2</span>
+    <span class="boolean" title="boolean">false</span>
     <span class="curly" data-par-id="par_1">}</span>
+    <span class="semicolon">;</span>
+  </li>
+  <li>
+    <span class="ident_ref" title="struct Point" data-ident-ref="ident__stmt1" data-type-ident-ref="ident__stmt0">p</span>
+    <span class="dot">.</span>
+    <span class="ident_ref" title="number" data-ident-ref="ident__stmt0_index0" data-type-ident-ref="">x</span>
+    <span class="semicolon">;</span>
+  </li>
+  <li>
+    <span class="ident_ref" title="struct Point" data-ident-ref="ident__stmt1" data-type-ident-ref="ident__stmt0">p</span>
+    <span class="dot">.</span>
+    <span class="ident_ref" title="boolean" data-ident-ref="ident__stmt0_index1" data-type-ident-ref="">y</span>
     <span class="semicolon">;</span>
   </li>
 </ul>

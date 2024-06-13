@@ -1,22 +1,22 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"S { a: a, b: a, c a }\")).parse()"
+expression: "Parser::new(Lexer::new(\"a.1;\")).parse()"
 ---
 Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected identifier, expected one of `:`",
-                span: 1:19; [18, 19],
+                message: "Unexpected number, expected one of identifier",
+                span: 1:3; [2, 3],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    1250,
+                    866,
                 ),
             },
             Diagnostic {
-                message: "Unexpected `eof`, expected one of `;`, `.`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
-                span: 1:22; [21, 21],
+                message: "Unexpected number, expected one of `;`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                span: 1:3; [2, 3],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",

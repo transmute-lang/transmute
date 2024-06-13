@@ -153,6 +153,9 @@ where
 
                 (collected, left_always_returns || right_always_returns)
             }
+            ExpressionKind::Access(expr_id, _) => {
+                self.visit_expression(*expr_id, depth + 1, unreachable)
+            }
             ExpressionKind::FunctionCall(_, params) => {
                 let mut always_returns = false;
                 let mut collected = Collected::default();

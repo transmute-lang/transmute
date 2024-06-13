@@ -11,16 +11,16 @@ Err(
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    1215,
+                    1250,
                 ),
             },
             Diagnostic {
-                message: "Unexpected `eof`, expected one of `;`, `(`, `=`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                message: "Unexpected `eof`, expected one of `;`, `.`, `(`, `=`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
                 span: 1:22; [21, 21],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    1321,
+                    1356,
                 ),
             },
         ],

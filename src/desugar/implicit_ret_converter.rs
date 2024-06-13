@@ -87,6 +87,9 @@ impl ImplicitRetConverter {
                 );
                 left_always_returns || right_always_returns
             }
+            ExpressionKind::Access(expr_id, _) => {
+                self.visit_expression(ast, *expr_id, depth + 1, unreachable)
+            }
             ExpressionKind::FunctionCall(_, params) => {
                 let mut some_param_always_returns = false;
 

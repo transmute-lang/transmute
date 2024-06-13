@@ -115,6 +115,11 @@ where
                 }
                 ctx.pretty_print_expression(*expr_id, opts, f)
             }
+            ExpressionKind::Access(expr_id, ident_ref_id) => {
+                ctx.pretty_print_expression(*expr_id, opts, f)?;
+                write!(f, ".")?;
+                write!(f, "{ident}", ident = ctx.identifier_ref(*ident_ref_id))
+            }
             ExpressionKind::FunctionCall(ident_ref_id, param_ids) => {
                 write!(f, "{ident}(", ident = ctx.identifier_ref(*ident_ref_id))?;
                 for (i, param) in param_ids.iter().enumerate() {

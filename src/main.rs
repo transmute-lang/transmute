@@ -85,10 +85,21 @@ fn points() {
                 x: number,
                 y: number
             }
-            let area(p1: Point, p2: Point): number = {
 
+            let area(p1: Point, p2: Point): number = {
+                (p2.x - p1.x) * (p2.y - p1.y);
             }
-            area(Point { x: 1, y: 1 }, Point { x: 1 + 6, y: 1 + 7 });
+
+            area(
+                Point {
+                    x: 1,
+                    y: 1
+                },
+                Point {
+                    x: 1 + 6,
+                    y: 1 + 7
+                }
+            );
         "#,
         "points",
     )

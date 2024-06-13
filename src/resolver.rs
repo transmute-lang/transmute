@@ -222,6 +222,90 @@ impl Resolver {
                     *operand,
                 )
             }
+            ExpressionKind::Access(expr_id, ident_ref_id) => {
+                let ident_ref = state
+                    .identifier_refs
+                    .remove(*ident_ref_id)
+                    .expect("ident_ref exists");
+
+                let (expr_type_id, new_state) = self.visit_expression(state, *expr_id);
+                state = new_state;
+
+                let ty = state.find_type_by_type_id(expr_type_id);
+                let field_type_id = match ty {
+                    Type::Struct(stmt_id) => {
+                        let stmt_id = *stmt_id;
+
+                        if let Some(statement) = state.statements.remove(stmt_id) {
+                            let (_, new_state) = self.visit_statement(state, statement);
+                            state = new_state;
+                        };
+
+                        let stmt = &state.resolution.statements[stmt_id];
+                        match stmt.kind() {
+                            StatementKind::Struct(ident, fields) => {
+                                // todo find a better way (symbol table per struct? See also
+                                //   find_symbol_id_for_struct_field)
+                                match fields
+                                    .iter()
+                                    .enumerate()
+                                    .find(|(_, f)| f.identifier().id() == ident_ref.ident_id())
+                                {
+                                    Some((index, field)) => {
+                                        let field_symbol_id = state
+                                            .find_symbol_id_for_struct_field(stmt_id, index)
+                                            .expect("field exists");
+                                        let ident_ref = ident_ref.resolved(field_symbol_id);
+                                        state
+                                            .resolution
+                                            .identifier_refs
+                                            .insert(ident_ref.id(), ident_ref);
+                                        field.type_id()
+                                    }
+                                    None => {
+                                        state.diagnostics.report_err(
+                                            format!(
+                                                "No field '{}' found in struct {}",
+                                                state.resolution.identifiers[ident_ref.ident_id()],
+                                                state.resolution.identifiers[ident.id()]
+                                            ),
+                                            ident_ref.ident().span().clone(),
+                                            (file!(), line!()),
+                                        );
+                                        let ident_ref =
+                                            ident_ref.resolved(state.not_found_symbol_id);
+                                        state
+                                            .resolution
+                                            .identifier_refs
+                                            .insert(ident_ref.id(), ident_ref);
+                                        state.invalid_type_id
+                                    }
+                                }
+                            }
+                            _ => panic!("struct expected"),
+                        }
+                    }
+                    _ => {
+                        state.diagnostics.report_err(
+                            format!("Expected struct type, got {}", ty),
+                            state.resolution.expressions[*expr_id].span().clone(),
+                            (file!(), line!()),
+                        );
+
+                        // this it not always true (the left hand side can be a symbol), but it not
+                        // being a struct field anyway, considering we did not find any symbol is
+                        // (probably) fine...
+                        let ident_ref = ident_ref.resolved(state.not_found_symbol_id);
+                        state
+                            .resolution
+                            .identifier_refs
+                            .insert(ident_ref.id(), ident_ref);
+                        state.invalid_type_id
+                    }
+                };
+
+                (field_type_id, state)
+            }
             ExpressionKind::FunctionCall(ident_ref, params) => {
                 self.visit_function_call(state, *ident_ref, params.clone().as_slice())
             }
@@ -1718,9 +1802,29 @@ mod tests {
         function_returns_struct,
         "struct S {} let f(): S = { S { }; }"
     );
+    test_type_ok!(
+        function_returns_struct_field,
+        "struct S { field: number } let f(s: S): number = { s.field; }"
+    );
+    test_type_ok!(
+        access_struct_field_read,
+        "struct S { field: boolean } let s = S { field: true }; if s.field { }"
+    );
+    test_type_error!(
+        access_struct_field_read_invalid_type,
+        "struct S { field: number } let s = S { field: 1 }; if s.field { }",
+        "Expected type boolean, got number",
+        Span::new(1, 55, 54, 7)
+    );
     // todo test_type_ok!(
-    //     function_returns_struct_field,
-    //     "struct S { field: number } let f(s: String): number = { s.field; }"
+    //     access_struct_field_write,
+    //     "struct S { field: number } s.field = 1;"
+    // );
+    // todo test_type_error!(
+    //     access_struct_field_write_wrong_type,
+    //     "struct S { field: number } s.field = false;",
+    //     "Expected type number, got boolean",
+    //     Span::new(1, 13, 12, 16)
     // );
     test_type_error!(
         function_returns_void_but_expect_struct,
@@ -1745,6 +1849,12 @@ mod tests {
         "struct S { x: number } let s = S { x: 1 == 1 };",
         "Invalid type for field 'x': expected number, got boolean",
         Span::new(1, 39, 38, 6)
+    );
+    test_type_error!(
+        access_non_struct,
+        "1.x;",
+        "Expected struct type, got number",
+        Span::new(1, 1, 0, 1)
     );
     test_type_error!(
         function_void_cannot_return_number,

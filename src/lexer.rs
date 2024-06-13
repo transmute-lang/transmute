@@ -125,6 +125,11 @@ impl<'s> Lexer<'s> {
                 self.advance_consumed(span.len);
                 (TokenKind::CloseParenthesis, span)
             }
+            '.' => {
+                self.advance_column();
+                self.advance_consumed(span.len);
+                (TokenKind::Dot, span)
+            }
             ',' => {
                 self.advance_column();
                 self.advance_consumed(span.len);
@@ -445,6 +450,7 @@ pub enum TokenKind {
     CloseParenthesis,
     Colon,
     Comma,
+    Dot,
     Else,
     Equal,
     EqualEqual,
@@ -491,26 +497,27 @@ impl TokenKind {
             TokenKind::Comma => 10,
             TokenKind::Semicolon => 11,
             TokenKind::Colon => 12,
+            TokenKind::Dot => 13,
 
-            TokenKind::CloseCurlyBracket => 13,
-            TokenKind::CloseParenthesis => 14,
-            TokenKind::OpenCurlyBracket => 15,
-            TokenKind::OpenParenthesis => 16,
+            TokenKind::CloseCurlyBracket => 14,
+            TokenKind::CloseParenthesis => 15,
+            TokenKind::OpenCurlyBracket => 16,
+            TokenKind::OpenParenthesis => 17,
 
-            TokenKind::Equal => 17,
+            TokenKind::Equal => 18,
 
-            TokenKind::Star => 18,
-            TokenKind::Slash => 19,
+            TokenKind::Star => 19,
+            TokenKind::Slash => 20,
 
-            TokenKind::Minus => 20,
-            TokenKind::Plus => 21,
+            TokenKind::Minus => 21,
+            TokenKind::Plus => 22,
 
-            TokenKind::EqualEqual => 22,
-            TokenKind::ExclaimEqual => 23,
-            TokenKind::Greater => 24,
-            TokenKind::GreaterEqual => 25,
-            TokenKind::Smaller => 26,
-            TokenKind::SmallerEqual => 27,
+            TokenKind::EqualEqual => 23,
+            TokenKind::ExclaimEqual => 24,
+            TokenKind::Greater => 25,
+            TokenKind::GreaterEqual => 26,
+            TokenKind::Smaller => 27,
+            TokenKind::SmallerEqual => 28,
 
             TokenKind::Eof => 254,
             TokenKind::Bad(_) => 255,
@@ -544,6 +551,9 @@ impl Display for TokenKind {
             }
             TokenKind::Comma => {
                 write!(f, "`,`")
+            }
+            TokenKind::Dot => {
+                write!(f, "`.`")
             }
             TokenKind::Else => {
                 write!(f, "`else`")
@@ -808,6 +818,7 @@ mod tests {
     lexer_test_next!(next_open_parenthesis, "(" => TokenKind::OpenParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_parenthesis, ")" => TokenKind::CloseParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_comma, "," => TokenKind::Comma; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_dot, "." => TokenKind::Dot; loc: 1,1; span: 0,1);
     lexer_test_next!(next_open_curly_bracket, "{" => TokenKind::OpenCurlyBracket; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_curly_bracket, "}" => TokenKind::CloseCurlyBracket; loc: 1,1; span: 0,1);
     lexer_test_next!(semicolon, ";" => TokenKind::Semicolon; loc: 1,1; span: 0,1);

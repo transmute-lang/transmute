@@ -118,6 +118,40 @@ impl<'a> XmlWriter<'a> {
             ExpressionKind::Binary(left, op, right) => {
                 self.visit_binary_operator(expr, left, op, right);
             }
+            ExpressionKind::Access(expr_id, ident_ref_id) => {
+                self.emit(XmlEvent::start_element("access"));
+                self.visit_expression(*expr_id);
+
+                let ident_ref = self.ast.identifier_ref(*ident_ref_id);
+                let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
+                    SymbolKind::Let(stmt) => {
+                        format!("stmt:{stmt}")
+                    }
+                    SymbolKind::LetFn(stmt, _, _) => {
+                        format!("stmt:{stmt}")
+                    }
+                    SymbolKind::Parameter(stmt_id, index) | SymbolKind::Field(stmt_id, index) => {
+                        format!("stmt:{}:{}", stmt_id, index)
+                    }
+                    SymbolKind::Native(..) => "native".to_string(),
+                    SymbolKind::NativeType(_, _) => {
+                        unreachable!("cannot assign to NativeType")
+                    }
+                    SymbolKind::Struct(_) => {
+                        unreachable!("cannot assign to Struct")
+                    }
+                    SymbolKind::NotFound => panic!(),
+                };
+
+                self.emit(
+                    XmlEvent::start_element("ident")
+                        .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
+                        .attr("target-id", &symbol),
+                );
+
+                self.emit(XmlEvent::end_element());
+                self.emit(XmlEvent::end_element());
+            }
             ExpressionKind::FunctionCall(ident_ref, params) => {
                 self.visit_function_call(expr, ident_ref, params);
             }
@@ -131,16 +165,46 @@ impl<'a> XmlWriter<'a> {
                 self.visit_block(stmts);
             }
             ExpressionKind::Dummy => {}
-            ExpressionKind::StructInstantiation(_, _) => {
-                todo!()
+            ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
+                let ident_ref = self.ast.identifier_ref(*ident_ref_id);
+
+                let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
+                    SymbolKind::Struct(stmt_id) => {
+                        format!("stmt:{stmt_id}")
+                    }
+                    _ => panic!(),
+                };
+
+                self.emit(XmlEvent::start_element("struct_init"));
+                self.emit(
+                    XmlEvent::start_element("ident")
+                        .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
+                        .attr("target-id", &symbol),
+                );
+                self.emit(XmlEvent::start_element("fields"));
+                for (ident_ref_id, expr_id) in fields {
+                    let ident_ref = self.ast.identifier_ref(*ident_ref_id);
+                    let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
+                        SymbolKind::Field(stmt_id, index) => {
+                            format!("stmt:{}:{}", stmt_id, index)
+                        }
+                        _ => panic!(),
+                    };
+
+                    self.emit(XmlEvent::start_element("field").attr("target-id", &symbol));
+                    self.visit_expression(*expr_id);
+                    self.emit(XmlEvent::end_element());
+                }
+                self.emit(XmlEvent::end_element());
+                self.emit(XmlEvent::end_element());
             }
         }
 
         self.emit(XmlEvent::end_element());
     }
 
-    fn visit_assignment(&mut self, ident_ref: &IdentRefId, expr: &ExprId) {
-        let ident_ref = self.ast.identifier_ref(*ident_ref);
+    fn visit_assignment(&mut self, ident_ref_id: &IdentRefId, expr: &ExprId) {
+        let ident_ref = self.ast.identifier_ref(*ident_ref_id);
 
         let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
             SymbolKind::Let(stmt) => {
@@ -213,8 +277,8 @@ impl<'a> XmlWriter<'a> {
                 self.emit(XmlEvent::characters(&b.to_string()));
                 self.emit(XmlEvent::end_element());
             }
-            LiteralKind::Identifier(ident_ref) => {
-                let ident_ref = self.ast.identifier_ref(*ident_ref);
+            LiteralKind::Identifier(ident_ref_id) => {
+                let ident_ref = self.ast.identifier_ref(*ident_ref_id);
 
                 let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
                     SymbolKind::Let(stmt) => {
@@ -250,7 +314,7 @@ impl<'a> XmlWriter<'a> {
 
                 self.emit(
                     XmlEvent::start_element("identifier-ref")
-                        .attr("id", &format!("ident-ref:{}", ident_ref.id()))
+                        .attr("id", &format!("ident-ref:{}", ident_ref_id))
                         .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
                         .attr("target-id", &symbol)
                         .attr("type-ref", &type_ref.unwrap_or_default()),
@@ -298,10 +362,10 @@ impl<'a> XmlWriter<'a> {
     fn visit_function_call(
         &mut self,
         expr: &Expression<Typed>,
-        ident_ref: &IdentRefId,
+        ident_ref_id: &IdentRefId,
         params: &[ExprId],
     ) {
-        let ident_ref = self.ast.identifier_ref(*ident_ref);
+        let ident_ref = self.ast.identifier_ref(*ident_ref_id);
 
         let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
             SymbolKind::Let(stmt) => {
@@ -646,6 +710,23 @@ mod tests {
         // todo also have struct as return type
         write_struct_as_type,
         "struct S { a: number, b: number } let f(s: S) = { s; }"
+    );
+    test_xml_write!(
+        serialize_struct,
+        r#"
+            struct Point {
+                x: number,
+                y: boolean
+            }
+
+            let p = Point {
+                x: 1,
+                y: false
+            };
+
+            p.x;
+            p.y;
+        "#
     );
     test_xml_write!(
         write_fibonacci_rec,

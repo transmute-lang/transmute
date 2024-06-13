@@ -840,6 +840,41 @@ impl<'s> Parser<'s> {
             }
         };
 
+        match self.lexer.peek().kind() {
+            TokenKind::Dot => {
+                // expr . 'identifier
+                let _dot = self.lexer.next();
+                let token = self.lexer.next();
+                match token.kind() {
+                    TokenKind::Identifier => {
+                        let identifier = Identifier::new(
+                            self.push_identifier(token.span()),
+                            token.span().clone(),
+                        );
+                        let identifier_ref = self.push_identifier_ref(identifier);
+
+                        let span = self.expressions[expression.id()]
+                            .span()
+                            .extend_to(token.span());
+                        expression = self.push_expression(
+                            ExpressionKind::Access(expression, identifier_ref),
+                            span,
+                        );
+                    }
+                    _ => {
+                        self.expected.clear();
+                        report_unexpected_token!(self, token, [TokenKind::Identifier,]);
+                        self.lexer.push_next(token);
+                        // we ignore the dot and keep parsing as if it did not exist
+                    }
+                }
+            }
+            _ => {
+                // ignore and keep parsing
+                self.expected.insert(TokenKind::Dot);
+            }
+        }
+
         while let Some(operator) = self.parse_binary_operator_with_higher_precedence(precedence) {
             expression = self
                 .parse_infix_expression(expression, operator, allow_struct)
@@ -1444,6 +1479,10 @@ mod tests {
     test_syntax!(prefix_minus => "- 40 * 2;");
     test_syntax!(let_statement => "let forty_two = 42;");
     test_syntax!(assignment => "forty_two = 42;");
+    test_syntax!(access => "forty . two ;");
+    // todo test_syntax!(access_equal => "forty . two = 1;");
+    test_syntax!(access_precendence => "-a.b;");
+    test_syntax!(err_access => "a.1;");
     test_syntax!(two_statements => "let forty_two = 42; forty_two;");
     test_syntax!(function_statement => "let times_two(a: number) = a * 2;");
     test_syntax!(function_statement_with_return_type => "let times_two(a: number): number = a * 2;");

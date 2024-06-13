@@ -222,6 +222,10 @@ impl<R> Ast<R, Typed, Bound> {
         &self.identifier_refs[id]
     }
 
+    pub fn symbol_by_ident_ref_id(&self, id: IdentRefId) -> &Symbol {
+        &self.symbols[self.identifier_refs[id].symbol_id()]
+    }
+
     pub fn expression(&self, id: ExprId) -> &Expression<Typed> {
         &self.expressions[id]
     }

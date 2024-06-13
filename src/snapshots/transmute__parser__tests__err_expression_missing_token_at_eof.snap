@@ -6,7 +6,7 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `eof`, expected one of identifier, number, `true`, `false`, `if`, `while`, `(`, `-`",
+                message: "Unexpected `eof`, expected one of identifier, number, `true`, `false`, `if`, `while`, `.`, `(`, `-`",
                 span: 1:5; [4, 4],
                 level: Error,
                 generated_at: (

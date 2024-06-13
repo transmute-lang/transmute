@@ -76,7 +76,8 @@ impl<'a> HtmlWriter<'a> {
                     | ExpressionKind::Literal(_)
                     | ExpressionKind::Binary(_, _, _)
                     | ExpressionKind::Unary(_, _)
-                    | ExpressionKind::FunctionCall(_, _) => {
+                    | ExpressionKind::FunctionCall(_, _)
+                    | ExpressionKind::Access(_, _) => {
                         self.emit_semicolon();
                     }
                     _ => {}
@@ -224,6 +225,11 @@ impl<'a> HtmlWriter<'a> {
             }
             ExpressionKind::Unary(_, _) => {
                 unimplemented!("turned into functions during the resolution pass")
+            }
+            ExpressionKind::Access(expr_id, ident_ref_id) => {
+                self.visit_expression(*expr_id);
+                self.emit_dot();
+                self.emit_identifier_ref(*ident_ref_id);
             }
             ExpressionKind::FunctionCall(ident_ref, params) => {
                 self.visit_function_call(*ident_ref, params)
@@ -588,13 +594,16 @@ mod tests {
         r#"
             struct Point {
                 x: number,
-                y: number
+                y: boolean
             }
 
             let p = Point {
                 x: 1,
-                y: 2
+                y: false
             };
+
+            p.x;
+            p.y;
         "#
     );
     // test_html_write!(

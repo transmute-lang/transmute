@@ -96,6 +96,7 @@ pub enum Precedence {
     Sum,
     Product,
     Prefix,
+    Access,
 }
 
 #[derive(Debug, Clone, PartialEq)]
