@@ -11,16 +11,16 @@ Err(
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    866,
+                    867,
                 ),
             },
             Diagnostic {
-                message: "Unexpected number, expected one of `;`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                message: "Unexpected number, expected one of `;`, `.`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
                 span: 1:3; [2, 3],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    1356,
+                    1359,
                 ),
             },
         ],

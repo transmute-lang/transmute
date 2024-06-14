@@ -1810,6 +1810,19 @@ mod tests {
         access_struct_field_read,
         "struct S { field: boolean } let s = S { field: true }; if s.field { }"
     );
+    test_type_ok!(
+        access_struct_field_nested_read,
+        r#"
+        struct S1 { s: S2 }
+        struct S2 { f: boolean }
+        let s = S1 {
+            s: S2 {
+                f: true
+            }
+        };
+        if s.s.f { }
+        "#
+    );
     test_type_error!(
         access_struct_field_read_invalid_type,
         "struct S { field: number } let s = S { field: 1 }; if s.field { }",

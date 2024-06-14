@@ -479,4 +479,29 @@ mod tests {
             }
         );
     "# => Number(42));
+    eval!(area_nested_struct, r#"
+        struct Point {
+            x: number,
+            y: number
+        }
+        struct Square {
+            p1: Point,
+            p2: Point
+        }
+        let area(s: Square): number = {
+            (s.p2.x - s.p1.x) * (s.p2.y - s.p1.y);
+        }
+        area(
+            Square {
+            p1: Point {
+                    x: 1,
+                    y: 1
+                },
+            p2: Point {
+                    x: 1 + 6,
+                    y: 1 + 7
+                }
+            }
+        );
+    "# => Number(42));
 }
