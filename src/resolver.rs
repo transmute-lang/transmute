@@ -1,4 +1,4 @@
-use crate::ast::expression::{Expression, ExpressionKind, Typed, Untyped};
+use crate::ast::expression::{Expression, ExpressionKind, Target, Typed, Untyped};
 use crate::ast::identifier::Identifier;
 use crate::ast::identifier_ref::{Bound, IdentifierRef, Unbound};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
@@ -196,8 +196,35 @@ impl Resolver {
 
         // todo take_kind()
         let (type_id, mut state) = match expr.kind() {
-            ExpressionKind::Assignment(ident_ref, expr) => {
+            ExpressionKind::Assignment(Target::Direct(ident_ref), expr) => {
                 self.visit_assignment(state, *ident_ref, *expr)
+            }
+            ExpressionKind::Assignment(Target::Indirect(lhs_expr_id), rhs_expr_id) => {
+                let (lhs_type_id, new_state) = self.visit_expression(state, *lhs_expr_id);
+                let (rhs_type_id, new_state) = self.visit_expression(new_state, *rhs_expr_id);
+                state = new_state;
+
+                if lhs_type_id == state.invalid_type_id {
+                    return (lhs_type_id, state);
+                }
+                if rhs_type_id == state.invalid_type_id {
+                    return (rhs_type_id, state);
+                }
+
+                if lhs_type_id != rhs_type_id {
+                    state.diagnostics.report_err(
+                        format!(
+                            "Expected type {}, got {}",
+                            state.find_type_by_type_id(lhs_type_id),
+                            state.find_type_by_type_id(rhs_type_id)
+                        ),
+                        state.resolution.expressions[*rhs_expr_id].span().clone(),
+                        (file!(), line!()),
+                    );
+                    return (state.invalid_type_id, state);
+                }
+
+                (rhs_type_id, state)
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
                 self.visit_if(state, *cond, *true_branch, *false_branch)
@@ -355,27 +382,31 @@ impl Resolver {
         // todo some things to check:
         //  - assign to a let fn
 
-        let (expr_type, mut state) = self.visit_expression(state, expr);
+        let (rhs_type_id, mut state) = self.visit_expression(state, expr);
 
-        let expected_type = state
+        let lhs_type_id = state
             // todo: to search for method, we need to extract the parameter types from the
-            //  expr_type, it it corresponds to a function type. We don't have this
-            //  information yet and this we cannot assign to a variable holding a function
+            //  expr_type, if it corresponds to a function type. We don't have this
+            //  information yet and thus we cannot assign to a variable holding a function
             //  (yet).
             .resolve_ident_ref(ident_ref, None)
             .map(|s| state.resolution.symbols[s].ty)
             .unwrap_or(state.invalid_type_id);
 
-        if expected_type == state.invalid_type_id {
-            return (expected_type, state);
+        if lhs_type_id == state.invalid_type_id {
+            return (lhs_type_id, state);
         }
 
-        if expr_type != expected_type {
+        if rhs_type_id == state.invalid_type_id {
+            return (rhs_type_id, state);
+        }
+
+        if rhs_type_id != lhs_type_id {
             state.diagnostics.report_err(
                 format!(
                     "Expected type {}, got {}",
-                    state.find_type_by_type_id(expected_type),
-                    state.find_type_by_type_id(expr_type)
+                    state.find_type_by_type_id(lhs_type_id),
+                    state.find_type_by_type_id(rhs_type_id)
                 ),
                 state.resolution.expressions[expr].span().clone(),
                 (file!(), line!()),
@@ -383,7 +414,7 @@ impl Resolver {
             return (state.invalid_type_id, state);
         }
 
-        (expr_type, state)
+        (rhs_type_id, state)
     }
 
     fn visit_if(
@@ -1829,16 +1860,16 @@ mod tests {
         "Expected type boolean, got number",
         Span::new(1, 55, 54, 7)
     );
-    // todo test_type_ok!(
-    //     access_struct_field_write,
-    //     "struct S { field: number } s.field = 1;"
-    // );
-    // todo test_type_error!(
-    //     access_struct_field_write_wrong_type,
-    //     "struct S { field: number } s.field = false;",
-    //     "Expected type number, got boolean",
-    //     Span::new(1, 13, 12, 16)
-    // );
+    test_type_ok!(
+        access_struct_field_write,
+        "struct S { field: number } let s = S { field: 1 }; s.field = 1;"
+    );
+    test_type_error!(
+        access_struct_field_write_wrong_type,
+        "struct S { field: number } let s = S { field: 1 }; s.field = false;",
+        "Expected type number, got boolean",
+        Span::new(1, 62, 61, 5)
+    );
     test_type_error!(
         function_returns_void_but_expect_struct,
         "struct S {} let f(): S = { }",

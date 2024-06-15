@@ -188,12 +188,12 @@ expression: "&xml"
                                       <parameters>
                                         <parameter>
                                           <expr id="expr:19" line="12" column="31" start="303" len="9">
-                                            <identifier-ref id="ident-ref:4" ident-ref="ident:3" target-id="stmt:4" type-ref="">prev_prev</identifier-ref>
+                                            <identifier-ref id="ident-ref:5" ident-ref="ident:3" target-id="stmt:4" type-ref="">prev_prev</identifier-ref>
                                           </expr>
                                         </parameter>
                                         <parameter>
                                           <expr id="expr:20" line="12" column="43" start="315" len="4">
-                                            <identifier-ref id="ident-ref:5" ident-ref="ident:4" target-id="stmt:5" type-ref="">prev</identifier-ref>
+                                            <identifier-ref id="ident-ref:6" ident-ref="ident:4" target-id="stmt:5" type-ref="">prev</identifier-ref>
                                           </expr>
                                         </parameter>
                                       </parameters>
@@ -209,7 +209,7 @@ expression: "&xml"
                                 <identifier>prev_prev</identifier>
                                 <expression>
                                   <expr id="expr:23" line="13" column="33" start="353" len="4">
-                                    <identifier-ref id="ident-ref:7" ident-ref="ident:4" target-id="stmt:5" type-ref="">prev</identifier-ref>
+                                    <identifier-ref id="ident-ref:8" ident-ref="ident:4" target-id="stmt:5" type-ref="">prev</identifier-ref>
                                   </expr>
                                 </expression>
                               </assign>
@@ -221,7 +221,7 @@ expression: "&xml"
                                 <identifier>prev</identifier>
                                 <expression>
                                   <expr id="expr:25" line="14" column="28" start="386" len="7">
-                                    <identifier-ref id="ident-ref:9" ident-ref="ident:5" target-id="stmt:6" type-ref="">current</identifier-ref>
+                                    <identifier-ref id="ident-ref:10" ident-ref="ident:5" target-id="stmt:6" type-ref="">current</identifier-ref>
                                   </expr>
                                 </expression>
                               </assign>
@@ -237,7 +237,7 @@ expression: "&xml"
                                       <parameters>
                                         <parameter>
                                           <expr id="expr:27" line="15" column="25" start="419" len="1">
-                                            <identifier-ref id="ident-ref:11" ident-ref="ident:6" target-id="stmt:7" type-ref="">m</identifier-ref>
+                                            <identifier-ref id="ident-ref:12" ident-ref="ident:6" target-id="stmt:7" type-ref="">m</identifier-ref>
                                           </expr>
                                         </parameter>
                                         <parameter>

@@ -1,4 +1,4 @@
-use crate::ast::expression::{Expression, ExpressionKind, Typed, TypedState, Untyped};
+use crate::ast::expression::{Expression, ExpressionKind, Target, Typed, TypedState, Untyped};
 use crate::ast::identifier_ref::{Bound, BoundState, Unbound};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
@@ -61,9 +61,14 @@ where
         W: Write,
     {
         match self.kind() {
-            ExpressionKind::Assignment(target, expr_id) => {
+            ExpressionKind::Assignment(Target::Direct(target), expr_id) => {
                 write!(f, "{ident} = ", ident = ctx.identifier_ref(*target))?;
                 ctx.pretty_print_expression(*expr_id, opts, f)
+            }
+            ExpressionKind::Assignment(Target::Indirect(lhs_expr_id), rhs_expr_id) => {
+                ctx.pretty_print_expression(*lhs_expr_id, opts, f)?;
+                write!(f, " = ")?;
+                ctx.pretty_print_expression(*rhs_expr_id, opts, f)
             }
             ExpressionKind::If(cond_id, true_id, false_id) => {
                 let indent = ctx.indent();
@@ -475,6 +480,22 @@ mod tests {
         expr.pretty_print(&mut ctx, &Options::default(), &mut w)
             .unwrap();
         assert_eq!(w, "a = true");
+    }
+
+    #[test]
+    fn expression_assignment_indirect() {
+        let ast = Parser::new(Lexer::new("a.b.c = true;")).parse().unwrap();
+        let expr = ast.expression(ExprId::from(ast.expressions().len() - 1));
+
+        let mut ctx = PrettyPrintContext {
+            ast: AstState::UntypedUnbound(&ast),
+            level: 1,
+            require_semicolon: false,
+        };
+        let mut w = String::new();
+        expr.pretty_print(&mut ctx, &Options::default(), &mut w)
+            .unwrap();
+        assert_eq!(w, "a.b.c = true");
     }
 
     #[test]
@@ -900,6 +921,20 @@ mod tests {
     #[test]
     fn struct_instantiation() {
         let ast = Parser::new(Lexer::new("Point { x: 1, y: 2 };"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRetConverter::new());
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_display_snapshot!(w);
+    }
+
+    #[test]
+    fn struct_nested_access() {
+        let ast = Parser::new(Lexer::new("s.f.g;"))
             .parse()
             .unwrap()
             .convert_implicit_ret(ImplicitRetConverter::new());

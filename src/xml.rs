@@ -1,4 +1,4 @@
-use crate::ast::expression::{Expression, ExpressionKind, Typed};
+use crate::ast::expression::{Expression, ExpressionKind, Target, Typed};
 use crate::ast::identifier::Identifier;
 use crate::ast::identifier_ref::Bound;
 use crate::ast::ids::{ExprId, IdentRefId, StmtId};
@@ -108,8 +108,16 @@ impl<'a> XmlWriter<'a> {
         );
 
         match expr.kind() {
-            ExpressionKind::Assignment(ident_ref, expr) => {
-                self.visit_assignment(ident_ref, expr);
+            ExpressionKind::Assignment(Target::Direct(ident_ref), rhs_expr_id) => {
+                self.visit_assignment(ident_ref, rhs_expr_id);
+            }
+            ExpressionKind::Assignment(Target::Indirect(lhs_expr_id), rhs_expr_id) => {
+                self.emit(XmlEvent::start_element("assign"));
+
+                self.visit_expression(*lhs_expr_id);
+                self.visit_expression(*rhs_expr_id);
+
+                self.emit(XmlEvent::end_element());
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
                 self.visit_if(cond, true_branch, false_branch);

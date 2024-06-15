@@ -64,7 +64,7 @@ impl Expression<Typed> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionKind {
     // todo add support for (nested) struct field assignment
-    Assignment(IdentRefId, ExprId),
+    Assignment(Target, ExprId),
     If(ExprId, ExprId, Option<ExprId>),
     Literal(Literal),
     Binary(ExprId, BinaryOperator, ExprId),
@@ -78,6 +78,13 @@ pub enum ExpressionKind {
     /// A dummy expression kind, inserted by the parser when the expression could not be parsed
     // todo probably remove...
     Dummy,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Target {
+    Direct(IdentRefId),
+    // The expression id if of kind ExpressionKind::Access
+    Indirect(ExprId),
 }
 
 pub trait TypedState {}

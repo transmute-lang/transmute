@@ -42,9 +42,11 @@ Ok(
                     id: 1,
                 },
                 kind: Assignment(
-                    IdentRefId {
-                        id: 0,
-                    },
+                    Direct(
+                        IdentRefId {
+                            id: 0,
+                        },
+                    ),
                     ExprId {
                         id: 0,
                     },

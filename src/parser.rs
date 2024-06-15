@@ -1,5 +1,5 @@
 use crate::ast;
-use crate::ast::expression::{ExpressionKind, Untyped};
+use crate::ast::expression::{ExpressionKind, Target, Untyped};
 use crate::ast::identifier::Identifier;
 use crate::ast::identifier_ref::{IdentifierRef, Unbound};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
@@ -665,7 +665,7 @@ impl<'s> Parser<'s> {
     ) -> &Expression {
         let token = self.lexer.next();
 
-        let mut expression = match token.kind() {
+        let mut expr_id = match token.kind() {
             TokenKind::If => {
                 // self.expected.clear();
                 self.parse_if_expression(token.span().clone()).id()
@@ -689,25 +689,14 @@ impl<'s> Parser<'s> {
                         self.parse_struct_instantiation(identifier)
                     }
                     // ident '= ...
-                    TokenKind::Equal => {
-                        self.lexer.next();
-                        let expression = self.parse_expression(allow_struct);
-                        let span = identifier.span().extend_to(expression.span());
-                        let expression = expression.id();
-                        let ident_ref = self.push_identifier_ref(identifier);
-                        self.push_expression(
-                            ExpressionKind::Assignment(ident_ref, expression),
-                            span,
-                        )
-                    }
                     _ => {
                         // ident '...
                         // we just take ident and leave the rest to the next step
                         let span = identifier.span().clone();
 
-                        let ident_ref = self.push_identifier_ref(identifier);
+                        let ident_ref_id = self.push_identifier_ref(identifier);
                         let literal =
-                            Literal::new(LiteralKind::Identifier(ident_ref), span.clone());
+                            Literal::new(LiteralKind::Identifier(ident_ref_id), span.clone());
 
                         self.expected.insert(TokenKind::OpenParenthesis);
                         self.expected.insert(TokenKind::Equal);
@@ -854,11 +843,11 @@ impl<'s> Parser<'s> {
                             );
                             let identifier_ref = self.push_identifier_ref(identifier);
 
-                            let span = self.expressions[expression.id()]
+                            let span = self.expressions[expr_id.id()]
                                 .span()
                                 .extend_to(token.span());
-                            expression = self.push_expression(
-                                ExpressionKind::Access(expression, identifier_ref),
+                            expr_id = self.push_expression(
+                                ExpressionKind::Access(expr_id, identifier_ref),
                                 span,
                             );
                         }
@@ -878,13 +867,53 @@ impl<'s> Parser<'s> {
             }
         }
 
+        if self.lexer.peek().kind() == &TokenKind::Equal {
+            // ... '= ...
+            let lhs = self.expressions.pop().unwrap();
+            match lhs.kind() {
+                ExpressionKind::Literal(literal) => match literal.kind() {
+                    LiteralKind::Identifier(ident_ref_id) => {
+                        self.lexer.next();
+                        let rhs = self.parse_expression(allow_struct);
+                        let span = lhs.span().extend_to(rhs.span());
+                        let rhs_id = rhs.id();
+                        expr_id = self.push_expression(
+                            ExpressionKind::Assignment(Target::Direct(*ident_ref_id), rhs_id),
+                            span,
+                        );
+                    }
+                    _ => {
+                        self.expressions.push(lhs);
+                    }
+                },
+                ExpressionKind::Access(_, _) => {
+                    self.lexer.next();
+                    let lhs_id = lhs.id();
+                    let lhs_span = lhs.span().clone();
+                    self.expressions.push(lhs);
+
+                    let rhs = self.parse_expression(allow_struct);
+                    let span = lhs_span.extend_to(rhs.span());
+                    let rhs_id = rhs.id();
+
+                    expr_id = self.push_expression(
+                        ExpressionKind::Assignment(Target::Indirect(lhs_id), rhs_id),
+                        span,
+                    );
+                }
+                _ => {
+                    self.expressions.push(lhs);
+                }
+            }
+        }
+
         while let Some(operator) = self.parse_binary_operator_with_higher_precedence(precedence) {
-            expression = self
-                .parse_infix_expression(expression, operator, allow_struct)
+            expr_id = self
+                .parse_infix_expression(expr_id, operator, allow_struct)
                 .id();
         }
 
-        &self.expressions[expression.id()]
+        &self.expressions[expr_id.id()]
     }
 
     fn parse_binary_operator_with_higher_precedence(
@@ -1484,7 +1513,7 @@ mod tests {
     test_syntax!(assignment => "forty_two = 42;");
     test_syntax!(access => "forty . two ;");
     test_syntax!(access_nested => "forty . two . something;");
-    // todo test_syntax!(access_equal => "forty . two = 1;");
+    test_syntax!(access_equal => "forty . two = 1;");
     test_syntax!(access_precendence => "-a.b;");
     test_syntax!(err_access => "a.1;");
     test_syntax!(two_statements => "let forty_two = 42; forty_two;");

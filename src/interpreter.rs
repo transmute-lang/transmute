@@ -1,4 +1,4 @@
-use crate::ast::expression::{ExpressionKind, Typed};
+use crate::ast::expression::{ExpressionKind, Target, Typed};
 use crate::ast::identifier_ref::Bound;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
@@ -87,7 +87,26 @@ impl<'a> Interpreter<'a> {
             ExpressionKind::FunctionCall(ident, arguments) => {
                 self.visit_function_call(ident, arguments)
             }
-            ExpressionKind::Assignment(ident, expr) => self.visit_assignment(ident, expr),
+            ExpressionKind::Assignment(Target::Direct(ident), expr) => {
+                self.visit_assignment(ident, expr)
+            }
+            ExpressionKind::Assignment(Target::Indirect(lhs_expr_id), rhs_expr_id) => {
+                let (mut values, index) = match self.ast.expression(*lhs_expr_id).kind() {
+                    ExpressionKind::Access(expr_id, ident_ref_id) => {
+                        let values = self.visit_expression(*expr_id).try_to_struct();
+                        let symbol = self.ast.symbol_by_ident_ref_id(*ident_ref_id);
+                        match symbol.kind() {
+                            SymbolKind::Field(_, index) => (values, index),
+                            _ => panic!("field expected"),
+                        }
+                    }
+                    _ => panic!("access expected"),
+                };
+
+                let rhs = self.visit_expression(*rhs_expr_id);
+                values[*index] = rhs.clone();
+                rhs
+            }
             ExpressionKind::If(cond, true_branch, false_branch) => {
                 self.visit_if(cond, true_branch, false_branch)
             }
@@ -484,23 +503,33 @@ mod tests {
             x: number,
             y: number
         }
+
         struct Square {
             p1: Point,
             p2: Point
         }
+
         let area(s: Square): number = {
             (s.p2.x - s.p1.x) * (s.p2.y - s.p1.y);
         }
+
+        let p1 = Point {
+            x: 1,
+            y: 1
+        };
+
+        let p2 = Point {
+            x: 6,
+            y: 7
+        };
+
+        p2.x = p2.x + 1;
+        p2.y = p2.y + 1;
+
         area(
             Square {
-            p1: Point {
-                    x: 1,
-                    y: 1
-                },
-            p2: Point {
-                    x: 1 + 6,
-                    y: 1 + 7
-                }
+                p1: p1,
+                p2: p2
             }
         );
     "# => Number(42));

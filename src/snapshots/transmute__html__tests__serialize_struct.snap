@@ -148,6 +148,7 @@ expression: "&html"
     <span class="ident_ref" title="number" data-ident-ref="ident__stmt0_index0" data-type-ident-ref="">x</span>
     <span class="colon">: </span>
     <span class="num" title="number">1</span>
+    <span class="comma">, </span>
     <span class="ident_ref" title="boolean" data-ident-ref="ident__stmt0_index1" data-type-ident-ref="">y</span>
     <span class="colon">: </span>
     <span class="boolean" title="boolean">false</span>

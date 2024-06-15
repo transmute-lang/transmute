@@ -1,4 +1,4 @@
-use crate::ast::expression::{ExpressionKind, Typed};
+use crate::ast::expression::{ExpressionKind, Target, Typed};
 use crate::ast::identifier_ref::Bound;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
@@ -215,7 +215,14 @@ impl<'a> HtmlWriter<'a> {
 
     fn visit_expression(&mut self, expr: ExprId) {
         match self.ast.expression(expr).kind() {
-            ExpressionKind::Assignment(ident_ref, expr) => self.visit_assignment(*ident_ref, *expr),
+            ExpressionKind::Assignment(Target::Direct(ident_ref), expr) => {
+                self.visit_assignment(*ident_ref, *expr)
+            }
+            ExpressionKind::Assignment(Target::Indirect(lhs_expr_id), rhs_expr_id) => {
+                self.visit_expression(*lhs_expr_id);
+                self.emit_equal();
+                self.visit_expression(*rhs_expr_id);
+            }
             ExpressionKind::If(cond, true_branch, false_branch) => {
                 self.visit_if(*cond, *true_branch, *false_branch)
             }
@@ -243,7 +250,10 @@ impl<'a> HtmlWriter<'a> {
 
                 self.emit_curly("{", &par_id);
 
-                for (ident_ref_id, expr_id) in fields {
+                for (index, (ident_ref_id, expr_id)) in fields.iter().enumerate() {
+                    if index > 0 {
+                        self.emit_comma();
+                    }
                     self.emit_identifier_ref(*ident_ref_id);
                     self.emit_colon();
                     self.visit_expression(*expr_id);
