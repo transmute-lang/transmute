@@ -24,6 +24,7 @@ impl<'a> Interpreter<'a> {
         }
     }
 
+    // fixme returning a value means returning references to heap...
     pub fn start(&mut self) -> Value {
         let val = self.visit_statements(self.ast.root_statements());
         val.value_ref

@@ -49,7 +49,10 @@ fn main() {
     );
     exec(include_str!("../examples/area.th"), "area");
 
-    // todo add example that returns a struct
+    println!(
+        "\n--------------------------------------------------------------------------------\n"
+    );
+    exec(include_str!("../examples/vector_sum.th"), "vector_sum");
 }
 
 fn exec(src: &str, name: &str) {
