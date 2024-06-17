@@ -27,7 +27,7 @@ impl Natives {
             parameters: vec![Type::Number],
             return_type: Type::Number,
             body: |mut params| {
-                let v = params.pop().unwrap().try_to_i64();
+                let v = params.pop().unwrap().as_i64();
                 Value::Number(-v)
             },
         });
@@ -37,8 +37,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Number(left + right)
             },
         });
@@ -47,8 +47,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Number(left - right)
             },
         });
@@ -57,8 +57,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Number(left * right)
             },
         });
@@ -67,8 +67,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Number(left / right)
             },
         });
@@ -77,8 +77,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Boolean(left == right)
             },
         });
@@ -87,8 +87,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Boolean(left != right)
             },
         });
@@ -97,8 +97,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Boolean(left > right)
             },
         });
@@ -107,8 +107,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Boolean(left < right)
             },
         });
@@ -117,8 +117,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Boolean(left >= right)
             },
         });
@@ -127,8 +127,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Boolean(left <= right)
             },
         });
@@ -138,8 +138,8 @@ impl Natives {
             parameters: vec![Type::Boolean, Type::Boolean],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_bool();
-                let left = params.pop().unwrap().try_to_bool();
+                let right = params.pop().unwrap().as_bool();
+                let left = params.pop().unwrap().as_bool();
                 Value::Boolean(left == right)
             },
         });
@@ -148,8 +148,8 @@ impl Natives {
             parameters: vec![Type::Boolean, Type::Boolean],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_bool();
-                let left = params.pop().unwrap().try_to_bool();
+                let right = params.pop().unwrap().as_bool();
+                let left = params.pop().unwrap().as_bool();
                 Value::Boolean(left != right)
             },
         });

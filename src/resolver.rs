@@ -20,6 +20,8 @@ pub struct Resolver {}
 
 type BoundParametersAndReturnType = (Vec<Parameter<Bound>>, Return<Bound>);
 
+// todo if cond { a } else { b } . field = 42
+
 impl Resolver {
     pub fn new() -> Self {
         Self {}

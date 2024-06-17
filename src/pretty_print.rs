@@ -4,7 +4,7 @@ use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
 use crate::ast::statement::{RetMode, Statement, StatementKind};
-use crate::ast::Ast;
+use crate::ast::{Ast, ExitPoints, ResolvedAst};
 use std::fmt::{Result, Write};
 
 pub trait PrettyPrint {
@@ -305,7 +305,7 @@ impl<R> Ast<R, Untyped, Unbound> {
     }
 }
 
-enum AstState<'a, R> {
+pub enum AstState<'a, R> {
     TypedBound(&'a Ast<R, Typed, Bound>),
     UntypedUnbound(&'a Ast<R, Untyped, Unbound>),
 }
@@ -320,6 +320,16 @@ pub struct PrettyPrintContext<'a, R> {
     ast: AstState<'a, R>,
     level: usize,
     require_semicolon: bool,
+}
+
+impl<'a> PrettyPrintContext<'a, ExitPoints> {
+    pub fn from(ast: &'a ResolvedAst) -> Self {
+        Self {
+            ast: AstState::TypedBound(ast),
+            level: 0,
+            require_semicolon: false,
+        }
+    }
 }
 
 impl<R> PrettyPrintContext<'_, R> {
