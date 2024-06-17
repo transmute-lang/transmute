@@ -33,90 +33,23 @@ mod xml;
 // todo fix the ident().id() -> ident_id()
 
 fn main() {
-    fibonacci_rec();
-    println!(
-        "\n--------------------------------------------------------------------------------\n"
-    );
-    fibonacci_iter();
-    println!(
-        "\n--------------------------------------------------------------------------------\n"
-    );
-    points();
-}
-
-fn fibonacci_rec() {
     exec(
-        "let f(n: number): number = { if n <= 1 { ret n; } f(n - 1) + f(n - 2); } f(9) + 8;",
+        include_str!("../examples/fibonacci_rec.th"),
         "fibonacci_rec",
     );
-}
-
-fn fibonacci_iter() {
+    println!(
+        "\n--------------------------------------------------------------------------------\n"
+    );
     exec(
-        r#"
-            let f(n: number): number = {
-                if n == 0 { ret 0; }
-                if n == 1 { ret 1; }
-
-                let prev_prev = 0;
-                let prev = 1;
-                let current = 0;
-
-                while n > 1 {
-                    current = prev_prev + prev;
-                    prev_prev = prev;
-                    prev = current;
-                    n = n - 1;
-                }
-
-                current;
-            }
-            f(9) + 8;
-        "#,
+        include_str!("../examples/fibonacci_iter.th"),
         "fibonacci_iter",
     );
-}
+    println!(
+        "\n--------------------------------------------------------------------------------\n"
+    );
+    exec(include_str!("../examples/area.th"), "area");
 
-fn points() {
-    // todo return Point
-    exec(
-        r#"
-            struct Point {
-                x: number,
-                y: number
-            }
-
-            struct Square {
-                p1: Point,
-                p2: Point
-            }
-
-            let area(s: Square): number = {
-                (s.p2.x - s.p1.x) * (s.p2.y - s.p1.y);
-            }
-
-            let p1 = Point {
-                x: 1,
-                y: 1
-            };
-
-            let p2 = Point {
-                x: 6,
-                y: 7
-            };
-
-            p2.x = p2.x + 1;
-            p2.y = p2.y + 1;
-
-            area(
-                Square {
-                    p1: p1,
-                    p2: p2
-                }
-            );
-        "#,
-        "points",
-    )
+    // todo add example that returns a struct
 }
 
 fn exec(src: &str, name: &str) {
