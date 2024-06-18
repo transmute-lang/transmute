@@ -34,25 +34,25 @@ mod xml;
 
 fn main() {
     exec(
-        include_str!("../examples/fibonacci_rec.th"),
+        include_str!("../examples/fibonacci_rec.tm"),
         "fibonacci_rec",
     );
     println!(
         "\n--------------------------------------------------------------------------------\n"
     );
     exec(
-        include_str!("../examples/fibonacci_iter.th"),
+        include_str!("../examples/fibonacci_iter.tm"),
         "fibonacci_iter",
     );
     println!(
         "\n--------------------------------------------------------------------------------\n"
     );
-    exec(include_str!("../examples/area.th"), "area");
+    exec(include_str!("../examples/area.tm"), "area");
 
     println!(
         "\n--------------------------------------------------------------------------------\n"
     );
-    exec(include_str!("../examples/vector_sum.th"), "vector_sum");
+    exec(include_str!("../examples/vector_sum.tm"), "vector_sum");
 }
 
 fn exec(src: &str, name: &str) {
