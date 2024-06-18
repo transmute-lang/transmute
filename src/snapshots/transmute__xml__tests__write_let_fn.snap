@@ -43,7 +43,7 @@ expression: "&xml"
                       <parameters>
                         <parameter>
                           <expr id="expr:0" line="1" column="28" start="27" len="1">
-                            <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:1:0">n</identifier-ref>
+                            <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:1:0" type-ref="">n</identifier-ref>
                           </expr>
                         </parameter>
                         <parameter>

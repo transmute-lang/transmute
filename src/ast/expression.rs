@@ -63,18 +63,28 @@ impl Expression<Typed> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionKind {
-    Assignment(IdentRefId, ExprId),
+    // todo add support for (nested) struct field assignment
+    Assignment(Target, ExprId),
     If(ExprId, ExprId, Option<ExprId>),
     Literal(Literal),
     Binary(ExprId, BinaryOperator, ExprId),
     Unary(UnaryOperator, ExprId),
+    Access(ExprId, IdentRefId),
     FunctionCall(IdentRefId, Vec<ExprId>),
     While(ExprId, ExprId),
     // todo: should it be it's own struct and use it like While(ExprId, Block)?
     Block(Vec<StmtId>),
+    StructInstantiation(IdentRefId, Vec<(IdentRefId, ExprId)>),
     /// A dummy expression kind, inserted by the parser when the expression could not be parsed
     // todo probably remove...
     Dummy,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Target {
+    Direct(IdentRefId),
+    // The expression id if of kind ExpressionKind::Access
+    Indirect(ExprId),
 }
 
 pub trait TypedState {}
@@ -85,5 +95,5 @@ pub struct Untyped;
 impl TypedState for Untyped {}
 
 #[derive(Debug, Clone)]
-pub struct Typed(TypeId);
+pub struct Typed(pub TypeId);
 impl TypedState for Typed {}

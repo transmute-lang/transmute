@@ -1,19 +1,65 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"forty_two\")).parse()"
+expression: "Parser::new(Lexer::new(\"forty_two;\")).parse()"
 ---
-Err(
-    Diagnostics {
-        diagnostics: [
-            Diagnostic {
-                message: "Unexpected `eof`, expected one of `;`, `(`, `=`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
-                span: 1:10; [9, 9],
-                level: Error,
-                generated_at: (
-                    "src/parser.rs",
-                    938,
-                ),
+Ok(
+    Ast {
+        identifiers: [
+            "forty_two",
+        ],
+        identifier_refs: [
+            IdentifierRef {
+                id: IdentRefId {
+                    id: 0,
+                },
+                ident: Identifier {
+                    id: IdentId {
+                        id: 0,
+                    },
+                    span: 1:1; [0, 9],
+                },
+                bound_state: Unbound,
             },
         ],
+        expressions: [
+            Expression {
+                id: ExprId {
+                    id: 0,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Identifier(
+                            IdentRefId {
+                                id: 0,
+                            },
+                        ),
+                        span: 1:1; [0, 9],
+                    },
+                ),
+                span: 1:1; [0, 9],
+                typed_state: Untyped,
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: Expression(
+                    ExprId {
+                        id: 0,
+                    },
+                ),
+                span: 1:1; [0, 10],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 0,
+            },
+        ],
+        symbols: [],
+        types: [],
+        state: ImplicitRet,
     },
 )

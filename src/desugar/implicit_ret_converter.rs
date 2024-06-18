@@ -5,7 +5,7 @@ use crate::ast::statement::{RetMode, Statement, StatementKind};
 use crate::ast::{Ast, ImplicitRet};
 
 pub struct ImplicitRetConverter {
-    replacements: Vec<Statement<Unbound>>,
+    replacements: Vec<Statement<Untyped, Unbound>>,
 }
 
 impl ImplicitRetConverter {
@@ -15,7 +15,10 @@ impl ImplicitRetConverter {
         }
     }
 
-    pub fn convert(mut self, ast: &Ast<ImplicitRet, Untyped, Unbound>) -> Vec<Statement<Unbound>> {
+    pub fn convert(
+        mut self,
+        ast: &Ast<ImplicitRet, Untyped, Unbound>,
+    ) -> Vec<Statement<Untyped, Unbound>> {
         for expr in ast
             .root_statements()
             .iter()
@@ -84,6 +87,9 @@ impl ImplicitRetConverter {
                 );
                 left_always_returns || right_always_returns
             }
+            ExpressionKind::Access(expr_id, _) => {
+                self.visit_expression(ast, *expr_id, depth + 1, unreachable)
+            }
             ExpressionKind::FunctionCall(_, params) => {
                 let mut some_param_always_returns = false;
 
@@ -123,6 +129,19 @@ impl ImplicitRetConverter {
                     }
                 }
                 ret
+            }
+            ExpressionKind::StructInstantiation(_, fields) => {
+                let mut always_return = false;
+                for (_, expr_id) in fields {
+                    always_return = always_return
+                        || self.visit_expression(
+                            ast,
+                            *expr_id,
+                            depth + 1,
+                            unreachable || always_return,
+                        );
+                }
+                always_return
             }
             ExpressionKind::Dummy => {
                 panic!("should not compute exit points of an invalid source code")
@@ -164,6 +183,7 @@ impl ImplicitRetConverter {
                 self.visit_expression(ast, *expr, depth + 1, unreachable);
                 false
             }
+            StatementKind::Struct(_, _) => false,
         }
     }
 }
@@ -250,6 +270,19 @@ mod tests {
                     42;
                 }
                 43;
+            }
+        "#
+    );
+
+    t!(
+        implicit_return_struct,
+        r#"
+            struct S { x: number, y: number }
+            let f(): number = {
+                S {
+                    x: if true { ret 1; },
+                    y: 1
+                };
             }
         "#
     );

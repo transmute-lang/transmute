@@ -6,12 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `}`, expected one of `{`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                message: "Unexpected `}`, expected one of `.`, `{`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
                 span: 1:12; [11, 12],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    836,
+                    1151,
                 ),
             },
         ],

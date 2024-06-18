@@ -125,6 +125,11 @@ impl<'s> Lexer<'s> {
                 self.advance_consumed(span.len);
                 (TokenKind::CloseParenthesis, span)
             }
+            '.' => {
+                self.advance_column();
+                self.advance_consumed(span.len);
+                (TokenKind::Dot, span)
+            }
             ',' => {
                 self.advance_column();
                 self.advance_consumed(span.len);
@@ -228,11 +233,10 @@ impl<'s> Lexer<'s> {
             chars: Chars,
             suffix: &str,
             token_kind: TokenKind,
-            cols: usize,
             span: Span,
         ) -> Option<(TokenKind, Span)> {
             let mut span = span;
-            let mut cols = cols;
+            let mut cols = 1;
 
             let mut suffix_chars = suffix.chars();
 
@@ -262,7 +266,6 @@ impl<'s> Lexer<'s> {
                 chars,
                 "lse",
                 TokenKind::Else,
-                1,
                 span.extend('e'.len_utf8()),
             ),
             'f' => make_keyword(
@@ -270,23 +273,14 @@ impl<'s> Lexer<'s> {
                 chars,
                 "alse",
                 TokenKind::False,
-                1,
                 span.extend('f'.len_utf8()),
             ),
-            'i' => make_keyword(
-                self,
-                chars,
-                "f",
-                TokenKind::If,
-                1,
-                span.extend('f'.len_utf8()),
-            ),
+            'i' => make_keyword(self, chars, "f", TokenKind::If, span.extend('f'.len_utf8())),
             'l' => make_keyword(
                 self,
                 chars,
                 "et",
                 TokenKind::Let,
-                1,
                 span.extend('l'.len_utf8()),
             ),
             'r' => make_keyword(
@@ -294,15 +288,20 @@ impl<'s> Lexer<'s> {
                 chars,
                 "et",
                 TokenKind::Ret,
-                1,
                 span.extend('r'.len_utf8()),
+            ),
+            's' => make_keyword(
+                self,
+                chars,
+                "truct",
+                TokenKind::Struct,
+                span.extend('t'.len_utf8()),
             ),
             't' => make_keyword(
                 self,
                 chars,
                 "rue",
                 TokenKind::True,
-                1,
                 span.extend('t'.len_utf8()),
             ),
             'w' => make_keyword(
@@ -310,7 +309,6 @@ impl<'s> Lexer<'s> {
                 chars,
                 "hile",
                 TokenKind::While,
-                1,
                 span.extend('w'.len_utf8()),
             ),
             _ => None,
@@ -440,6 +438,10 @@ impl Token {
     pub fn span(&self) -> &Span {
         &self.span
     }
+
+    pub fn take_span(self) -> Span {
+        self.span
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -448,6 +450,7 @@ pub enum TokenKind {
     CloseParenthesis,
     Colon,
     Comma,
+    Dot,
     Else,
     Equal,
     EqualEqual,
@@ -471,6 +474,7 @@ pub enum TokenKind {
     Star,
     True,
     While,
+    Struct,
     Bad(String),
     Eof,
 }
@@ -488,30 +492,32 @@ impl TokenKind {
             TokenKind::If => 6,
             TokenKind::Else => 7,
             TokenKind::While => 8,
+            TokenKind::Struct => 9,
 
-            TokenKind::Comma => 9,
-            TokenKind::Semicolon => 10,
-            TokenKind::Colon => 11,
+            TokenKind::Comma => 10,
+            TokenKind::Semicolon => 11,
+            TokenKind::Colon => 12,
+            TokenKind::Dot => 13,
 
-            TokenKind::CloseCurlyBracket => 12,
-            TokenKind::CloseParenthesis => 13,
-            TokenKind::OpenCurlyBracket => 14,
-            TokenKind::OpenParenthesis => 15,
+            TokenKind::CloseCurlyBracket => 14,
+            TokenKind::CloseParenthesis => 15,
+            TokenKind::OpenCurlyBracket => 16,
+            TokenKind::OpenParenthesis => 17,
 
-            TokenKind::Equal => 16,
+            TokenKind::Equal => 18,
 
-            TokenKind::Star => 17,
-            TokenKind::Slash => 18,
+            TokenKind::Star => 19,
+            TokenKind::Slash => 20,
 
-            TokenKind::Minus => 19,
-            TokenKind::Plus => 20,
+            TokenKind::Minus => 21,
+            TokenKind::Plus => 22,
 
-            TokenKind::EqualEqual => 21,
-            TokenKind::ExclaimEqual => 22,
-            TokenKind::Greater => 23,
-            TokenKind::GreaterEqual => 24,
-            TokenKind::Smaller => 25,
-            TokenKind::SmallerEqual => 26,
+            TokenKind::EqualEqual => 23,
+            TokenKind::ExclaimEqual => 24,
+            TokenKind::Greater => 25,
+            TokenKind::GreaterEqual => 26,
+            TokenKind::Smaller => 27,
+            TokenKind::SmallerEqual => 28,
 
             TokenKind::Eof => 254,
             TokenKind::Bad(_) => 255,
@@ -545,6 +551,9 @@ impl Display for TokenKind {
             }
             TokenKind::Comma => {
                 write!(f, "`,`")
+            }
+            TokenKind::Dot => {
+                write!(f, "`.`")
             }
             TokenKind::Else => {
                 write!(f, "`else`")
@@ -620,6 +629,9 @@ impl Display for TokenKind {
             }
             TokenKind::Eof => {
                 write!(f, "`eof`")
+            }
+            TokenKind::Struct => {
+                write!(f, "struct")
             }
         }
     }
@@ -806,6 +818,7 @@ mod tests {
     lexer_test_next!(next_open_parenthesis, "(" => TokenKind::OpenParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_parenthesis, ")" => TokenKind::CloseParenthesis; loc: 1,1; span: 0,1);
     lexer_test_next!(next_comma, "," => TokenKind::Comma; loc: 1,1; span: 0,1);
+    lexer_test_next!(next_dot, "." => TokenKind::Dot; loc: 1,1; span: 0,1);
     lexer_test_next!(next_open_curly_bracket, "{" => TokenKind::OpenCurlyBracket; loc: 1,1; span: 0,1);
     lexer_test_next!(next_close_curly_bracket, "}" => TokenKind::CloseCurlyBracket; loc: 1,1; span: 0,1);
     lexer_test_next!(semicolon, ";" => TokenKind::Semicolon; loc: 1,1; span: 0,1);
@@ -885,6 +898,7 @@ mod tests {
     lexer_test_keyword!(keyword_while, "while" => While);
     lexer_test_keyword!(keyword_true, "true" => True);
     lexer_test_keyword!(keyword_false, "false" => False);
+    lexer_test_keyword!(keyword_struct, "struct" => Struct);
 
     macro_rules! lexer_test_fn {
         ($name:ident, $f:ident, $src:expr => $expected:expr) => {

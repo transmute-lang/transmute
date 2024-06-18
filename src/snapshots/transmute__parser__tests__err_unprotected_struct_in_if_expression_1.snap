@@ -1,0 +1,28 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"if Point{} {}\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `{`, expected one of identifier, number, `true`, `false`, `let`, `ret`, `if`, `while`, `.`, `(`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                span: 1:12; [11, 12],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    271,
+                ),
+            },
+            Diagnostic {
+                message: "Unexpected `}`, expected one of identifier, number, `true`, `false`, `let`, `ret`, `if`, `while`, `(`, `-`",
+                span: 1:13; [12, 13],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    271,
+                ),
+            },
+        ],
+    },
+)

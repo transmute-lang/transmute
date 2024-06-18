@@ -33,44 +33,26 @@ mod xml;
 // todo fix the ident().id() -> ident_id()
 
 fn main() {
-    fibonacci_rec();
+    exec(
+        include_str!("../examples/fibonacci_rec.tm"),
+        "fibonacci_rec",
+    );
     println!(
         "\n--------------------------------------------------------------------------------\n"
     );
-    fibonacci_iter();
-}
-
-fn fibonacci_rec() {
     exec(
-        "let f(n: number): number = { if n <= 1 { ret n; } f(n - 1) + f(n - 2); } f(9) + 8;",
-        "fibonacci_rec",
-    );
-}
-
-fn fibonacci_iter() {
-    exec(
-        r#"
-            let f(n: number): number = {
-                if n == 0 { ret 0; }
-                if n == 1 { ret 1; }
-
-                let prev_prev = 0;
-                let prev = 1;
-                let current = 0;
-
-                while n > 1 {
-                    current = prev_prev + prev;
-                    prev_prev = prev;
-                    prev = current;
-                    n = n - 1;
-                }
-
-                current;
-            }
-            f(9) + 8;
-        "#,
+        include_str!("../examples/fibonacci_iter.tm"),
         "fibonacci_iter",
     );
+    println!(
+        "\n--------------------------------------------------------------------------------\n"
+    );
+    exec(include_str!("../examples/area.tm"), "area");
+
+    println!(
+        "\n--------------------------------------------------------------------------------\n"
+    );
+    exec(include_str!("../examples/vector_sum.tm"), "vector_sum");
 }
 
 fn exec(src: &str, name: &str) {
@@ -88,10 +70,10 @@ fn exec(src: &str, name: &str) {
             let _ = ast.pretty_print(&Options::default(), &mut w);
             print!("Executable AST:\n{w}\n");
             XmlWriter::new(ast)
-                .write(&mut File::create(format!("target/{name}.xml")).unwrap())
+                .write(&mut File::create(format!("target/run__{name}.xml")).unwrap())
                 .unwrap();
             HtmlWriter::new(ast)
-                .write(&mut File::create(format!("target/{name}.html")).unwrap())
+                .write(&mut File::create(format!("target/html/run__{name}.html")).unwrap())
                 .unwrap();
         })
         .map(|ast| Interpreter::new(&ast).start());

@@ -1,19 +1,116 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"2 + 20 * 2\")).parse()"
+expression: "Parser::new(Lexer::new(\"2 + 20 * 2;\")).parse()"
 ---
-Err(
-    Diagnostics {
-        diagnostics: [
-            Diagnostic {
-                message: "Unexpected `eof`, expected one of `;`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
-                span: 1:11; [10, 10],
-                level: Error,
-                generated_at: (
-                    "src/parser.rs",
-                    938,
+Ok(
+    Ast {
+        identifiers: [],
+        identifier_refs: [],
+        expressions: [
+            Expression {
+                id: ExprId {
+                    id: 0,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Number(
+                            2,
+                        ),
+                        span: 1:1; [0, 1],
+                    },
                 ),
+                span: 1:1; [0, 1],
+                typed_state: Untyped,
+            },
+            Expression {
+                id: ExprId {
+                    id: 1,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Number(
+                            20,
+                        ),
+                        span: 1:5; [4, 6],
+                    },
+                ),
+                span: 1:5; [4, 6],
+                typed_state: Untyped,
+            },
+            Expression {
+                id: ExprId {
+                    id: 2,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Number(
+                            2,
+                        ),
+                        span: 1:10; [9, 10],
+                    },
+                ),
+                span: 1:10; [9, 10],
+                typed_state: Untyped,
+            },
+            Expression {
+                id: ExprId {
+                    id: 3,
+                },
+                kind: Binary(
+                    ExprId {
+                        id: 1,
+                    },
+                    BinaryOperator {
+                        kind: Multiplication,
+                        span: 1:8; [7, 8],
+                    },
+                    ExprId {
+                        id: 2,
+                    },
+                ),
+                span: 1:5; [4, 10],
+                typed_state: Untyped,
+            },
+            Expression {
+                id: ExprId {
+                    id: 4,
+                },
+                kind: Binary(
+                    ExprId {
+                        id: 0,
+                    },
+                    BinaryOperator {
+                        kind: Addition,
+                        span: 1:3; [2, 3],
+                    },
+                    ExprId {
+                        id: 3,
+                    },
+                ),
+                span: 1:1; [0, 10],
+                typed_state: Untyped,
             },
         ],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: Expression(
+                    ExprId {
+                        id: 4,
+                    },
+                ),
+                span: 1:1; [0, 11],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 0,
+            },
+        ],
+        symbols: [],
+        types: [],
+        state: ImplicitRet,
     },
 )

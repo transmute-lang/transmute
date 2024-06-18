@@ -44,7 +44,7 @@ expression: "XmlWriter::new(&ast).serialize()"
               <stmt id="stmt:1" line="1" column="32" start="31" len="2">
                 <ret mode="implicit" line="1" column="32" start="31" len="2">
                   <expr id="expr:1" line="1" column="32" start="31" len="1">
-                    <identifier-ref id="ident-ref:0" ident-ref="ident:2" target-id="stmt:0">n</identifier-ref>
+                    <identifier-ref id="ident-ref:0" ident-ref="ident:2" target-id="stmt:0" type-ref="">n</identifier-ref>
                   </expr>
                 </ret>
               </stmt>

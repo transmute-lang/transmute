@@ -1,0 +1,28 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"S { : a, b: a, c: a }\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `:`, expected one of identifier, `}`",
+                span: 1:5; [4, 5],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    1355,
+                ),
+            },
+            Diagnostic {
+                message: "Unexpected `eof`, expected one of `;`, `.`, `(`, `=`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                span: 1:22; [21, 21],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    1388,
+                ),
+            },
+        ],
+    },
+)

@@ -1,19 +1,48 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"42\")).parse()"
+expression: "Parser::new(Lexer::new(\"42;\")).parse()"
 ---
-Err(
-    Diagnostics {
-        diagnostics: [
-            Diagnostic {
-                message: "Unexpected `eof`, expected one of `;`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
-                span: 1:3; [2, 2],
-                level: Error,
-                generated_at: (
-                    "src/parser.rs",
-                    938,
+Ok(
+    Ast {
+        identifiers: [],
+        identifier_refs: [],
+        expressions: [
+            Expression {
+                id: ExprId {
+                    id: 0,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Number(
+                            42,
+                        ),
+                        span: 1:1; [0, 2],
+                    },
                 ),
+                span: 1:1; [0, 2],
+                typed_state: Untyped,
             },
         ],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: Expression(
+                    ExprId {
+                        id: 0,
+                    },
+                ),
+                span: 1:1; [0, 3],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 0,
+            },
+        ],
+        symbols: [],
+        types: [],
+        state: ImplicitRet,
     },
 )

@@ -27,7 +27,7 @@ impl Natives {
             parameters: vec![Type::Number],
             return_type: Type::Number,
             body: |mut params| {
-                let v = params.pop().unwrap().try_to_i64();
+                let v = params.pop().unwrap().as_i64();
                 Value::Number(-v)
             },
         });
@@ -37,8 +37,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Number(left + right)
             },
         });
@@ -47,8 +47,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Number(left - right)
             },
         });
@@ -57,8 +57,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Number(left * right)
             },
         });
@@ -67,8 +67,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Number,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Number(left / right)
             },
         });
@@ -77,8 +77,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Boolean(left == right)
             },
         });
@@ -87,8 +87,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Boolean(left != right)
             },
         });
@@ -97,8 +97,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Boolean(left > right)
             },
         });
@@ -107,8 +107,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Boolean(left < right)
             },
         });
@@ -117,8 +117,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Boolean(left >= right)
             },
         });
@@ -127,8 +127,8 @@ impl Natives {
             parameters: vec![Type::Number, Type::Number],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_i64();
-                let left = params.pop().unwrap().try_to_i64();
+                let right = params.pop().unwrap().as_i64();
+                let left = params.pop().unwrap().as_i64();
                 Value::Boolean(left <= right)
             },
         });
@@ -138,8 +138,8 @@ impl Natives {
             parameters: vec![Type::Boolean, Type::Boolean],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_bool();
-                let left = params.pop().unwrap().try_to_bool();
+                let right = params.pop().unwrap().as_bool();
+                let left = params.pop().unwrap().as_bool();
                 Value::Boolean(left == right)
             },
         });
@@ -148,22 +148,22 @@ impl Natives {
             parameters: vec![Type::Boolean, Type::Boolean],
             return_type: Type::Boolean,
             body: |mut params| {
-                let right = params.pop().unwrap().try_to_bool();
-                let left = params.pop().unwrap().try_to_bool();
+                let right = params.pop().unwrap().as_bool();
+                let left = params.pop().unwrap().as_bool();
                 Value::Boolean(left != right)
             },
         });
 
         natives.insert_type(NativeType {
-            name: "boolean",
+            name: Type::Boolean.identifier(),
             ty: Type::Boolean,
         });
         natives.insert_type(NativeType {
-            name: "number",
+            name: Type::Number.identifier(),
             ty: Type::Number,
         });
         natives.insert_type(NativeType {
-            name: "void",
+            name: Type::Void.identifier(),
             ty: Type::Void,
         });
 
@@ -196,6 +196,11 @@ impl Natives {
             .map(|s| s.to_string())
             .chain(self.types.iter().map(|native| native.name.to_string()))
             .collect::<Vec<String>>();
+
+        // todo maybe do it somewhere else?
+        names.push(Type::Void.to_string());
+        names.push(Type::Boolean.to_string());
+        names.push(Type::Number.to_string());
         names.sort();
         names.dedup();
         names
@@ -316,6 +321,10 @@ impl NativeType {
     pub fn name(&self) -> &'static str {
         self.name
     }
+
+    pub fn ty(&self) -> &Type {
+        &self.ty
+    }
 }
 
 #[cfg(test)]
@@ -323,12 +332,12 @@ mod tests {
     use super::*;
 
     macro_rules! native {
-        ($name:ident: $function:expr, [$($value:expr,)*] => $expected:expr) => {
+        ($name:ident: $function:expr, [$($ty:expr,)*], [$($value:expr,)*] => $expected:expr) => {
             #[test]
             fn $name() {
                 let native = Natives::default();
                 let values = vec![$($value),*];
-                let types = values.iter().map(|v| v.ty()).collect::<Vec<Type>>();
+                let types = vec![$($ty),*];
 
                 let f = if let Some(function) = native.functions.get($function) {
                     function.iter().find(|f| f.parameters == types)
@@ -345,23 +354,23 @@ mod tests {
         };
     }
 
-    native!(neg_number: "neg", [Value::Number(1),] => Value::Number(-1));
+    native!(neg_number: "neg", [Type::Number,], [Value::Number(1),] => Value::Number(-1));
 
-    native!(add_number_number: "add", [Value::Number(1), Value::Number(2),] => Value::Number(3));
-    native!(sum_number_number: "sub", [Value::Number(1), Value::Number(2),] => Value::Number(-1));
-    native!(mul_number_number: "mul", [Value::Number(1), Value::Number(2),] => Value::Number(2));
-    native!(div_number_number: "div", [Value::Number(1), Value::Number(2),] => Value::Number(0));
-    native!(gt_number_number: "gt", [Value::Number(1), Value::Number(2),] => Value::Boolean(false));
-    native!(ge_number_number: "ge", [Value::Number(1), Value::Number(2),] => Value::Boolean(false));
-    native!(lt_number_number: "lt", [Value::Number(1), Value::Number(2),] => Value::Boolean(true));
-    native!(le_number_number: "le", [Value::Number(1), Value::Number(2),] => Value::Boolean(true));
-    native!(eq_number_number_false: "eq", [Value::Number(1), Value::Number(2),] => Value::Boolean(false));
-    native!(eq_number_number_true: "eq", [Value::Number(1), Value::Number(1),] => Value::Boolean(true));
-    native!(neq_number_number_false: "neq", [Value::Number(1), Value::Number(1),] => Value::Boolean(false));
-    native!(neq_number_number_true: "neq", [Value::Number(1), Value::Number(2),] => Value::Boolean(true));
+    native!(add_number_number: "add", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Number(3));
+    native!(sum_number_number: "sub", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Number(-1));
+    native!(mul_number_number: "mul", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Number(2));
+    native!(div_number_number: "div", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Number(0));
+    native!(gt_number_number: "gt", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Boolean(false));
+    native!(ge_number_number: "ge", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Boolean(false));
+    native!(lt_number_number: "lt", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Boolean(true));
+    native!(le_number_number: "le", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Boolean(true));
+    native!(eq_number_number_false: "eq", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Boolean(false));
+    native!(eq_number_number_true: "eq", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(1),] => Value::Boolean(true));
+    native!(neq_number_number_false: "neq", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(1),] => Value::Boolean(false));
+    native!(neq_number_number_true: "neq", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Boolean(true));
 
-    native!(eq_boolean_boolean_false: "eq", [Value::Boolean(true), Value::Boolean(false),] => Value::Boolean(false));
-    native!(eq_boolean_boolean_true: "eq", [Value::Boolean(true), Value::Boolean(true),] => Value::Boolean(true));
-    native!(neq_boolean_boolean_false: "neq", [Value::Boolean(false), Value::Boolean(false),] => Value::Boolean(false));
-    native!(neq_boolean_boolean_true: "neq", [Value::Boolean(true), Value::Boolean(false),] => Value::Boolean(true));
+    native!(eq_boolean_boolean_false: "eq", [Type::Boolean, Type::Boolean,], [Value::Boolean(true), Value::Boolean(false),] => Value::Boolean(false));
+    native!(eq_boolean_boolean_true: "eq", [Type::Boolean, Type::Boolean,], [Value::Boolean(true), Value::Boolean(true),] => Value::Boolean(true));
+    native!(neq_boolean_boolean_false: "neq", [Type::Boolean, Type::Boolean,], [Value::Boolean(false), Value::Boolean(false),] => Value::Boolean(false));
+    native!(neq_boolean_boolean_true: "neq", [Type::Boolean, Type::Boolean,], [Value::Boolean(true), Value::Boolean(false),] => Value::Boolean(true));
 }

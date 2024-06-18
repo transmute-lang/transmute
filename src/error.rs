@@ -53,15 +53,7 @@ impl Display for Diagnostics {
         diagnostics.sort_by(|a, b| a.span.cmp(&b.span));
 
         for diagnostic in diagnostics {
-            writeln!(
-                f,
-                "[{}:{}] {} at {}:{}",
-                diagnostic.generated_at.0,
-                diagnostic.generated_at.1,
-                diagnostic.message,
-                diagnostic.span.line(),
-                diagnostic.span.column()
-            )?;
+            writeln!(f, " - {}", diagnostic)?;
         }
         Ok(())
     }
@@ -93,6 +85,20 @@ pub struct Diagnostic {
     generated_at: (&'static str, u32),
 }
 
+impl Display for Diagnostic {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[{}:{}] {} at {}:{}",
+            self.generated_at.0,
+            self.generated_at.1,
+            self.message,
+            self.span.line(),
+            self.span.column()
+        )
+    }
+}
+
 impl Diagnostic {
     pub fn new<S: Into<String>>(
         message: S,
@@ -106,6 +112,14 @@ impl Diagnostic {
             level,
             generated_at,
         }
+    }
+
+    pub fn error<S: Into<String>>(
+        message: S,
+        span: Span,
+        generated_at: (&'static str, u32),
+    ) -> Self {
+        Self::new(message, span, Level::Error, generated_at)
     }
 
     pub fn message(&self) -> &str {

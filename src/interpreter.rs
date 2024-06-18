@@ -1,79 +1,133 @@
-use crate::ast::expression::ExpressionKind;
-use crate::ast::identifier_ref::Bound;
+use crate::ast::expression::{ExpressionKind, Target};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::statement::{Statement, StatementKind};
+use crate::ast::statement::StatementKind;
 use crate::ast::ResolvedAst;
-use crate::resolver::{SymbolKind, Type};
+use crate::resolver::SymbolKind;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 pub struct Interpreter<'a> {
     ast: &'a ResolvedAst,
+    /// Maps an identifier in the current frame to the value's index in the heap
     // todo IdentId should be SymbolId
-    // todo turn into frame
-    variables: Vec<HashMap<IdentId, Value>>,
+    stack: Vec<HashMap<IdentId, Ref>>,
+    heap: Vec<Value>,
 }
 
 impl<'a> Interpreter<'a> {
     pub fn new(ast: &'a ResolvedAst) -> Self {
         Self {
             ast,
-            variables: vec![Default::default()],
+            stack: vec![Default::default()],
+            heap: Default::default(),
         }
     }
 
+    // fixme returning a value means returning references to heap...
     pub fn start(&mut self) -> Value {
-        self.visit_statements(self.ast.root_statements())
+        let val = self.visit_statements(self.ast.root_statements());
+        val.value_ref
+            .map(|r| &self.heap[r.0])
+            .cloned()
+            .unwrap_or_default()
     }
 
-    fn visit_statements(&mut self, statements: &[StmtId]) -> Value {
-        let mut value = Value::Void;
+    fn visit_statements(&mut self, statements: &[StmtId]) -> Val {
+        let mut value = Val::none();
 
         for statement in statements {
-            let statement = self.ast.statement(*statement);
-            if is_ret(statement) {
-                return Value::RetVal(Box::new(self.visit_statement(statement.id())));
-            }
+            value = self.visit_statement(self.ast.statement(*statement).id());
 
-            value = match self.visit_statement(statement.id()) {
-                ret @ Value::RetVal(_) => return ret,
-                v => v,
+            if value.is_ret {
+                return value;
             }
         }
 
         value
     }
 
-    fn visit_statement(&mut self, stmt: StmtId) -> Value {
+    fn visit_statement(&mut self, stmt: StmtId) -> Val {
         let stmt = self.ast.statement(stmt);
         match stmt.kind() {
             StatementKind::Expression(e) => self.visit_expression(*e),
             StatementKind::Let(ident, expr) => {
                 let val = self.visit_expression(*expr);
-                self.variables
+                if val.is_ret {
+                    return val;
+                }
+
+                self.stack
                     .last_mut()
                     .expect("there is an env")
-                    .insert(ident.id(), val);
-                Value::Void
+                    .insert(ident.id(), val.value_ref.expect("rhs has value"));
+
+                Val::none()
             }
-            StatementKind::LetFn(_, _, _, _) => {
-                Value::Void // todo this is wrong
-            }
-            StatementKind::Ret(e, _) => self.visit_expression(*e),
+            StatementKind::LetFn(_, _, _, _) => Val::none(),
+            StatementKind::Ret(e, _) => Val::of_option_ret(self.visit_expression(*e).value_ref),
+            StatementKind::Struct(_, _) => Val::none(),
         }
     }
 
-    fn visit_expression(&mut self, expr: ExprId) -> Value {
+    fn visit_expression(&mut self, expr: ExprId) -> Val {
         let expr = self.ast.expression(expr);
         match expr.kind() {
-            ExpressionKind::Literal(n) => self.visit_literal(n),
+            ExpressionKind::Literal(n) => Val::of(self.visit_literal(n)),
             ExpressionKind::Binary(_, _, _) => unimplemented!(),
             ExpressionKind::Unary(_, _) => unimplemented!(),
+            ExpressionKind::Access(expr_id, ident_ref_id) => {
+                let val = self.visit_expression(*expr_id);
+
+                if val.is_ret {
+                    return val;
+                }
+
+                let values = self.heap[val.value_ref.expect("expr exists").0].as_struct();
+
+                match self.ast.symbol_by_ident_ref_id(*ident_ref_id).kind() {
+                    SymbolKind::Field(_, index) => Val::of(values[*index]),
+                    _ => panic!(),
+                }
+            }
             ExpressionKind::FunctionCall(ident, arguments) => {
                 self.visit_function_call(ident, arguments)
             }
-            ExpressionKind::Assignment(ident, expr) => self.visit_assignment(ident, expr),
+            ExpressionKind::Assignment(Target::Direct(ident), expr) => {
+                self.visit_assignment(ident, expr)
+            }
+            ExpressionKind::Assignment(Target::Indirect(lhs_expr_id), rhs_expr_id) => {
+                let (lhs_val, index) = match self.ast.expression(*lhs_expr_id).kind() {
+                    ExpressionKind::Access(expr_id, ident_ref_id) => {
+                        let val = self.visit_expression(*expr_id);
+                        if val.is_ret {
+                            return val;
+                        }
+
+                        let symbol = self.ast.symbol_by_ident_ref_id(*ident_ref_id);
+                        match symbol.kind() {
+                            SymbolKind::Field(_, index) => (val, index),
+                            _ => panic!("field expected"),
+                        }
+                    }
+                    _ => panic!("access expected"),
+                };
+
+                let rhs_val = self.visit_expression(*rhs_expr_id);
+                if rhs_val.is_ret {
+                    return rhs_val;
+                }
+
+                let lhs_val = self
+                    .heap
+                    .get_mut(lhs_val.value_ref.expect("lhs has value").0)
+                    .expect("rhs value exists");
+                let lhs_val = lhs_val.as_mut_struct();
+
+                lhs_val[*index] = rhs_val.value_ref.expect("rhs has value");
+
+                rhs_val
+            }
             ExpressionKind::If(cond, true_branch, false_branch) => {
                 self.visit_if(cond, true_branch, false_branch)
             }
@@ -81,19 +135,35 @@ impl<'a> Interpreter<'a> {
             ExpressionKind::Block(_) => {
                 todo!("implement block expression")
             }
+            ExpressionKind::StructInstantiation(_, fields) => {
+                let mut values = Vec::with_capacity(fields.len());
+                for (_, expr_id) in fields {
+                    let val = self.visit_expression(*expr_id);
+                    if val.is_ret {
+                        return val;
+                    }
+                    values.push(val.value_ref.expect("field has value"));
+                }
+                self.heap.push(Value::Struct(values));
+
+                Val::of(Ref(self.heap.len() - 1))
+            }
             ExpressionKind::Dummy => {
                 panic!("should not interpret an invalid source code")
             }
         }
     }
 
-    fn visit_literal(&mut self, literal: &Literal) -> Value {
+    fn visit_literal(&mut self, literal: &Literal) -> Ref {
         match literal.kind() {
-            LiteralKind::Number(n) => Value::Number(*n),
-            LiteralKind::Identifier(ident) => {
-                let ident = self.ast.identifier_ref(*ident).ident();
+            LiteralKind::Number(n) => {
+                self.heap.push(Value::Number(*n));
+                Ref(self.heap.len() - 1)
+            }
+            LiteralKind::Identifier(ident_ref_id) => {
+                let ident = self.ast.identifier_ref(*ident_ref_id).ident();
                 match self
-                    .variables
+                    .stack
                     .last_mut()
                     .expect("there is an env")
                     .get(&ident.id())
@@ -101,19 +171,23 @@ impl<'a> Interpreter<'a> {
                     None => {
                         panic!("{} not in scope", self.ast.identifier(ident.id()))
                     }
-                    Some(v) => v.clone(),
+                    Some(v) => *v,
                 }
             }
-            LiteralKind::Boolean(b) => Value::Boolean(*b),
+            LiteralKind::Boolean(b) => {
+                self.heap.push(Value::Boolean(*b));
+                Ref(self.heap.len() - 1)
+            }
         }
     }
 
-    fn visit_function_call(&mut self, ident: &IdentRefId, arguments: &[ExprId]) -> Value {
-        let ident_ref = self.ast.identifier_ref(*ident);
-        let symbol = self.ast.symbol(ident_ref.symbol_id());
-        match symbol.kind() {
-            SymbolKind::NotFound => panic!(),
-            SymbolKind::Let(_) | SymbolKind::Parameter(_, _) | SymbolKind::NativeType(_) => {
+    fn visit_function_call(&mut self, ident: &IdentRefId, arguments: &[ExprId]) -> Val {
+        match self.ast.symbol_by_ident_ref_id(*ident).kind() {
+            SymbolKind::Let(_)
+            | SymbolKind::Parameter(_, _)
+            | SymbolKind::Field(_, _)
+            | SymbolKind::Struct(_)
+            | SymbolKind::NativeType(_, _) => {
                 panic!("let fn expected")
             }
             SymbolKind::LetFn(stmt, _, _) => {
@@ -123,21 +197,26 @@ impl<'a> Interpreter<'a> {
                         let expr = self.ast.expression(*expr);
                         match expr.kind() {
                             ExpressionKind::Block(stmts) => {
-                                let env = parameters
-                                    .iter()
-                                    .zip(arguments.iter())
-                                    .map(|(param, expr)| {
-                                        (param.identifier().id(), self.visit_expression(*expr))
-                                    })
-                                    .collect::<HashMap<IdentId, Value>>();
+                                let mut env = HashMap::with_capacity(parameters.len());
 
-                                self.variables.push(env);
+                                for (param, expr_id) in parameters.iter().zip(arguments.iter()) {
+                                    let val = self.visit_expression(*expr_id);
+                                    if val.is_ret {
+                                        return val;
+                                    }
+                                    env.insert(
+                                        param.identifier().id(),
+                                        val.value_ref.expect("param has value"),
+                                    );
+                                }
 
-                                let ret = self.visit_statements(stmts).unwrap();
+                                self.stack.push(env);
 
-                                let _ = self.variables.pop();
+                                let ret = self.visit_statements(stmts);
 
-                                ret
+                                let _ = self.stack.pop();
+
+                                Val::of_option(ret.value_ref)
                             }
                             _ => panic!("block expected"),
                         }
@@ -146,20 +225,35 @@ impl<'a> Interpreter<'a> {
                 }
             }
             SymbolKind::Native(_, _, _, body) => {
-                let env = arguments
-                    .iter()
-                    .map(|expr| self.visit_expression(*expr))
+                let mut env = Vec::with_capacity(arguments.len());
+
+                for expr_id in arguments {
+                    // fixme not always: a Void could be returned
+                    let val = self.visit_expression(*expr_id);
+                    if val.is_ret {
+                        return val;
+                    }
+                    env.push(val);
+                }
+
+                let env = env
+                    .into_iter()
+                    // fixme should be a ref?
+                    .map(|val| self.heap[val.value_ref.expect("param has value").0].clone())
                     .collect::<Vec<Value>>();
 
-                body(env)
+                self.heap.push(body(env));
+
+                Val::of(Ref(self.heap.len() - 1))
             }
+            SymbolKind::NotFound => panic!(),
         }
     }
 
-    fn visit_assignment(&mut self, ident: &IdentRefId, expr: &ExprId) -> Value {
-        let ident = self.ast.identifier_ref(*ident).ident();
+    fn visit_assignment(&mut self, ident_ref_id: &IdentRefId, expr: &ExprId) -> Val {
+        let ident = self.ast.identifier_ref(*ident_ref_id).ident();
         if !self
-            .variables
+            .stack
             .last()
             .expect("there is an env")
             .contains_key(&ident.id())
@@ -168,11 +262,12 @@ impl<'a> Interpreter<'a> {
         }
 
         let val = self.visit_expression(*expr);
-
-        self.variables
-            .last_mut()
-            .expect("there is an env")
-            .insert(ident.id(), val.clone());
+        if !val.is_ret {
+            self.stack
+                .last_mut()
+                .expect("there is an env")
+                .insert(ident.id(), val.value_ref.expect("rhs has value"));
+        }
 
         val
     }
@@ -182,12 +277,12 @@ impl<'a> Interpreter<'a> {
         cond: &ExprId,
         true_branch: &ExprId,
         false_branch: &Option<ExprId>,
-    ) -> Value {
-        let cond = self.visit_expression(*cond);
-        let cond = match cond {
-            Value::Boolean(b) => b,
-            _ => panic!("condition is not a boolean"),
-        };
+    ) -> Val {
+        let val = self.visit_expression(*cond);
+        if val.is_ret {
+            return val;
+        }
+        let cond = self.heap[val.value_ref.expect("condition has value").0].as_bool();
 
         let statements = if cond {
             Some(true_branch)
@@ -202,23 +297,25 @@ impl<'a> Interpreter<'a> {
         if let Some(statements) = statements {
             self.visit_statements(statements)
         } else {
-            Value::Void
+            Val::none()
         }
     }
 
-    fn visit_while(&mut self, cond: &ExprId, expr: &ExprId) -> Value {
+    fn visit_while(&mut self, cond: &ExprId, expr: &ExprId) -> Val {
         let statements = match self.ast.expression(*expr).kind() {
             ExpressionKind::Block(statements) => statements,
             _ => panic!("block expected"),
         };
 
-        let mut ret = Value::Void;
+        let mut ret = Val::none();
         loop {
-            match self.visit_expression(*cond) {
-                Value::Boolean(false) => return ret,
-                Value::Boolean(true) => {}
-                _ => panic!("condition is not a boolean"),
-            };
+            let val = self.visit_expression(*cond);
+            if val.is_ret {
+                return val;
+            }
+            if !self.heap[val.value_ref.expect("condition has value").0].as_bool() {
+                return ret;
+            }
 
             ret = self.visit_statements(statements);
         }
@@ -231,40 +328,37 @@ impl<'a> Interpreter<'a> {}
 pub enum Value {
     Boolean(bool),
     Number(i64),
-    /// a value, generated by a return statement
-    RetVal(Box<Value>),
+    Struct(Vec<Ref>),
     #[default]
     Void,
 }
 
 impl Value {
-    fn unwrap(self) -> Self {
+    pub fn as_i64(&self) -> i64 {
         match self {
-            Value::RetVal(v) => v.unwrap(),
-            v => v,
-        }
-    }
-
-    pub fn ty(&self) -> Type {
-        match self {
-            Value::Boolean(_) => Type::Boolean,
-            Value::Number(_) => Type::Number,
-            Value::RetVal(v) => v.ty(),
-            Value::Void => Type::Void,
-        }
-    }
-
-    pub fn try_to_i64(self) -> i64 {
-        match self {
-            Value::Number(n) => n,
+            Value::Number(n) => *n,
             _ => panic!("{} is not a number", self),
         }
     }
 
-    pub fn try_to_bool(self) -> bool {
+    pub fn as_bool(&self) -> bool {
         match self {
-            Value::Boolean(b) => b,
+            Value::Boolean(b) => *b,
             _ => panic!("{} is not a bool", self),
+        }
+    }
+
+    pub fn as_struct(&self) -> &Vec<Ref> {
+        match self {
+            Value::Struct(v) => v,
+            _ => panic!("{} is not a struct", self),
+        }
+    }
+
+    fn as_mut_struct(&mut self) -> &mut Vec<Ref> {
+        match self {
+            Value::Struct(v) => v,
+            _ => panic!("{} is not a struct", self),
         }
     }
 }
@@ -281,15 +375,62 @@ impl Display for Value {
             Value::Void => {
                 write!(f, "void")
             }
-            Value::RetVal(v) => {
-                write!(f, "{}", v)
+            Value::Struct(values) => {
+                write!(f, "{{")?;
+                for (index, value) in values.iter().enumerate() {
+                    if index > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", value)?;
+                }
+                write!(f, "}}")
             }
         }
     }
 }
 
-fn is_ret(s: &Statement<Bound>) -> bool {
-    matches!(s.kind(), &StatementKind::Ret(_, _))
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
+pub struct Ref(usize);
+
+impl Display for Ref {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "*{}", self.0)
+    }
+}
+
+struct Val {
+    value_ref: Option<Ref>,
+    is_ret: bool,
+}
+
+impl Val {
+    fn none() -> Self {
+        Self {
+            value_ref: None,
+            is_ret: false,
+        }
+    }
+
+    fn of(r: Ref) -> Self {
+        Self {
+            value_ref: Some(r),
+            is_ret: false,
+        }
+    }
+
+    fn of_option(r: Option<Ref>) -> Self {
+        Self {
+            value_ref: r,
+            is_ret: false,
+        }
+    }
+
+    fn of_option_ret(r: Option<Ref>) -> Self {
+        Self {
+            value_ref: r,
+            is_ret: true,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -428,4 +569,58 @@ mod tests {
         }
         fact(3);
     "# => Number(6));
+    eval!(area, r#"
+        struct Point {
+            x: number,
+            y: number
+        }
+        let area(p1: Point, p2: Point): number = {
+            (p2.x - p1.x) * (p2.y - p1.y);
+        }
+        area(
+            Point {
+                x: 1,
+                y: 1
+            },
+            Point {
+                x: 1 + 6,
+                y: 1 + 7
+            }
+        );
+    "# => Number(42));
+    eval!(area_nested_struct, r#"
+        struct Point {
+            x: number,
+            y: number
+        }
+
+        struct Square {
+            p1: Point,
+            p2: Point
+        }
+
+        let area(s: Square): number = {
+            (s.p2.x - s.p1.x) * (s.p2.y - s.p1.y);
+        }
+
+        let p1 = Point {
+            x: 1,
+            y: 1
+        };
+
+        let p2 = Point {
+            x: 6,
+            y: 7
+        };
+
+        p2.x = p2.x + 1;
+        p2.y = p2.y + 1;
+
+        area(
+            Square {
+                p1: p1,
+                p2: p2
+            }
+        );
+    "# => Number(42));
 }

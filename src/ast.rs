@@ -33,7 +33,7 @@ where
     /// All expressions
     expressions: VecMap<ExprId, Expression<T>>,
     /// All statements
-    statements: VecMap<StmtId, Statement<B>>,
+    statements: VecMap<StmtId, Statement<T, B>>,
     /// Root statements
     // todo replace with Statements
     root: Vec<StmtId>,
@@ -93,7 +93,7 @@ where
     }
 
     #[cfg(test)]
-    pub fn statements(&self) -> &VecMap<StmtId, Statement<B>> {
+    pub fn statements(&self) -> &VecMap<StmtId, Statement<T, B>> {
         &self.statements
     }
 
@@ -123,7 +123,7 @@ impl Ast<ImplicitRet, Untyped, Unbound> {
         identifiers: Vec<String>,
         identifier_refs: Vec<IdentifierRef<Unbound>>,
         expressions: Vec<Expression<Untyped>>,
-        statements: Vec<Statement<Unbound>>,
+        statements: Vec<Statement<Untyped, Unbound>>,
         root: Vec<StmtId>,
     ) -> Self {
         Self {
@@ -212,7 +212,7 @@ impl<R> Ast<R, Untyped, Unbound> {
         &self.expressions[id]
     }
 
-    pub fn statement(&self, id: StmtId) -> &Statement<Unbound> {
+    pub fn statement(&self, id: StmtId) -> &Statement<Untyped, Unbound> {
         &self.statements[id]
     }
 }
@@ -220,6 +220,10 @@ impl<R> Ast<R, Untyped, Unbound> {
 impl<R> Ast<R, Typed, Bound> {
     pub fn identifier_ref(&self, id: IdentRefId) -> &IdentifierRef<Bound> {
         &self.identifier_refs[id]
+    }
+
+    pub fn symbol_by_ident_ref_id(&self, id: IdentRefId) -> &Symbol {
+        &self.symbols[self.identifier_refs[id].symbol_id()]
     }
 
     pub fn expression(&self, id: ExprId) -> &Expression<Typed> {
@@ -230,7 +234,7 @@ impl<R> Ast<R, Typed, Bound> {
         &self.types[self.expressions[id].ty_id()]
     }
 
-    pub fn statement(&self, id: StmtId) -> &Statement<Bound> {
+    pub fn statement(&self, id: StmtId) -> &Statement<Typed, Bound> {
         &self.statements[id]
     }
 

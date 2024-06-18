@@ -1,0 +1,19 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"struct S { a: number,\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `eof`, expected one of identifier, `}`",
+                span: 1:22; [21, 21],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    610,
+                ),
+            },
+        ],
+    },
+)

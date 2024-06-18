@@ -1,0 +1,125 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"forty . two = 1;\")).parse()"
+---
+Ok(
+    Ast {
+        identifiers: [
+            "forty",
+            "two",
+        ],
+        identifier_refs: [
+            IdentifierRef {
+                id: IdentRefId {
+                    id: 0,
+                },
+                ident: Identifier {
+                    id: IdentId {
+                        id: 0,
+                    },
+                    span: 1:1; [0, 5],
+                },
+                bound_state: Unbound,
+            },
+            IdentifierRef {
+                id: IdentRefId {
+                    id: 1,
+                },
+                ident: Identifier {
+                    id: IdentId {
+                        id: 1,
+                    },
+                    span: 1:9; [8, 11],
+                },
+                bound_state: Unbound,
+            },
+        ],
+        expressions: [
+            Expression {
+                id: ExprId {
+                    id: 0,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Identifier(
+                            IdentRefId {
+                                id: 0,
+                            },
+                        ),
+                        span: 1:1; [0, 5],
+                    },
+                ),
+                span: 1:1; [0, 5],
+                typed_state: Untyped,
+            },
+            Expression {
+                id: ExprId {
+                    id: 1,
+                },
+                kind: Access(
+                    ExprId {
+                        id: 0,
+                    },
+                    IdentRefId {
+                        id: 1,
+                    },
+                ),
+                span: 1:1; [0, 11],
+                typed_state: Untyped,
+            },
+            Expression {
+                id: ExprId {
+                    id: 2,
+                },
+                kind: Literal(
+                    Literal {
+                        kind: Number(
+                            1,
+                        ),
+                        span: 1:15; [14, 15],
+                    },
+                ),
+                span: 1:15; [14, 15],
+                typed_state: Untyped,
+            },
+            Expression {
+                id: ExprId {
+                    id: 3,
+                },
+                kind: Assignment(
+                    Indirect(
+                        ExprId {
+                            id: 1,
+                        },
+                    ),
+                    ExprId {
+                        id: 2,
+                    },
+                ),
+                span: 1:1; [0, 15],
+                typed_state: Untyped,
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId {
+                    id: 0,
+                },
+                kind: Expression(
+                    ExprId {
+                        id: 3,
+                    },
+                ),
+                span: 1:1; [0, 16],
+            },
+        ],
+        root: [
+            StmtId {
+                id: 0,
+            },
+        ],
+        symbols: [],
+        types: [],
+        state: ImplicitRet,
+    },
+)

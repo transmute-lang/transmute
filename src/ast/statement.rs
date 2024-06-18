@@ -1,23 +1,26 @@
+use crate::ast::expression::{Typed, TypedState, Untyped};
 use crate::ast::identifier::Identifier;
 use crate::ast::identifier_ref::{Bound, BoundState, Unbound};
-use crate::ast::ids::{ExprId, StmtId, SymbolId};
+use crate::ast::ids::{ExprId, StmtId, SymbolId, TypeId};
 use crate::lexer::Span;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Statement<B>
+pub struct Statement<T, B>
 where
+    T: TypedState,
     B: BoundState,
 {
     id: StmtId,
-    kind: StatementKind<B>,
+    kind: StatementKind<T, B>,
     span: Span,
 }
 
-impl<B> Statement<B>
+impl<T, B> Statement<T, B>
 where
+    T: TypedState,
     B: BoundState,
 {
-    pub fn new(id: StmtId, kind: StatementKind<B>, span: Span) -> Self {
+    pub fn new(id: StmtId, kind: StatementKind<T, B>, span: Span) -> Self {
         Self { id, kind, span }
     }
 
@@ -25,11 +28,11 @@ where
         self.id
     }
 
-    pub fn kind(&self) -> &StatementKind<B> {
+    pub fn kind(&self) -> &StatementKind<T, B> {
         &self.kind
     }
 
-    pub fn take_kind(self) -> StatementKind<B> {
+    pub fn take_kind(self) -> StatementKind<T, B> {
         self.kind
     }
 
@@ -39,15 +42,16 @@ where
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum StatementKind<B>
+pub enum StatementKind<T, B>
 where
+    T: TypedState,
     B: BoundState,
 {
     Expression(ExprId),
     Let(Identifier, ExprId),
     Ret(ExprId, RetMode),
-    // todo second Identifier should be a type
     LetFn(Identifier, Vec<Parameter<B>>, Return<B>, ExprId),
+    Struct(Identifier, Vec<Field<T>>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -65,15 +69,15 @@ impl RetMode {
     }
 }
 
-// fixme what is bound? the identifier or the type??? so far it's the identifier...
 #[derive(Debug, Clone, PartialEq)]
 pub struct Parameter<B>
 where
     B: BoundState,
 {
     identifier: Identifier,
-    ty: Identifier, // todo must be something more complex (a TypeId?), but let's start simple
+    ty: Identifier, // todo should be an IdentifierRef
     span: Span,
+    // todo the ty should be <B>, the state should be <T>
     state: B,
 }
 
@@ -93,6 +97,8 @@ where
         &self.span
     }
 
+    /// Binds the parameter to a symbol in the symbol table. The `symbol_id` is the parameter's
+    /// symbol id.
     pub fn bind(self, symbol_id: SymbolId) -> Parameter<Bound> {
         Parameter::<Bound> {
             identifier: self.identifier,
@@ -119,6 +125,7 @@ pub struct Return<B>
 where
     B: BoundState,
 {
+    // todo should be an IdentifierRef<B>, and the second element a <T>
     ret: Option<(Identifier, B)>,
 }
 
@@ -156,5 +163,60 @@ where
 impl Return<Unbound> {
     pub fn take_identifier(self) -> Option<Identifier> {
         self.ret.map(|(ident, _)| ident)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Field<T>
+where
+    T: TypedState,
+{
+    // todo add bound/type
+    identifier: Identifier,
+    ty: Identifier, // todo should be a IdentifierRef<B>
+    span: Span,
+    state: T,
+}
+
+impl Field<Untyped> {
+    pub fn new(identifier: Identifier, ty: Identifier, span: Span) -> Self {
+        Self {
+            identifier,
+            ty,
+            span,
+            state: Untyped,
+        }
+    }
+
+    pub fn typed(self, type_id: TypeId) -> Field<Typed> {
+        Field {
+            identifier: self.identifier,
+            ty: self.ty,
+            span: self.span,
+            state: Typed(type_id),
+        }
+    }
+}
+
+impl Field<Typed> {
+    pub fn type_id(&self) -> TypeId {
+        self.state.0
+    }
+}
+
+impl<T> Field<T>
+where
+    T: TypedState,
+{
+    pub fn identifier(&self) -> &Identifier {
+        &self.identifier
+    }
+
+    pub fn ty(&self) -> &Identifier {
+        &self.ty
+    }
+
+    pub fn span(&self) -> &Span {
+        &self.span
     }
 }

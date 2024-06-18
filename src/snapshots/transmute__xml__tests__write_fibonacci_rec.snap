@@ -45,7 +45,7 @@ expression: "&xml"
                           <parameters>
                             <parameter>
                               <expr id="expr:0" line="3" column="20" start="61" len="1">
-                                <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:3:0">n</identifier-ref>
+                                <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:3:0" type-ref="">n</identifier-ref>
                               </expr>
                             </parameter>
                             <parameter>
@@ -63,7 +63,7 @@ expression: "&xml"
                           <stmt id="stmt:0" line="4" column="21" start="90" len="6">
                             <ret mode="explicit" line="4" column="21" start="90" len="6">
                               <expr id="expr:3" line="4" column="25" start="94" len="1">
-                                <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="stmt:3:0">n</identifier-ref>
+                                <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="stmt:3:0" type-ref="">n</identifier-ref>
                               </expr>
                             </ret>
                           </stmt>
@@ -88,7 +88,7 @@ expression: "&xml"
                                       <parameters>
                                         <parameter>
                                           <expr id="expr:6" line="6" column="19" start="133" len="1">
-                                            <identifier-ref id="ident-ref:2" ident-ref="ident:1" target-id="stmt:3:0">n</identifier-ref>
+                                            <identifier-ref id="ident-ref:2" ident-ref="ident:1" target-id="stmt:3:0" type-ref="">n</identifier-ref>
                                           </expr>
                                         </parameter>
                                         <parameter>
@@ -114,7 +114,7 @@ expression: "&xml"
                                       <parameters>
                                         <parameter>
                                           <expr id="expr:10" line="6" column="30" start="144" len="1">
-                                            <identifier-ref id="ident-ref:4" ident-ref="ident:1" target-id="stmt:3:0">n</identifier-ref>
+                                            <identifier-ref id="ident-ref:4" ident-ref="ident:1" target-id="stmt:3:0" type-ref="">n</identifier-ref>
                                           </expr>
                                         </parameter>
                                         <parameter>

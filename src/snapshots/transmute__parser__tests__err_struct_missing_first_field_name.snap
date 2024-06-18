@@ -1,0 +1,19 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"struct S { : number, b: number, c: number }\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `:`, expected one of identifier, `}`",
+                span: 1:12; [11, 12],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    629,
+                ),
+            },
+        ],
+    },
+)

@@ -1,10 +1,10 @@
-use crate::ast::expression::{Expression, ExpressionKind, Typed, TypedState, Untyped};
+use crate::ast::expression::{Expression, ExpressionKind, Target, Typed, TypedState, Untyped};
 use crate::ast::identifier_ref::{Bound, BoundState, Unbound};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
 use crate::ast::statement::{RetMode, Statement, StatementKind};
-use crate::ast::Ast;
+use crate::ast::{Ast, ExitPoints, ResolvedAst};
 use std::fmt::{Result, Write};
 
 pub trait PrettyPrint {
@@ -61,9 +61,14 @@ where
         W: Write,
     {
         match self.kind() {
-            ExpressionKind::Assignment(target, expr_id) => {
+            ExpressionKind::Assignment(Target::Direct(target), expr_id) => {
                 write!(f, "{ident} = ", ident = ctx.identifier_ref(*target))?;
                 ctx.pretty_print_expression(*expr_id, opts, f)
+            }
+            ExpressionKind::Assignment(Target::Indirect(lhs_expr_id), rhs_expr_id) => {
+                ctx.pretty_print_expression(*lhs_expr_id, opts, f)?;
+                write!(f, " = ")?;
+                ctx.pretty_print_expression(*rhs_expr_id, opts, f)
             }
             ExpressionKind::If(cond_id, true_id, false_id) => {
                 let indent = ctx.indent();
@@ -115,6 +120,11 @@ where
                 }
                 ctx.pretty_print_expression(*expr_id, opts, f)
             }
+            ExpressionKind::Access(expr_id, ident_ref_id) => {
+                ctx.pretty_print_expression(*expr_id, opts, f)?;
+                write!(f, ".")?;
+                write!(f, "{ident}", ident = ctx.identifier_ref(*ident_ref_id))
+            }
             ExpressionKind::FunctionCall(ident_ref_id, param_ids) => {
                 write!(f, "{ident}(", ident = ctx.identifier_ref(*ident_ref_id))?;
                 for (i, param) in param_ids.iter().enumerate() {
@@ -144,13 +154,26 @@ where
                 }
                 Ok(())
             }
+            ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
+                write!(f, "{} {{", ctx.identifier_ref(*ident_ref_id))?;
+                for (i, (ident_ref_id, expr_id)) in fields.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " ")?;
+                    }
+                    write!(f, "{}: ", ctx.identifier_ref(*ident_ref_id))?;
+                    ctx.pretty_print_expression(*expr_id, opts, f)?;
+                    write!(f, ",")?;
+                }
+                write!(f, "}}")
+            }
             ExpressionKind::Dummy => unreachable!(),
         }
     }
 }
 
-impl<B> PrettyPrint for Statement<B>
+impl<T, B> PrettyPrint for Statement<T, B>
 where
+    T: TypedState,
     B: BoundState,
 {
     fn pretty_print<W, R>(
@@ -226,6 +249,24 @@ where
                 ctx.level -= 1;
                 writeln!(f, "{indent}}}")
             }
+            StatementKind::Struct(ident, fields) => {
+                let indent = ctx.indent();
+                writeln!(
+                    f,
+                    "{indent}struct {ident} {{",
+                    ident = ctx.identifier(ident.id())
+                )?;
+
+                for field in fields.iter() {
+                    writeln!(
+                        f,
+                        "{indent}  {ident}: {ty},",
+                        ident = ctx.identifier(field.identifier().id()),
+                        ty = ctx.identifier(field.ty().id())
+                    )?;
+                }
+                writeln!(f, "{indent}}}")
+            }
         }
     }
 }
@@ -264,7 +305,7 @@ impl<R> Ast<R, Untyped, Unbound> {
     }
 }
 
-enum AstState<'a, R> {
+pub enum AstState<'a, R> {
     TypedBound(&'a Ast<R, Typed, Bound>),
     UntypedUnbound(&'a Ast<R, Untyped, Unbound>),
 }
@@ -279,6 +320,16 @@ pub struct PrettyPrintContext<'a, R> {
     ast: AstState<'a, R>,
     level: usize,
     require_semicolon: bool,
+}
+
+impl<'a> PrettyPrintContext<'a, ExitPoints> {
+    pub fn from(ast: &'a ResolvedAst) -> Self {
+        Self {
+            ast: AstState::TypedBound(ast),
+            level: 0,
+            require_semicolon: false,
+        }
+    }
 }
 
 impl<R> PrettyPrintContext<'_, R> {
@@ -439,6 +490,22 @@ mod tests {
         expr.pretty_print(&mut ctx, &Options::default(), &mut w)
             .unwrap();
         assert_eq!(w, "a = true");
+    }
+
+    #[test]
+    fn expression_assignment_indirect() {
+        let ast = Parser::new(Lexer::new("a.b.c = true;")).parse().unwrap();
+        let expr = ast.expression(ExprId::from(ast.expressions().len() - 1));
+
+        let mut ctx = PrettyPrintContext {
+            ast: AstState::UntypedUnbound(&ast),
+            level: 1,
+            require_semicolon: false,
+        };
+        let mut w = String::new();
+        expr.pretty_print(&mut ctx, &Options::default(), &mut w)
+            .unwrap();
+        assert_eq!(w, "a.b.c = true");
     }
 
     #[test]
@@ -836,6 +903,48 @@ mod tests {
     #[test]
     fn fibonacci_iter() {
         let ast = Parser::new(Lexer::new("let f(n: number): number = {if n == 0 { ret 0; }if n == 1 { ret 1; }let prev_prev = 0;let prev = 1;let current = 0;while n > 1 {current = prev_prev + prev;prev_prev = prev;prev = current;n = n - 1;}current;}f(9) + 8;"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRetConverter::new());
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_display_snapshot!(w);
+    }
+
+    #[test]
+    fn struct_declaration() {
+        let ast = Parser::new(Lexer::new("struct Point { x: number, y: number }"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRetConverter::new());
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_display_snapshot!(w);
+    }
+
+    #[test]
+    fn struct_instantiation() {
+        let ast = Parser::new(Lexer::new("Point { x: 1, y: 2 };"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRetConverter::new());
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_display_snapshot!(w);
+    }
+
+    #[test]
+    fn struct_nested_access() {
+        let ast = Parser::new(Lexer::new("s.f.g;"))
             .parse()
             .unwrap()
             .convert_implicit_ret(ImplicitRetConverter::new());

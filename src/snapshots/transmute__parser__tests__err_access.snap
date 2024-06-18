@@ -1,0 +1,28 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"a.1;\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected number, expected one of identifier",
+                span: 1:3; [2, 3],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    856,
+                ),
+            },
+            Diagnostic {
+                message: "Unexpected number, expected one of `;`, `.`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                span: 1:3; [2, 3],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    1388,
+                ),
+            },
+        ],
+    },
+)

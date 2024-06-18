@@ -50,7 +50,7 @@ expression: "XmlWriter::new(&ast).serialize()"
                           <stmt id="stmt:0" line="1" column="43" start="42" len="6">
                             <ret mode="explicit" line="1" column="43" start="42" len="6">
                               <expr id="expr:1" line="1" column="47" start="46" len="1">
-                                <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:2:0">n</identifier-ref>
+                                <identifier-ref id="ident-ref:0" ident-ref="ident:1" target-id="stmt:2:0" type-ref="">n</identifier-ref>
                               </expr>
                             </ret>
                           </stmt>
