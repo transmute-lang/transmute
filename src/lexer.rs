@@ -21,10 +21,20 @@ impl<'s> Lexer<'s> {
         }
     }
 
-    pub fn next(&mut self) -> Token {
+    fn skip_whitespaces_and_comments(&mut self) {
         if let Some(span) = self.take_while(|c| c.is_whitespace()) {
             self.advance_consumed(span.len());
         }
+        if let Some('#') = self.remaining.chars().next() {
+            self.advance_consumed('#'.len_utf8());
+            if let Some(span) = self.take_while(|c| c != '\n') {
+                self.advance_consumed(span.len() + '\n'.len_utf8());
+            }
+        }
+    }
+
+    pub fn next(&mut self) -> Token {
+        self.skip_whitespaces_and_comments();
 
         let mut chars = self.remaining.chars();
         let next = match chars.next() {
@@ -355,11 +365,7 @@ impl<'s> Lexer<'s> {
         if len == 0 {
             None
         } else {
-            Some(
-                //(
-                // &self.remaining[..len],
-                Span::new(line, column, self.pos, len),
-            ) //)
+            Some(Span::new(line, column, self.pos, len))
         }
     }
 
@@ -824,6 +830,7 @@ mod tests {
     lexer_test_next!(semicolon, ";" => TokenKind::Semicolon; loc: 1,1; span: 0,1);
     lexer_test_next!(colon, ":" => TokenKind::Colon; loc: 1,1; span: 0,1);
     lexer_test_next!(bad, "\\" => TokenKind::Bad("\\".to_string()); loc: 1,1; span: 0,1);
+    lexer_test_next!(comment, "#this is a comment\n+" => TokenKind::Plus; loc: 1,20; span: 19,1);
     lexer_test_next!(eof, "" => TokenKind::Eof; loc: 1,1; span: 0,0);
 
     #[test]
