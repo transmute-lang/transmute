@@ -22,13 +22,21 @@ impl<'s> Lexer<'s> {
     }
 
     fn skip_whitespaces_and_comments(&mut self) {
-        if let Some(span) = self.take_while(|c| c.is_whitespace()) {
-            self.advance_consumed(span.len());
-        }
-        if let Some('#') = self.remaining.chars().next() {
-            self.advance_consumed('#'.len_utf8());
-            if let Some(span) = self.take_while(|c| c != '\n') {
-                self.advance_consumed(span.len() + '\n'.len_utf8());
+        loop {
+            let mut read = false;
+            if let Some(span) = self.take_while(|c| c.is_whitespace()) {
+                self.advance_consumed(span.len());
+                read = true;
+            }
+            if let Some('#') = self.remaining.chars().next() {
+                self.advance_consumed(1);
+                if let Some(span) = self.take_while(|c| c != '\n') {
+                    self.advance_consumed(span.len() + 1);
+                }
+                read = true;
+            }
+            if !read {
+                break;
             }
         }
     }
@@ -830,7 +838,7 @@ mod tests {
     lexer_test_next!(semicolon, ";" => TokenKind::Semicolon; loc: 1,1; span: 0,1);
     lexer_test_next!(colon, ":" => TokenKind::Colon; loc: 1,1; span: 0,1);
     lexer_test_next!(bad, "\\" => TokenKind::Bad("\\".to_string()); loc: 1,1; span: 0,1);
-    lexer_test_next!(comment, "#this is a comment\n+" => TokenKind::Plus; loc: 1,20; span: 19,1);
+    lexer_test_next!(comment, "#!transmute\n+" => TokenKind::Plus; loc: 1,13; span: 12,1);
     lexer_test_next!(eof, "" => TokenKind::Eof; loc: 1,1; span: 0,0);
 
     #[test]
