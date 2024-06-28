@@ -482,8 +482,8 @@ impl<'a> HtmlWriter<'a> {
         self.emit(XmlEvent::end_element());
     }
 
-    fn emit_identifier_ref(&mut self, identifier: IdentRefId) {
-        let ident_ref = self.ast.identifier_ref(identifier);
+    fn emit_identifier_ref(&mut self, ident_ref_id: IdentRefId) {
+        let ident_ref = self.ast.identifier_ref(ident_ref_id);
 
         let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
             SymbolKind::NotFound => panic!(),

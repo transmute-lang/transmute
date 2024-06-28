@@ -1326,7 +1326,8 @@ impl State {
             *id
         } else {
             let id = TypeId::from(self.resolution.types.len());
-            debug_assert!(!self.resolution.types.insert(ty, id).did_overwrite());
+            let did_overwrite = self.resolution.types.insert(ty, id).did_overwrite();
+            debug_assert!(!did_overwrite);
             id
         }
     }
