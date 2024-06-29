@@ -11,16 +11,7 @@ Err(
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    271,
-                ),
-            },
-            Diagnostic {
-                message: "Unexpected `}`, expected one of identifier, number, `true`, `false`, `let`, `ret`, `if`, `while`, `(`, `-`",
-                span: 1:16; [15, 16],
-                level: Error,
-                generated_at: (
-                    "src/parser.rs",
-                    271,
+                    275,
                 ),
             },
         ],

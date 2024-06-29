@@ -1,0 +1,16 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\";\")).parse()"
+---
+Ok(
+    Ast {
+        identifiers: [],
+        identifier_refs: [],
+        expressions: [],
+        statements: [],
+        root: [],
+        symbols: [],
+        types: [],
+        state: ImplicitRet,
+    },
+)

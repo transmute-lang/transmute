@@ -182,12 +182,16 @@ impl<'s> Parser<'s> {
     /// 'ret expr ;
     /// ```
     fn parse_statement(&mut self) -> Option<&Statement> {
-        let token = self.lexer.peek();
+        let mut token = self.lexer.peek();
 
-        if token.kind() == &TokenKind::Eof {
+        while token.kind() == &TokenKind::Semicolon {
+            let _semicolon = self.lexer.next();
+            token = self.lexer.peek();
+        }
+
+        if token.kind() == &TokenKind::Eof || token.kind() == &TokenKind::CloseCurlyBracket {
             return None;
         }
-        // todo allow empty statement
 
         match token.kind() {
             TokenKind::Let => {
@@ -389,8 +393,9 @@ impl<'s> Parser<'s> {
 
         // let name ( param , ... ): type '= expr ;
         let token = self.lexer.next();
-        if token.kind() != &TokenKind::Equal {
-            // todo allow to skip the equal sign if the next token is {
+        if token.kind() == &TokenKind::OpenCurlyBracket {
+            self.lexer.push_next(token);
+        } else if token.kind() != &TokenKind::Equal {
             report_and_insert_missing_token!(self, token, TokenKind::Equal);
             self.lexer.push_next(token);
         }
@@ -1520,8 +1525,13 @@ mod tests {
     test_syntax!(function_statement => "let times_two(a: number) = a * 2;");
     test_syntax!(function_statement_with_return_type => "let times_two(a: number): number = a * 2;");
     test_syntax!(function_statements => "let times_two(a: number) = { a * 2; }");
+    test_syntax!(function_statements_without_equal => "let times_two(a: number) { a * 2; }");
     test_syntax!(function_call => "times_two(21);");
     test_syntax!(ret => "ret 42;");
+    test_syntax!(empty_statement => ";");
+    test_syntax!(empty_statement_followed_by_non_empty => "; ret 42;");
+    test_syntax!(function_empty_block => "let a() {}");
+    test_syntax!(function_block_empty_statement => "let a() {;}");
     test_syntax!(if_simple => "if true { 42; }");
     test_syntax!(if_else => "if true { 42; } else { 43; }");
     test_syntax!(if_else_if_else => "if true { 42; } else if false { 43; } else { 44; }");
@@ -1551,7 +1561,7 @@ mod tests {
     test_syntax!(err_let_fn_params_missing_type => "let f(n:) = { }");
     test_syntax!(err_let_fn_params_missing_colon_and_type => "let f(n) = { }");
     test_syntax!(err_let_fn_eof_in_params => "let x(");
-    test_syntax!(err_let_fn_missing_equal => "let x() { }");
+    test_syntax!(err_let_fn_missing_equal => "let x() 1;");
     test_syntax!(err_operator_illegal => "41 $ 1;");
     test_syntax!(err_illegal_char_in_place_of_potential_operator => "41 $");
     test_syntax!(err_unexpected_token_in_place_of_potential_operator_or_method_call_or_equal => "f 4;");
