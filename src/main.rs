@@ -9,10 +9,10 @@ use crate::natives::Natives;
 use crate::parser::Parser;
 use crate::pretty_print::Options;
 use crate::resolver::Resolver;
-use crate::xml::XmlWriter;
-use std::env::args;
 use std::fs::File;
 use std::{fs, process};
+use std::path::PathBuf;
+use crate::cli:: parse_args;
 
 mod ast;
 mod desugar;
@@ -27,6 +27,7 @@ mod pretty_print;
 mod resolver;
 mod vec_map;
 mod xml;
+mod cli;
 
 // todo things to check:
 //  let f() = 0:
@@ -35,50 +36,38 @@ mod xml;
 // todo fix the ident().id() -> ident_id()
 
 fn main() {
-    let mut args = args();
-    let _program = args.next();
-    if let Some(arg) = args.next() {
-        let script = match fs::read_to_string(&arg) {
-            Ok(script) => script,
-            Err(e) => {
-                eprintln!("Could not read {}: {}", arg, e);
-                process::exit(1);
-            }
-        };
+    let cli = parse_args();
 
-        exec(&script, None);
+    let script = match fs::read_to_string(&cli.script) {
+        Ok(script) => script,
+        Err(e) => {
+            eprintln!("Could not read {}: {}", cli.script, e);
+            process::exit(1);
+        }
+    };
+
+    let html_file_name = if cli.output_html {
+        let path = PathBuf::from(&cli.script);
+
+        let mut file_name = path.file_name().expect("we could read it").to_os_string();
+        file_name.push(".html");
+
+        let mut path = PathBuf::from("target");
+        path.push(file_name);
+
+        Some(path)
     } else {
-        exec(
-            include_str!("../examples/fibonacci_rec.tm"),
-            Some("fibonacci_rec"),
-        );
-        println!(
-            "\n--------------------------------------------------------------------------------\n"
-        );
-        exec(
-            include_str!("../examples/fibonacci_iter.tm"),
-            Some("fibonacci_iter"),
-        );
-        println!(
-            "\n--------------------------------------------------------------------------------\n"
-        );
-        exec(include_str!("../examples/area.tm"), Some("area"));
+        None
+    };
 
-        println!(
-            "\n--------------------------------------------------------------------------------\n"
-        );
-        exec(
-            include_str!("../examples/vector_sum.tm"),
-            Some("vector_sum"),
-        );
-    }
+    exec(&script, cli.output_parsed, cli.output_executable, html_file_name);
 }
 
-fn exec(src: &str, name: Option<&str>) {
+fn exec(src: &str, print_ast: bool, print_executable_ast: bool, html_file_name: Option<PathBuf>) {
     let result = Parser::new(Lexer::new(src))
         .parse()
         .peek(|ast| {
-            if name.is_some() {
+            if print_ast {
                 let mut w = String::new();
                 let _ = ast.pretty_print(&Options::default(), &mut w);
                 print!("Parsed AST:\n{w}\n");
@@ -86,17 +75,15 @@ fn exec(src: &str, name: Option<&str>) {
         })
         .map(|ast| ast.convert_implicit_ret(ImplicitRetConverter::new()))
         .and_then(|ast| ast.resolve(Resolver::new(), Natives::new()))
-        .peek(move |ast| {
-            if let Some(name) = name {
+        .peek(|ast| {
+            if print_executable_ast {
                 let mut w = String::new();
                 let _ = ast.pretty_print(&Options::default(), &mut w);
                 print!("Executable AST:\n{w}\n");
-
-                XmlWriter::new(ast)
-                    .write(&mut File::create(format!("target/run__{name}.xml")).unwrap())
-                    .unwrap();
+            }
+            if let Some(html_file_name) = &html_file_name {
                 HtmlWriter::new(ast)
-                    .write(&mut File::create(format!("target/html/run__{name}.html")).unwrap())
+                    .write(&mut File::create(html_file_name).unwrap())
                     .unwrap();
             }
         })
