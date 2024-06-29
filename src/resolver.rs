@@ -896,8 +896,6 @@ impl Resolver {
         // fixme we redo the same type computation as in insert_function, but here, we already know
         //   the types.
 
-        // fixme duplicate parameter name
-
         let ret_type_id = match ret_type.take_identifier() {
             Some(ident) => {
                 match state.find_type_id_by_identifier(&ident) {
@@ -936,13 +934,24 @@ impl Resolver {
                         None
                     }
                     Some(type_id) => {
-                        let symbol_id = state.insert_symbol(
-                            parameter.identifier().id(),
-                            SymbolKind::Parameter(stmt, index),
-                            type_id,
-                        );
+                        let ident_id = parameter.identifier().id();
+                        let symbol_kind = SymbolKind::Parameter(stmt, index);
 
-                        Some(parameter.bind(symbol_id))
+                        if state.symbol_exists(ident_id, &symbol_kind) {
+                            state.diagnostics.report_err(
+                                format!(
+                                    "Parameter '{ident}' is already defined",
+                                    ident = state.resolution.identifiers[ident_id],
+                                ),
+                                parameter.identifier().span().clone(),
+                                (file!(), line!()),
+                            );
+                            None
+                        } else {
+                            let symbol_id = state.insert_symbol(ident_id, symbol_kind, type_id);
+
+                            Some(parameter.bind(symbol_id))
+                        }
                     }
                 }
             })
@@ -1042,11 +1051,21 @@ impl Resolver {
             .collect::<Vec<Field<Typed>>>();
 
         for (index, field) in fields.iter().enumerate() {
-            state.insert_symbol(
-                field.identifier().id(),
-                SymbolKind::Field(stmt, index),
-                field.type_id(),
-            );
+            let ident_id = field.identifier().id();
+            let symbol_kind = SymbolKind::Field(stmt, index);
+
+            if state.symbol_exists(ident_id, &symbol_kind) {
+                state.diagnostics.report_err(
+                    format!(
+                        "Field '{ident}' is already defined",
+                        ident = state.resolution.identifiers[ident_id],
+                    ),
+                    field.identifier().span().clone(),
+                    (file!(), line!()),
+                )
+            } else {
+                state.insert_symbol(ident_id, symbol_kind, field.type_id());
+            }
         }
 
         (fields, state)
@@ -1279,34 +1298,72 @@ impl State {
         // we start by inserting all the structs we find, so that the types are available from
         // everywhere in the current scope.
 
-        // todo fix duplicate field name
-
         let structs = stmts
             .iter()
             .filter_map(|stmt| match self.statements[*stmt].kind() {
-                StatementKind::Struct(ident, _) => Some((*stmt, ident.id())),
+                StatementKind::Struct(ident, _) => Some((*stmt, ident.clone())),
                 _ => None,
             })
-            .collect::<Vec<(StmtId, IdentId)>>();
+            .collect::<Vec<(StmtId, Identifier)>>();
 
-        for (stmt_id, ident_id) in structs.into_iter() {
-            let struct_type_id = self.insert_type(Type::Struct(stmt_id));
-            // todo this is not really the struct type ... weird
-            self.insert_symbol(ident_id, SymbolKind::Struct(stmt_id), struct_type_id);
+        for (stmt_id, identifier) in structs.into_iter() {
+            let ident_id = identifier.id();
+            let symbol_kind = SymbolKind::Struct(stmt_id);
+
+            if self.symbol_exists(ident_id, &symbol_kind) {
+                self.diagnostics.report_err(
+                    format!(
+                        "Struct '{ident}' is already defined in scope",
+                        ident = self.resolution.identifiers[ident_id],
+                    ),
+                    identifier.span().clone(),
+                    (file!(), line!()),
+                )
+            } else {
+                // todo this is not really the struct type ... weird
+                let struct_type_id = self.insert_type(Type::Struct(stmt_id));
+                self.insert_symbol(ident_id, symbol_kind, struct_type_id);
+            }
         }
     }
 
-    fn insert_symbol(&mut self, ident: IdentId, kind: SymbolKind, ty: TypeId) -> SymbolId {
-        let id = SymbolId::from(self.resolution.symbols.len());
-        self.resolution.symbols.push(Symbol { id, kind, ty });
+    /// Returns `true` if a symbol of the same kind already exists in the current scope.
+    fn symbol_exists(&self, ident_id: IdentId, kind: &SymbolKind) -> bool {
+        match self
+            .scope_stack
+            .last()
+            .expect("current scope exists")
+            .symbols
+            .get(&ident_id)
+        {
+            None => false,
+            Some(symbols) => symbols
+                .iter()
+                .map(|s| &self.resolution.symbols[*s])
+                .any(|s| match (&s.kind(), kind) {
+                    (SymbolKind::Parameter(_, _), SymbolKind::Parameter(_, _)) => true,
+                    (SymbolKind::Field(_, _), SymbolKind::Field(_, _)) => true,
+                    (SymbolKind::Struct(_), SymbolKind::Struct(_)) => true,
+                    _ => false,
+                }),
+        }
+    }
+
+    fn insert_symbol(&mut self, ident_id: IdentId, kind: SymbolKind, ty: TypeId) -> SymbolId {
+        let symbol_id = SymbolId::from(self.resolution.symbols.len());
+        self.resolution.symbols.push(Symbol {
+            id: symbol_id,
+            kind,
+            ty,
+        });
         self.scope_stack
             .last_mut()
             .expect("current scope exists")
             .symbols
-            .entry(ident)
+            .entry(ident_id)
             .or_default()
-            .push(id);
-        id
+            .push(symbol_id);
+        symbol_id
     }
 
     pub fn find_ident_id_by_str(&self, name: &str) -> IdentId {
@@ -1908,6 +1965,12 @@ mod tests {
         Span::new(1, 32, 31, 5)
     );
     test_type_error!(
+        duplicate_struct_field,
+        "struct S { x: number, x: number }",
+        "Field 'x' is already defined",
+        Span::new(1, 23, 22, 1)
+    );
+    test_type_error!(
         struct_invalid_field_type,
         "struct S { x: number } let s = S { x: 1 == 1 };",
         "Invalid type for field 'x': expected number, got boolean",
@@ -1918,6 +1981,12 @@ mod tests {
         "1.x;",
         "Expected struct type, got number",
         Span::new(1, 1, 0, 1)
+    );
+    test_type_error!(
+        duplicate_struct,
+        "struct S {} struct S {}",
+        "Struct 'S' is already defined in scope",
+        Span::new(1, 20, 19, 1)
     );
     test_type_error!(
         function_void_cannot_return_number,
@@ -1977,6 +2046,12 @@ mod tests {
         "let f(n: number, b: boolean) = { f(0); }",
         "No function 'f' found for parameters of types (number)",
         Span::new(1, 34, 33, 1)
+    );
+    test_type_error!(
+        duplicate_function_parameter_name,
+        "let f(n: number, n: number) = { }",
+        "Parameter 'n' is already defined",
+        Span::new(1, 18, 17, 1)
     );
     test_type_error!(
         function_not_found,

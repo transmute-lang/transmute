@@ -1483,6 +1483,7 @@ mod tests {
     test_syntax!(struct_valid_one_field => "struct S { a: number }");
     test_syntax!(struct_valid_several_fields => "struct S { a: number, b: number }");
     test_syntax!(struct_valid_trailing_comma => "struct S { a: number, }");
+    test_syntax!(structs_as_root => "struct S { } struct S { }");
     test_syntax!(protected_struct_in_if_expression => "if (Struct {}) {}");
     test_syntax!(protected_struct_in_while_expression => "while (Struct {}) {}");
     test_syntax!(struct_instantiation_empty => "S { };");
