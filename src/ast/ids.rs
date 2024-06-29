@@ -5,13 +5,6 @@ macro_rules! make_id {
             id: usize,
         }
 
-        // todo delete
-        impl $name {
-            pub fn id(&self) -> usize {
-                self.id
-            }
-        }
-
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", self.id)
@@ -26,7 +19,7 @@ macro_rules! make_id {
 
         impl From<$name> for usize {
             fn from(id: $name) -> Self {
-                id.id()
+                id.id
             }
         }
 
@@ -56,3 +49,11 @@ make_id!(ExprId);
 make_id!(StmtId);
 make_id!(SymbolId);
 make_id!(TypeId);
+
+macro_rules! id {
+    ($e:expr) => {
+        <_ as Into<usize>>::into($e)
+    };
+}
+
+pub(crate) use id;

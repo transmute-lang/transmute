@@ -221,8 +221,8 @@ impl<'a> XmlWriter<'a> {
             SymbolKind::LetFn(stmt, _, _) => {
                 format!("stmt:{stmt}")
             }
-            SymbolKind::Parameter(stmt, index) => {
-                format!("stmt:{}:{}", stmt.id(), index)
+            SymbolKind::Parameter(stmt_id, index) => {
+                format!("stmt:{}:{}", stmt_id, index)
             }
             SymbolKind::Native(..) => "native".to_string(),
             SymbolKind::NativeType(_, _) => {
@@ -295,8 +295,8 @@ impl<'a> XmlWriter<'a> {
                     SymbolKind::LetFn(stmt, _, _) => {
                         format!("stmt:{stmt}")
                     }
-                    SymbolKind::Parameter(stmt, index) => {
-                        format!("stmt:{}:{}", stmt.id(), index)
+                    SymbolKind::Parameter(stmt_id, index) => {
+                        format!("stmt:{}:{}", stmt_id, index)
                     }
                     SymbolKind::Native(..) => "native".to_string(),
                     SymbolKind::NativeType(_, _) => {

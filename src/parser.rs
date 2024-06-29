@@ -2,7 +2,7 @@ use crate::ast;
 use crate::ast::expression::{ExpressionKind, Target, Untyped};
 use crate::ast::identifier::Identifier;
 use crate::ast::identifier_ref::{IdentifierRef, Unbound};
-use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
+use crate::ast::ids::{id, ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{
     BinaryOperator, BinaryOperatorKind, Precedence, UnaryOperator, UnaryOperatorKind,
@@ -152,7 +152,7 @@ impl<'s> Parser<'s> {
             .into_iter()
             .collect::<Vec<(String, IdentId)>>();
 
-        identifiers.sort_by(|(_, id1), (_, id2)| id1.id().cmp(&id2.id()));
+        identifiers.sort_by(|(_, id1), (_, id2)| id1.cmp(&id2));
 
         let identifiers = identifiers
             .into_iter()
@@ -231,7 +231,7 @@ impl<'s> Parser<'s> {
                 let span = let_token.span().extend_to(semicolon.span());
 
                 let id = self.push_statement(StatementKind::Let(identifier, expression), span);
-                Some(&self.statements[id.id()])
+                Some(&self.statements[id!(id)])
             }
             TokenKind::Ret => {
                 // self.expected.clear();
@@ -242,7 +242,7 @@ impl<'s> Parser<'s> {
 
                 let id =
                     self.push_statement(StatementKind::Ret(expression, RetMode::Explicit), span);
-                Some(&self.statements[id.id()])
+                Some(&self.statements[id!(id)])
             }
             TokenKind::If | TokenKind::While => {
                 // todo could call `parse_if_expression` without going through `parse_expression`
@@ -251,7 +251,7 @@ impl<'s> Parser<'s> {
                 let span = expression.span().extend_to(expression.span());
                 let id = expression.id();
                 let id = self.push_statement(StatementKind::Expression(id), span);
-                Some(&self.statements[id.id()])
+                Some(&self.statements[id!(id)])
             }
             TokenKind::False
             | TokenKind::Identifier
@@ -268,7 +268,7 @@ impl<'s> Parser<'s> {
                 let span = span.extend_to(semicolon.span());
 
                 let id = self.push_statement(StatementKind::Expression(expression), span);
-                Some(&self.statements[id.id()])
+                Some(&self.statements[id!(id)])
             }
             TokenKind::Struct => self.parse_struct(),
             _ => {
@@ -430,12 +430,12 @@ impl<'s> Parser<'s> {
             )
         };
 
-        let id = self.push_statement(
+        let stmt_id = self.push_statement(
             StatementKind::LetFn(identifier, parameters, ty, expr_id),
             span.extend_to(&end_span),
         );
 
-        Some(&self.statements[id.id()])
+        Some(&self.statements[id!(stmt_id)])
     }
 
     fn parse_struct(&mut self) -> Option<&Statement> {
@@ -648,11 +648,11 @@ impl<'s> Parser<'s> {
             }
         };
 
-        let id = self.push_statement(
+        let stmt_id = self.push_statement(
             StatementKind::Struct(identifier, fields),
             token_struct.take_span().extend_to(last_token.span()),
         );
-        Some(&self.statements[id.id()])
+        Some(&self.statements[id!(stmt_id)])
     }
 
     /// Parses the following:
@@ -753,7 +753,7 @@ impl<'s> Parser<'s> {
                 // self.expected.clear();
                 let open_loc = token.span();
 
-                let expression = self.parse_expression(true).id();
+                let expr_id = self.parse_expression(true).id();
                 let token = self.lexer.next();
                 let token = if token.kind() == &TokenKind::CloseParenthesis {
                     token
@@ -771,7 +771,7 @@ impl<'s> Parser<'s> {
 
                 // we need to alter the expression's span to account for open and close
                 // parenthesis
-                let expression = &mut self.expressions[expression.id()];
+                let expression = &mut self.expressions[id!(expr_id)];
                 expression.set_span(
                     open_loc
                         .extend_to(expression.span())
@@ -848,7 +848,7 @@ impl<'s> Parser<'s> {
                             );
                             let identifier_ref = self.push_identifier_ref(identifier);
 
-                            let span = self.expressions[expr_id.id()]
+                            let span = self.expressions[id!(expr_id)]
                                 .span()
                                 .extend_to(token.span());
                             expr_id = self.push_expression(
@@ -918,7 +918,7 @@ impl<'s> Parser<'s> {
                 .id();
         }
 
-        &self.expressions[expr_id.id()]
+        &self.expressions[id!(expr_id)]
     }
 
     fn parse_binary_operator_with_higher_precedence(
@@ -1032,7 +1032,7 @@ impl<'s> Parser<'s> {
         operator: BinaryOperator,
         allow_struct: bool,
     ) -> &Expression {
-        let left_span = self.expressions[left.id()].span().clone();
+        let left_span = self.expressions[id!(left)].span().clone();
 
         let right =
             self.parse_expression_with_precedence(operator.kind().precedence(), allow_struct);
@@ -1041,7 +1041,7 @@ impl<'s> Parser<'s> {
         let id = right.id();
         let id = self.push_expression(ExpressionKind::Binary(left, operator, id), span);
 
-        &self.expressions[id.id()]
+        &self.expressions[id!(id)]
     }
 
     /// Parses the following (the `if` keyword is already consumed):
@@ -1143,7 +1143,7 @@ impl<'s> Parser<'s> {
             full_span,
         );
 
-        &self.expressions[id.id()]
+        &self.expressions[id!(id)]
     }
 
     fn parse_while_expression(&mut self, span: Span) -> &Expression {
@@ -1184,7 +1184,7 @@ impl<'s> Parser<'s> {
             ExpressionKind::While(condition, expr_id),
             span.extend_to(&statements_span),
         );
-        &self.expressions[id.id()]
+        &self.expressions[id!(id)]
     }
 
     /// Parses the following:
@@ -1246,7 +1246,7 @@ impl<'s> Parser<'s> {
         // identifier ( expr , ... ) '
         let ident_ref = self.push_identifier_ref(identifier);
         let id = self.push_expression(ExpressionKind::FunctionCall(ident_ref, arguments), span);
-        &self.expressions[id.id()]
+        &self.expressions[id!(id)]
     }
 
     fn parse_struct_instantiation(&mut self, struct_identifier: Identifier) -> ExprId {

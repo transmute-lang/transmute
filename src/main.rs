@@ -33,8 +33,6 @@ mod cli;
 //  let f() = 0:
 //  f = 1;
 
-// todo fix the ident().id() -> ident_id()
-
 fn main() {
     let cli = parse_args();
 
