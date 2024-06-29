@@ -24,13 +24,24 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    // fixme returning a value means returning references to heap...
-    pub fn start(&mut self) -> Value {
+    pub fn start(&mut self) -> i64 {
         let val = self.visit_statements(self.ast.root_statements());
-        val.value_ref
+        let val = val
+            .value_ref
             .map(|r| &self.heap[r.0])
             .cloned()
-            .unwrap_or_default()
+            .unwrap_or_default();
+
+        match val {
+            Value::Boolean(true) => 1,
+            Value::Boolean(false) => 0,
+            Value::Number(n) => n,
+            Value::Struct(_) => {
+                eprintln!("Cannot return a struct");
+                0
+            }
+            Value::Void => 0,
+        }
     }
 
     fn visit_statements(&mut self, statements: &[StmtId]) -> Val {
@@ -443,7 +454,7 @@ mod tests {
     use crate::resolver::Resolver;
 
     macro_rules! eval {
-        ($name:ident, $src:expr => $kind:ident($value:expr)) => {
+        ($name:ident, $src:expr => $value:expr) => {
             #[test]
             fn $name() {
                 let parser = Parser::new(Lexer::new($src));
@@ -456,7 +467,7 @@ mod tests {
 
                 let actual = Interpreter::new(&ast).start();
 
-                assert_eq!(actual, super::Value::$kind($value))
+                assert_eq!(actual, $value)
             }
         };
         ($name:ident, $src:expr => $kind:ident) => {
@@ -477,39 +488,39 @@ mod tests {
         };
     }
 
-    eval!(simple_precedence_1, "2 + 20 * 2;" => Number(42));
-    eval!(simple_precedence_2, "20 * 2 + 2;" => Number(42));
-    eval!(parenthesis_precedence, "(20 + 1) * 2;" => Number(42));
-    eval!(negative_number, "-1 + 43;" => Number(42));
-    eval!(unary_operator_minus_number, "- 1 + 43;" => Number(42));
-    eval!(binary_operator_minus, "43 - 1;" => Number(42));
-    eval!(unary_operator_minus_negative_number, "--42;" => Number(42));
-    eval!(division, "85 / 2;" => Number(42));
-    eval!(let_stmt, "let forty_two = 42;" => Void);
-    eval!(let_stmt_then_expression, "let forty = 2 * 20; forty + 2;" => Number(42));
-    eval!(function, "let times_two(v: number): number = v * 2;" => Void);
-    eval!(function_call, "let times_two(v: number): number = v * 2; times_two(21);" => Number(42));
-    eval!(complex_function_call, "let plus_one_times_two(v: number): number = { let res = v + 1; res * 2; } plus_one_times_two(20);" => Number(42));
-    eval!(ret_function_call, "let times_two(v: number): number = { 41; ret v * 2; 42; } times_two(21);" => Number(42));
-    eval!(bool_true, "true;" => Boolean(true));
-    eval!(bool_false, "false;" => Boolean(false));
-    eval!(equality_numbers_eq_true, "42 == 42;" => Boolean(true));
-    eval!(equality_numbers_eq_false, "42 == 41;" => Boolean(false));
-    eval!(equality_numbers_neq_true, "42 != 42;" => Boolean(false));
-    eval!(equality_numbers_neq_false, "42 != 42;" => Boolean(false));
-    eval!(equality_booleans_eq_true, "true == true;" => Boolean(true));
-    eval!(equality_booleans_eq_false, "true == false;" => Boolean(false));
-    eval!(equality_booleans_neq_true, "true != true;" => Boolean(false));
-    eval!(equality_booleans_neq_false, "true != false;" => Boolean(true));
-    eval!(comaprison_1, "(42 > 42) != (42 >= 42);" => Boolean(true));
-    eval!(comaprison_2, "(42 > 42) != (42 <= 42);" => Boolean(true));
-    eval!(comaprison_3, "(42 == 42) == (42 >= 42);" => Boolean(true));
-    eval!(comaprison_4, "(42 == 42) == (42 <= 42);" => Boolean(true));
-    eval!(comaprison_5, "(42 > 42) == (42 < 42);" => Boolean(true));
-    eval!(equality_bool_eq1, "true == true;" => Boolean(true));
-    eval!(equality_bool_eq2, "false == false;" => Boolean(true));
-    eval!(equality_bool_neq1, "true == false;" => Boolean(false));
-    eval!(equality_bool_neq2, "false == true;" => Boolean(false));
+    eval!(simple_precedence_1, "2 + 20 * 2;" => 42);
+    eval!(simple_precedence_2, "20 * 2 + 2;" => 42);
+    eval!(parenthesis_precedence, "(20 + 1) * 2;" => 42);
+    eval!(negative_number, "-1 + 43;" => 42);
+    eval!(unary_operator_minus_number, "- 1 + 43;" => 42);
+    eval!(binary_operator_minus, "43 - 1;" => 42);
+    eval!(unary_operator_minus_negative_number, "--42;" => 42);
+    eval!(division, "85 / 2;" => 42);
+    eval!(let_stmt, "let forty_two = 42;" => 0);
+    eval!(let_stmt_then_expression, "let forty = 2 * 20; forty + 2;" => 42);
+    eval!(function, "let times_two(v: number): number = v * 2;" => 0);
+    eval!(function_call, "let times_two(v: number): number = v * 2; times_two(21);" => 42);
+    eval!(complex_function_call, "let plus_one_times_two(v: number): number = { let res = v + 1; res * 2; } plus_one_times_two(20);" => 42);
+    eval!(ret_function_call, "let times_two(v: number): number = { 41; ret v * 2; 42; } times_two(21);" => 42);
+    eval!(bool_true, "true;" => 1);
+    eval!(bool_false, "false;" => 0);
+    eval!(equality_numbers_eq_true, "42 == 42;" => 1);
+    eval!(equality_numbers_eq_false, "42 == 41;" => 0);
+    eval!(equality_numbers_neq_true, "42 != 42;" => 0);
+    eval!(equality_numbers_neq_false, "42 != 42;" => 0);
+    eval!(equality_booleans_eq_true, "true == true;" => 1);
+    eval!(equality_booleans_eq_false, "true == false;" => 0);
+    eval!(equality_booleans_neq_true, "true != true;" => 0);
+    eval!(equality_booleans_neq_false, "true != false;" => 1);
+    eval!(comaprison_1, "(42 > 42) != (42 >= 42);" => 1);
+    eval!(comaprison_2, "(42 > 42) != (42 <= 42);" => 1);
+    eval!(comaprison_3, "(42 == 42) == (42 >= 42);" => 1);
+    eval!(comaprison_4, "(42 == 42) == (42 <= 42);" => 1);
+    eval!(comaprison_5, "(42 > 42) == (42 < 42);" => 1);
+    eval!(equality_bool_eq1, "true == true;" => 1);
+    eval!(equality_bool_eq2, "false == false;" => 1);
+    eval!(equality_bool_neq1, "true == false;" => 0);
+    eval!(equality_bool_neq2, "false == true;" => 0);
     eval!(fibonacci_rec, r#"
         let f(n: number): number = {
             if n <= 1 {
@@ -518,7 +529,7 @@ mod tests {
             f(n - 1) + f(n - 2);
         }
         f(9) + 8;
-    "# => Number(42));
+    "# => 42);
     eval!(fibonacci_iter, r#"
         let f(n: number): number = {
             if n == 0 { ret 0; }
@@ -539,7 +550,7 @@ mod tests {
             current;
         }
         f(9) + 8;
-    "# => Number(42));
+    "# => 42);
     eval!(wtf, r#"
         let wtf(i: number, j: number): number = {
             ret if i > j {
@@ -556,7 +567,7 @@ mod tests {
         let twenty_one = wtf(11, 21);
 
         seven * tree + twenty_one;
-    "# => Number(42));
+    "# => 42);
     eval!(fact, r#"
         let fact(n: number): number = {
             let n = n;
@@ -568,7 +579,7 @@ mod tests {
             product;
         }
         fact(3);
-    "# => Number(6));
+    "# => 6);
     eval!(area, r#"
         struct Point {
             x: number,
@@ -587,7 +598,7 @@ mod tests {
                 y: 1 + 7
             }
         );
-    "# => Number(42));
+    "# => 42);
     eval!(area_nested_struct, r#"
         struct Point {
             x: number,
@@ -622,5 +633,5 @@ mod tests {
                 p2: p2
             }
         );
-    "# => Number(42));
+    "# => 42);
 }
