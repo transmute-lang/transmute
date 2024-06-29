@@ -13,7 +13,6 @@ use xml::{EmitterConfig, EventWriter};
 const HTML: &str = include_str!("html/template.html");
 
 // todo: color unreachable expressions
-// todo: color ret expressions
 // todo: should not use index but symbol IDs
 
 pub struct HtmlWriter<'a> {
@@ -105,14 +104,7 @@ impl<'a> HtmlWriter<'a> {
 
     fn visit_ret(&mut self, expr: ExprId, mode: RetMode) {
         self.emit(XmlEvent::start_element("li"));
-        if let RetMode::Implicit = mode {
-            self.emit(XmlEvent::start_element("span").attr("class", "implicit"));
-        }
-
-        self.emit_ret();
-        if mode == RetMode::Implicit {
-            self.emit(XmlEvent::end_element());
-        }
+        self.emit_ret(mode);
         self.visit_expression(expr);
         self.emit_semicolon();
         self.emit(XmlEvent::end_element());
@@ -402,8 +394,17 @@ impl<'a> HtmlWriter<'a> {
         self.emit(XmlEvent::end_element());
     }
 
-    fn emit_ret(&mut self) {
-        self.emit(XmlEvent::start_element("span").attr("class", "kw"));
+    fn emit_ret(&mut self, mode: RetMode) {
+        let element = match mode {
+            RetMode::Explicit => XmlEvent::start_element("span")
+                .attr("class", "kw")
+                .attr("title", "explicit"),
+            RetMode::Implicit => XmlEvent::start_element("span")
+                .attr("class", "kw implicit")
+                .attr("title", "implicit"),
+        };
+
+        self.emit(element);
         self.emit(XmlEvent::Characters("ret"));
         self.emit(XmlEvent::end_element());
     }

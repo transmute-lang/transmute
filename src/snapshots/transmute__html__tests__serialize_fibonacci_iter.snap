@@ -17,7 +17,7 @@ expression: "&html"
         }
 
         .line {
-            position:absolute;
+            position: absolute;
             left:0;
         }
 
@@ -39,7 +39,7 @@ expression: "&html"
             color: #cc7832;
         }
 
-        .implicit .kw {
+        .implicit.kw {
             font-weight: normal;
         }
 
@@ -143,7 +143,7 @@ expression: "&html"
       <li>
         <ul>
           <li>
-            <span class="kw">ret</span>
+            <span class="kw" title="explicit">ret</span>
             <span class="num" title="number">0</span>
             <span class="semicolon">;</span>
           </li>
@@ -165,7 +165,7 @@ expression: "&html"
       <li>
         <ul>
           <li>
-            <span class="kw">ret</span>
+            <span class="kw" title="explicit">ret</span>
             <span class="num" title="number">1</span>
             <span class="semicolon">;</span>
           </li>
@@ -254,9 +254,7 @@ expression: "&html"
         <span class="curly" data-par-id="par_7">}</span>
       </li>
       <li>
-        <span class="implicit">
-          <span class="kw">ret</span>
-        </span>
+        <span class="kw implicit" title="implicit">ret</span>
         <span class="ident_ref" title="number" data-ident-ref="ident__stmt6" data-type-ident-ref="">current</span>
         <span class="semicolon">;</span>
       </li>

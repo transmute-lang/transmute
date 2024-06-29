@@ -17,7 +17,7 @@ expression: "&html"
         }
 
         .line {
-            position:absolute;
+            position: absolute;
             left:0;
         }
 
@@ -39,7 +39,7 @@ expression: "&html"
             color: #cc7832;
         }
 
-        .implicit .kw {
+        .implicit.kw {
             font-weight: normal;
         }
 
