@@ -63,7 +63,6 @@ impl Expression<Typed> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionKind {
-    // todo add support for (nested) struct field assignment
     Assignment(Target, ExprId),
     If(ExprId, ExprId, Option<ExprId>),
     Literal(Literal),

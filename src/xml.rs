@@ -488,7 +488,7 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("identifier")
-                // todo not sure this is really useful, we have the ull name in the tag anyway
+                // todo not sure this is really useful, we have the full name in the tag anyway
                 .attr("ref", &format!("ident:{}", ident.id()))
                 .attr("line", &ident.span().line().to_string())
                 .attr("column", &ident.span().column().to_string())
@@ -538,7 +538,7 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("identifier")
-                // todo not sure this is really useful, we have the ull name in the tag anyway
+                // todo not sure this is really useful, we have the full name in the tag anyway
                 .attr("ref", &format!("ident:{}", ident.id()))
                 .attr("line", &ident.span().line().to_string())
                 .attr("column", &ident.span().column().to_string())
@@ -621,7 +621,7 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("identifier")
-                // todo not sure this is really useful, we have the ull name in the tag anyway
+                // todo not sure this is really useful, we have the full name in the tag anyway
                 .attr("ref", &format!("ident:{}", ident.id()))
                 .attr("line", &ident.span().line().to_string())
                 .attr("column", &ident.span().column().to_string())

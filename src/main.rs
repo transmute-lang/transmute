@@ -1,6 +1,7 @@
 #![allow(dead_code)] // fixme eventually remove
 extern crate core;
 
+use crate::cli::parse_args;
 use crate::desugar::ImplicitRetConverter;
 use crate::html::HtmlWriter;
 use crate::interpreter::Interpreter;
@@ -10,11 +11,11 @@ use crate::parser::Parser;
 use crate::pretty_print::Options;
 use crate::resolver::Resolver;
 use std::fs::File;
-use std::{fs, process};
 use std::path::PathBuf;
-use crate::cli:: parse_args;
+use std::{fs, process};
 
 mod ast;
+mod cli;
 mod desugar;
 mod error;
 mod exit_points;
@@ -27,7 +28,6 @@ mod pretty_print;
 mod resolver;
 mod vec_map;
 mod xml;
-mod cli;
 
 // todo things to check:
 //  let f() = 0:
@@ -58,7 +58,12 @@ fn main() {
         None
     };
 
-    exec(&script, cli.output_parsed, cli.output_executable, html_file_name);
+    exec(
+        &script,
+        cli.output_parsed,
+        cli.output_executable,
+        html_file_name,
+    );
 }
 
 fn exec(src: &str, print_ast: bool, print_executable_ast: bool, html_file_name: Option<PathBuf>) {

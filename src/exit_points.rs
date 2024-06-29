@@ -221,8 +221,13 @@ where
         always_returns
     }
 
-    fn visit_statement(&self, stmt: StmtId, depth: usize, unreachable: bool) -> (Collected, bool) {
-        match self.statements[stmt].kind() {
+    fn visit_statement(
+        &self,
+        stmt_id: StmtId,
+        depth: usize,
+        unreachable: bool,
+    ) -> (Collected, bool) {
+        match self.statements[stmt_id].kind() {
             StatementKind::Expression(expr) => self.visit_expression(*expr, depth + 1, unreachable),
             StatementKind::Let(_, expr) => self.visit_expression(*expr, depth + 1, unreachable),
             StatementKind::Ret(expr, mode) => {
@@ -240,9 +245,7 @@ where
             StatementKind::LetFn(_, _, _, expr) => {
                 self.visit_expression(*expr, depth + 1, unreachable)
             }
-            StatementKind::Struct(_, _) => {
-                todo!()
-            }
+            StatementKind::Struct(_, _) => (Collected::default(), false),
         }
     }
 }

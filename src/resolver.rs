@@ -20,7 +20,7 @@ pub struct Resolver {}
 
 type BoundParametersAndReturnType = (Vec<Parameter<Bound>>, Return<Bound>);
 
-// todo if cond { a } else { b } . field = 42
+// todo add support for struct nested in function (examples/.inner_struct.tm)
 
 impl Resolver {
     pub fn new() -> Self {
@@ -1855,6 +1855,22 @@ mod tests {
             }
         };
         if s.s.f { }
+        "#
+    );
+
+    test_type_ok!(
+        if_evaluates_to_struct,
+        r#"
+        struct S { f: number }
+
+        let a = S { f: 1 };
+        let b = S { f: 2 };
+
+        if 1 == 1 {
+            a;
+        } else {
+            b;
+        }.f = 42;
         "#
     );
     test_type_error!(

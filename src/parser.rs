@@ -195,7 +195,6 @@ impl<'s> Parser<'s> {
 
         match token.kind() {
             TokenKind::Let => {
-                // self.expected.clear();
                 let let_token = self.lexer.next();
                 let identifier_token = self.lexer.next();
                 let identifier = match identifier_token.kind() {
@@ -213,7 +212,6 @@ impl<'s> Parser<'s> {
                 let token = self.lexer.peek();
 
                 if token.kind() == &TokenKind::OpenParenthesis {
-                    // self.expected.clear();
                     // let ident '( expr , ... ) = expr ;
                     return self.parse_function(let_token.span(), identifier);
                 }
@@ -234,7 +232,6 @@ impl<'s> Parser<'s> {
                 Some(&self.statements[id!(id)])
             }
             TokenKind::Ret => {
-                // self.expected.clear();
                 let ret_token = self.lexer.next();
                 let expression = self.parse_expression(true).id();
                 let semicolon = self.parse_semicolon();
@@ -245,8 +242,6 @@ impl<'s> Parser<'s> {
                 Some(&self.statements[id!(id)])
             }
             TokenKind::If | TokenKind::While => {
-                // todo could call `parse_if_expression` without going through `parse_expression`
-                // self.expected.clear();
                 let expression = self.parse_expression(true);
                 let span = expression.span().extend_to(expression.span());
                 let id = expression.id();
@@ -259,7 +254,6 @@ impl<'s> Parser<'s> {
             | TokenKind::Number(_)
             | TokenKind::OpenParenthesis
             | TokenKind::True => {
-                // self.expected.clear();
                 let expression = self.parse_expression(true);
                 let span = expression.span().clone();
                 let expression = expression.id();
@@ -317,15 +311,12 @@ impl<'s> Parser<'s> {
             let token = self.lexer.next();
             match token.kind() {
                 TokenKind::CloseParenthesis => {
-                    // self.expected.clear();
                     break;
                 }
                 TokenKind::Comma if next == TokenKind::Comma => {
-                    // self.expected.clear();
                     next = TokenKind::Identifier;
                 }
                 TokenKind::Identifier if next == TokenKind::Identifier => {
-                    // self.expected.clear();
                     let ident =
                         Identifier::new(self.push_identifier(token.span()), token.span().clone());
 
@@ -671,16 +662,9 @@ impl<'s> Parser<'s> {
         let token = self.lexer.next();
 
         let mut expr_id = match token.kind() {
-            TokenKind::If => {
-                // self.expected.clear();
-                self.parse_if_expression(token.span().clone()).id()
-            }
-            TokenKind::While => {
-                // self.expected.clear();
-                self.parse_while_expression(token.span().clone()).id()
-            }
+            TokenKind::If => self.parse_if_expression(token.span().clone()).id(),
+            TokenKind::While => self.parse_while_expression(token.span().clone()).id(),
             TokenKind::Identifier => {
-                // self.expected.clear();
                 let identifier =
                     Identifier::new(self.push_identifier(token.span()), token.span().clone());
 
@@ -711,12 +695,10 @@ impl<'s> Parser<'s> {
                 }
             }
             TokenKind::Number(n) => {
-                // self.expected.clear();
                 let literal = Literal::new(LiteralKind::Number(*n), token.span().clone());
                 self.push_expression(ExpressionKind::Literal(literal), token.span().clone())
             }
             TokenKind::Minus => {
-                // self.expected.clear();
                 let expression =
                     self.parse_expression_with_precedence(Precedence::Prefix, allow_struct);
                 let span = token.span().extend_to(expression.span());
@@ -729,28 +711,21 @@ impl<'s> Parser<'s> {
                     span,
                 )
             }
-            TokenKind::True => {
-                // self.expected.clear();
-                self.push_expression(
-                    ExpressionKind::Literal(Literal::new(
-                        LiteralKind::Boolean(true),
-                        token.span().clone(),
-                    )),
+            TokenKind::True => self.push_expression(
+                ExpressionKind::Literal(Literal::new(
+                    LiteralKind::Boolean(true),
                     token.span().clone(),
-                )
-            }
-            TokenKind::False => {
-                // self.expected.clear();
-                self.push_expression(
-                    ExpressionKind::Literal(Literal::new(
-                        LiteralKind::Boolean(false),
-                        token.span().clone(),
-                    )),
+                )),
+                token.span().clone(),
+            ),
+            TokenKind::False => self.push_expression(
+                ExpressionKind::Literal(Literal::new(
+                    LiteralKind::Boolean(false),
                     token.span().clone(),
-                )
-            }
+                )),
+                token.span().clone(),
+            ),
             TokenKind::OpenParenthesis => {
-                // self.expected.clear();
                 let open_loc = token.span();
 
                 let expr_id = self.parse_expression(true).id();
@@ -928,76 +903,46 @@ impl<'s> Parser<'s> {
         let token = self.lexer.next();
 
         match token.kind() {
-            TokenKind::EqualEqual => {
-                // self.expected.clear();
-                Some(BinaryOperator::new(
-                    BinaryOperatorKind::Equality,
-                    token.span().clone(),
-                ))
-            }
-            TokenKind::ExclaimEqual => {
-                // self.expected.clear();
-                Some(BinaryOperator::new(
-                    BinaryOperatorKind::NonEquality,
-                    token.span().clone(),
-                ))
-            }
-            TokenKind::Greater => {
-                // self.expected.clear();
-                Some(BinaryOperator::new(
-                    BinaryOperatorKind::GreaterThan,
-                    token.span().clone(),
-                ))
-            }
-            TokenKind::GreaterEqual => {
-                // self.expected.clear();
-                Some(BinaryOperator::new(
-                    BinaryOperatorKind::GreaterThanOrEqualTo,
-                    token.span().clone(),
-                ))
-            }
-            TokenKind::Smaller => {
-                // self.expected.clear();
-                Some(BinaryOperator::new(
-                    BinaryOperatorKind::SmallerThan,
-                    token.span().clone(),
-                ))
-            }
-            TokenKind::SmallerEqual => {
-                // self.expected.clear();
-                Some(BinaryOperator::new(
-                    BinaryOperatorKind::SmallerThanOrEqualTo,
-                    token.span().clone(),
-                ))
-            }
-            TokenKind::Minus => {
-                // self.expected.clear();
-                Some(BinaryOperator::new(
-                    BinaryOperatorKind::Subtraction,
-                    token.span().clone(),
-                ))
-            }
-            TokenKind::Plus => {
-                // self.expected.clear();
-                Some(BinaryOperator::new(
-                    BinaryOperatorKind::Addition,
-                    token.span().clone(),
-                ))
-            }
-            TokenKind::Slash => {
-                // self.expected.clear();
-                Some(BinaryOperator::new(
-                    BinaryOperatorKind::Division,
-                    token.span().clone(),
-                ))
-            }
-            TokenKind::Star => {
-                // self.expected.clear();
-                Some(BinaryOperator::new(
-                    BinaryOperatorKind::Multiplication,
-                    token.span().clone(),
-                ))
-            }
+            TokenKind::EqualEqual => Some(BinaryOperator::new(
+                BinaryOperatorKind::Equality,
+                token.span().clone(),
+            )),
+            TokenKind::ExclaimEqual => Some(BinaryOperator::new(
+                BinaryOperatorKind::NonEquality,
+                token.span().clone(),
+            )),
+            TokenKind::Greater => Some(BinaryOperator::new(
+                BinaryOperatorKind::GreaterThan,
+                token.span().clone(),
+            )),
+            TokenKind::GreaterEqual => Some(BinaryOperator::new(
+                BinaryOperatorKind::GreaterThanOrEqualTo,
+                token.span().clone(),
+            )),
+            TokenKind::Smaller => Some(BinaryOperator::new(
+                BinaryOperatorKind::SmallerThan,
+                token.span().clone(),
+            )),
+            TokenKind::SmallerEqual => Some(BinaryOperator::new(
+                BinaryOperatorKind::SmallerThanOrEqualTo,
+                token.span().clone(),
+            )),
+            TokenKind::Minus => Some(BinaryOperator::new(
+                BinaryOperatorKind::Subtraction,
+                token.span().clone(),
+            )),
+            TokenKind::Plus => Some(BinaryOperator::new(
+                BinaryOperatorKind::Addition,
+                token.span().clone(),
+            )),
+            TokenKind::Slash => Some(BinaryOperator::new(
+                BinaryOperatorKind::Division,
+                token.span().clone(),
+            )),
+            TokenKind::Star => Some(BinaryOperator::new(
+                BinaryOperatorKind::Multiplication,
+                token.span().clone(),
+            )),
             _ => {
                 self.expected.insert(TokenKind::EqualEqual);
                 self.expected.insert(TokenKind::ExclaimEqual);
@@ -1191,7 +1136,6 @@ impl<'s> Parser<'s> {
     /// ```
     /// identifier ( expr , ... )
     /// ```
-    // todo return ExprId
     fn parse_function_call(&mut self, identifier: Identifier) -> &Expression {
         // identifier '( expr , ... )
         let open_parenthesis_token = self.lexer.next();
@@ -1468,12 +1412,11 @@ impl<'s> Parser<'s> {
 
     /// Consumes tokens until one of supplied one is found. It does NOT consume it.
     /// Returns the amount of skipped tokens
-    // todo should return the matched token
-    fn take_until_one_of(&mut self, mut token_kinds: Vec<TokenKind>) -> usize {
+    fn take_until_one_of(&mut self, mut token_kinds: Vec<TokenKind>) {
         // todo handle case where we are in a ( or in a { block
         //  i.e. if in a `(a + ...` we want to take all until parenthesis?
         token_kinds.push(TokenKind::Eof);
-        self.take_while(|k| !token_kinds.contains(k))
+        self.take_while(|k| !token_kinds.contains(k));
     }
 
     /// Consumes tokens while `f` returns `true`. It does NOT consume the last one (i.e. first one

@@ -35,7 +35,6 @@ where
     /// All statements
     statements: VecMap<StmtId, Statement<T, B>>,
     /// Root statements
-    // todo replace with Statements
     root: Vec<StmtId>,
     /// All symbols
     symbols: VecMap<SymbolId, Symbol>,
