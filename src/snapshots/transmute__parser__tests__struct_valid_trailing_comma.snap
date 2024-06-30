@@ -9,7 +9,20 @@ Ok(
             "a",
             "number",
         ],
-        identifier_refs: [],
+        identifier_refs: [
+            IdentifierRef {
+                id: IdentRefId {
+                    id: 0,
+                },
+                ident: Identifier {
+                    id: IdentId {
+                        id: 2,
+                    },
+                    span: 1:15; [14, 20],
+                },
+                bound_state: Unbound,
+            },
+        ],
         expressions: [],
         statements: [
             Statement {
@@ -31,11 +44,8 @@ Ok(
                                 },
                                 span: 1:12; [11, 12],
                             },
-                            ty: Identifier {
-                                id: IdentId {
-                                    id: 2,
-                                },
-                                span: 1:15; [14, 20],
+                            ty: IdentRefId {
+                                id: 0,
                             },
                             span: 1:12; [11, 20],
                             state: Untyped,

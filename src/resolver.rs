@@ -1022,9 +1022,12 @@ impl Resolver {
         let fields = fields
             .into_iter()
             .map(|field| {
+                let type_identifier = state.resolution.identifier_refs[field.ty()].ident();
+
                 let ty = state
-                    .find_type_id_by_identifier(field.ty().id())
+                    .find_type_id_by_identifier(type_identifier.id())
                     .unwrap_or(state.invalid_type_id);
+
                 field.typed(ty)
             })
             .collect::<Vec<Field<Typed>>>();
@@ -1307,6 +1310,7 @@ impl State {
         // we start by inserting all the structs we find, so that the types are available from
         // everywhere in the current scope.
 
+        // first, we insert all structs
         let structs = stmts
             .iter()
             .filter_map(|stmt| match self.statements[*stmt].kind() {
@@ -1333,6 +1337,22 @@ impl State {
                 let struct_type_id = self.insert_type(Type::Struct(stmt_id));
                 self.insert_symbol(ident_id, symbol_kind, struct_type_id);
             }
+        }
+
+        // then we resolve their fields types
+        let ident_ref_ids = stmts
+            .iter()
+            .filter_map(|stmt_id| match self.statements[*stmt_id].kind() {
+                StatementKind::Struct(_, fields) => {
+                    Some(fields.iter().map(|p| p.ty()).collect::<Vec<IdentRefId>>())
+                }
+                _ => None,
+            })
+            .flatten()
+            .collect::<Vec<IdentRefId>>();
+
+        for ident_ref_id in ident_ref_ids.into_iter() {
+            self.resolve_ident_ref(ident_ref_id, None);
         }
     }
 
@@ -1545,8 +1565,10 @@ pub enum SymbolKind {
     NotFound,
     Let(StmtId),
     LetFn(StmtId, Vec<TypeId>, TypeId),
+    // todo could StmtId be replaced with SymbolId (the symbol that defines the function)
     Parameter(StmtId, usize),
     Struct(StmtId),
+    // todo could StmtId be replaced with SymbolId (the symbol that defines the struct)
     Field(StmtId, usize),
     NativeType(IdentId, Type),
     Native(IdentId, Vec<TypeId>, TypeId, fn(Vec<Value>) -> Value),

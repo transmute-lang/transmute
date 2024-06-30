@@ -178,8 +178,7 @@ impl<'a> HtmlWriter<'a> {
             self.emit(XmlEvent::start_element("li"));
             self.emit_identifier(stmt_id, field.identifier().id(), Some(i));
             self.emit_colon();
-            // fixme should be an emit_identifier_ref (or at least some emit_type_identifier)
-            self.emit_identifier(stmt_id, field.ty().id(), None);
+            self.emit_identifier_ref(field.ty());
             self.emit_comma();
             self.emit(XmlEvent::end_element());
         }

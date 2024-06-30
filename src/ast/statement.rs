@@ -140,15 +140,14 @@ pub struct Field<T>
 where
     T: TypedState,
 {
-    // todo add bound/type
     identifier: Identifier,
-    ty: Identifier, // todo should be a IdentifierRef<B>
+    ty: IdentRefId,
     span: Span,
     state: T,
 }
 
 impl Field<Untyped> {
-    pub fn new(identifier: Identifier, ty: Identifier, span: Span) -> Self {
+    pub fn new(identifier: Identifier, ty: IdentRefId, span: Span) -> Self {
         Self {
             identifier,
             ty,
@@ -181,8 +180,8 @@ where
         &self.identifier
     }
 
-    pub fn ty(&self) -> &Identifier {
-        &self.ty
+    pub fn ty(&self) -> IdentRefId {
+        self.ty
     }
 
     pub fn span(&self) -> &Span {

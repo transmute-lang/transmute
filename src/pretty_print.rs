@@ -261,7 +261,7 @@ where
                         f,
                         "{indent}  {ident}: {ty},",
                         ident = ctx.identifier(field.identifier().id()),
-                        ty = ctx.identifier(field.ty().id())
+                        ty = ctx.identifier_ref(field.ty())
                     )?;
                 }
                 writeln!(f, "{indent}}}")

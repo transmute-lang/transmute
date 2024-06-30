@@ -125,13 +125,13 @@ expression: "&html"
       <li>
         <span id="ident__stmt0_index0" class="ident">x</span>
         <span class="colon">: </span>
-        <span id="ident__stmt0" class="ident">number</span>
+        <span class="ident_ref" title="" data-ident-ref="ident__native-type_number" data-type-ident-ref="">number</span>
         <span class="comma">, </span>
       </li>
       <li>
         <span id="ident__stmt0_index1" class="ident">y</span>
         <span class="colon">: </span>
-        <span id="ident__stmt0" class="ident">boolean</span>
+        <span class="ident_ref" title="" data-ident-ref="ident__native-type_boolean" data-type-ident-ref="">boolean</span>
         <span class="comma">, </span>
       </li>
     </ul>

@@ -662,16 +662,20 @@ impl<'a> XmlWriter<'a> {
             ));
             self.emit(XmlEvent::end_element());
 
+            let ty_ident_ref = self.ast.identifier_ref(param.ty());
+
             self.emit(
                 XmlEvent::start_element("type")
                     // todo add ref to actual type
-                    .attr("ref", &format!("ident:{}", param.ty().id()))
-                    .attr("line", &param.ty().span().line().to_string())
-                    .attr("column", &param.ty().span().column().to_string())
-                    .attr("start", &param.ty().span().start().to_string())
-                    .attr("len", &param.ty().span().len().to_string()),
+                    .attr("ref", &format!("ident:{}", ty_ident_ref.ident().id()))
+                    .attr("line", &ty_ident_ref.span().line().to_string())
+                    .attr("column", &ty_ident_ref.span().column().to_string())
+                    .attr("start", &ty_ident_ref.span().start().to_string())
+                    .attr("len", &ty_ident_ref.span().len().to_string()),
             );
-            self.emit(XmlEvent::characters(self.ast.identifier(param.ty().id())));
+            self.emit(XmlEvent::characters(
+                self.ast.identifier(ty_ident_ref.ident().id()),
+            ));
             self.emit(XmlEvent::end_element());
 
             self.emit(XmlEvent::end_element());

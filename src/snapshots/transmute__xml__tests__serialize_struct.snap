@@ -68,7 +68,7 @@ expression: "&xml"
         <expr id="expr:4" line="12" column="13" start="200" len="3">
           <access>
             <expr id="expr:3" line="12" column="13" start="200" len="1">
-              <identifier-ref id="ident-ref:3" ident-ref="ident:5" target-id="stmt:1" type-ref="stmt:0">p</identifier-ref>
+              <identifier-ref id="ident-ref:5" ident-ref="ident:5" target-id="stmt:1" type-ref="stmt:0">p</identifier-ref>
             </expr>
             <ident ident-ref="ident:1" target-id="stmt:0:0" />
           </access>
@@ -78,7 +78,7 @@ expression: "&xml"
         <expr id="expr:6" line="13" column="13" start="217" len="3">
           <access>
             <expr id="expr:5" line="13" column="13" start="217" len="1">
-              <identifier-ref id="ident-ref:5" ident-ref="ident:5" target-id="stmt:1" type-ref="stmt:0">p</identifier-ref>
+              <identifier-ref id="ident-ref:7" ident-ref="ident:5" target-id="stmt:1" type-ref="stmt:0">p</identifier-ref>
             </expr>
             <ident ident-ref="ident:3" target-id="stmt:0:1" />
           </access>

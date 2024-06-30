@@ -538,12 +538,14 @@ impl<'s> Parser<'s> {
                     match token.kind() {
                         TokenKind::Identifier => {
                             // struct ident { ... , ident : 'ident , ... }
-                            let ty = Identifier::new(
+                            let type_identifier = Identifier::new(
                                 self.push_identifier(token.span()),
                                 token.take_span(),
                             );
-                            let field_span = ident.span().extend_to(ty.span());
-                            fields.push(Field::new(ident, ty, field_span));
+                            let field_span = ident.span().extend_to(type_identifier.span());
+                            let type_ident_ref_id = self.push_identifier_ref(type_identifier);
+
+                            fields.push(Field::new(ident, type_ident_ref_id, field_span));
                         }
                         TokenKind::Comma => {
                             // we missed the type and got the comma. try to parse next field from
@@ -569,12 +571,15 @@ impl<'s> Parser<'s> {
                                     // struct ident { ... , ident : ... 'ident, ... }
 
                                     // we found the type, create the field
-                                    let ty = Identifier::new(
+                                    let type_identifier = Identifier::new(
                                         self.push_identifier(token.span()),
                                         token.take_span(),
                                     );
-                                    let field_span = ident.span().extend_to(ty.span());
-                                    fields.push(Field::new(ident, ty, field_span));
+                                    let field_span = ident.span().extend_to(type_identifier.span());
+                                    let type_ident_ref_id =
+                                        self.push_identifier_ref(type_identifier);
+
+                                    fields.push(Field::new(ident, type_ident_ref_id, field_span));
                                 }
                                 TokenKind::Comma => {
                                     // we found a comma, abort the current field and parse
