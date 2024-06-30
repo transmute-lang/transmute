@@ -73,7 +73,9 @@ where
     identifier: Identifier,
     ty: IdentRefId,
     span: Span,
-    state: T, // fixme is it really needed??
+    /// When `Typed`, corresponds to the `TypeId` of the parameter, as derived from the `ty` during
+    /// resolution
+    typed_state: T,
 }
 
 impl<T> Parameter<T>
@@ -99,7 +101,7 @@ impl Parameter<Untyped> {
             identifier,
             ty,
             span,
-            state: Untyped,
+            typed_state: Untyped,
         }
     }
 
@@ -109,7 +111,7 @@ impl Parameter<Untyped> {
             identifier: self.identifier,
             ty: self.ty,
             span: self.span,
-            state: Typed(type_id),
+            typed_state: Typed(type_id),
         }
     }
 }
@@ -143,7 +145,9 @@ where
     identifier: Identifier,
     ty: IdentRefId,
     span: Span,
-    state: T,
+    /// When `Typed`, corresponds to the `TypeId` of the field, as derived from the `ty` during
+    /// resolution
+    typed_state: T,
 }
 
 impl Field<Untyped> {
@@ -152,7 +156,7 @@ impl Field<Untyped> {
             identifier,
             ty,
             span,
-            state: Untyped,
+            typed_state: Untyped,
         }
     }
 
@@ -161,14 +165,14 @@ impl Field<Untyped> {
             identifier: self.identifier,
             ty: self.ty,
             span: self.span,
-            state: Typed(type_id),
+            typed_state: Typed(type_id),
         }
     }
 }
 
 impl Field<Typed> {
     pub fn type_id(&self) -> TypeId {
-        self.state.0
+        self.typed_state.0
     }
 }
 

@@ -12,8 +12,8 @@ where
     id: IdentRefId,
     /// The referenced symbol identifier
     ident: Identifier,
-    /// The referenced symbol id
-    bound_state: B,
+    /// When `Bound`, the referenced `SymbolId`
+    bound_state: B, // todo move to Identifier
 }
 
 impl<S> IdentifierRef<S>

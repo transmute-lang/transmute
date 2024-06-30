@@ -149,7 +149,7 @@ Ok(
                                 id: 0,
                             },
                             span: 1:15; [14, 23],
-                            state: Untyped,
+                            typed_state: Untyped,
                         },
                     ],
                     Return {
