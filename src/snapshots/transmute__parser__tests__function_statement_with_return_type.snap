@@ -114,6 +114,7 @@ Ok(
                         ret: Some(
                             IdentRefId(1),
                         ),
+                        typed: Untyped,
                     },
                     ExprId(3),
                 ),

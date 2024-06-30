@@ -1,8 +1,8 @@
-use std::fmt::{Debug, Formatter};
 use crate::ast::ids::{ExprId, IdentRefId, StmtId, TypeId};
 use crate::ast::literal::Literal;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::lexer::Span;
+use std::fmt::{Debug, Formatter};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expression<T>

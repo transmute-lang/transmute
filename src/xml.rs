@@ -531,7 +531,7 @@ impl<'a> XmlWriter<'a> {
         stmt_id: StmtId,
         ident: &Identifier<Bound>,
         params: &[Parameter<Typed, Bound>],
-        return_type: &Return,
+        return_type: &Return<Typed>,
         expr: &ExprId,
     ) {
         self.emit(XmlEvent::start_element("fn"));

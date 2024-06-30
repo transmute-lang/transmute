@@ -20,6 +20,8 @@ pub struct Resolver {}
 
 // todo add support for struct nested in function (examples/.inner_struct.tm)
 
+type Function<T, B> = (Identifier<B>, Vec<Parameter<T, B>>, Return<T>);
+
 impl Resolver {
     pub fn new() -> Self {
         Self {}
@@ -112,7 +114,12 @@ impl Resolver {
 
                     state.insert_symbol(
                         ident,
-                        SymbolKind::Native(ident, parameters, ret_type, NativeFunction(native.body())),
+                        SymbolKind::Native(
+                            ident,
+                            parameters,
+                            ret_type,
+                            NativeFunction(native.body()),
+                        ),
                         fn_type_id,
                     );
                 }
@@ -837,9 +844,9 @@ impl Resolver {
             }
             StatementKind::LetFn(ident, params, ret_type, expr) => {
                 let (res, mut state) =
-                    self.visit_function(state, stmt_id, ident, params, &ret_type, expr, &span);
+                    self.visit_function(state, stmt_id, (ident, params, ret_type), expr, &span);
 
-                if let Ok((identifier, parameters)) = res {
+                if let Ok((identifier, parameters, ret_type)) = res {
                     state.resolution.statements.insert(
                         stmt_id,
                         Statement::new(
@@ -892,15 +899,10 @@ impl Resolver {
         &self,
         mut state: State,
         stmt: StmtId,
-        ident: Identifier<Unbound>,
-        params: Vec<Parameter<Untyped, Unbound>>,
-        ret_type: &Return,
+        (ident, params, ret_type): Function<Untyped, Unbound>,
         expr: ExprId,
         span: &Span,
-    ) -> (
-        Result<(Identifier<Bound>, Vec<Parameter<Typed, Bound>>), ()>,
-        State,
-    ) {
+    ) -> (Result<Function<Typed, Bound>, ()>, State) {
         state.push_scope();
 
         let ret_type_id = match ret_type.ident_ret_id() {
@@ -1031,7 +1033,14 @@ impl Resolver {
                         .collect::<Vec<TypeId>>(),
                 ),
             ) {
-                return (Ok((ident.bind(symbol_id), parameters)), state);
+                return (
+                    Ok((
+                        ident.bind(symbol_id),
+                        parameters,
+                        ret_type.typed(ret_type_id.expect("cannot be here with Err")),
+                    )),
+                    state,
+                );
             }
         }
 

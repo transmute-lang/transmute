@@ -1,7 +1,7 @@
-use std::fmt::{Debug, Formatter};
 use crate::ast::identifier::Identifier;
 use crate::ast::ids::{IdentId, IdentRefId, SymbolId};
 use crate::lexer::Span;
+use std::fmt::{Debug, Formatter};
 
 /// Represents an identifier when used as a reference
 #[derive(Debug, Clone, PartialEq)]

@@ -50,7 +50,7 @@ where
     Expression(ExprId),
     Let(Identifier<B>, ExprId),
     Ret(ExprId, RetMode),
-    LetFn(Identifier<B>, Vec<Parameter<T, B>>, Return, ExprId),
+    LetFn(Identifier<B>, Vec<Parameter<T, B>>, Return<T>, ExprId),
     Struct(Identifier<B>, Vec<Field<T, B>>),
 }
 
@@ -132,22 +132,41 @@ where
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Return {
+pub struct Return<T>
+where
+    T: TypedState,
+{
     ret: Option<IdentRefId>,
-    // todo add typed_state
+    typed: T,
 }
 
-impl Return {
+impl Return<Untyped> {
     pub fn none() -> Self {
-        Self { ret: None }
+        Self {
+            ret: None,
+            typed: Untyped,
+        }
     }
 
     pub fn some(ident_ref_id: IdentRefId) -> Self {
         Self {
             ret: Some(ident_ref_id),
+            typed: Untyped,
         }
     }
 
+    pub fn typed(self, type_id: TypeId) -> Return<Typed> {
+        Return::<Typed> {
+            ret: self.ret,
+            typed: Typed(type_id),
+        }
+    }
+}
+
+impl<T> Return<T>
+where
+    T: TypedState,
+{
     pub fn ident_ret_id(&self) -> Option<IdentRefId> {
         self.ret
     }
@@ -178,7 +197,10 @@ impl Field<Untyped, Unbound> {
     }
 }
 
-impl<B> Field<Untyped, B> where B:BoundState {
+impl<B> Field<Untyped, B>
+where
+    B: BoundState,
+{
     pub fn typed(self, type_id: TypeId) -> Field<Typed, B> {
         Field {
             identifier: self.identifier,

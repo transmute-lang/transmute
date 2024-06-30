@@ -1,6 +1,6 @@
-use std::fmt::{Debug, Formatter};
 use crate::ast::ids::IdentRefId;
 use crate::lexer::Span;
+use std::fmt::{Debug, Formatter};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Literal {
