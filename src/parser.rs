@@ -14,7 +14,7 @@ use crate::lexer::{Lexer, PeekableLexer, Span, Token, TokenKind};
 use std::collections::{HashMap, HashSet};
 
 type Expression = ast::expression::Expression<Untyped>;
-type Statement = ast::statement::Statement<Untyped>;
+type Statement = ast::statement::Statement<Untyped, Unbound>;
 
 pub struct Parser<'s> {
     lexer: PeekableLexer<'s>,
@@ -298,7 +298,11 @@ impl<'s> Parser<'s> {
     /// let ident '( param , ... ): type = expr ;
     /// let ident '( param , ... ): type = { expr ; ... } ;
     /// ```
-    fn parse_function(&mut self, span: &Span, identifier: Identifier) -> Option<&Statement> {
+    fn parse_function(
+        &mut self,
+        span: &Span,
+        identifier: Identifier<Unbound>,
+    ) -> Option<&Statement> {
         // let name '( param , ... ): type = expr ;
         let open_parenthesis_token = self.lexer.next();
         assert_eq!(open_parenthesis_token.kind(), &TokenKind::OpenParenthesis);
@@ -1144,7 +1148,7 @@ impl<'s> Parser<'s> {
     /// ```
     /// identifier ( expr , ... )
     /// ```
-    fn parse_function_call(&mut self, identifier: Identifier) -> &Expression {
+    fn parse_function_call(&mut self, identifier: Identifier<Unbound>) -> &Expression {
         // identifier '( expr , ... )
         let open_parenthesis_token = self.lexer.next();
         assert_eq!(open_parenthesis_token.kind(), &TokenKind::OpenParenthesis);
@@ -1201,7 +1205,7 @@ impl<'s> Parser<'s> {
         &self.expressions[id!(id)]
     }
 
-    fn parse_struct_instantiation(&mut self, struct_identifier: Identifier) -> ExprId {
+    fn parse_struct_instantiation(&mut self, struct_identifier: Identifier<Unbound>) -> ExprId {
         // ident '{ ident : expr , ... }
 
         let open_curly_bracket_token = self.lexer.next();
@@ -1400,9 +1404,10 @@ impl<'s> Parser<'s> {
         }
     }
 
-    fn push_identifier_ref(&mut self, ident: Identifier) -> IdentRefId {
+    fn push_identifier_ref(&mut self, ident: Identifier<Unbound>) -> IdentRefId {
         let id = IdentRefId::from(self.identifier_refs.len());
-        self.identifier_refs.push(IdentifierRef::new(id, ident));
+        self.identifier_refs
+            .push(IdentifierRef::<Unbound>::new(id, ident));
         id
     }
 
@@ -1412,7 +1417,7 @@ impl<'s> Parser<'s> {
         id
     }
 
-    fn push_statement(&mut self, kind: StatementKind<Untyped>, span: Span) -> StmtId {
+    fn push_statement(&mut self, kind: StatementKind<Untyped, Unbound>, span: Span) -> StmtId {
         let id = StmtId::from(self.statements.len());
         self.statements.push(Statement::new(id, kind, span));
         id

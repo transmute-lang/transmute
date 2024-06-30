@@ -1,23 +1,26 @@
 use crate::ast::expression::{Typed, TypedState, Untyped};
 use crate::ast::identifier::Identifier;
-use crate::ast::ids::{ExprId, IdentRefId, StmtId, TypeId};
+use crate::ast::identifier_ref::{Bound, BoundState, Unbound};
+use crate::ast::ids::{ExprId, IdentRefId, StmtId, SymbolId, TypeId};
 use crate::lexer::Span;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Statement<T>
+pub struct Statement<T, B>
 where
     T: TypedState,
+    B: BoundState,
 {
     id: StmtId,
-    kind: StatementKind<T>,
+    kind: StatementKind<T, B>,
     span: Span,
 }
 
-impl<T> Statement<T>
+impl<T, B> Statement<T, B>
 where
     T: TypedState,
+    B: BoundState,
 {
-    pub fn new(id: StmtId, kind: StatementKind<T>, span: Span) -> Self {
+    pub fn new(id: StmtId, kind: StatementKind<T, B>, span: Span) -> Self {
         Self { id, kind, span }
     }
 
@@ -25,11 +28,11 @@ where
         self.id
     }
 
-    pub fn kind(&self) -> &StatementKind<T> {
+    pub fn kind(&self) -> &StatementKind<T, B> {
         &self.kind
     }
 
-    pub fn take_kind(self) -> StatementKind<T> {
+    pub fn take_kind(self) -> StatementKind<T, B> {
         self.kind
     }
 
@@ -39,15 +42,16 @@ where
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum StatementKind<T>
+pub enum StatementKind<T, B>
 where
     T: TypedState,
+    B: BoundState,
 {
     Expression(ExprId),
-    Let(Identifier, ExprId),
+    Let(Identifier<B>, ExprId),
     Ret(ExprId, RetMode),
-    LetFn(Identifier, Vec<Parameter<T>>, Return, ExprId),
-    Struct(Identifier, Vec<Field<T>>),
+    LetFn(Identifier<B>, Vec<Parameter<T, B>>, Return, ExprId),
+    Struct(Identifier<B>, Vec<Field<T, B>>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -66,23 +70,25 @@ impl RetMode {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Parameter<T>
+pub struct Parameter<T, B>
 where
     T: TypedState,
+    B: BoundState,
 {
-    identifier: Identifier,
+    identifier: Identifier<B>,
     ty: IdentRefId,
     span: Span,
     /// When `Typed`, corresponds to the `TypeId` of the parameter, as derived from the `ty` during
     /// resolution
-    typed_state: T,
+    typed: T,
 }
 
-impl<T> Parameter<T>
+impl<T, B> Parameter<T, B>
 where
     T: TypedState,
+    B: BoundState,
 {
-    pub fn identifier(&self) -> &Identifier {
+    pub fn identifier(&self) -> &Identifier<B> {
         &self.identifier
     }
 
@@ -95,30 +101,40 @@ where
     }
 }
 
-impl Parameter<Untyped> {
-    pub fn new(identifier: Identifier, ty: IdentRefId, span: Span) -> Self {
+impl Parameter<Untyped, Unbound> {
+    pub fn new(identifier: Identifier<Unbound>, ty: IdentRefId, span: Span) -> Self {
         Self {
             identifier,
             ty,
             span,
-            typed_state: Untyped,
+            typed: Untyped,
         }
     }
 
-    /// Types the parameter.
-    pub fn bind(self, type_id: TypeId) -> Parameter<Typed> {
-        Parameter::<Typed> {
-            identifier: self.identifier,
+    /// Types and binds the parameter.
+    pub fn bind(self, type_id: TypeId, symbol_id: SymbolId) -> Parameter<Typed, Bound> {
+        Parameter::<Typed, Bound> {
+            identifier: self.identifier.bind(symbol_id),
             ty: self.ty,
             span: self.span,
-            typed_state: Typed(type_id),
+            typed: Typed(type_id),
         }
+    }
+}
+
+impl<B> Parameter<Typed, B>
+where
+    B: BoundState,
+{
+    pub fn type_id(&self) -> TypeId {
+        self.typed.0
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Return {
     ret: Option<IdentRefId>,
+    // todo add typed_state
 }
 
 impl Return {
@@ -138,49 +154,70 @@ impl Return {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Field<T>
+pub struct Field<T, B>
 where
     T: TypedState,
+    B: BoundState,
 {
-    identifier: Identifier,
+    identifier: Identifier<B>,
     ty: IdentRefId,
     span: Span,
     /// When `Typed`, corresponds to the `TypeId` of the field, as derived from the `ty` during
     /// resolution
-    typed_state: T,
+    typed: T,
 }
 
-impl Field<Untyped> {
-    pub fn new(identifier: Identifier, ty: IdentRefId, span: Span) -> Self {
+impl Field<Untyped, Unbound> {
+    pub fn new(identifier: Identifier<Unbound>, ty: IdentRefId, span: Span) -> Self {
         Self {
             identifier,
             ty,
             span,
-            typed_state: Untyped,
+            typed: Untyped,
         }
     }
+}
 
-    pub fn typed(self, type_id: TypeId) -> Field<Typed> {
+impl<B> Field<Untyped, B> where B:BoundState {
+    pub fn typed(self, type_id: TypeId) -> Field<Typed, B> {
         Field {
             identifier: self.identifier,
             ty: self.ty,
             span: self.span,
-            typed_state: Typed(type_id),
+            typed: Typed(type_id),
         }
     }
 }
 
-impl Field<Typed> {
+impl<B> Field<Typed, B>
+where
+    B: BoundState,
+{
     pub fn type_id(&self) -> TypeId {
-        self.typed_state.0
+        self.typed.0
     }
 }
 
-impl<T> Field<T>
+impl<T> Field<T, Unbound>
 where
     T: TypedState,
 {
-    pub fn identifier(&self) -> &Identifier {
+    pub fn bind(self, symbol_id: SymbolId) -> Field<T, Bound> {
+        Field {
+            identifier: self.identifier.bind(symbol_id),
+            ty: self.ty,
+            span: self.span,
+            typed: self.typed,
+        }
+    }
+}
+
+impl<T, B> Field<T, B>
+where
+    T: TypedState,
+    B: BoundState,
+{
+    pub fn identifier(&self) -> &Identifier<B> {
         &self.identifier
     }
 

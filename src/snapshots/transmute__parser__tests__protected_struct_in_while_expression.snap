@@ -13,8 +13,8 @@ Ok(
                 ident: Identifier {
                     id: IdentId(0),
                     span: 1:8; [7, 13],
+                    bound: Unbound,
                 },
-                bound_state: Unbound,
             },
         ],
         expressions: [
@@ -25,7 +25,7 @@ Ok(
                     [],
                 ),
                 span: 1:7; [6, 17],
-                typed_state: Untyped,
+                typed: Untyped,
             },
             Expression {
                 id: ExprId(1),
@@ -33,7 +33,7 @@ Ok(
                     [],
                 ),
                 span: 1:19; [18, 20],
-                typed_state: Untyped,
+                typed: Untyped,
             },
             Expression {
                 id: ExprId(2),
@@ -42,7 +42,7 @@ Ok(
                     ExprId(1),
                 ),
                 span: 1:1; [0, 20],
-                typed_state: Untyped,
+                typed: Untyped,
             },
         ],
         statements: [

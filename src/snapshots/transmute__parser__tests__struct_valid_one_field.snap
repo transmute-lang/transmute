@@ -15,8 +15,8 @@ Ok(
                 ident: Identifier {
                     id: IdentId(2),
                     span: 1:15; [14, 20],
+                    bound: Unbound,
                 },
-                bound_state: Unbound,
             },
         ],
         expressions: [],
@@ -27,16 +27,18 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 1:8; [7, 8],
+                        bound: Unbound,
                     },
                     [
                         Field {
                             identifier: Identifier {
                                 id: IdentId(1),
                                 span: 1:12; [11, 12],
+                                bound: Unbound,
                             },
                             ty: IdentRefId(0),
                             span: 1:12; [11, 20],
-                            typed_state: Untyped,
+                            typed: Untyped,
                         },
                     ],
                 ),

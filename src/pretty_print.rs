@@ -1,5 +1,5 @@
 use crate::ast::expression::{Expression, ExpressionKind, Target, Typed, TypedState, Untyped};
-use crate::ast::identifier_ref::{Bound, Unbound};
+use crate::ast::identifier_ref::{Bound, BoundState, Unbound};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
@@ -171,9 +171,10 @@ where
     }
 }
 
-impl<T> PrettyPrint for Statement<T>
+impl<T, B> PrettyPrint for Statement<T, B>
 where
     T: TypedState,
+    B: BoundState,
 {
     fn pretty_print<W, R>(
         &self,
@@ -378,7 +379,7 @@ impl<R> PrettyPrintContext<'_, R> {
 #[cfg(test)]
 mod tests {
     use crate::ast::identifier::Identifier;
-    use crate::ast::identifier_ref::IdentifierRef;
+    use crate::ast::identifier_ref::{IdentifierRef, Unbound};
     use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
     use crate::ast::literal::{Literal, LiteralKind};
     use crate::ast::Ast;
@@ -405,7 +406,7 @@ mod tests {
         identifier_refs!(0 => $ident, $($tail)*)
     };
     ($ident_ref:expr => $ident:expr) => {
-        vec![IdentifierRef::new(
+        vec![IdentifierRef::<Unbound>::new(
             IdentRefId::from($ident_ref),
             Identifier::new(IdentId::from($ident), Span::default())
         )]

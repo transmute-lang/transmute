@@ -14,7 +14,7 @@ use crate::natives::{Native, Natives};
 use crate::vec_map::VecMap;
 use bimap::BiHashMap;
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 pub struct Resolver {}
 
@@ -30,7 +30,7 @@ impl Resolver {
         identifiers: VecMap<IdentId, String>,
         identifier_refs: VecMap<IdentRefId, IdentifierRef<Unbound>>,
         expressions: VecMap<ExprId, Expression<Untyped>>,
-        statements: VecMap<StmtId, Statement<Untyped>>,
+        statements: VecMap<StmtId, Statement<Untyped, Unbound>>,
         root: Vec<StmtId>,
         natives: Natives,
     ) -> Result<Output, Diagnostics> {
@@ -112,7 +112,7 @@ impl Resolver {
 
                     state.insert_symbol(
                         ident,
-                        SymbolKind::Native(ident, parameters, ret_type, native.body()),
+                        SymbolKind::Native(ident, parameters, ret_type, NativeFunction(native.body())),
                         fn_type_id,
                     );
                 }
@@ -186,7 +186,7 @@ impl Resolver {
 
     fn visit_expression(&self, mut state: State, expr_id: ExprId) -> (TypeId, State) {
         if let Some(expr) = state.resolution.expressions.get(expr_id) {
-            return (expr.ty_id(), state);
+            return (expr.type_id(), state);
         }
 
         let expr = state
@@ -533,7 +533,7 @@ impl Resolver {
             };
 
         let ident_ref_id =
-            state.create_identifier_ref(Identifier::new(ident_id, op.span().clone()), symbol);
+            state.create_identifier_ref(Identifier::new(ident_id, op.span().clone()).bind(symbol));
         let parameters = vec![left, right];
         let (ret_type, mut state) = self.visit_function_call(state, ident_ref_id, &parameters);
 
@@ -580,7 +580,7 @@ impl Resolver {
             };
 
         let ident_ref_id =
-            state.create_identifier_ref(Identifier::new(ident_id, op.span().clone()), symbol);
+            state.create_identifier_ref(Identifier::new(ident_id, op.span().clone()).bind(symbol));
         let parameters = vec![operand];
         let (ret_type, mut state) = self.visit_function_call(state, ident_ref_id, &parameters);
 
@@ -782,7 +782,7 @@ impl Resolver {
                         .expressions
                         .get(*e)
                         .expect("expression was visited")
-                        .ty_id(),
+                        .type_id(),
                     StatementKind::Let(..) => state.void_type_id,
                     StatementKind::Ret(..) => state.none_type_id,
                     StatementKind::LetFn(..) => state.void_type_id,
@@ -798,7 +798,11 @@ impl Resolver {
         (ret_type, state)
     }
 
-    fn visit_statement(&self, mut state: State, stmt: Statement<Untyped>) -> (TypeId, State) {
+    fn visit_statement(
+        &self,
+        mut state: State,
+        stmt: Statement<Untyped, Unbound>,
+    ) -> (TypeId, State) {
         let stmt_id = stmt.id();
         let span = stmt.span().clone();
 
@@ -812,7 +816,7 @@ impl Resolver {
                 self.visit_expression(state, expr)
             }
             StatementKind::Let(ident, expr) => {
-                state = self.visit_let(state, stmt_id, ident.id(), expr);
+                let (ident, mut state) = self.visit_let(state, stmt_id, ident, expr);
 
                 state.resolution.statements.insert(
                     stmt_id,
@@ -832,15 +836,15 @@ impl Resolver {
                 (state.none_type_id, state)
             }
             StatementKind::LetFn(ident, params, ret_type, expr) => {
-                let (ret, mut state) =
-                    self.visit_function(state, stmt_id, params, &ret_type, expr, &span);
+                let (res, mut state) =
+                    self.visit_function(state, stmt_id, ident, params, &ret_type, expr, &span);
 
-                if let Ok(parameters) = ret {
+                if let Ok((identifier, parameters)) = res {
                     state.resolution.statements.insert(
                         stmt_id,
                         Statement::new(
                             stmt_id,
-                            StatementKind::LetFn(ident, parameters, ret_type, expr),
+                            StatementKind::LetFn(identifier, parameters, ret_type, expr),
                             span,
                         ),
                     );
@@ -849,7 +853,7 @@ impl Resolver {
                 (state.void_type_id, state)
             }
             StatementKind::Struct(ident, fields) => {
-                let (fields, mut state) = self.visit_struct(state, stmt_id, fields);
+                let (ident, fields, mut state) = self.visit_struct(state, stmt_id, ident, fields);
 
                 state.resolution.statements.insert(
                     stmt_id,
@@ -861,7 +865,13 @@ impl Resolver {
         }
     }
 
-    fn visit_let(&self, state: State, stmt: StmtId, ident: IdentId, expr: ExprId) -> State {
+    fn visit_let(
+        &self,
+        state: State,
+        stmt: StmtId,
+        ident: Identifier<Unbound>,
+        expr: ExprId,
+    ) -> (Identifier<Bound>, State) {
         let (expr_type_id, mut state) = self.visit_expression(state, expr);
 
         if expr_type_id == state.none_type_id {
@@ -873,19 +883,24 @@ impl Resolver {
             );
         }
 
-        state.insert_symbol(ident, SymbolKind::Let(stmt), expr_type_id);
-        state
+        let symbol_id = state.insert_symbol(ident.id(), SymbolKind::Let(stmt), expr_type_id);
+
+        (ident.bind(symbol_id), state)
     }
 
     fn visit_function(
         &self,
         mut state: State,
         stmt: StmtId,
-        params: Vec<Parameter<Untyped>>,
+        ident: Identifier<Unbound>,
+        params: Vec<Parameter<Untyped, Unbound>>,
         ret_type: &Return,
         expr: ExprId,
         span: &Span,
-    ) -> (Result<Vec<Parameter<Typed>>, ()>, State) {
+    ) -> (
+        Result<(Identifier<Bound>, Vec<Parameter<Typed, Bound>>), ()>,
+        State,
+    ) {
         state.push_scope();
 
         let ret_type_id = match ret_type.ident_ret_id() {
@@ -932,14 +947,14 @@ impl Resolver {
                             );
                             None
                         } else {
-                            let _symbol_id = state.insert_symbol(ident_id, symbol_kind, type_id);
+                            let symbol_id = state.insert_symbol(ident_id, symbol_kind, type_id);
 
-                            Some(parameter.bind(type_id))
+                            Some(parameter.bind(type_id, symbol_id))
                         }
                     }
                 }
             })
-            .collect::<Vec<Parameter<Typed>>>();
+            .collect::<Vec<Parameter<Typed, Bound>>>();
 
         success = success && parameters.len() == params_len;
 
@@ -1007,18 +1022,29 @@ impl Resolver {
         state.pop_scope();
 
         if success {
-            (Ok(parameters), state)
-        } else {
-            (Err(()), state)
+            if let Some(symbol_id) = state.find_symbol_id_by_ident_and_param_types(
+                ident.id(),
+                Some(
+                    &parameters
+                        .iter()
+                        .map(|p| p.type_id())
+                        .collect::<Vec<TypeId>>(),
+                ),
+            ) {
+                return (Ok((ident.bind(symbol_id), parameters)), state);
+            }
         }
+
+        (Err(()), state)
     }
 
     fn visit_struct(
         &self,
         mut state: State,
         stmt: StmtId,
-        fields: Vec<Field<Untyped>>,
-    ) -> (Vec<Field<Typed>>, State) {
+        identifier: Identifier<Unbound>,
+        fields: Vec<Field<Untyped, Unbound>>,
+    ) -> (Identifier<Bound>, Vec<Field<Typed, Bound>>, State) {
         let fields = fields
             .into_iter()
             .map(|field| {
@@ -1030,27 +1056,40 @@ impl Resolver {
 
                 field.typed(ty)
             })
-            .collect::<Vec<Field<Typed>>>();
+            .collect::<Vec<Field<Typed, Unbound>>>();
 
-        for (index, field) in fields.iter().enumerate() {
-            let ident_id = field.identifier().id();
-            let symbol_kind = SymbolKind::Field(stmt, index);
+        let fields = fields
+            .into_iter()
+            .enumerate()
+            .map(|(index, field)| {
+                let ident_id = field.identifier().id();
+                let symbol_kind = SymbolKind::Field(stmt, index);
 
-            if state.symbol_exists(ident_id, &symbol_kind) {
-                state.diagnostics.report_err(
-                    format!(
-                        "Field '{ident}' is already defined",
-                        ident = state.resolution.identifiers[ident_id],
-                    ),
-                    field.identifier().span().clone(),
-                    (file!(), line!()),
-                )
-            } else {
-                state.insert_symbol(ident_id, symbol_kind, field.type_id());
-            }
-        }
+                if state.symbol_exists(ident_id, &symbol_kind) {
+                    state.diagnostics.report_err(
+                        format!(
+                            "Field '{ident}' is already defined",
+                            ident = state.resolution.identifiers[ident_id],
+                        ),
+                        field.identifier().span().clone(),
+                        (file!(), line!()),
+                    );
+                    field.bind(state.not_found_symbol_id)
+                } else {
+                    let symbol_id = state.insert_symbol(ident_id, symbol_kind, field.type_id());
+                    field.bind(symbol_id)
+                }
+            })
+            .collect::<Vec<Field<Typed, Bound>>>();
 
-        (fields, state)
+        let symbol_id = state
+            .find_symbol_id_by_ident_and_param_types(identifier.id(), None)
+            // todo same handling as for visit_function: if not found, return Err()
+            //   or, return not_found_symbol_id in visit_function. This requires that the find_*()
+            //   and resolve_*() function are reworked...
+            .unwrap_or(state.not_found_symbol_id);
+
+        (identifier.bind(symbol_id), fields, state)
     }
 }
 
@@ -1058,7 +1097,7 @@ struct State {
     // in
     identifier_refs: VecMap<IdentRefId, IdentifierRef<Unbound>>,
     expressions: VecMap<ExprId, Expression<Untyped>>,
-    statements: VecMap<StmtId, Statement<Untyped>>,
+    statements: VecMap<StmtId, Statement<Untyped, Unbound>>,
 
     // work
     scope_stack: Vec<Scope>,
@@ -1077,11 +1116,11 @@ struct State {
 }
 
 impl State {
-    fn create_identifier_ref(&mut self, identifier: Identifier, symbol: SymbolId) -> IdentRefId {
+    fn create_identifier_ref(&mut self, identifier: Identifier<Bound>) -> IdentRefId {
         let id = IdentRefId::from(self.resolution.identifier_refs.len());
         self.resolution
             .identifier_refs
-            .push(IdentifierRef::new_resolved(id, identifier, symbol));
+            .push(IdentifierRef::<Bound>::new(id, identifier));
         id
     }
 
@@ -1279,7 +1318,7 @@ impl State {
                 }
             })
             .collect::<Vec<(
-                Identifier,
+                Identifier<Unbound>,
                 StmtId,
                 Vec<TypeId>,
                 TypeId,
@@ -1317,7 +1356,7 @@ impl State {
                 StatementKind::Struct(ident, _) => Some((*stmt, ident.clone())),
                 _ => None,
             })
-            .collect::<Vec<(StmtId, Identifier)>>();
+            .collect::<Vec<(StmtId, Identifier<Unbound>)>>();
 
         for (stmt_id, identifier) in structs.into_iter() {
             let ident_id = identifier.id();
@@ -1466,7 +1505,7 @@ pub struct Resolution {
     pub symbols: VecMap<SymbolId, Symbol>,
     pub types: BiHashMap<Type, TypeId>,
     pub expressions: VecMap<ExprId, Expression<Typed>>,
-    pub statements: VecMap<StmtId, Statement<Typed>>,
+    pub statements: VecMap<StmtId, Statement<Typed, Bound>>,
     pub root: Vec<StmtId>,
     pub exit_points: HashMap<ExprId, Vec<ExitPoint>>,
     pub unreachable: Vec<ExprId>,
@@ -1478,7 +1517,7 @@ pub struct Output {
     pub symbols: VecMap<SymbolId, Symbol>,
     pub types: VecMap<TypeId, Type>,
     pub expressions: VecMap<ExprId, Expression<Typed>>,
-    pub statements: VecMap<StmtId, Statement<Typed>>,
+    pub statements: VecMap<StmtId, Statement<Typed, Bound>>,
     pub root: Vec<StmtId>,
     pub exit_points: HashMap<ExprId, Vec<ExitPoint>>,
     pub unreachable: Vec<ExprId>,
@@ -1571,7 +1610,16 @@ pub enum SymbolKind {
     // todo could StmtId be replaced with SymbolId (the symbol that defines the struct)
     Field(StmtId, usize),
     NativeType(IdentId, Type),
-    Native(IdentId, Vec<TypeId>, TypeId, fn(Vec<Value>) -> Value),
+    Native(IdentId, Vec<TypeId>, TypeId, NativeFunction),
+}
+
+#[derive(PartialEq)]
+pub struct NativeFunction(pub fn(Vec<Value>) -> Value);
+
+impl Debug for NativeFunction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "native")
+    }
 }
 
 // todo think about it being in Native
@@ -1642,7 +1690,7 @@ mod tests {
     use crate::parser::Parser;
     use crate::resolver::Resolver;
     use crate::xml::XmlWriter;
-    use insta::assert_snapshot;
+    use insta::{assert_debug_snapshot, assert_snapshot};
 
     #[test]
     fn resolve_ref_to_parameter() {
@@ -1727,6 +1775,28 @@ mod tests {
             .unwrap();
 
         assert_snapshot!("rebinding-xml", XmlWriter::new(&ast).serialize());
+    }
+
+    #[test]
+    fn fibonacci_rec() {
+        let ast = Parser::new(Lexer::new(include_str!("../examples/fibonacci_rec.tm")))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRetConverter::new())
+            .resolve(Resolver::new(), Natives::default())
+            .unwrap();
+        assert_debug_snapshot!(&ast);
+    }
+
+    #[test]
+    fn bindings_and_types() {
+        let ast = Parser::new(Lexer::new("struct S { f: S } let f(a: S, b: S): S { a; }"))
+            .parse()
+            .unwrap()
+            .convert_implicit_ret(ImplicitRetConverter::new())
+            .resolve(Resolver::new(), Natives::empty())
+            .unwrap();
+        assert_debug_snapshot!(&ast);
     }
 
     macro_rules! test_type_error {
@@ -2112,10 +2182,6 @@ mod tests {
         "let n = 10; n();",
         "No function 'n' found for parameters of types ()",
         Span::new(1, 13, 12, 1)
-    );
-    test_type_ok!(
-        fibonacci_rec,
-        "let f(n: number): number = { if n <= 1 { ret n; } f(n - 1) + f(n - 2); }"
     );
     // fixme un-comment the following test
     // test_type_ok!(

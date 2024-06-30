@@ -1,5 +1,6 @@
 use crate::ast::expression::{Expression, ExpressionKind, Target, Typed};
 use crate::ast::identifier::Identifier;
+use crate::ast::identifier_ref::Bound;
 use crate::ast::ids::{ExprId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
@@ -482,7 +483,7 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::end_element());
     }
 
-    fn visit_let(&mut self, ident: &Identifier, expr: &ExprId) {
+    fn visit_let(&mut self, ident: &Identifier<Bound>, expr: &ExprId) {
         self.emit(XmlEvent::start_element("let"));
 
         self.emit(
@@ -512,7 +513,7 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::end_element());
     }
 
-    fn visit_ret(&mut self, stmt: &Statement<Typed>, expr: &ExprId, mode: &RetMode) {
+    fn visit_ret(&mut self, stmt: &Statement<Typed, Bound>, expr: &ExprId, mode: &RetMode) {
         self.emit(
             XmlEvent::start_element("ret")
                 .attr("mode", mode.as_str())
@@ -528,8 +529,8 @@ impl<'a> XmlWriter<'a> {
     fn visit_function(
         &mut self,
         stmt_id: StmtId,
-        ident: &Identifier,
-        params: &[Parameter<Typed>],
+        ident: &Identifier<Bound>,
+        params: &[Parameter<Typed, Bound>],
         return_type: &Return,
         expr: &ExprId,
     ) {
@@ -623,7 +624,12 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::end_element());
     }
 
-    fn visit_struct(&mut self, stmt_id: StmtId, ident: &Identifier, fields: &[Field<Typed>]) {
+    fn visit_struct(
+        &mut self,
+        stmt_id: StmtId,
+        ident: &Identifier<Bound>,
+        fields: &[Field<Typed, Bound>],
+    ) {
         self.emit(XmlEvent::start_element("struct"));
 
         self.emit(

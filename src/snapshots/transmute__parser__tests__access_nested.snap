@@ -15,24 +15,24 @@ Ok(
                 ident: Identifier {
                     id: IdentId(0),
                     span: 1:1; [0, 5],
+                    bound: Unbound,
                 },
-                bound_state: Unbound,
             },
             IdentifierRef {
                 id: IdentRefId(1),
                 ident: Identifier {
                     id: IdentId(1),
                     span: 1:9; [8, 11],
+                    bound: Unbound,
                 },
-                bound_state: Unbound,
             },
             IdentifierRef {
                 id: IdentRefId(2),
                 ident: Identifier {
                     id: IdentId(2),
                     span: 1:15; [14, 23],
+                    bound: Unbound,
                 },
-                bound_state: Unbound,
             },
         ],
         expressions: [
@@ -45,7 +45,7 @@ Ok(
                     },
                 ),
                 span: 1:1; [0, 5],
-                typed_state: Untyped,
+                typed: Untyped,
             },
             Expression {
                 id: ExprId(1),
@@ -54,7 +54,7 @@ Ok(
                     IdentRefId(1),
                 ),
                 span: 1:1; [0, 11],
-                typed_state: Untyped,
+                typed: Untyped,
             },
             Expression {
                 id: ExprId(2),
@@ -63,7 +63,7 @@ Ok(
                     IdentRefId(2),
                 ),
                 span: 1:1; [0, 23],
-                typed_state: Untyped,
+                typed: Untyped,
             },
         ],
         statements: [

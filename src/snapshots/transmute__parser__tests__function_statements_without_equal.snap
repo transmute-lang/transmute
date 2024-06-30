@@ -15,16 +15,16 @@ Ok(
                 ident: Identifier {
                     id: IdentId(2),
                     span: 1:18; [17, 23],
+                    bound: Unbound,
                 },
-                bound_state: Unbound,
             },
             IdentifierRef {
                 id: IdentRefId(1),
                 ident: Identifier {
                     id: IdentId(1),
                     span: 1:28; [27, 28],
+                    bound: Unbound,
                 },
-                bound_state: Unbound,
             },
         ],
         expressions: [
@@ -37,7 +37,7 @@ Ok(
                     },
                 ),
                 span: 1:28; [27, 28],
-                typed_state: Untyped,
+                typed: Untyped,
             },
             Expression {
                 id: ExprId(1),
@@ -48,7 +48,7 @@ Ok(
                     },
                 ),
                 span: 1:32; [31, 32],
-                typed_state: Untyped,
+                typed: Untyped,
             },
             Expression {
                 id: ExprId(2),
@@ -61,7 +61,7 @@ Ok(
                     ExprId(1),
                 ),
                 span: 1:28; [27, 32],
-                typed_state: Untyped,
+                typed: Untyped,
             },
             Expression {
                 id: ExprId(3),
@@ -71,7 +71,7 @@ Ok(
                     ],
                 ),
                 span: 1:26; [25, 35],
-                typed_state: Untyped,
+                typed: Untyped,
             },
         ],
         statements: [
@@ -88,16 +88,18 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 1:5; [4, 13],
+                        bound: Unbound,
                     },
                     [
                         Parameter {
                             identifier: Identifier {
                                 id: IdentId(1),
                                 span: 1:15; [14, 15],
+                                bound: Unbound,
                             },
                             ty: IdentRefId(0),
                             span: 1:15; [14, 23],
-                            typed_state: Untyped,
+                            typed: Untyped,
                         },
                     ],
                     Return {

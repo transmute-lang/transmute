@@ -12,7 +12,7 @@ where
     id: ExprId,
     kind: ExpressionKind,
     span: Span,
-    typed_state: T,
+    typed: T,
 }
 
 impl Expression<Untyped> {
@@ -21,7 +21,7 @@ impl Expression<Untyped> {
             id,
             kind,
             span,
-            typed_state: Untyped,
+            typed: Untyped,
         }
     }
 
@@ -30,7 +30,7 @@ impl Expression<Untyped> {
             id: self.id,
             kind: self.kind,
             span: self.span,
-            typed_state: Typed(ty),
+            typed: Typed(ty),
         }
     }
 }
@@ -57,8 +57,8 @@ where
 }
 
 impl Expression<Typed> {
-    pub fn ty_id(&self) -> TypeId {
-        self.typed_state.0
+    pub fn type_id(&self) -> TypeId {
+        self.typed.0
     }
 }
 

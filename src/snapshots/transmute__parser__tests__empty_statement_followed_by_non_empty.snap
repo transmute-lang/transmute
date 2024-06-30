@@ -16,7 +16,7 @@ Ok(
                     },
                 ),
                 span: 1:7; [6, 8],
-                typed_state: Untyped,
+                typed: Untyped,
             },
         ],
         statements: [

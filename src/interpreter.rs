@@ -3,7 +3,7 @@ use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::StatementKind;
 use crate::ast::ResolvedAst;
-use crate::resolver::SymbolKind;
+use crate::resolver::{NativeFunction, SymbolKind};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
@@ -235,7 +235,7 @@ impl<'a> Interpreter<'a> {
                     _ => panic!("let fn expected"),
                 }
             }
-            SymbolKind::Native(_, _, _, body) => {
+            SymbolKind::Native(_, _, _, NativeFunction(body)) => {
                 let mut env = Vec::with_capacity(arguments.len());
 
                 for expr_id in arguments {
