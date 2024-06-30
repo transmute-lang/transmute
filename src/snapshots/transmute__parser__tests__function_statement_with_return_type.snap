@@ -28,6 +28,18 @@ Ok(
                 },
                 ident: Identifier {
                     id: IdentId {
+                        id: 2,
+                    },
+                    span: 1:27; [26, 32],
+                },
+                bound_state: Unbound,
+            },
+            IdentifierRef {
+                id: IdentRefId {
+                    id: 2,
+                },
+                ident: Identifier {
+                    id: IdentId {
                         id: 1,
                     },
                     span: 1:36; [35, 36],
@@ -44,7 +56,7 @@ Ok(
                     Literal {
                         kind: Identifier(
                             IdentRefId {
-                                id: 1,
+                                id: 2,
                             },
                         ),
                         span: 1:36; [35, 36],
@@ -142,15 +154,9 @@ Ok(
                     ],
                     Return {
                         ret: Some(
-                            (
-                                Identifier {
-                                    id: IdentId {
-                                        id: 2,
-                                    },
-                                    span: 1:27; [26, 32],
-                                },
-                                Unbound,
-                            ),
+                            IdentRefId {
+                                id: 1,
+                            },
                         ),
                     },
                     ExprId {

@@ -1,6 +1,5 @@
 use crate::ast::expression::{Expression, ExpressionKind, Target, Typed};
 use crate::ast::identifier::Identifier;
-use crate::ast::identifier_ref::Bound;
 use crate::ast::ids::{ExprId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
@@ -513,7 +512,7 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::end_element());
     }
 
-    fn visit_ret(&mut self, stmt: &Statement<Typed, Bound>, expr: &ExprId, mode: &RetMode) {
+    fn visit_ret(&mut self, stmt: &Statement<Typed>, expr: &ExprId, mode: &RetMode) {
         self.emit(
             XmlEvent::start_element("ret")
                 .attr("mode", mode.as_str())
@@ -531,7 +530,7 @@ impl<'a> XmlWriter<'a> {
         stmt_id: StmtId,
         ident: &Identifier,
         params: &[Parameter<Typed>],
-        return_type: &Return<Bound>,
+        return_type: &Return,
         expr: &ExprId,
     ) {
         self.emit(XmlEvent::start_element("fn"));
@@ -548,17 +547,21 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::characters(self.ast.identifier(ident.id())));
         self.emit(XmlEvent::end_element());
 
-        if let Some(ty) = return_type.identifier() {
+        if let Some(ty_ident_ref_id) = return_type.ident_ret_id() {
+            let ty_ident_ref = self.ast.identifier_ref(ty_ident_ref_id);
+
             self.emit(
                 XmlEvent::start_element("type")
                     // todo add ref to actual type
-                    .attr("ref", &format!("ident:{}", ty.id()))
-                    .attr("line", &ty.span().line().to_string())
-                    .attr("column", &ty.span().column().to_string())
-                    .attr("start", &ty.span().start().to_string())
-                    .attr("len", &ty.span().len().to_string()),
+                    .attr("ref", &format!("ident:{}", ty_ident_ref.ident().id()))
+                    .attr("line", &ty_ident_ref.span().line().to_string())
+                    .attr("column", &ty_ident_ref.span().column().to_string())
+                    .attr("start", &ty_ident_ref.span().start().to_string())
+                    .attr("len", &ty_ident_ref.span().len().to_string()),
             );
-            self.emit(XmlEvent::characters(self.ast.identifier(ty.id())));
+            self.emit(XmlEvent::characters(
+                self.ast.identifier(ty_ident_ref.ident().id()),
+            ));
             self.emit(XmlEvent::end_element());
         }
 
@@ -592,10 +595,10 @@ impl<'a> XmlWriter<'a> {
                 XmlEvent::start_element("type")
                     // todo add ref to actual type
                     .attr("ref", &format!("ident:{}", ty_ident_ref.ident().id()))
-                    .attr("line", &ty_ident_ref.ident().span().line().to_string())
-                    .attr("column", &ty_ident_ref.ident().span().column().to_string())
-                    .attr("start", &ty_ident_ref.ident().span().start().to_string())
-                    .attr("len", &ty_ident_ref.ident().span().len().to_string()),
+                    .attr("line", &ty_ident_ref.span().line().to_string())
+                    .attr("column", &ty_ident_ref.span().column().to_string())
+                    .attr("start", &ty_ident_ref.span().start().to_string())
+                    .attr("len", &ty_ident_ref.span().len().to_string()),
             );
             self.emit(XmlEvent::characters(
                 self.ast.identifier(ty_ident_ref.ident().id()),

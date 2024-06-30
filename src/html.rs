@@ -92,7 +92,7 @@ impl<'a> HtmlWriter<'a> {
                 stmt.id(),
                 ident.id(),
                 params,
-                ret_type.identifier().map(|i| i.id()),
+                ret_type.ident_ret_id(),
                 *expr,
             ),
             StatementKind::Struct(ident, fields) => {
@@ -114,7 +114,7 @@ impl<'a> HtmlWriter<'a> {
         stmt_id: StmtId,
         ident: IdentId,
         params: &[Parameter<Typed>],
-        ret_type: Option<IdentId>,
+        ret_type: Option<IdentRefId>,
         expr: ExprId,
     ) {
         self.emit(XmlEvent::start_element("li"));
@@ -140,8 +140,7 @@ impl<'a> HtmlWriter<'a> {
 
         if let Some(ret_type) = ret_type {
             self.emit_colon();
-            // fixme should be an emit_identifier_ref (or at least some emit_type_identifier)
-            self.emit_identifier(stmt_id, ret_type, None);
+            self.emit_identifier_ref(ret_type);
         }
 
         self.emit_equal();

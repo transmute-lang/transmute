@@ -1,5 +1,5 @@
 use crate::ast::expression::{Expression, ExpressionKind, Target, Typed, TypedState, Untyped};
-use crate::ast::identifier_ref::{Bound, BoundState, Unbound};
+use crate::ast::identifier_ref::{Bound, Unbound};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
@@ -171,10 +171,9 @@ where
     }
 }
 
-impl<T, B> PrettyPrint for Statement<T, B>
+impl<T> PrettyPrint for Statement<T>
 where
     T: TypedState,
-    B: BoundState,
 {
     fn pretty_print<W, R>(
         &self,
@@ -240,8 +239,8 @@ where
                 }
 
                 write!(f, ")")?;
-                if let Some(ret_type) = ret_type.identifier() {
-                    write!(f, ": {ret_type}", ret_type = ctx.identifier(ret_type.id()))?;
+                if let Some(ret_type) = ret_type.ident_ret_id() {
+                    write!(f, ": {ret_type}", ret_type = ctx.identifier_ref(ret_type))?;
                 }
                 writeln!(f, " = {{")?;
                 ctx.level += 1;

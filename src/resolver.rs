@@ -18,8 +18,6 @@ use std::fmt::{Display, Formatter};
 
 pub struct Resolver {}
 
-type BoundParametersAndReturnType = (Vec<Parameter<Typed>>, Return<Bound>); // todo rename
-
 // todo add support for struct nested in function (examples/.inner_struct.tm)
 
 impl Resolver {
@@ -32,7 +30,7 @@ impl Resolver {
         identifiers: VecMap<IdentId, String>,
         identifier_refs: VecMap<IdentRefId, IdentifierRef<Unbound>>,
         expressions: VecMap<ExprId, Expression<Untyped>>,
-        statements: VecMap<StmtId, Statement<Untyped, Unbound>>,
+        statements: VecMap<StmtId, Statement<Untyped>>,
         root: Vec<StmtId>,
         natives: Natives,
     ) -> Result<Output, Diagnostics> {
@@ -800,11 +798,7 @@ impl Resolver {
         (ret_type, state)
     }
 
-    fn visit_statement(
-        &self,
-        mut state: State,
-        stmt: Statement<Untyped, Unbound>,
-    ) -> (TypeId, State) {
+    fn visit_statement(&self, mut state: State, stmt: Statement<Untyped>) -> (TypeId, State) {
         let stmt_id = stmt.id();
         let span = stmt.span().clone();
 
@@ -839,9 +833,9 @@ impl Resolver {
             }
             StatementKind::LetFn(ident, params, ret_type, expr) => {
                 let (ret, mut state) =
-                    self.visit_function(state, stmt_id, params, ret_type, expr, &span);
+                    self.visit_function(state, stmt_id, params, &ret_type, expr, &span);
 
-                if let Ok((parameters, ret_type)) = ret {
+                if let Ok(parameters) = ret {
                     state.resolution.statements.insert(
                         stmt_id,
                         Statement::new(
@@ -888,37 +882,24 @@ impl Resolver {
         mut state: State,
         stmt: StmtId,
         params: Vec<Parameter<Untyped>>,
-        ret_type: Return<Unbound>,
+        ret_type: &Return,
         expr: ExprId,
         span: &Span,
-    ) -> (Result<BoundParametersAndReturnType, ()>, State) {
+    ) -> (Result<Vec<Parameter<Typed>>, ()>, State) {
         state.push_scope();
 
-        // fixme we redo the same type computation as in insert_function, but here, we already know
-        //   the types.
-
-        let ret_type_id = match ret_type.take_identifier() {
-            Some(ident) => {
-                match state.find_type_id_by_identifier(ident.id()) {
+        let ret_type_id = match ret_type.ident_ret_id() {
+            Some(ident_ref_id) => {
+                let type_identifier = state.resolution.identifier_refs[ident_ref_id].ident();
+                match state.find_type_id_by_identifier(type_identifier.id()) {
                     None => {
                         // no need to report error here, it was already reported in insert_functions
-                        Err((
-                            state.find_type_id_by_type(&Type::Void),
-                            Return::<Unbound>::none(),
-                        ))
+                        Err(state.find_type_id_by_type(&Type::Void))
                     }
-                    Some(ret_type_id) => {
-                        let bound = state
-                            .find_symbol_id_by_ident_and_param_types(ident.id(), None)
-                            .map(Bound)
-                            .unwrap_or_else(|| {
-                                panic!("symbol for type_id '{}' exists", ret_type_id)
-                            });
-                        Ok((ret_type_id, Return::some(ident, bound)))
-                    }
+                    Some(ret_type_id) => Ok(ret_type_id),
                 }
             }
-            None => Ok((state.find_type_id_by_type(&Type::Void), Return::none())),
+            None => Ok(state.find_type_id_by_type(&Type::Void)),
         };
 
         let mut success = ret_type_id.is_ok();
@@ -966,7 +947,7 @@ impl Resolver {
         let (expr_type_id, mut state) = self.visit_expression(state, expr);
         success = expr_type_id != state.invalid_type_id && success;
 
-        if let Ok((ret_type_id, _)) = ret_type_id {
+        if let Ok(ret_type_id) = ret_type_id {
             // todo we remove it here and put it back later to avoid borrowing issues. can it be
             //   improved? - exit points dont change while we visit the tree => move it outside of
             //   state, maybe?
@@ -1025,16 +1006,11 @@ impl Resolver {
 
         state.pop_scope();
 
-        let ret = if success {
-            Ok((
-                parameters,
-                ret_type_id.expect("cannot be success if ret_type is err").1,
-            ))
+        if success {
+            (Ok(parameters), state)
         } else {
-            Err(())
-        };
-
-        (ret, state)
+            (Err(()), state)
+        }
     }
 
     fn visit_struct(
@@ -1079,7 +1055,7 @@ struct State {
     // in
     identifier_refs: VecMap<IdentRefId, IdentifierRef<Unbound>>,
     expressions: VecMap<ExprId, Expression<Untyped>>,
-    statements: VecMap<StmtId, Statement<Untyped, Unbound>>,
+    statements: VecMap<StmtId, Statement<Untyped>>,
 
     // work
     scope_stack: Vec<Scope>,
@@ -1158,13 +1134,19 @@ impl State {
                     // todo move that to caller side
                     self.diagnostics.report_err(
                         format!(
-                            "No variable '{}' found",
+                            "Identifier '{}' not found",
                             self.resolution.identifiers[ident_id]
                         ),
                         ident_ref.ident().span().clone(),
                         (file!(), line!()),
                     );
                 }
+
+                // still, resolve it to an unknown symbol
+                self.resolution
+                    .identifier_refs
+                    .insert(ident_ref.id(), ident_ref.resolved(self.not_found_symbol_id));
+
                 None
             }
         }
@@ -1197,24 +1179,30 @@ impl State {
     }
 
     fn insert_functions(&mut self, stmts: &[StmtId]) {
-        // first, we resolve all the identifier refs for parameter types and return type
+        // first, we resolve all the identifier refs for parameter types and return type ...
         let ident_ref_ids = stmts
             .iter()
-            .filter_map(|stmt_id| {
-                match self.statements[*stmt_id].kind() {
-                    StatementKind::LetFn(_, params, ..) => {
-                        // todo use ret and resolve the ident_ref_id as well
-                        Some(params.iter().map(|p| p.ty()).collect::<Vec<IdentRefId>>())
+            .filter_map(|stmt_id| match self.statements[*stmt_id].kind() {
+                StatementKind::LetFn(_, params, ret, ..) => {
+                    let mut ident_ref_ids =
+                        params.iter().map(|p| p.ty()).collect::<Vec<IdentRefId>>();
+
+                    if let Some(ident_ref_id) = ret.ident_ret_id() {
+                        ident_ref_ids.push(ident_ref_id);
                     }
-                    _ => None,
+
+                    Some(ident_ref_ids)
                 }
+                _ => None,
             })
             .flatten()
             .collect::<Vec<IdentRefId>>();
+
         for ident_ref_id in ident_ref_ids.into_iter() {
             self.resolve_ident_ref(ident_ref_id, None);
         }
 
+        // ... then, we proceed with the function
         let functions = stmts
             .iter()
             .filter_map(|stmt_id| {
@@ -1256,24 +1244,21 @@ impl State {
                             .collect::<Vec<TypeId>>();
 
                         let ret_type_id = ret_type
-                            .identifier()
-                            .map(|ident| match self.find_type_id_by_identifier(ident.id()) {
-                                None => Err(Diagnostic::error(
-                                    format!(
-                                        "'{}' is not a known type",
-                                        self.resolution.identifiers[ident.id()]
-                                    ),
-                                    ident.span().clone(),
-                                    (file!(), line!()),
-                                )),
-                                Some(t) => Ok(t),
+                            .ident_ret_id()
+                            .map(|ident_ref_id| {
+                                let identifier =
+                                    self.resolution.identifier_refs[ident_ref_id].ident();
+                                match self.find_type_id_by_identifier(identifier.id()) {
+                                    None => Err(()),
+                                    Some(t) => Ok(t),
+                                }
                             })
                             .unwrap_or(Ok(self.void_type_id));
 
                         let ret_type_id = match ret_type_id {
                             Ok(t) => t,
-                            Err(d) => {
-                                self.diagnostics.push(d);
+                            Err(_) => {
+                                // self.diagnostics.push(d);
                                 self.invalid_type_id
                             }
                         };
@@ -1461,7 +1446,7 @@ pub struct Resolution {
     pub symbols: VecMap<SymbolId, Symbol>,
     pub types: BiHashMap<Type, TypeId>,
     pub expressions: VecMap<ExprId, Expression<Typed>>,
-    pub statements: VecMap<StmtId, Statement<Typed, Bound>>,
+    pub statements: VecMap<StmtId, Statement<Typed>>,
     pub root: Vec<StmtId>,
     pub exit_points: HashMap<ExprId, Vec<ExitPoint>>,
     pub unreachable: Vec<ExprId>,
@@ -1473,7 +1458,7 @@ pub struct Output {
     pub symbols: VecMap<SymbolId, Symbol>,
     pub types: VecMap<TypeId, Type>,
     pub expressions: VecMap<ExprId, Expression<Typed>>,
-    pub statements: VecMap<StmtId, Statement<Typed, Bound>>,
+    pub statements: VecMap<StmtId, Statement<Typed>>,
     pub root: Vec<StmtId>,
     pub exit_points: HashMap<ExprId, Vec<ExitPoint>>,
     pub unreachable: Vec<ExprId>,
@@ -1702,7 +1687,7 @@ mod tests {
             .collect::<Vec<(&str, Span, Level)>>();
 
         let expected_diagnostics = vec![(
-            "No variable 'n' found",
+            "Identifier 'n' not found",
             Span::new(1, 13, 12, 1),
             Level::Error,
         )];
@@ -1980,7 +1965,7 @@ mod tests {
     test_type_error!(
         struct_unknown,
         "let s = S {};",
-        "No variable 'S' found",
+        "Identifier 'S' not found",
         Span::new(1, 9, 8, 1)
     );
     test_type_error!(
@@ -2022,7 +2007,7 @@ mod tests {
     test_type_error!(
         function_invalid_return_type,
         "let f(): unknown = { }",
-        "'unknown' is not a known type",
+        "Identifier 'unknown' not found",
         Span::new(1, 10, 9, 7)
     );
     test_type_error!(

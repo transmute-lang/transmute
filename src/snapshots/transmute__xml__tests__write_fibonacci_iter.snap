@@ -49,7 +49,7 @@ expression: "&xml"
                           <parameters>
                             <parameter>
                               <expr id="expr:0" line="3" column="20" start="61" len="1">
-                                <identifier-ref id="ident-ref:1" ident-ref="ident:1" target-id="stmt:14:0" type-ref="">n</identifier-ref>
+                                <identifier-ref id="ident-ref:2" ident-ref="ident:1" target-id="stmt:14:0" type-ref="">n</identifier-ref>
                               </expr>
                             </parameter>
                             <parameter>
@@ -86,7 +86,7 @@ expression: "&xml"
                           <parameters>
                             <parameter>
                               <expr id="expr:6" line="4" column="20" start="98" len="1">
-                                <identifier-ref id="ident-ref:2" ident-ref="ident:1" target-id="stmt:14:0" type-ref="">n</identifier-ref>
+                                <identifier-ref id="ident-ref:3" ident-ref="ident:1" target-id="stmt:14:0" type-ref="">n</identifier-ref>
                               </expr>
                             </parameter>
                             <parameter>
@@ -149,7 +149,7 @@ expression: "&xml"
                   <identifier ref="ident:6" line="10" column="21" start="236" len="1">m</identifier>
                   <expression line="10" column="25" start="240" len="1">
                     <expr id="expr:15" line="10" column="25" start="240" len="1">
-                      <identifier-ref id="ident-ref:3" ident-ref="ident:1" target-id="stmt:14:0" type-ref="">n</identifier-ref>
+                      <identifier-ref id="ident-ref:4" ident-ref="ident:1" target-id="stmt:14:0" type-ref="">n</identifier-ref>
                     </expr>
                   </expression>
                 </let>
@@ -163,7 +163,7 @@ expression: "&xml"
                           <parameters>
                             <parameter>
                               <expr id="expr:16" line="11" column="23" start="265" len="1">
-                                <identifier-ref id="ident-ref:4" ident-ref="ident:6" target-id="stmt:7" type-ref="">m</identifier-ref>
+                                <identifier-ref id="ident-ref:5" ident-ref="ident:6" target-id="stmt:7" type-ref="">m</identifier-ref>
                               </expr>
                             </parameter>
                             <parameter>
@@ -188,12 +188,12 @@ expression: "&xml"
                                       <parameters>
                                         <parameter>
                                           <expr id="expr:19" line="12" column="31" start="303" len="9">
-                                            <identifier-ref id="ident-ref:6" ident-ref="ident:3" target-id="stmt:4" type-ref="">prev_prev</identifier-ref>
+                                            <identifier-ref id="ident-ref:7" ident-ref="ident:3" target-id="stmt:4" type-ref="">prev_prev</identifier-ref>
                                           </expr>
                                         </parameter>
                                         <parameter>
                                           <expr id="expr:20" line="12" column="43" start="315" len="4">
-                                            <identifier-ref id="ident-ref:7" ident-ref="ident:4" target-id="stmt:5" type-ref="">prev</identifier-ref>
+                                            <identifier-ref id="ident-ref:8" ident-ref="ident:4" target-id="stmt:5" type-ref="">prev</identifier-ref>
                                           </expr>
                                         </parameter>
                                       </parameters>
@@ -209,7 +209,7 @@ expression: "&xml"
                                 <identifier>prev_prev</identifier>
                                 <expression>
                                   <expr id="expr:23" line="13" column="33" start="353" len="4">
-                                    <identifier-ref id="ident-ref:9" ident-ref="ident:4" target-id="stmt:5" type-ref="">prev</identifier-ref>
+                                    <identifier-ref id="ident-ref:10" ident-ref="ident:4" target-id="stmt:5" type-ref="">prev</identifier-ref>
                                   </expr>
                                 </expression>
                               </assign>
@@ -221,7 +221,7 @@ expression: "&xml"
                                 <identifier>prev</identifier>
                                 <expression>
                                   <expr id="expr:25" line="14" column="28" start="386" len="7">
-                                    <identifier-ref id="ident-ref:11" ident-ref="ident:5" target-id="stmt:6" type-ref="">current</identifier-ref>
+                                    <identifier-ref id="ident-ref:12" ident-ref="ident:5" target-id="stmt:6" type-ref="">current</identifier-ref>
                                   </expr>
                                 </expression>
                               </assign>
@@ -237,7 +237,7 @@ expression: "&xml"
                                       <parameters>
                                         <parameter>
                                           <expr id="expr:27" line="15" column="25" start="419" len="1">
-                                            <identifier-ref id="ident-ref:13" ident-ref="ident:6" target-id="stmt:7" type-ref="">m</identifier-ref>
+                                            <identifier-ref id="ident-ref:14" ident-ref="ident:6" target-id="stmt:7" type-ref="">m</identifier-ref>
                                           </expr>
                                         </parameter>
                                         <parameter>
@@ -261,7 +261,7 @@ expression: "&xml"
               <stmt id="stmt:13" line="18" column="17" start="461" len="8">
                 <ret mode="implicit" line="18" column="17" start="461" len="8">
                   <expr id="expr:33" line="18" column="17" start="461" len="7">
-                    <identifier-ref id="ident-ref:14" ident-ref="ident:5" target-id="stmt:6" type-ref="">current</identifier-ref>
+                    <identifier-ref id="ident-ref:15" ident-ref="ident:5" target-id="stmt:6" type-ref="">current</identifier-ref>
                   </expr>
                 </ret>
               </stmt>

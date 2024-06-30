@@ -1,26 +1,23 @@
 use crate::ast::expression::{Typed, TypedState, Untyped};
 use crate::ast::identifier::Identifier;
-use crate::ast::identifier_ref::{BoundState, Unbound};
 use crate::ast::ids::{ExprId, IdentRefId, StmtId, TypeId};
 use crate::lexer::Span;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Statement<T, B>
+pub struct Statement<T>
 where
     T: TypedState,
-    B: BoundState,
 {
     id: StmtId,
-    kind: StatementKind<T, B>,
+    kind: StatementKind<T>,
     span: Span,
 }
 
-impl<T, B> Statement<T, B>
+impl<T> Statement<T>
 where
     T: TypedState,
-    B: BoundState,
 {
-    pub fn new(id: StmtId, kind: StatementKind<T, B>, span: Span) -> Self {
+    pub fn new(id: StmtId, kind: StatementKind<T>, span: Span) -> Self {
         Self { id, kind, span }
     }
 
@@ -28,11 +25,11 @@ where
         self.id
     }
 
-    pub fn kind(&self) -> &StatementKind<T, B> {
+    pub fn kind(&self) -> &StatementKind<T> {
         &self.kind
     }
 
-    pub fn take_kind(self) -> StatementKind<T, B> {
+    pub fn take_kind(self) -> StatementKind<T> {
         self.kind
     }
 
@@ -42,15 +39,14 @@ where
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum StatementKind<T, B>
+pub enum StatementKind<T>
 where
     T: TypedState,
-    B: BoundState,
 {
     Expression(ExprId),
     Let(Identifier, ExprId),
     Ret(ExprId, RetMode),
-    LetFn(Identifier, Vec<Parameter<T>>, Return<B>, ExprId),
+    LetFn(Identifier, Vec<Parameter<T>>, Return, ExprId),
     Struct(Identifier, Vec<Field<T>>),
 }
 
@@ -119,48 +115,23 @@ impl Parameter<Untyped> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Return<B>
-where
-    B: BoundState,
-{
-    // todo should be an IdentifierRef<B>, and the second element a <T>
-    ret: Option<(Identifier, B)>,
+pub struct Return {
+    ret: Option<IdentRefId>,
 }
 
-impl<B> Return<B>
-where
-    B: BoundState,
-{
+impl Return {
     pub fn none() -> Self {
         Self { ret: None }
     }
 
-    pub fn some(identifier: Identifier, state: B) -> Self {
+    pub fn some(ident_ref_id: IdentRefId) -> Self {
         Self {
-            ret: Some((identifier, state)),
+            ret: Some(ident_ref_id),
         }
     }
 
-    pub fn map_identifier<F>(self, f: F) -> Self
-    where
-        F: FnOnce(Identifier) -> Identifier,
-    {
-        match self.ret {
-            None => self,
-            Some((ident, bound)) => Self {
-                ret: Some((f(ident), bound)),
-            },
-        }
-    }
-
-    pub fn identifier(&self) -> Option<&Identifier> {
-        self.ret.as_ref().map(|(ident, _)| ident)
-    }
-}
-
-impl Return<Unbound> {
-    pub fn take_identifier(self) -> Option<Identifier> {
-        self.ret.map(|(ident, _)| ident)
+    pub fn ident_ret_id(&self) -> Option<IdentRefId> {
+        self.ret
     }
 }
 

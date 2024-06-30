@@ -1,5 +1,6 @@
 use crate::ast::identifier::Identifier;
 use crate::ast::ids::{IdentId, IdentRefId, SymbolId};
+use crate::lexer::Span;
 
 /// Represents an identifier when used as a reference
 #[derive(Debug, Clone, PartialEq)]
@@ -29,6 +30,10 @@ where
 
     pub fn ident_id(&self) -> IdentId {
         self.ident.id()
+    }
+
+    pub fn span(&self) -> &Span {
+        self.ident.span()
     }
 }
 

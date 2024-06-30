@@ -1,16 +1,14 @@
 use crate::ast::expression::{Expression, ExpressionKind, TypedState};
-use crate::ast::identifier_ref::BoundState;
 use crate::ast::ids::{ExprId, StmtId};
 use crate::ast::statement::{RetMode, Statement, StatementKind};
 use crate::vec_map::VecMap;
 
-pub struct ExitPoints<'a, T, B>
+pub struct ExitPoints<'a, T>
 where
     T: TypedState,
-    B: BoundState,
 {
     expressions: &'a VecMap<ExprId, Expression<T>>,
-    statements: &'a VecMap<StmtId, Statement<T, B>>,
+    statements: &'a VecMap<StmtId, Statement<T>>,
 }
 
 #[derive(Default)]
@@ -74,14 +72,13 @@ pub struct Output {
     pub unreachable: Vec<ExprId>,
 }
 
-impl<'a, T, B> ExitPoints<'a, T, B>
+impl<'a, T> ExitPoints<'a, T>
 where
     T: TypedState,
-    B: BoundState,
 {
     pub fn new(
         expressions: &'a VecMap<ExprId, Expression<T>>,
-        statements: &'a VecMap<StmtId, Statement<T, B>>,
+        statements: &'a VecMap<StmtId, Statement<T>>,
     ) -> Self {
         Self {
             expressions,
