@@ -5,7 +5,7 @@ use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use crate::ast::literal::LiteralKind;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::statement::{Field, Parameter, Return, Statement, StatementKind};
-use crate::error::{Diagnostic, Diagnostics};
+use crate::error::Diagnostics;
 use crate::exit_points;
 use crate::exit_points::{ExitPoint, ExitPoints};
 use crate::interpreter::Value;
@@ -78,6 +78,8 @@ impl Resolver {
             expressions,
             statements,
             scope_stack: vec![Scope::new()],
+            function_symbols: Default::default(),
+            struct_symbols: Default::default(),
             diagnostics: Default::default(),
             resolution: Resolution {
                 identifiers: VecMap::from_iter(identifiers.into_iter().map(|(a, b)| (b, a))),
@@ -513,31 +515,37 @@ impl Resolver {
 
         let ident_id = state.find_ident_id_by_str(op.kind().function_name());
         let param_types = [left_type, right_type];
-        let symbol =
-            match state.find_symbol_id_by_ident_and_param_types(ident_id, Some(&param_types)) {
-                None => {
+        let symbol = match state
+            .find_symbol_id_by_ident_and_param_types(ident_id, Some(&param_types))
+        {
+            None => {
+                let left_type = state
+                    .resolution
+                    .types
+                    .get_by_right(&param_types[0])
+                    .unwrap();
+
+                let right_type = state
+                    .resolution
+                    .types
+                    .get_by_right(&param_types[1])
+                    .unwrap();
+
+                if left_type != &Type::Invalid && right_type != &Type::Invalid {
                     state.diagnostics.report_err(
-                        format!(
-                            "No function '{}' found for parameters of types ({}, {})",
-                            state.resolution.identifiers[ident_id],
-                            state
-                                .resolution
-                                .types
-                                .get_by_right(&param_types[0])
-                                .unwrap(),
-                            state
-                                .resolution
-                                .types
-                                .get_by_right(&param_types[1])
-                                .unwrap(),
-                        ),
-                        op.span().clone(),
-                        (file!(), line!()),
-                    );
-                    state.not_found_symbol_id
+                            format!(
+                                "No function '{name}' found for parameters of types ({left_type}, {right_type})",
+                                name = state.resolution.identifiers[ident_id],
+                            ),
+                            op.span().clone(),
+                            (file!(), line!()),
+                        );
                 }
-                Some(s) => s,
-            };
+
+                state.not_found_symbol_id
+            }
+            Some(s) => s,
+        };
 
         let ident_ref_id =
             state.create_identifier_ref(Identifier::new(ident_id, op.span().clone()).bind(symbol));
@@ -572,15 +580,18 @@ impl Resolver {
         let symbol =
             match state.find_symbol_id_by_ident_and_param_types(ident_id, Some(&[operand_type])) {
                 None => {
-                    state.diagnostics.report_err(
-                        format!(
-                            "No function '{}' found for parameters of types ({})",
-                            state.resolution.identifiers[ident_id],
-                            state.resolution.types.get_by_right(&operand_type).unwrap(),
-                        ),
-                        op.span().clone(),
-                        (file!(), line!()),
-                    );
+                    let ty = state.resolution.types.get_by_right(&operand_type).unwrap();
+
+                    if ty != &Type::Invalid {
+                        state.diagnostics.report_err(
+                            format!(
+                                "No function '{name}' found for parameters of types ({ty})",
+                                name = state.resolution.identifiers[ident_id],
+                            ),
+                            op.span().clone(),
+                            (file!(), line!()),
+                        );
+                    }
                     state.not_found_symbol_id
                 }
                 Some(d) => d,
@@ -898,62 +909,48 @@ impl Resolver {
     fn visit_function(
         &self,
         mut state: State,
-        stmt: StmtId,
+        stmt_id: StmtId,
         (ident, params, ret_type): Function<Untyped, Unbound>,
         expr: ExprId,
         span: &Span,
     ) -> (Result<Function<Typed, Bound>, ()>, State) {
         state.push_scope();
 
-        let ret_type_id = match ret_type.ident_ret_id() {
-            Some(ident_ref_id) => {
-                let type_identifier = state.resolution.identifier_refs[ident_ref_id].ident();
-                match state.find_type_id_by_identifier(type_identifier.id()) {
-                    None => {
-                        // no need to report error here, it was already reported in insert_functions
-                        Err(state.find_type_id_by_type(&Type::Void))
-                    }
-                    Some(ret_type_id) => Ok(ret_type_id),
-                }
-            }
-            None => Ok(state.find_type_id_by_type(&Type::Void)),
-        };
+        // fixme manage duplicate functions (for whatever it means ... - at least same name same
+        //   first parameter type)
 
-        let mut success = ret_type_id.is_ok();
+        let symbol_id = *state
+            .function_symbols
+            .get(&stmt_id)
+            .expect("function was inserted");
+        let (param_types, ret_type_id) = state.resolution.symbols[symbol_id].as_function();
+        let param_types = param_types.clone();
+
+        let mut success = ret_type_id != state.invalid_type_id;
 
         let params_len = params.len();
         let parameters = params
             .into_iter()
+            .zip(param_types)
             .enumerate()
-            .filter_map(|(index, parameter)| {
-                let type_identifier = state.resolution.identifier_refs[parameter.ty()].ident();
+            .filter_map(|(index, (parameter, type_id))| {
+                let ident_id = parameter.identifier().id();
+                let symbol_kind = SymbolKind::Parameter(stmt_id, index);
 
-                match state.find_type_id_by_identifier(type_identifier.id()) {
-                    None => {
-                        // diagnostic already produced in resolve_type_id_by_identifier
-                        // todo we might rather use the illegal type
-                        None
-                    }
-                    Some(type_id) => {
-                        let ident_id = parameter.identifier().id();
-                        let symbol_kind = SymbolKind::Parameter(stmt, index);
+                if state.symbol_exists(ident_id, &symbol_kind) {
+                    state.diagnostics.report_err(
+                        format!(
+                            "Parameter '{ident}' is already defined",
+                            ident = state.resolution.identifiers[ident_id],
+                        ),
+                        parameter.identifier().span().clone(),
+                        (file!(), line!()),
+                    );
+                    None
+                } else {
+                    let symbol_id = state.insert_symbol(ident_id, symbol_kind, type_id);
 
-                        if state.symbol_exists(ident_id, &symbol_kind) {
-                            state.diagnostics.report_err(
-                                format!(
-                                    "Parameter '{ident}' is already defined",
-                                    ident = state.resolution.identifiers[ident_id],
-                                ),
-                                parameter.identifier().span().clone(),
-                                (file!(), line!()),
-                            );
-                            None
-                        } else {
-                            let symbol_id = state.insert_symbol(ident_id, symbol_kind, type_id);
-
-                            Some(parameter.bind(type_id, symbol_id))
-                        }
-                    }
+                    Some(parameter.bind(type_id, symbol_id))
                 }
             })
             .collect::<Vec<Parameter<Typed, Bound>>>();
@@ -964,7 +961,7 @@ impl Resolver {
         let (expr_type_id, mut state) = self.visit_expression(state, expr);
         success = expr_type_id != state.invalid_type_id && success;
 
-        if let Ok(ret_type_id) = ret_type_id {
+        if ret_type_id != state.invalid_type_id {
             // todo we remove it here and put it back later to avoid borrowing issues. can it be
             //   improved? - exit points dont change while we visit the tree => move it outside of
             //   state, maybe?
@@ -1037,7 +1034,7 @@ impl Resolver {
                     Ok((
                         ident.bind(symbol_id),
                         parameters,
-                        ret_type.typed(ret_type_id.expect("cannot be here with Err")),
+                        ret_type.typed(ret_type_id),
                     )),
                     state,
                 );
@@ -1050,7 +1047,7 @@ impl Resolver {
     fn visit_struct(
         &self,
         mut state: State,
-        stmt: StmtId,
+        stmt_id: StmtId,
         identifier: Identifier<Unbound>,
         fields: Vec<Field<Untyped, Unbound>>,
     ) -> (Identifier<Bound>, Vec<Field<Typed, Bound>>, State) {
@@ -1072,7 +1069,7 @@ impl Resolver {
             .enumerate()
             .map(|(index, field)| {
                 let ident_id = field.identifier().id();
-                let symbol_kind = SymbolKind::Field(stmt, index);
+                let symbol_kind = SymbolKind::Field(stmt_id, index);
 
                 if state.symbol_exists(ident_id, &symbol_kind) {
                     state.diagnostics.report_err(
@@ -1091,11 +1088,12 @@ impl Resolver {
             })
             .collect::<Vec<Field<Typed, Bound>>>();
 
-        let symbol_id = state
-            .find_symbol_id_by_ident_and_param_types(identifier.id(), None)
+        let symbol_id = state.struct_symbols.get(&stmt_id)
+            .cloned()
             // todo same handling as for visit_function: if not found, return Err()
             //   or, return not_found_symbol_id in visit_function. This requires that the find_*()
             //   and resolve_*() function are reworked...
+            // it may happen that the struct is not found in case of duplicate def.
             .unwrap_or(state.not_found_symbol_id);
 
         (identifier.bind(symbol_id), fields, state)
@@ -1110,6 +1108,10 @@ struct State {
 
     // work
     scope_stack: Vec<Scope>,
+    /// maps functions (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
+    function_symbols: HashMap<StmtId, SymbolId>,
+    /// maps structs (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
+    struct_symbols: HashMap<StmtId, SymbolId>,
 
     // out
     diagnostics: Diagnostics,
@@ -1270,27 +1272,7 @@ impl State {
                                 let identifier = self.resolution.identifier_refs[p.ty()].ident();
 
                                 self.find_type_id_by_identifier(identifier.id())
-                                    .ok_or_else(|| {
-                                        Diagnostic::error(
-                                            format!(
-                                                "'{}' is not a known type",
-                                                self.resolution.identifiers[identifier.id()]
-                                            ),
-                                            identifier.span().clone(),
-                                            (file!(), line!()),
-                                        )
-                                    })
-                            })
-                            .collect::<Vec<Result<TypeId, Diagnostic>>>();
-
-                        let parameter_types = parameter_types
-                            .into_iter()
-                            .map(|e| match e {
-                                Ok(t) => t,
-                                Err(d) => {
-                                    self.diagnostics.push(d);
-                                    self.invalid_type_id
-                                }
+                                    .unwrap_or(self.invalid_type_id)
                             })
                             .collect::<Vec<TypeId>>();
 
@@ -1299,20 +1281,11 @@ impl State {
                             .map(|ident_ref_id| {
                                 let identifier =
                                     self.resolution.identifier_refs[ident_ref_id].ident();
-                                match self.find_type_id_by_identifier(identifier.id()) {
-                                    None => Err(()),
-                                    Some(t) => Ok(t),
-                                }
-                            })
-                            .unwrap_or(Ok(self.void_type_id));
 
-                        let ret_type_id = match ret_type_id {
-                            Ok(t) => t,
-                            Err(_) => {
-                                // self.diagnostics.push(d);
-                                self.invalid_type_id
-                            }
-                        };
+                                self.find_type_id_by_identifier(identifier.id())
+                                    .unwrap_or(self.invalid_type_id)
+                            })
+                            .unwrap_or(self.void_type_id);
 
                         Some((
                             ident.clone(),
@@ -1340,11 +1313,14 @@ impl State {
         {
             let fn_type_id = self.insert_type(Type::Function(parameter_types.clone(), ret_type));
 
-            self.insert_symbol(
+            let symbol_id = self.insert_symbol(
                 ident.id(),
                 SymbolKind::LetFn(stmt_id, parameter_types, ret_type),
                 fn_type_id,
             );
+
+            self.function_symbols.insert(stmt_id, symbol_id);
+
             self.resolution
                 .exit_points
                 .insert(expr_id, exit_points.exit_points);
@@ -1383,7 +1359,8 @@ impl State {
             } else {
                 // todo this is not really the struct type ... weird
                 let struct_type_id = self.insert_type(Type::Struct(stmt_id));
-                self.insert_symbol(ident_id, symbol_kind, struct_type_id);
+                let symbol_id = self.insert_symbol(ident_id, symbol_kind, struct_type_id);
+                self.struct_symbols.insert(stmt_id, symbol_id);
             }
         }
 
@@ -1605,6 +1582,13 @@ impl Symbol {
 
     pub fn ty(&self) -> TypeId {
         self.ty
+    }
+
+    fn as_function(&self) -> (&Vec<TypeId>, TypeId) {
+        match &self.kind {
+            SymbolKind::LetFn(_, params, ret_type_id) => (params, *ret_type_id),
+            _ => panic!("{:?} is not a function", self),
+        }
     }
 }
 
@@ -2139,13 +2123,12 @@ mod tests {
         "Expected type boolean, got number",
         Span::new(1, 31, 30, 1)
     );
-    // todo uncomment
-    // test_type_error!(
-    //     function_parameter_invalid_type,
-    //     "let f(n: unknown) = { let a = n + true; }",
-    //     "'unknown' in not a known type",
-    //     Span::new(1, 32, 31, 1)
-    // );
+    test_type_error!(
+        function_parameter_invalid_type,
+        "let f(n: unknown) = { let a = n + true; }",
+        "Identifier 'unknown' not found",
+        Span::new(1, 10, 9, 7)
+    );
     test_type_error!(
         function_parameter_incorrect_type,
         "let f(n: number) = { let a = n + true; }",
