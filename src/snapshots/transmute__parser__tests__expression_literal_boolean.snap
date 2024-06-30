@@ -8,14 +8,10 @@ Ok(
         identifier_refs: [],
         expressions: [
             Expression {
-                id: ExprId {
-                    id: 0,
-                },
+                id: ExprId(0),
                 kind: Literal(
                     Literal {
-                        kind: Boolean(
-                            true,
-                        ),
+                        kind: Boolean(true),
                         span: 1:1; [0, 4],
                     },
                 ),
@@ -25,21 +21,15 @@ Ok(
         ],
         statements: [
             Statement {
-                id: StmtId {
-                    id: 0,
-                },
+                id: StmtId(0),
                 kind: Expression(
-                    ExprId {
-                        id: 0,
-                    },
+                    ExprId(0),
                 ),
                 span: 1:1; [0, 5],
             },
         ],
         root: [
-            StmtId {
-                id: 0,
-            },
+            StmtId(0),
         ],
         symbols: [],
         types: [],

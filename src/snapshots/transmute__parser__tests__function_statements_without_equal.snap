@@ -11,25 +11,17 @@ Ok(
         ],
         identifier_refs: [
             IdentifierRef {
-                id: IdentRefId {
-                    id: 0,
-                },
+                id: IdentRefId(0),
                 ident: Identifier {
-                    id: IdentId {
-                        id: 2,
-                    },
+                    id: IdentId(2),
                     span: 1:18; [17, 23],
                 },
                 bound_state: Unbound,
             },
             IdentifierRef {
-                id: IdentRefId {
-                    id: 1,
-                },
+                id: IdentRefId(1),
                 ident: Identifier {
-                    id: IdentId {
-                        id: 1,
-                    },
+                    id: IdentId(1),
                     span: 1:28; [27, 28],
                 },
                 bound_state: Unbound,
@@ -37,16 +29,10 @@ Ok(
         ],
         expressions: [
             Expression {
-                id: ExprId {
-                    id: 0,
-                },
+                id: ExprId(0),
                 kind: Literal(
                     Literal {
-                        kind: Identifier(
-                            IdentRefId {
-                                id: 1,
-                            },
-                        ),
+                        kind: IdentRefId(1),
                         span: 1:28; [27, 28],
                     },
                 ),
@@ -54,14 +40,10 @@ Ok(
                 typed_state: Untyped,
             },
             Expression {
-                id: ExprId {
-                    id: 1,
-                },
+                id: ExprId(1),
                 kind: Literal(
                     Literal {
-                        kind: Number(
-                            2,
-                        ),
+                        kind: Number(2),
                         span: 1:32; [31, 32],
                     },
                 ),
@@ -69,33 +51,23 @@ Ok(
                 typed_state: Untyped,
             },
             Expression {
-                id: ExprId {
-                    id: 2,
-                },
+                id: ExprId(2),
                 kind: Binary(
-                    ExprId {
-                        id: 0,
-                    },
+                    ExprId(0),
                     BinaryOperator {
                         kind: Multiplication,
                         span: 1:30; [29, 30],
                     },
-                    ExprId {
-                        id: 1,
-                    },
+                    ExprId(1),
                 ),
                 span: 1:28; [27, 32],
                 typed_state: Untyped,
             },
             Expression {
-                id: ExprId {
-                    id: 3,
-                },
+                id: ExprId(3),
                 kind: Block(
                     [
-                        StmtId {
-                            id: 0,
-                        },
+                        StmtId(0),
                     ],
                 ),
                 span: 1:26; [25, 35],
@@ -104,38 +76,26 @@ Ok(
         ],
         statements: [
             Statement {
-                id: StmtId {
-                    id: 0,
-                },
+                id: StmtId(0),
                 kind: Expression(
-                    ExprId {
-                        id: 2,
-                    },
+                    ExprId(2),
                 ),
                 span: 1:28; [27, 33],
             },
             Statement {
-                id: StmtId {
-                    id: 1,
-                },
+                id: StmtId(1),
                 kind: LetFn(
                     Identifier {
-                        id: IdentId {
-                            id: 0,
-                        },
+                        id: IdentId(0),
                         span: 1:5; [4, 13],
                     },
                     [
                         Parameter {
                             identifier: Identifier {
-                                id: IdentId {
-                                    id: 1,
-                                },
+                                id: IdentId(1),
                                 span: 1:15; [14, 15],
                             },
-                            ty: IdentRefId {
-                                id: 0,
-                            },
+                            ty: IdentRefId(0),
                             span: 1:15; [14, 23],
                             typed_state: Untyped,
                         },
@@ -143,17 +103,13 @@ Ok(
                     Return {
                         ret: None,
                     },
-                    ExprId {
-                        id: 3,
-                    },
+                    ExprId(3),
                 ),
                 span: 1:1; [0, 35],
             },
         ],
         root: [
-            StmtId {
-                id: 1,
-            },
+            StmtId(1),
         ],
         symbols: [],
         types: [],

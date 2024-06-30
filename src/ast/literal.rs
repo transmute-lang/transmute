@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Formatter};
 use crate::ast::ids::IdentRefId;
 use crate::lexer::Span;
 
@@ -21,9 +22,19 @@ impl Literal {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum LiteralKind {
     Boolean(bool),
     Identifier(IdentRefId),
     Number(i64),
+}
+
+impl Debug for LiteralKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LiteralKind::Boolean(v) => write!(f, "Boolean({v})"),
+            LiteralKind::Identifier(v) => write!(f, "IdentRefId({v})"),
+            LiteralKind::Number(v) => write!(f, "Number({v})"),
+        }
+    }
 }

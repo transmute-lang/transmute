@@ -8,14 +8,10 @@ Ok(
         identifier_refs: [],
         expressions: [
             Expression {
-                id: ExprId {
-                    id: 0,
-                },
+                id: ExprId(0),
                 kind: Literal(
                     Literal {
-                        kind: Boolean(
-                            true,
-                        ),
+                        kind: Boolean(true),
                         span: 1:4; [3, 7],
                     },
                 ),
@@ -23,14 +19,10 @@ Ok(
                 typed_state: Untyped,
             },
             Expression {
-                id: ExprId {
-                    id: 1,
-                },
+                id: ExprId(1),
                 kind: Literal(
                     Literal {
-                        kind: Number(
-                            42,
-                        ),
+                        kind: Number(42),
                         span: 1:11; [10, 12],
                     },
                 ),
@@ -38,28 +30,20 @@ Ok(
                 typed_state: Untyped,
             },
             Expression {
-                id: ExprId {
-                    id: 2,
-                },
+                id: ExprId(2),
                 kind: Block(
                     [
-                        StmtId {
-                            id: 0,
-                        },
+                        StmtId(0),
                     ],
                 ),
                 span: 1:9; [8, 15],
                 typed_state: Untyped,
             },
             Expression {
-                id: ExprId {
-                    id: 3,
-                },
+                id: ExprId(3),
                 kind: Literal(
                     Literal {
-                        kind: Number(
-                            43,
-                        ),
+                        kind: Number(43),
                         span: 1:24; [23, 25],
                     },
                 ),
@@ -67,34 +51,22 @@ Ok(
                 typed_state: Untyped,
             },
             Expression {
-                id: ExprId {
-                    id: 4,
-                },
+                id: ExprId(4),
                 kind: Block(
                     [
-                        StmtId {
-                            id: 1,
-                        },
+                        StmtId(1),
                     ],
                 ),
                 span: 1:22; [21, 28],
                 typed_state: Untyped,
             },
             Expression {
-                id: ExprId {
-                    id: 5,
-                },
+                id: ExprId(5),
                 kind: If(
-                    ExprId {
-                        id: 0,
-                    },
-                    ExprId {
-                        id: 2,
-                    },
+                    ExprId(0),
+                    ExprId(2),
                     Some(
-                        ExprId {
-                            id: 4,
-                        },
+                        ExprId(4),
                     ),
                 ),
                 span: 1:1; [0, 28],
@@ -103,43 +75,29 @@ Ok(
         ],
         statements: [
             Statement {
-                id: StmtId {
-                    id: 0,
-                },
+                id: StmtId(0),
                 kind: Expression(
-                    ExprId {
-                        id: 1,
-                    },
+                    ExprId(1),
                 ),
                 span: 1:11; [10, 13],
             },
             Statement {
-                id: StmtId {
-                    id: 1,
-                },
+                id: StmtId(1),
                 kind: Expression(
-                    ExprId {
-                        id: 3,
-                    },
+                    ExprId(3),
                 ),
                 span: 1:24; [23, 26],
             },
             Statement {
-                id: StmtId {
-                    id: 2,
-                },
+                id: StmtId(2),
                 kind: Expression(
-                    ExprId {
-                        id: 5,
-                    },
+                    ExprId(5),
                 ),
                 span: 1:1; [0, 28],
             },
         ],
         root: [
-            StmtId {
-                id: 2,
-            },
+            StmtId(2),
         ],
         symbols: [],
         types: [],

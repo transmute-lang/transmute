@@ -11,13 +11,9 @@ Ok(
         ],
         identifier_refs: [
             IdentifierRef {
-                id: IdentRefId {
-                    id: 0,
-                },
+                id: IdentRefId(0),
                 ident: Identifier {
-                    id: IdentId {
-                        id: 2,
-                    },
+                    id: IdentId(2),
                     span: 1:15; [14, 20],
                 },
                 bound_state: Unbound,
@@ -26,27 +22,19 @@ Ok(
         expressions: [],
         statements: [
             Statement {
-                id: StmtId {
-                    id: 0,
-                },
+                id: StmtId(0),
                 kind: Struct(
                     Identifier {
-                        id: IdentId {
-                            id: 0,
-                        },
+                        id: IdentId(0),
                         span: 1:8; [7, 8],
                     },
                     [
                         Field {
                             identifier: Identifier {
-                                id: IdentId {
-                                    id: 1,
-                                },
+                                id: IdentId(1),
                                 span: 1:12; [11, 12],
                             },
-                            ty: IdentRefId {
-                                id: 0,
-                            },
+                            ty: IdentRefId(0),
                             span: 1:12; [11, 20],
                             typed_state: Untyped,
                         },
@@ -56,9 +44,7 @@ Ok(
             },
         ],
         root: [
-            StmtId {
-                id: 0,
-            },
+            StmtId(0),
         ],
         symbols: [],
         types: [],

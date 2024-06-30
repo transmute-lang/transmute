@@ -10,25 +10,17 @@ Ok(
         ],
         identifier_refs: [
             IdentifierRef {
-                id: IdentRefId {
-                    id: 0,
-                },
+                id: IdentRefId(0),
                 ident: Identifier {
-                    id: IdentId {
-                        id: 1,
-                    },
+                    id: IdentId(1),
                     span: 1:5; [4, 5],
                 },
                 bound_state: Unbound,
             },
             IdentifierRef {
-                id: IdentRefId {
-                    id: 1,
-                },
+                id: IdentRefId(1),
                 ident: Identifier {
-                    id: IdentId {
-                        id: 0,
-                    },
+                    id: IdentId(0),
                     span: 1:1; [0, 1],
                 },
                 bound_state: Unbound,
@@ -36,14 +28,10 @@ Ok(
         ],
         expressions: [
             Expression {
-                id: ExprId {
-                    id: 0,
-                },
+                id: ExprId(0),
                 kind: Literal(
                     Literal {
-                        kind: Number(
-                            1,
-                        ),
+                        kind: Number(1),
                         span: 1:8; [7, 8],
                     },
                 ),
@@ -51,21 +39,13 @@ Ok(
                 typed_state: Untyped,
             },
             Expression {
-                id: ExprId {
-                    id: 1,
-                },
+                id: ExprId(1),
                 kind: StructInstantiation(
-                    IdentRefId {
-                        id: 1,
-                    },
+                    IdentRefId(1),
                     [
                         (
-                            IdentRefId {
-                                id: 0,
-                            },
-                            ExprId {
-                                id: 0,
-                            },
+                            IdentRefId(0),
+                            ExprId(0),
                         ),
                     ],
                 ),
@@ -75,21 +55,15 @@ Ok(
         ],
         statements: [
             Statement {
-                id: StmtId {
-                    id: 0,
-                },
+                id: StmtId(0),
                 kind: Expression(
-                    ExprId {
-                        id: 1,
-                    },
+                    ExprId(1),
                 ),
                 span: 1:1; [0, 11],
             },
         ],
         root: [
-            StmtId {
-                id: 0,
-            },
+            StmtId(0),
         ],
         symbols: [],
         types: [],

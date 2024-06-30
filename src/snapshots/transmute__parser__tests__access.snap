@@ -10,25 +10,17 @@ Ok(
         ],
         identifier_refs: [
             IdentifierRef {
-                id: IdentRefId {
-                    id: 0,
-                },
+                id: IdentRefId(0),
                 ident: Identifier {
-                    id: IdentId {
-                        id: 0,
-                    },
+                    id: IdentId(0),
                     span: 1:1; [0, 5],
                 },
                 bound_state: Unbound,
             },
             IdentifierRef {
-                id: IdentRefId {
-                    id: 1,
-                },
+                id: IdentRefId(1),
                 ident: Identifier {
-                    id: IdentId {
-                        id: 1,
-                    },
+                    id: IdentId(1),
                     span: 1:9; [8, 11],
                 },
                 bound_state: Unbound,
@@ -36,16 +28,10 @@ Ok(
         ],
         expressions: [
             Expression {
-                id: ExprId {
-                    id: 0,
-                },
+                id: ExprId(0),
                 kind: Literal(
                     Literal {
-                        kind: Identifier(
-                            IdentRefId {
-                                id: 0,
-                            },
-                        ),
+                        kind: IdentRefId(0),
                         span: 1:1; [0, 5],
                     },
                 ),
@@ -53,16 +39,10 @@ Ok(
                 typed_state: Untyped,
             },
             Expression {
-                id: ExprId {
-                    id: 1,
-                },
+                id: ExprId(1),
                 kind: Access(
-                    ExprId {
-                        id: 0,
-                    },
-                    IdentRefId {
-                        id: 1,
-                    },
+                    ExprId(0),
+                    IdentRefId(1),
                 ),
                 span: 1:1; [0, 11],
                 typed_state: Untyped,
@@ -70,21 +50,15 @@ Ok(
         ],
         statements: [
             Statement {
-                id: StmtId {
-                    id: 0,
-                },
+                id: StmtId(0),
                 kind: Expression(
-                    ExprId {
-                        id: 1,
-                    },
+                    ExprId(1),
                 ),
                 span: 1:1; [0, 13],
             },
         ],
         root: [
-            StmtId {
-                id: 0,
-            },
+            StmtId(0),
         ],
         symbols: [],
         types: [],

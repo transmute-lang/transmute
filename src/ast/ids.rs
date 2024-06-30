@@ -1,6 +1,6 @@
 macro_rules! make_id {
     ($name:ident) => {
-        #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+        #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
         pub struct $name {
             id: usize,
         }
@@ -8,6 +8,12 @@ macro_rules! make_id {
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", self.id)
+            }
+        }
+
+        impl std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}({})", stringify!($name), self.id)
             }
         }
 

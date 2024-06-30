@@ -10,9 +10,7 @@ Ok(
         identifier_refs: [],
         expressions: [
             Expression {
-                id: ExprId {
-                    id: 0,
-                },
+                id: ExprId(0),
                 kind: Block(
                     [],
                 ),
@@ -22,31 +20,23 @@ Ok(
         ],
         statements: [
             Statement {
-                id: StmtId {
-                    id: 0,
-                },
+                id: StmtId(0),
                 kind: LetFn(
                     Identifier {
-                        id: IdentId {
-                            id: 0,
-                        },
+                        id: IdentId(0),
                         span: 1:5; [4, 5],
                     },
                     [],
                     Return {
                         ret: None,
                     },
-                    ExprId {
-                        id: 0,
-                    },
+                    ExprId(0),
                 ),
                 span: 1:1; [0, 10],
             },
         ],
         root: [
-            StmtId {
-                id: 0,
-            },
+            StmtId(0),
         ],
         symbols: [],
         types: [],

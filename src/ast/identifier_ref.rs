@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Formatter};
 use crate::ast::identifier::Identifier;
 use crate::ast::ids::{IdentId, IdentRefId, SymbolId};
 use crate::lexer::Span;
@@ -75,7 +76,13 @@ pub struct Unbound;
 
 impl BoundState for Unbound {}
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Bound(pub SymbolId);
 
 impl BoundState for Bound {}
+
+impl Debug for Bound {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Bound({})", self.0)
+    }
+}
