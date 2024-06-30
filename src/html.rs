@@ -507,7 +507,9 @@ impl<'a> HtmlWriter<'a> {
             SymbolKind::Struct(stmt) => Self::ident_id(*stmt, None),
         };
 
-        let ty = self.ast.ty(self.ast.symbol(ident_ref.symbol_id()).ty());
+        let ty = self
+            .ast
+            .ty(self.ast.symbol(ident_ref.symbol_id()).type_id());
         let (type_ref, type_name) = match ty {
             Type::Struct(stmt) => {
                 let name = match self.ast.statement(*stmt).kind() {

@@ -1,3 +1,4 @@
+#!transmute
 
 let area() = {
     struct Point {

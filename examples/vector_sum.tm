@@ -1,3 +1,5 @@
+#!transmute
+
 struct Vec {
     x: number,
     y: number,

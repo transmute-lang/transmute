@@ -120,7 +120,7 @@ impl Resolver {
                             ident,
                             parameters,
                             ret_type,
-                            NativeFunction(native.body()),
+                            NativeImplementation(native.body()),
                         ),
                         fn_type_id,
                     );
@@ -1580,7 +1580,7 @@ impl Symbol {
         &self.kind
     }
 
-    pub fn ty(&self) -> TypeId {
+    pub fn type_id(&self) -> TypeId {
         self.ty
     }
 
@@ -1603,13 +1603,19 @@ pub enum SymbolKind {
     // todo could StmtId be replaced with SymbolId (the symbol that defines the struct)
     Field(StmtId, usize),
     NativeType(IdentId, Type),
-    Native(IdentId, Vec<TypeId>, TypeId, NativeFunction),
+    Native(IdentId, Vec<TypeId>, TypeId, NativeImplementation),
 }
 
 #[derive(PartialEq)]
-pub struct NativeFunction(pub fn(Vec<Value>) -> Value);
+pub struct NativeImplementation(fn(Vec<Value>) -> Value);
 
-impl Debug for NativeFunction {
+impl NativeImplementation {
+    pub fn call(&self, parameters: Vec<Value>) -> Value {
+        self.0(parameters)
+    }
+}
+
+impl Debug for NativeImplementation {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "native")
     }

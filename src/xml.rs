@@ -311,7 +311,9 @@ impl<'a> XmlWriter<'a> {
                     SymbolKind::NotFound => panic!(),
                 };
 
-                let ty = self.ast.ty(self.ast.symbol(ident_ref.symbol_id()).ty());
+                let ty = self
+                    .ast
+                    .ty(self.ast.symbol(ident_ref.symbol_id()).type_id());
                 let type_ref = match ty {
                     Type::Struct(stmt) => match self.ast.statement(*stmt).kind() {
                         StatementKind::Struct(_, _) => Some(format!("stmt:{stmt}")),

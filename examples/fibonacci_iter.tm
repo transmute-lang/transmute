@@ -1,3 +1,5 @@
+#!transmute
+
 let f(n: number): number = {
     if n == 0 { ret 0; }
     if n == 1 { ret 1; }
