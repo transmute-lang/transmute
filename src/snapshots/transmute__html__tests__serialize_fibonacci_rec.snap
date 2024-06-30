@@ -121,7 +121,7 @@ expression: "&html"
     <span class="par" data-par-id="par_0">(</span>
     <span id="ident__stmt3_index0" class="ident">n</span>
     <span class="colon">: </span>
-    <span id="ident__stmt3" class="ident">number</span>
+    <span class="ident_ref" title="" data-ident-ref="ident__native-type_number" data-type-ident-ref="">number</span>
     <span class="par" data-par-id="par_0">)</span>
     <span class="colon">: </span>
     <span id="ident__stmt3" class="ident">number</span>

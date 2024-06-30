@@ -11,7 +11,7 @@ Err(
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    1231,
+                    1232,
                 ),
             },
             Diagnostic {
@@ -20,7 +20,7 @@ Err(
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    1337,
+                    1338,
                 ),
             },
         ],

@@ -1,7 +1,7 @@
 use crate::ast::expression::{Typed, TypedState, Untyped};
 use crate::ast::identifier::Identifier;
-use crate::ast::identifier_ref::{Bound, BoundState, Unbound};
-use crate::ast::ids::{ExprId, StmtId, SymbolId, TypeId};
+use crate::ast::identifier_ref::{BoundState, Unbound};
+use crate::ast::ids::{ExprId, IdentRefId, StmtId, TypeId};
 use crate::lexer::Span;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -50,7 +50,7 @@ where
     Expression(ExprId),
     Let(Identifier, ExprId),
     Ret(ExprId, RetMode),
-    LetFn(Identifier, Vec<Parameter<B>>, Return<B>, ExprId),
+    LetFn(Identifier, Vec<Parameter<T>>, Return<B>, ExprId),
     Struct(Identifier, Vec<Field<T>>),
 }
 
@@ -70,52 +70,50 @@ impl RetMode {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Parameter<B>
+pub struct Parameter<T>
 where
-    B: BoundState,
+    T: TypedState,
 {
     identifier: Identifier,
-    ty: Identifier, // todo should be an IdentifierRef
+    ty: IdentRefId,
     span: Span,
-    // todo the ty should be <B>, the state should be <T>
-    state: B,
+    state: T, // fixme is it really needed??
 }
 
-impl<B> Parameter<B>
+impl<T> Parameter<T>
 where
-    B: BoundState,
+    T: TypedState,
 {
     pub fn identifier(&self) -> &Identifier {
         &self.identifier
     }
 
-    pub fn ty(&self) -> &Identifier {
-        &self.ty
+    pub fn ty(&self) -> IdentRefId {
+        self.ty
     }
 
     pub fn span(&self) -> &Span {
         &self.span
     }
-
-    /// Binds the parameter to a symbol in the symbol table. The `symbol_id` is the parameter's
-    /// symbol id.
-    pub fn bind(self, symbol_id: SymbolId) -> Parameter<Bound> {
-        Parameter::<Bound> {
-            identifier: self.identifier,
-            ty: self.ty,
-            span: self.span,
-            state: Bound(symbol_id),
-        }
-    }
 }
 
-impl Parameter<Unbound> {
-    pub fn new(identifier: Identifier, ty: Identifier, span: Span) -> Self {
+impl Parameter<Untyped> {
+    pub fn new(identifier: Identifier, ty: IdentRefId, span: Span) -> Self {
         Self {
             identifier,
             ty,
             span,
-            state: Unbound,
+            state: Untyped,
+        }
+    }
+
+    /// Types the parameter.
+    pub fn bind(self, type_id: TypeId) -> Parameter<Typed> {
+        Parameter::<Typed> {
+            identifier: self.identifier,
+            ty: self.ty,
+            span: self.span,
+            state: Typed(type_id),
         }
     }
 }

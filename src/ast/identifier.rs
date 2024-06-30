@@ -2,6 +2,7 @@ use crate::ast::ids::IdentId;
 use crate::lexer::Span;
 
 /// Represents an identifier when not used a reference
+// todo add ref to symbol Id
 #[derive(Debug, Clone, PartialEq)]
 pub struct Identifier {
     id: IdentId,

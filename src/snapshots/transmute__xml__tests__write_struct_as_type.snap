@@ -56,7 +56,7 @@ expression: "&xml"
               <stmt id="stmt:1" line="1" column="51" start="50" len="2">
                 <ret mode="implicit" line="1" column="51" start="50" len="2">
                   <expr id="expr:0" line="1" column="51" start="50" len="1">
-                    <identifier-ref id="ident-ref:0" ident-ref="ident:5" target-id="stmt:2:0" type-ref="stmt:0">s</identifier-ref>
+                    <identifier-ref id="ident-ref:1" ident-ref="ident:5" target-id="stmt:2:0" type-ref="stmt:0">s</identifier-ref>
                   </expr>
                 </ret>
               </stmt>

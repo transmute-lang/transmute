@@ -235,7 +235,7 @@ where
                         f,
                         "{ident}: {ty}",
                         ident = ctx.identifier(parameter.identifier().id()),
-                        ty = ctx.identifier(parameter.ty().id())
+                        ty = ctx.identifier_ref(parameter.ty())
                     )?;
                 }
 

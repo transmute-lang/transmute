@@ -18,7 +18,7 @@ use std::fmt::{Display, Formatter};
 
 pub struct Resolver {}
 
-type BoundParametersAndReturnType = (Vec<Parameter<Bound>>, Return<Bound>);
+type BoundParametersAndReturnType = (Vec<Parameter<Typed>>, Return<Bound>); // todo rename
 
 // todo add support for struct nested in function (examples/.inner_struct.tm)
 
@@ -486,6 +486,7 @@ impl Resolver {
                 state
                     .resolve_ident_ref(ident_ref, None)
                     .map(|s| state.resolution.symbols[s].ty)
+                    // fixme must issue a diagnostic when the identifier is not found
                     .unwrap_or(state.invalid_type_id)
             }
         };
@@ -753,7 +754,7 @@ impl Resolver {
 
             (
                 state
-                    .find_type_id_by_identifier(struct_identifier)
+                    .find_type_id_by_identifier(struct_identifier.id())
                     .expect("type exists"),
                 state,
             )
@@ -886,7 +887,7 @@ impl Resolver {
         &self,
         mut state: State,
         stmt: StmtId,
-        params: Vec<Parameter<Unbound>>,
+        params: Vec<Parameter<Untyped>>,
         ret_type: Return<Unbound>,
         expr: ExprId,
         span: &Span,
@@ -898,7 +899,7 @@ impl Resolver {
 
         let ret_type_id = match ret_type.take_identifier() {
             Some(ident) => {
-                match state.find_type_id_by_identifier(&ident) {
+                match state.find_type_id_by_identifier(ident.id()) {
                     None => {
                         // no need to report error here, it was already reported in insert_functions
                         Err((
@@ -927,7 +928,9 @@ impl Resolver {
             .into_iter()
             .enumerate()
             .filter_map(|(index, parameter)| {
-                match state.find_type_id_by_identifier(parameter.ty()) {
+                let type_identifier = state.resolution.identifier_refs[parameter.ty()].ident();
+
+                match state.find_type_id_by_identifier(type_identifier.id()) {
                     None => {
                         // diagnostic already produced in resolve_type_id_by_identifier
                         // todo we might rather use the illegal type
@@ -948,14 +951,14 @@ impl Resolver {
                             );
                             None
                         } else {
-                            let symbol_id = state.insert_symbol(ident_id, symbol_kind, type_id);
+                            let _symbol_id = state.insert_symbol(ident_id, symbol_kind, type_id);
 
-                            Some(parameter.bind(symbol_id))
+                            Some(parameter.bind(type_id))
                         }
                     }
                 }
             })
-            .collect::<Vec<Parameter<Bound>>>();
+            .collect::<Vec<Parameter<Typed>>>();
 
         success = success && parameters.len() == params_len;
 
@@ -1044,7 +1047,7 @@ impl Resolver {
             .into_iter()
             .map(|field| {
                 let ty = state
-                    .find_type_id_by_identifier(field.ty())
+                    .find_type_id_by_identifier(field.ty().id())
                     .unwrap_or(state.invalid_type_id);
                 field.typed(ty)
             })
@@ -1194,6 +1197,24 @@ impl State {
     }
 
     fn insert_functions(&mut self, stmts: &[StmtId]) {
+        // first, we resolve all the identifier refs for parameter types and return type
+        let ident_ref_ids = stmts
+            .iter()
+            .filter_map(|stmt_id| {
+                match self.statements[*stmt_id].kind() {
+                    StatementKind::LetFn(_, params, ..) => {
+                        // todo use ret and resolve the ident_ref_id as well
+                        Some(params.iter().map(|p| p.ty()).collect::<Vec<IdentRefId>>())
+                    }
+                    _ => None,
+                }
+            })
+            .flatten()
+            .collect::<Vec<IdentRefId>>();
+        for ident_ref_id in ident_ref_ids.into_iter() {
+            self.resolve_ident_ref(ident_ref_id, None);
+        }
+
         let functions = stmts
             .iter()
             .filter_map(|stmt_id| {
@@ -1207,16 +1228,19 @@ impl State {
                         let parameter_types = params
                             .iter()
                             .map(|p| {
-                                self.find_type_id_by_identifier(p.ty()).ok_or_else(|| {
-                                    Diagnostic::error(
-                                        format!(
-                                            "'{}' is not a known type",
-                                            self.resolution.identifiers[p.ty().id()]
-                                        ),
-                                        p.ty().span().clone(),
-                                        (file!(), line!()),
-                                    )
-                                })
+                                let identifier = self.resolution.identifier_refs[p.ty()].ident();
+
+                                self.find_type_id_by_identifier(identifier.id())
+                                    .ok_or_else(|| {
+                                        Diagnostic::error(
+                                            format!(
+                                                "'{}' is not a known type",
+                                                self.resolution.identifiers[identifier.id()]
+                                            ),
+                                            identifier.span().clone(),
+                                            (file!(), line!()),
+                                        )
+                                    })
                             })
                             .collect::<Vec<Result<TypeId, Diagnostic>>>();
 
@@ -1233,7 +1257,7 @@ impl State {
 
                         let ret_type_id = ret_type
                             .identifier()
-                            .map(|ident| match self.find_type_id_by_identifier(ident) {
+                            .map(|ident| match self.find_type_id_by_identifier(ident.id()) {
                                 None => Err(Diagnostic::error(
                                     format!(
                                         "'{}' is not a known type",
@@ -1340,11 +1364,13 @@ impl State {
             Some(symbols) => symbols
                 .iter()
                 .map(|s| &self.resolution.symbols[*s])
-                .any(|s| match (&s.kind(), kind) {
-                    (SymbolKind::Parameter(_, _), SymbolKind::Parameter(_, _)) => true,
-                    (SymbolKind::Field(_, _), SymbolKind::Field(_, _)) => true,
-                    (SymbolKind::Struct(_), SymbolKind::Struct(_)) => true,
-                    _ => false,
+                .any(|s| {
+                    matches!(
+                        (&s.kind(), kind),
+                        (SymbolKind::Parameter(_, _), SymbolKind::Parameter(_, _))
+                            | (SymbolKind::Field(_, _), SymbolKind::Field(_, _))
+                            | (SymbolKind::Struct(_), SymbolKind::Struct(_))
+                    )
                 }),
         }
     }
@@ -1389,9 +1415,8 @@ impl State {
         }
     }
 
-    // todo make it take IdentId
-    fn find_type_id_by_identifier(&self, ident: &Identifier) -> Option<TypeId> {
-        match self.find_symbol_id_by_ident_and_param_types(ident.id(), None) {
+    fn find_type_id_by_identifier(&self, ident_id: IdentId) -> Option<TypeId> {
+        match self.find_symbol_id_by_ident_and_param_types(ident_id, None) {
             None => None,
             Some(s) => {
                 let symbol = &self.resolution.symbols[s];

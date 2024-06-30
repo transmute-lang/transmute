@@ -1,5 +1,4 @@
 use crate::ast::expression::{ExpressionKind, Target, Typed};
-use crate::ast::identifier_ref::Bound;
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::statement::{Field, Parameter, RetMode, StatementKind};
@@ -114,7 +113,7 @@ impl<'a> HtmlWriter<'a> {
         &mut self,
         stmt_id: StmtId,
         ident: IdentId,
-        params: &[Parameter<Bound>],
+        params: &[Parameter<Typed>],
         ret_type: Option<IdentId>,
         expr: ExprId,
     ) {
@@ -130,8 +129,7 @@ impl<'a> HtmlWriter<'a> {
         for (i, param) in params.iter().enumerate() {
             self.emit_identifier(stmt_id, param.identifier().id(), Some(i));
             self.emit_colon();
-            // fixme should be an emit_identifier_ref (or at least some emit_type_identifier)
-            self.emit_identifier(stmt_id, param.ty().id(), None);
+            self.emit_identifier_ref(param.ty());
 
             if i < params.len() - 1 {
                 self.emit_comma();
@@ -503,9 +501,8 @@ impl<'a> HtmlWriter<'a> {
                     self.ast.ty(*ret_type)
                 )
             }
-            SymbolKind::NativeType(_, _) => {
-                // was: format!("ident__native-type_{}", self.ast.identifier(*ident),)
-                todo!()
+            SymbolKind::NativeType(ident_id, _) => {
+                format!("ident__native-type_{}", self.ast.identifier(*ident_id))
             }
             SymbolKind::Field(stmt, index) => Self::ident_id(*stmt, Some(*index)),
             SymbolKind::Struct(stmt) => Self::ident_id(*stmt, None),
@@ -520,6 +517,7 @@ impl<'a> HtmlWriter<'a> {
                 };
                 (Some(format!("ident__stmt{stmt}")), format!("struct {name}"))
             }
+            Type::None => (None, "".to_string()),
             t => (None, t.to_string()),
         };
 

@@ -152,7 +152,7 @@ impl<'s> Parser<'s> {
             .into_iter()
             .collect::<Vec<(String, IdentId)>>();
 
-        identifiers.sort_by(|(_, id1), (_, id2)| id1.cmp(&id2));
+        identifiers.sort_by(|(_, id1), (_, id2)| id1.cmp(id2));
 
         let identifiers = identifiers
             .into_iter()
@@ -337,10 +337,11 @@ impl<'s> Parser<'s> {
                         next = TokenKind::Comma;
                         continue;
                     }
-                    let ty = Identifier::new(self.push_identifier(ty.span()), ty.span().clone());
-
-                    let span = ident.span().extend_to(ty.span());
-                    parameters.push(Parameter::new(ident, ty, span));
+                    let type_identifier =
+                        Identifier::new(self.push_identifier(ty.span()), ty.span().clone());
+                    let span = ident.span().extend_to(type_identifier.span());
+                    let type_ident_ref_id = self.push_identifier_ref(type_identifier);
+                    parameters.push(Parameter::new(ident, type_ident_ref_id, span));
                     next = TokenKind::Comma;
                 }
                 TokenKind::Eof => {
