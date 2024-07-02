@@ -4,10 +4,9 @@ use crate::ast::identifier_ref::{Bound, IdentifierRef, Unbound};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use crate::ast::literal::LiteralKind;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
+use crate::ast::passes::exit_points_resolver::ExitPoint;
 use crate::ast::statement::{Field, Parameter, Return, Statement, StatementKind};
 use crate::error::Diagnostics;
-use crate::exit_points;
-use crate::exit_points::{ExitPoint, ExitPoints};
 use crate::interpreter::Value;
 use crate::lexer::Span;
 use crate::natives::{Native, Natives};
@@ -16,15 +15,24 @@ use bimap::BiHashMap;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 
-pub struct Resolver {}
+pub struct Resolver<'a> {
+    exit_points: &'a HashMap<ExprId, Vec<ExitPoint>>,
+    unreachable: &'a Vec<ExprId>,
+}
 
 // todo add support for struct nested in function (examples/.inner_struct.tm)
 
 type Function<T, B> = (Identifier<B>, Vec<Parameter<T, B>>, Return<T>);
 
-impl Resolver {
-    pub fn new() -> Self {
-        Self {}
+impl<'a> Resolver<'a> {
+    pub fn new(
+        exit_points: &'a HashMap<ExprId, Vec<ExitPoint>>,
+        unreachable: &'a Vec<ExprId>,
+    ) -> Self {
+        Self {
+            exit_points,
+            unreachable,
+        }
     }
 
     pub fn resolve(
@@ -89,8 +97,6 @@ impl Resolver {
                 expressions: VecMap::with_reserved_capacity(expr_count),
                 statements: VecMap::with_reserved_capacity(stmt_count),
                 root,
-                exit_points: Default::default(),
-                unreachable: vec![],
             },
             invalid_type_id,
             void_type_id,
@@ -139,7 +145,7 @@ impl Resolver {
         let root = state.resolution.root.clone();
         state.insert_structs(&root);
         state.insert_functions(&root);
-        state.resolution.unreachable.dedup();
+        // state.resolution.unreachable.dedup();
         let (_, state) = self.visit_statements(state, &root);
 
         if !state.diagnostics.is_empty() {
@@ -159,8 +165,6 @@ impl Resolver {
             expressions: state.resolution.expressions,
             statements: state.resolution.statements,
             root,
-            exit_points: state.resolution.exit_points,
-            unreachable: state.resolution.unreachable,
         };
 
         debug_assert!(
@@ -202,6 +206,14 @@ impl Resolver {
             .expressions
             .remove(expr_id)
             .expect("expr is not resolved");
+
+        if self.unreachable.contains(&expr_id) {
+            state
+                .resolution
+                .expressions
+                .insert(expr.id(), expr.typed(state.void_type_id));
+            return (state.void_type_id, state);
+        }
 
         // todo take_kind()
         let (type_id, mut state) = match expr.kind() {
@@ -962,13 +974,9 @@ impl Resolver {
         success = expr_type_id != state.invalid_type_id && success;
 
         if ret_type_id != state.invalid_type_id {
-            // todo we remove it here and put it back later to avoid borrowing issues. can it be
-            //   improved? - exit points dont change while we visit the tree => move it outside of
-            //   state, maybe?
-            let exit_points = state
-                .resolution
+            let exit_points = self
                 .exit_points
-                .remove(&expr)
+                .get(&expr)
                 .expect("exit points is computed");
 
             if exit_points.is_empty() {
@@ -985,11 +993,11 @@ impl Resolver {
             } else {
                 for exit_point in exit_points.iter() {
                     let (exit_expr_id, explicit) = match exit_point {
-                        ExitPoint::Explicit(e) => (e, true),
-                        ExitPoint::Implicit(e) => (e, false),
+                        ExitPoint::Explicit(e) => (*e, true),
+                        ExitPoint::Implicit(e) => (*e, false),
                     };
 
-                    let (expr_type_id, new_state) = self.visit_expression(state, *exit_expr_id);
+                    let (expr_type_id, new_state) = self.visit_expression(state, exit_expr_id);
                     state = new_state;
 
                     if expr_type_id == state.invalid_type_id {
@@ -999,7 +1007,7 @@ impl Resolver {
                     } else if expr_type_id != ret_type_id
                         && (ret_type_id != state.void_type_id || explicit)
                     {
-                        let expr = &state.resolution.expressions[*exit_expr_id];
+                        let expr = &state.resolution.expressions[exit_expr_id];
                         let expr_type = state.find_type_by_type_id(expr_type_id);
 
                         state.diagnostics.report_err(
@@ -1015,7 +1023,7 @@ impl Resolver {
                 }
             }
 
-            state.resolution.exit_points.insert(expr, exit_points);
+            // state.resolution.exit_points.insert(expr, exit_points);
         }
 
         state.pop_scope();
@@ -1263,11 +1271,6 @@ impl State {
             .filter_map(|stmt_id| {
                 match self.statements[*stmt_id].kind() {
                     StatementKind::LetFn(ident, params, ret_type, expr_id) => {
-                        // todo could be moved to its own pass to produce an Ast containing exit
-                        //   points and unreachable expressions
-                        let exit_points = ExitPoints::new(&self.expressions, &self.statements)
-                            .exit_points(*expr_id);
-
                         let parameter_types = params
                             .iter()
                             .map(|p| {
@@ -1295,24 +1298,15 @@ impl State {
                             parameter_types,
                             ret_type_id,
                             *expr_id,
-                            exit_points,
+                            // exit_points,
                         ))
                     }
                     _ => None,
                 }
             })
-            .collect::<Vec<(
-                Identifier<Unbound>,
-                StmtId,
-                Vec<TypeId>,
-                TypeId,
-                ExprId,
-                exit_points::Output,
-            )>>();
+            .collect::<Vec<(Identifier<Unbound>, StmtId, Vec<TypeId>, TypeId, ExprId)>>();
 
-        for (ident, stmt_id, parameter_types, ret_type, expr_id, mut exit_points) in
-            functions.into_iter()
-        {
+        for (ident, stmt_id, parameter_types, ret_type, _) in functions.into_iter() {
             let fn_type_id = self.insert_type(Type::Function(parameter_types.clone(), ret_type));
 
             let symbol_id = self.insert_symbol(
@@ -1322,13 +1316,6 @@ impl State {
             );
 
             self.function_symbols.insert(stmt_id, symbol_id);
-
-            self.resolution
-                .exit_points
-                .insert(expr_id, exit_points.exit_points);
-            self.resolution
-                .unreachable
-                .append(&mut exit_points.unreachable);
         }
     }
 
@@ -1495,8 +1482,6 @@ pub struct Resolution {
     pub expressions: VecMap<ExprId, Expression<Typed>>,
     pub statements: VecMap<StmtId, Statement<Typed, Bound>>,
     pub root: Vec<StmtId>,
-    pub exit_points: HashMap<ExprId, Vec<ExitPoint>>,
-    pub unreachable: Vec<ExprId>,
 }
 
 pub struct Output {
@@ -1507,8 +1492,6 @@ pub struct Output {
     pub expressions: VecMap<ExprId, Expression<Typed>>,
     pub statements: VecMap<StmtId, Statement<Typed, Bound>>,
     pub root: Vec<StmtId>,
-    pub exit_points: HashMap<ExprId, Vec<ExitPoint>>,
-    pub unreachable: Vec<ExprId>,
 }
 
 struct Scope {
@@ -1684,13 +1667,11 @@ impl TryFrom<&str> for Type {
 
 #[cfg(test)]
 mod tests {
-    use crate::desugar::ImplicitRetConverter;
     use crate::error::Level;
     use crate::lexer::{Lexer, Span};
     use crate::natives::Natives;
-    use crate::parser::Parser;
-    use crate::resolver::Resolver;
     use crate::output::xml::XmlWriter;
+    use crate::parser::Parser;
     use insta::{assert_debug_snapshot, assert_snapshot};
 
     #[test]
@@ -1698,8 +1679,9 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x(n: number): number = { n; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRetConverter::new())
-            .resolve(Resolver::new(), Natives::default())
+            .convert_implicit_ret()
+            .resolve_exit_points()
+            .resolve(Natives::default())
             .unwrap();
 
         assert_snapshot!(XmlWriter::new(&ast).serialize());
@@ -1710,8 +1692,9 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x(): number = { let n = 0; n; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRetConverter::new())
-            .resolve(Resolver::new(), Natives::default())
+            .convert_implicit_ret()
+            .resolve_exit_points()
+            .resolve(Natives::default())
             .unwrap();
 
         assert_snapshot!(XmlWriter::new(&ast).serialize());
@@ -1722,8 +1705,9 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x() = { } x();"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRetConverter::new())
-            .resolve(Resolver::new(), Natives::default())
+            .convert_implicit_ret()
+            .resolve_exit_points()
+            .resolve(Natives::default())
             .unwrap();
 
         assert_snapshot!(XmlWriter::new(&ast).serialize());
@@ -1736,8 +1720,9 @@ mod tests {
         ))
         .parse()
         .unwrap()
-        .convert_implicit_ret(ImplicitRetConverter::new())
-        .resolve(Resolver::new(), Natives::default())
+        .convert_implicit_ret()
+        .resolve_exit_points()
+        .resolve(Natives::default())
         .unwrap();
 
         assert_snapshot!(XmlWriter::new(&ast).serialize());
@@ -1748,8 +1733,9 @@ mod tests {
         let actual_diagnostics = Parser::new(Lexer::new("let x() = { n; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRetConverter::new())
-            .resolve(Resolver::new(), Natives::default())
+            .convert_implicit_ret()
+            .resolve_exit_points()
+            .resolve(Natives::default())
             .unwrap_err();
 
         let actual_diagnostics = actual_diagnostics
@@ -1771,8 +1757,9 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x = true; let x = 1; x + 1;"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRetConverter::new())
-            .resolve(Resolver::new(), Natives::default())
+            .convert_implicit_ret()
+            .resolve_exit_points()
+            .resolve(Natives::default())
             .unwrap();
 
         assert_snapshot!("rebinding-xml", XmlWriter::new(&ast).serialize());
@@ -1783,8 +1770,9 @@ mod tests {
         let ast = Parser::new(Lexer::new(include_str!("../examples/fibonacci_rec.tm")))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRetConverter::new())
-            .resolve(Resolver::new(), Natives::default())
+            .convert_implicit_ret()
+            .resolve_exit_points()
+            .resolve(Natives::default())
             .unwrap();
         assert_debug_snapshot!(&ast);
     }
@@ -1794,8 +1782,9 @@ mod tests {
         let ast = Parser::new(Lexer::new("struct S { f: S } let f(a: S, b: S): S { a; }"))
             .parse()
             .unwrap()
-            .convert_implicit_ret(ImplicitRetConverter::new())
-            .resolve(Resolver::new(), Natives::empty())
+            .convert_implicit_ret()
+            .resolve_exit_points()
+            .resolve(Natives::empty())
             .unwrap();
         assert_debug_snapshot!(&ast);
     }
@@ -1807,8 +1796,9 @@ mod tests {
                 let actual_diagnostics = Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRetConverter::new())
-                    .resolve(Resolver::new(), Natives::default())
+                    .convert_implicit_ret()
+                    .resolve_exit_points()
+                    .resolve(Natives::default())
                     .unwrap_err();
 
                 let actual_diagnostics_str = actual_diagnostics
@@ -1834,8 +1824,9 @@ mod tests {
                 Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRetConverter::new())
-                    .resolve(Resolver::new(), Natives::new())
+                    .convert_implicit_ret()
+                    .resolve_exit_points()
+                    .resolve(Natives::new())
                     .expect("ok expected");
             }
         };

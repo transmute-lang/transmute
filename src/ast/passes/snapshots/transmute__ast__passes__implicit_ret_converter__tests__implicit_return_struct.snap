@@ -1,5 +1,5 @@
 ---
-source: src/desugar/implicit_ret_converter.rs
+source: src/ast/passes/implicit_ret_converter.rs
 expression: w
 ---
 struct S {

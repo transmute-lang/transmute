@@ -696,12 +696,10 @@ impl<'a> XmlWriter<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::desugar::ImplicitRetConverter;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
     use crate::output::xml::XmlWriter;
     use crate::parser::Parser;
-    use crate::resolver::Resolver;
     use insta::assert_snapshot;
 
     macro_rules! test_xml_write {
@@ -711,8 +709,9 @@ mod tests {
                 let ast = Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRetConverter::new())
-                    .resolve(Resolver::new(), Natives::default())
+                    .convert_implicit_ret()
+                    .resolve_exit_points()
+                    .resolve(Natives::default())
                     .unwrap();
 
                 let xml = XmlWriter::new(&ast).serialize();

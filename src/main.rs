@@ -2,23 +2,19 @@
 extern crate core;
 
 use crate::cli::parse_args;
-use crate::desugar::ImplicitRetConverter;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
 use crate::natives::Natives;
 use crate::output::html::HtmlWriter;
 use crate::output::pretty_print::Options;
 use crate::parser::Parser;
-use crate::resolver::Resolver;
 use std::fs::File;
 use std::path::PathBuf;
 use std::{fs, process};
 
 mod ast;
 mod cli;
-mod desugar;
 mod error;
-mod exit_points;
 mod interpreter;
 mod lexer;
 mod natives;
@@ -74,8 +70,9 @@ fn exec(src: &str, print_ast: bool, print_executable_ast: bool, html_file_name: 
                 print!("Parsed AST:\n{w}\n");
             }
         })
-        .map(|ast| ast.convert_implicit_ret(ImplicitRetConverter::new()))
-        .and_then(|ast| ast.resolve(Resolver::new(), Natives::new()))
+        .map(|ast| ast.convert_implicit_ret())
+        .map(|ast| ast.resolve_exit_points())
+        .and_then(|ast| ast.resolve(Natives::new()))
         .peek(|ast| {
             if print_executable_ast {
                 let mut w = String::new();

@@ -190,10 +190,9 @@ impl ImplicitRetConverter {
 
 #[cfg(test)]
 mod tests {
-    use crate::desugar::implicit_ret_converter::ImplicitRetConverter;
     use crate::lexer::Lexer;
-    use crate::parser::Parser;
     use crate::output::pretty_print::Options;
+    use crate::parser::Parser;
     use insta::assert_snapshot;
 
     macro_rules! t {
@@ -203,7 +202,7 @@ mod tests {
                 let ast = Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRetConverter::new());
+                    .convert_implicit_ret();
 
                 let mut w = String::new();
                 let mut options = Options::default();

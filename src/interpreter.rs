@@ -446,12 +446,10 @@ impl Val {
 
 #[cfg(test)]
 mod tests {
-    use crate::desugar::ImplicitRetConverter;
     use crate::interpreter::Interpreter;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
     use crate::parser::Parser;
-    use crate::resolver::Resolver;
 
     macro_rules! eval {
         ($name:ident, $src:expr => $value:expr) => {
@@ -461,8 +459,9 @@ mod tests {
                 let ast = parser
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRetConverter::new())
-                    .resolve(Resolver::new(), Natives::default())
+                    .convert_implicit_ret()
+                    .resolve_exit_points()
+                    .resolve(Natives::default())
                     .unwrap();
 
                 let actual = Interpreter::new(&ast).start();
@@ -477,8 +476,8 @@ mod tests {
                 let ast = parser
                     .parse()
                     .unwrap()
-                    .convert_implicit_ret(ImplicitRetConverter::new())
-                    .resolve(Resolver::new(), Natives::new())
+                    .convert_implicit_ret()
+                    .resolve(Natives::new())
                     .unwrap();
 
                 let actual = Interpreter::new(&ast).start();
@@ -501,7 +500,7 @@ mod tests {
     eval!(function, "let times_two(v: number): number = v * 2;" => 0);
     eval!(function_call, "let times_two(v: number): number = v * 2; times_two(21);" => 42);
     eval!(complex_function_call, "let plus_one_times_two(v: number): number = { let res = v + 1; res * 2; } plus_one_times_two(20);" => 42);
-    eval!(ret_function_call, "let times_two(v: number): number = { 41; ret v * 2; 42; } times_two(21);" => 42);
+    eval!(ret_function_call, "let times_two(v: number): number = { 41; ret v * 2; 43; } times_two(21);" => 42);
     eval!(bool_true, "true;" => 1);
     eval!(bool_false, "false;" => 0);
     eval!(equality_numbers_eq_true, "42 == 42;" => 1);

@@ -4,15 +4,16 @@ pub mod identifier_ref;
 pub mod ids;
 pub mod literal;
 pub mod operators;
+pub mod passes;
 pub mod statement;
 
 use crate::ast::expression::{Expression, Typed, TypedState, Untyped};
 use crate::ast::identifier_ref::{Bound, BoundState, IdentifierRef, Unbound};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
-use crate::ast::statement::Statement;
-use crate::desugar::ImplicitRetConverter;
+use crate::ast::passes::exit_points_resolver::{ExitPoint, ExitPointsResolver};
+use crate::ast::passes::implicit_ret_converter::ImplicitRetConverter;
+use crate::ast::statement::{Statement, StatementKind};
 use crate::error::Diagnostics;
-use crate::exit_points::ExitPoint;
 use crate::natives::Natives;
 use crate::resolver::{Resolver, Symbol, Type};
 use crate::vec_map::VecMap;
@@ -137,10 +138,9 @@ impl Ast<ImplicitRet, Untyped, Unbound> {
         }
     }
 
-    pub fn convert_implicit_ret(
-        mut self,
-        converter: ImplicitRetConverter,
-    ) -> Ast<ExplicitRet, Untyped, Unbound> {
+    pub fn convert_implicit_ret(mut self) -> Ast<ExplicitRet, Untyped, Unbound> {
+        let converter = ImplicitRetConverter::new();
+
         for statement in converter.convert(&self) {
             self.statements.insert(statement.id(), statement);
         }
@@ -158,11 +158,44 @@ impl Ast<ImplicitRet, Untyped, Unbound> {
 }
 
 impl Ast<ExplicitRet, Untyped, Unbound> {
-    pub fn resolve(self, resolver: Resolver, natives: Natives) -> Result<ResolvedAst, Diagnostics> {
+    pub fn resolve_exit_points(self) -> Ast<ExitPoints, Untyped, Unbound> {
+        let mut exit_points = HashMap::new();
+        let mut unreachable = vec![];
+
+        for (_, stmt) in self.statements.iter() {
+            if let &StatementKind::<Untyped, Unbound>::LetFn(_, _, _, expr_id) = stmt.kind() {
+                let mut output = ExitPointsResolver::new(&self.expressions, &self.statements)
+                    .exit_points(expr_id);
+                exit_points.insert(expr_id, output.exit_points);
+                unreachable.append(&mut output.unreachable);
+            }
+        }
+
+        unreachable.sort();
+        unreachable.dedup();
+
+        Ast::<ExitPoints, Untyped, Unbound> {
+            identifiers: self.identifiers,
+            identifier_refs: self.identifier_refs,
+            expressions: self.expressions,
+            statements: self.statements,
+            root: self.root,
+            symbols: self.symbols,
+            types: self.types,
+            state: ExitPoints {
+                exit_points,
+                unreachable,
+            },
+        }
+    }
+}
+
+impl Ast<ExitPoints, Untyped, Unbound> {
+    pub fn resolve(self, natives: Natives) -> Result<ResolvedAst, Diagnostics> {
         let expressions_count = self.expressions.len();
         let statements_count = self.statements.len();
 
-        resolver
+        Resolver::new(&self.state.exit_points, &self.state.unreachable)
             .resolve(
                 self.identifiers,
                 self.identifier_refs,
@@ -193,10 +226,7 @@ impl Ast<ExplicitRet, Untyped, Unbound> {
                     root: r.root,
                     symbols: r.symbols,
                     types: r.types,
-                    state: ExitPoints {
-                        exit_points: r.exit_points,
-                        unreachable: r.unreachable,
-                    },
+                    state: self.state,
                 }
             })
     }
