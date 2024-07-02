@@ -1,0 +1,6 @@
+---
+source: src/ast/passes/operators_converter.rs
+expression: w
+---
+mul(lhs, rhs);
+

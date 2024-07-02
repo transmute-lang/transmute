@@ -3,7 +3,6 @@ use crate::ast::identifier::Identifier;
 use crate::ast::identifier_ref::{Bound, IdentifierRef, Unbound};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use crate::ast::literal::LiteralKind;
-use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::ast::passes::exit_points_resolver::ExitPoint;
 use crate::ast::statement::{Field, Parameter, Return, Statement, StatementKind};
 use crate::error::Diagnostics;
@@ -250,24 +249,8 @@ impl<'a> Resolver<'a> {
                 self.visit_if(state, *cond, *true_branch, *false_branch)
             }
             ExpressionKind::Literal(literal) => self.visit_literal(state, literal.kind().clone()),
-            ExpressionKind::Binary(left, op, right) => {
-                return self.visit_binary_operator(
-                    state,
-                    expr.id(),
-                    expr.span().clone(),
-                    *left,
-                    op.clone(),
-                    *right,
-                );
-            }
-            ExpressionKind::Unary(op, operand) => {
-                return self.visit_unary_operator(
-                    state,
-                    expr.id(),
-                    expr.span().clone(),
-                    op.clone(),
-                    *operand,
-                )
+            ExpressionKind::Binary(..) | ExpressionKind::Unary(..) => {
+                panic!("operators must be converted to functions")
             }
             ExpressionKind::Access(expr_id, ident_ref_id) => {
                 let ident_ref = state
@@ -510,120 +493,6 @@ impl<'a> Resolver<'a> {
         };
 
         (literal_type_id, state)
-    }
-
-    fn visit_binary_operator(
-        &self,
-        state: State,
-        expr: ExprId,
-        expr_span: Span,
-        left: ExprId,
-        op: BinaryOperator,
-        right: ExprId,
-    ) -> (TypeId, State) {
-        let (left_type, state) = self.visit_expression(state, left);
-        let (right_type, mut state) = self.visit_expression(state, right);
-
-        let ident_id = state.find_ident_id_by_str(op.kind().function_name());
-        let param_types = [left_type, right_type];
-        let symbol = match state
-            .find_symbol_id_by_ident_and_param_types(ident_id, Some(&param_types))
-        {
-            None => {
-                let left_type = state
-                    .resolution
-                    .types
-                    .get_by_right(&param_types[0])
-                    .unwrap();
-
-                let right_type = state
-                    .resolution
-                    .types
-                    .get_by_right(&param_types[1])
-                    .unwrap();
-
-                if left_type != &Type::Invalid && right_type != &Type::Invalid {
-                    state.diagnostics.report_err(
-                            format!(
-                                "No function '{name}' found for parameters of types ({left_type}, {right_type})",
-                                name = state.resolution.identifiers[ident_id],
-                            ),
-                            op.span().clone(),
-                            (file!(), line!()),
-                        );
-                }
-
-                state.not_found_symbol_id
-            }
-            Some(s) => s,
-        };
-
-        let ident_ref_id =
-            state.create_identifier_ref(Identifier::new(ident_id, op.span().clone()).bind(symbol));
-        let parameters = vec![left, right];
-        let (ret_type, mut state) = self.visit_function_call(state, ident_ref_id, &parameters);
-
-        // todo keep it here?
-        // here, we replace the `left op right` with `op_fn(left, right)` in the ast as a de-sugar
-        // action
-        let expression = Expression::new(
-            expr,
-            ExpressionKind::FunctionCall(ident_ref_id, parameters),
-            expr_span,
-        )
-        .typed(ret_type);
-        state.resolution.expressions.insert(expr, expression);
-
-        (ret_type, state)
-    }
-
-    fn visit_unary_operator(
-        &self,
-        state: State,
-        expr: ExprId,
-        expr_span: Span,
-        op: UnaryOperator,
-        operand: ExprId,
-    ) -> (TypeId, State) {
-        let (operand_type, mut state) = self.visit_expression(state, operand);
-
-        let ident_id = state.find_ident_id_by_str(op.kind().function_name());
-        let symbol =
-            match state.find_symbol_id_by_ident_and_param_types(ident_id, Some(&[operand_type])) {
-                None => {
-                    let ty = state.resolution.types.get_by_right(&operand_type).unwrap();
-
-                    if ty != &Type::Invalid {
-                        state.diagnostics.report_err(
-                            format!(
-                                "No function '{name}' found for parameters of types ({ty})",
-                                name = state.resolution.identifiers[ident_id],
-                            ),
-                            op.span().clone(),
-                            (file!(), line!()),
-                        );
-                    }
-                    state.not_found_symbol_id
-                }
-                Some(d) => d,
-            };
-
-        let ident_ref_id =
-            state.create_identifier_ref(Identifier::new(ident_id, op.span().clone()).bind(symbol));
-        let parameters = vec![operand];
-        let (ret_type, mut state) = self.visit_function_call(state, ident_ref_id, &parameters);
-
-        // todo keep it here?
-        // here, we replace the `op operand` with `op_fn(operand)` in the ast as a de-sugar
-        let expression = Expression::new(
-            expr,
-            ExpressionKind::FunctionCall(ident_ref_id, parameters),
-            expr_span,
-        )
-        .typed(ret_type);
-        state.resolution.expressions.insert(expr, expression);
-
-        (ret_type, state)
     }
 
     fn visit_function_call(
@@ -1679,6 +1548,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x(n: number): number = { n; }"))
             .parse()
             .unwrap()
+            .convert_operators()
             .convert_implicit_ret()
             .resolve_exit_points()
             .resolve(Natives::default())
@@ -1692,6 +1562,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x(): number = { let n = 0; n; }"))
             .parse()
             .unwrap()
+            .convert_operators()
             .convert_implicit_ret()
             .resolve_exit_points()
             .resolve(Natives::default())
@@ -1705,6 +1576,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x() = { } x();"))
             .parse()
             .unwrap()
+            .convert_operators()
             .convert_implicit_ret()
             .resolve_exit_points()
             .resolve(Natives::default())
@@ -1720,6 +1592,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret()
         .resolve_exit_points()
         .resolve(Natives::default())
@@ -1733,6 +1606,7 @@ mod tests {
         let actual_diagnostics = Parser::new(Lexer::new("let x() = { n; }"))
             .parse()
             .unwrap()
+            .convert_operators()
             .convert_implicit_ret()
             .resolve_exit_points()
             .resolve(Natives::default())
@@ -1757,6 +1631,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let x = true; let x = 1; x + 1;"))
             .parse()
             .unwrap()
+            .convert_operators()
             .convert_implicit_ret()
             .resolve_exit_points()
             .resolve(Natives::default())
@@ -1770,6 +1645,7 @@ mod tests {
         let ast = Parser::new(Lexer::new(include_str!("../examples/fibonacci_rec.tm")))
             .parse()
             .unwrap()
+            .convert_operators()
             .convert_implicit_ret()
             .resolve_exit_points()
             .resolve(Natives::default())
@@ -1782,6 +1658,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("struct S { f: S } let f(a: S, b: S): S { a; }"))
             .parse()
             .unwrap()
+            .convert_operators()
             .convert_implicit_ret()
             .resolve_exit_points()
             .resolve(Natives::empty())
@@ -1796,6 +1673,7 @@ mod tests {
                 let actual_diagnostics = Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
+                    .convert_operators()
                     .convert_implicit_ret()
                     .resolve_exit_points()
                     .resolve(Natives::default())
@@ -1824,6 +1702,7 @@ mod tests {
                 Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
+                    .convert_operators()
                     .convert_implicit_ret()
                     .resolve_exit_points()
                     .resolve(Natives::new())

@@ -12,6 +12,7 @@ use crate::ast::identifier_ref::{Bound, BoundState, IdentifierRef, Unbound};
 use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use crate::ast::passes::exit_points_resolver::{ExitPoint, ExitPointsResolver};
 use crate::ast::passes::implicit_ret_converter::ImplicitRetConverter;
+use crate::ast::passes::operators_converter::OperatorsConverter;
 use crate::ast::statement::{Statement, StatementKind};
 use crate::error::Diagnostics;
 use crate::natives::Natives;
@@ -45,7 +46,10 @@ where
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ImplicitRet {}
+pub struct Raw {}
+
+#[derive(Debug, PartialEq)]
+pub struct NoOperators {}
 
 #[derive(Debug, PartialEq)]
 pub struct ExplicitRet {}
@@ -118,7 +122,7 @@ where
     }
 }
 
-impl Ast<ImplicitRet, Untyped, Unbound> {
+impl Ast<Raw, Untyped, Unbound> {
     pub fn new(
         identifiers: Vec<String>,
         identifier_refs: Vec<IdentifierRef<Unbound>>,
@@ -134,10 +138,30 @@ impl Ast<ImplicitRet, Untyped, Unbound> {
             root,
             symbols: Default::default(),
             types: Default::default(),
-            state: ImplicitRet {},
+            state: Raw {},
         }
     }
 
+    pub fn convert_operators(self) -> Ast<NoOperators, Untyped, Unbound> {
+        {
+            let output = OperatorsConverter::new(self.identifiers, self.identifier_refs)
+                .convert(self.expressions);
+
+            Ast::<NoOperators, Untyped, Unbound> {
+                identifiers: output.identifiers,
+                identifier_refs: output.identifier_refs,
+                expressions: output.expressions,
+                statements: self.statements,
+                root: self.root,
+                symbols: self.symbols,
+                types: self.types,
+                state: NoOperators {},
+            }
+        }
+    }
+}
+
+impl Ast<NoOperators, Untyped, Unbound> {
     pub fn convert_implicit_ret(mut self) -> Ast<ExplicitRet, Untyped, Unbound> {
         let converter = ImplicitRetConverter::new();
 

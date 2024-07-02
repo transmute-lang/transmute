@@ -766,10 +766,7 @@ mod tests {
 
     #[test]
     fn statement_ret_implicit() {
-        let ast = Parser::new(Lexer::new("let f() = { a; }"))
-            .parse()
-            .unwrap()
-            .convert_implicit_ret();
+        let ast = Parser::new(Lexer::new("let f() = { a; }")).parse().unwrap();
         let stmt = ast.statement(StmtId::from(0));
 
         let mut ctx = PrettyPrintContext {
@@ -785,10 +782,7 @@ mod tests {
 
     #[test]
     fn statement_let_fn() {
-        let ast = Parser::new(Lexer::new("let f() = { a; }"))
-            .parse()
-            .unwrap()
-            .convert_implicit_ret();
+        let ast = Parser::new(Lexer::new("let f() = { a; }")).parse().unwrap();
         let stmt = ast.statement(StmtId::from(1));
 
         let mut ctx = PrettyPrintContext {
@@ -812,8 +806,7 @@ mod tests {
     fn statement_let_fn_ret_type() {
         let ast = Parser::new(Lexer::new("let f(): number = { a; }"))
             .parse()
-            .unwrap()
-            .convert_implicit_ret();
+            .unwrap();
         let stmt = ast.statement(StmtId::from(1));
 
         let mut ctx = PrettyPrintContext {
@@ -837,8 +830,7 @@ mod tests {
     fn statement_let_fn_param_1() {
         let ast = Parser::new(Lexer::new("let f(x: number) = { a; }"))
             .parse()
-            .unwrap()
-            .convert_implicit_ret();
+            .unwrap();
         let stmt = ast.statement(StmtId::from(1));
 
         let mut ctx = PrettyPrintContext {
@@ -862,8 +854,7 @@ mod tests {
     fn statement_let_fn_param_2() {
         let ast = Parser::new(Lexer::new("let f(x: number, y: number) = { a; }"))
             .parse()
-            .unwrap()
-            .convert_implicit_ret();
+            .unwrap();
         let stmt = ast.statement(StmtId::from(1));
 
         let mut ctx = PrettyPrintContext {
@@ -889,8 +880,7 @@ mod tests {
             "let f(n: number): number = { if n <= 1 { ret n; } f(n - 1) + f(n - 2); } f(9) + 8;",
         ))
         .parse()
-        .unwrap()
-        .convert_implicit_ret();
+        .unwrap();
 
         let mut w = String::new();
 
@@ -903,8 +893,7 @@ mod tests {
     fn fibonacci_iter() {
         let ast = Parser::new(Lexer::new("let f(n: number): number = {if n == 0 { ret 0; }if n == 1 { ret 1; }let prev_prev = 0;let prev = 1;let current = 0;while n > 1 {current = prev_prev + prev;prev_prev = prev;prev = current;n = n - 1;}current;}f(9) + 8;"))
             .parse()
-            .unwrap()
-            .convert_implicit_ret();
+            .unwrap();
 
         let mut w = String::new();
 
@@ -917,8 +906,7 @@ mod tests {
     fn struct_declaration() {
         let ast = Parser::new(Lexer::new("struct Point { x: number, y: number }"))
             .parse()
-            .unwrap()
-            .convert_implicit_ret();
+            .unwrap();
 
         let mut w = String::new();
 
@@ -931,8 +919,7 @@ mod tests {
     fn struct_instantiation() {
         let ast = Parser::new(Lexer::new("Point { x: 1, y: 2 };"))
             .parse()
-            .unwrap()
-            .convert_implicit_ret();
+            .unwrap();
 
         let mut w = String::new();
 
@@ -943,10 +930,7 @@ mod tests {
 
     #[test]
     fn struct_nested_access() {
-        let ast = Parser::new(Lexer::new("s.f.g;"))
-            .parse()
-            .unwrap()
-            .convert_implicit_ret();
+        let ast = Parser::new(Lexer::new("s.f.g;")).parse().unwrap();
 
         let mut w = String::new();
 

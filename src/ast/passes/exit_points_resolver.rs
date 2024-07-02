@@ -143,16 +143,6 @@ where
                 )
             }
             ExpressionKind::Literal(_) => (Collected::empty(), false),
-            ExpressionKind::Binary(left, _, right) => {
-                let (mut collected, left_always_returns) =
-                    self.visit_expression(*left, depth + 1, unreachable);
-                let (right_collected, right_always_returns) =
-                    self.visit_expression(*right, depth + 1, unreachable || left_always_returns);
-
-                collected.merge(right_collected);
-
-                (collected, left_always_returns || right_always_returns)
-            }
             ExpressionKind::Access(expr_id, _) => {
                 self.visit_expression(*expr_id, depth + 1, unreachable)
             }
@@ -170,7 +160,9 @@ where
 
                 (collected, always_returns)
             }
-            ExpressionKind::Unary(_, expr) => self.visit_expression(*expr, depth + 1, unreachable),
+            ExpressionKind::Binary(..) | ExpressionKind::Unary(..) => {
+                panic!("operators must be converted to functions")
+            }
             ExpressionKind::While(cond, expr) => {
                 let (mut collected, condition_always_returns) =
                     self.visit_expression(*cond, depth + 1, unreachable);
@@ -273,6 +265,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(1);
@@ -298,6 +291,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(6);
@@ -329,6 +323,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(6);
@@ -362,6 +357,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(7);
@@ -392,6 +388,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(10);
@@ -422,6 +419,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(5);
@@ -447,6 +445,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(4);
@@ -474,6 +473,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(10);
@@ -502,6 +502,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(8);
@@ -531,6 +532,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
         let expr = ExprId::from(14);
 
@@ -559,6 +561,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(14);
@@ -588,6 +591,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(9);
@@ -616,6 +620,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(4);
@@ -641,6 +646,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(8);
@@ -668,6 +674,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(8);
@@ -699,6 +706,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(7);
@@ -727,6 +735,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(10);
@@ -758,6 +767,7 @@ mod tests {
         ))
         .parse()
         .unwrap()
+        .convert_operators()
         .convert_implicit_ret();
 
         let expr = ExprId::from(10);

@@ -2,7 +2,7 @@ use crate::ast::expression::{ExpressionKind, Untyped};
 use crate::ast::identifier_ref::Unbound;
 use crate::ast::ids::{ExprId, StmtId};
 use crate::ast::statement::{RetMode, Statement, StatementKind};
-use crate::ast::{Ast, ImplicitRet};
+use crate::ast::{Ast, NoOperators};
 
 pub struct ImplicitRetConverter {
     replacements: Vec<Statement<Untyped, Unbound>>,
@@ -17,7 +17,7 @@ impl ImplicitRetConverter {
 
     pub fn convert(
         mut self,
-        ast: &Ast<ImplicitRet, Untyped, Unbound>,
+        ast: &Ast<NoOperators, Untyped, Unbound>,
     ) -> Vec<Statement<Untyped, Unbound>> {
         for expr in ast
             .root_statements()
@@ -39,7 +39,7 @@ impl ImplicitRetConverter {
     /// returns true if all nested paths explicitly return
     fn visit_expression(
         &mut self,
-        ast: &Ast<ImplicitRet, Untyped, Unbound>,
+        ast: &Ast<NoOperators, Untyped, Unbound>,
         expr: ExprId,
         depth: usize,
         unreachable: bool,
@@ -77,15 +77,9 @@ impl ImplicitRetConverter {
                     || (true_branch_always_return && false_branch_always_return)
             }
             ExpressionKind::Literal(_) => false,
-            ExpressionKind::Binary(left, _, right) => {
-                let left_always_returns = self.visit_expression(ast, *left, depth + 1, unreachable);
-                let right_always_returns = self.visit_expression(
-                    ast,
-                    *right,
-                    depth + 1,
-                    unreachable || left_always_returns,
-                );
-                left_always_returns || right_always_returns
+            ExpressionKind::Binary(..) |  ExpressionKind::Unary(..)=> {
+                panic!("operators must be converted to functions");
+
             }
             ExpressionKind::Access(expr_id, _) => {
                 self.visit_expression(ast, *expr_id, depth + 1, unreachable)
@@ -104,9 +98,6 @@ impl ImplicitRetConverter {
                 }
 
                 some_param_always_returns
-            }
-            ExpressionKind::Unary(_, expr) => {
-                self.visit_expression(ast, *expr, depth + 1, unreachable)
             }
             ExpressionKind::While(cond, expr) => {
                 let condition_always_returns =
@@ -151,7 +142,7 @@ impl ImplicitRetConverter {
 
     fn visit_statement(
         &mut self,
-        ast: &Ast<ImplicitRet, Untyped, Unbound>,
+        ast: &Ast<NoOperators, Untyped, Unbound>,
         stmt: StmtId,
         depth: usize,
         unreachable: bool,
@@ -202,6 +193,7 @@ mod tests {
                 let ast = Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
+                    .convert_operators()
                     .convert_implicit_ret();
 
                 let mut w = String::new();

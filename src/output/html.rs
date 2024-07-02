@@ -551,6 +551,7 @@ mod tests {
                 let ast = Parser::new(Lexer::new($src))
                     .parse()
                     .unwrap()
+                    .convert_operators()
                     .convert_implicit_ret()
                     .resolve_exit_points()
                     .resolve(Natives::default())

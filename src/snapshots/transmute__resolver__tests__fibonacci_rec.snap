@@ -7,18 +7,18 @@ Ast {
         "f",
         "n",
         "number",
+        "le",
+        "sub",
         "add",
         "boolean",
         "div",
         "eq",
         "ge",
         "gt",
-        "le",
         "lt",
         "mul",
         "neg",
         "neq",
-        "sub",
         "void",
     ],
     identifier_refs: [
@@ -97,7 +97,7 @@ Ast {
         IdentifierRef {
             id: IdentRefId(9),
             ident: Identifier {
-                id: IdentId(9),
+                id: IdentId(3),
                 span: 3:10; [49, 51],
                 bound: Bound(10),
             },
@@ -105,7 +105,7 @@ Ast {
         IdentifierRef {
             id: IdentRefId(10),
             ident: Identifier {
-                id: IdentId(14),
+                id: IdentId(4),
                 span: 7:9; [86, 87],
                 bound: Bound(4),
             },
@@ -113,7 +113,7 @@ Ast {
         IdentifierRef {
             id: IdentRefId(11),
             ident: Identifier {
-                id: IdentId(14),
+                id: IdentId(4),
                 span: 7:20; [97, 98],
                 bound: Bound(4),
             },
@@ -121,7 +121,7 @@ Ast {
         IdentifierRef {
             id: IdentRefId(12),
             ident: Identifier {
-                id: IdentId(3),
+                id: IdentId(5),
                 span: 7:14; [91, 92],
                 bound: Bound(16),
             },
@@ -129,7 +129,7 @@ Ast {
         IdentifierRef {
             id: IdentRefId(13),
             ident: Identifier {
-                id: IdentId(3),
+                id: IdentId(5),
                 span: 10:6; [111, 112],
                 bound: Bound(16),
             },
@@ -451,7 +451,7 @@ Ast {
         Symbol {
             id: SymbolId(3),
             kind: NativeType(
-                IdentId(4),
+                IdentId(6),
                 Boolean,
             ),
             ty: TypeId(2),
@@ -459,7 +459,7 @@ Ast {
         Symbol {
             id: SymbolId(4),
             kind: Native(
-                IdentId(14),
+                IdentId(4),
                 [
                     TypeId(4),
                     TypeId(4),
@@ -472,7 +472,7 @@ Ast {
         Symbol {
             id: SymbolId(5),
             kind: Native(
-                IdentId(13),
+                IdentId(14),
                 [
                     TypeId(4),
                     TypeId(4),
@@ -485,7 +485,7 @@ Ast {
         Symbol {
             id: SymbolId(6),
             kind: Native(
-                IdentId(13),
+                IdentId(14),
                 [
                     TypeId(3),
                     TypeId(3),
@@ -498,7 +498,7 @@ Ast {
         Symbol {
             id: SymbolId(7),
             kind: Native(
-                IdentId(12),
+                IdentId(13),
                 [
                     TypeId(4),
                 ],
@@ -510,7 +510,7 @@ Ast {
         Symbol {
             id: SymbolId(8),
             kind: Native(
-                IdentId(11),
+                IdentId(12),
                 [
                     TypeId(4),
                     TypeId(4),
@@ -523,7 +523,7 @@ Ast {
         Symbol {
             id: SymbolId(9),
             kind: Native(
-                IdentId(10),
+                IdentId(11),
                 [
                     TypeId(4),
                     TypeId(4),
@@ -536,7 +536,7 @@ Ast {
         Symbol {
             id: SymbolId(10),
             kind: Native(
-                IdentId(9),
+                IdentId(3),
                 [
                     TypeId(4),
                     TypeId(4),
@@ -549,7 +549,7 @@ Ast {
         Symbol {
             id: SymbolId(11),
             kind: Native(
-                IdentId(8),
+                IdentId(10),
                 [
                     TypeId(4),
                     TypeId(4),
@@ -562,7 +562,7 @@ Ast {
         Symbol {
             id: SymbolId(12),
             kind: Native(
-                IdentId(7),
+                IdentId(9),
                 [
                     TypeId(4),
                     TypeId(4),
@@ -575,7 +575,7 @@ Ast {
         Symbol {
             id: SymbolId(13),
             kind: Native(
-                IdentId(6),
+                IdentId(8),
                 [
                     TypeId(4),
                     TypeId(4),
@@ -588,7 +588,7 @@ Ast {
         Symbol {
             id: SymbolId(14),
             kind: Native(
-                IdentId(6),
+                IdentId(8),
                 [
                     TypeId(3),
                     TypeId(3),
@@ -601,7 +601,7 @@ Ast {
         Symbol {
             id: SymbolId(15),
             kind: Native(
-                IdentId(5),
+                IdentId(7),
                 [
                     TypeId(4),
                     TypeId(4),
@@ -614,7 +614,7 @@ Ast {
         Symbol {
             id: SymbolId(16),
             kind: Native(
-                IdentId(3),
+                IdentId(5),
                 [
                     TypeId(4),
                     TypeId(4),

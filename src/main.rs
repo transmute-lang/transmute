@@ -70,6 +70,7 @@ fn exec(src: &str, print_ast: bool, print_executable_ast: bool, html_file_name: 
                 print!("Parsed AST:\n{w}\n");
             }
         })
+        .map(|ast| ast.convert_operators())
         .map(|ast| ast.convert_implicit_ret())
         .map(|ast| ast.resolve_exit_points())
         .and_then(|ast| ast.resolve(Natives::new()))

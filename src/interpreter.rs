@@ -459,6 +459,7 @@ mod tests {
                 let ast = parser
                     .parse()
                     .unwrap()
+                    .convert_operators()
                     .convert_implicit_ret()
                     .resolve_exit_points()
                     .resolve(Natives::default())
@@ -477,6 +478,7 @@ mod tests {
                     .parse()
                     .unwrap()
                     .convert_implicit_ret()
+                    .convert_operators()
                     .resolve(Natives::new())
                     .unwrap();
 

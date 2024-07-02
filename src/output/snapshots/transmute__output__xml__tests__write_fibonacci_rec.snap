@@ -9,18 +9,18 @@ expression: "&xml"
       <ident id="ident:0">f</ident>
       <ident id="ident:1">n</ident>
       <ident id="ident:2">number</ident>
-      <ident id="ident:3">add</ident>
-      <ident id="ident:4">boolean</ident>
-      <ident id="ident:5">div</ident>
-      <ident id="ident:6">eq</ident>
-      <ident id="ident:7">ge</ident>
-      <ident id="ident:8">gt</ident>
-      <ident id="ident:9">le</ident>
-      <ident id="ident:10">lt</ident>
-      <ident id="ident:11">mul</ident>
-      <ident id="ident:12">neg</ident>
-      <ident id="ident:13">neq</ident>
-      <ident id="ident:14">sub</ident>
+      <ident id="ident:3">le</ident>
+      <ident id="ident:4">sub</ident>
+      <ident id="ident:5">add</ident>
+      <ident id="ident:6">boolean</ident>
+      <ident id="ident:7">div</ident>
+      <ident id="ident:8">eq</ident>
+      <ident id="ident:9">ge</ident>
+      <ident id="ident:10">gt</ident>
+      <ident id="ident:11">lt</ident>
+      <ident id="ident:12">mul</ident>
+      <ident id="ident:13">neg</ident>
+      <ident id="ident:14">neq</ident>
       <ident id="ident:15">void</ident>
     </identifiers>
     <stmt id="stmt:3" line="2" column="13" start="13" len="152">
@@ -41,7 +41,7 @@ expression: "&xml"
                   <if>
                     <condition>
                       <expr id="expr:2" line="3" column="20" start="61" len="6">
-                        <call line="3" column="20" start="61" len="6" ident-ref="ident:9" name="le" target-id="native:le:number:number:boolean">
+                        <call line="3" column="20" start="61" len="6" ident-ref="ident:3" name="le" target-id="native:le:number:number:boolean">
                           <parameters>
                             <parameter>
                               <expr id="expr:0" line="3" column="20" start="61" len="1">
@@ -76,7 +76,7 @@ expression: "&xml"
               <stmt id="stmt:2" line="6" column="17" start="131" len="20">
                 <ret mode="implicit" line="6" column="17" start="131" len="20">
                   <expr id="expr:14" line="6" column="17" start="131" len="19">
-                    <call line="6" column="17" start="131" len="19" ident-ref="ident:3" name="add" target-id="native:add:number:number:number">
+                    <call line="6" column="17" start="131" len="19" ident-ref="ident:5" name="add" target-id="native:add:number:number:number">
                       <parameters>
                         <parameter>
                           <expr id="expr:9" line="6" column="17" start="131" len="8">
@@ -84,7 +84,7 @@ expression: "&xml"
                               <parameters>
                                 <parameter>
                                   <expr id="expr:8" line="6" column="19" start="133" len="5">
-                                    <call line="6" column="19" start="133" len="5" ident-ref="ident:14" name="sub" target-id="native:sub:number:number:number">
+                                    <call line="6" column="19" start="133" len="5" ident-ref="ident:4" name="sub" target-id="native:sub:number:number:number">
                                       <parameters>
                                         <parameter>
                                           <expr id="expr:6" line="6" column="19" start="133" len="1">
@@ -110,7 +110,7 @@ expression: "&xml"
                               <parameters>
                                 <parameter>
                                   <expr id="expr:12" line="6" column="30" start="144" len="5">
-                                    <call line="6" column="30" start="144" len="5" ident-ref="ident:14" name="sub" target-id="native:sub:number:number:number">
+                                    <call line="6" column="30" start="144" len="5" ident-ref="ident:4" name="sub" target-id="native:sub:number:number:number">
                                       <parameters>
                                         <parameter>
                                           <expr id="expr:10" line="6" column="30" start="144" len="1">

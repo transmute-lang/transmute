@@ -11,6 +11,6 @@ Ok(
         root: [],
         symbols: [],
         types: [],
-        state: ImplicitRet,
+        state: Raw,
     },
 )

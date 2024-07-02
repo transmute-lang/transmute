@@ -70,6 +70,6 @@ Ok(
         ],
         symbols: [],
         types: [],
-        state: ImplicitRet,
+        state: Raw,
     },
 )
