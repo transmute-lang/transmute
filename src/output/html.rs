@@ -539,9 +539,9 @@ impl<'a> HtmlWriter<'a> {
 #[cfg(test)]
 mod tests {
     use crate::desugar::ImplicitRetConverter;
-    use crate::html::HtmlWriter;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
+    use crate::output::html::HtmlWriter;
     use crate::parser::Parser;
     use crate::resolver::Resolver;
     use insta::assert_snapshot;

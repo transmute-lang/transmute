@@ -3,12 +3,12 @@ extern crate core;
 
 use crate::cli::parse_args;
 use crate::desugar::ImplicitRetConverter;
-use crate::html::HtmlWriter;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
 use crate::natives::Natives;
+use crate::output::html::HtmlWriter;
+use crate::output::pretty_print::Options;
 use crate::parser::Parser;
-use crate::pretty_print::Options;
 use crate::resolver::Resolver;
 use std::fs::File;
 use std::path::PathBuf;
@@ -19,15 +19,13 @@ mod cli;
 mod desugar;
 mod error;
 mod exit_points;
-mod html;
 mod interpreter;
 mod lexer;
 mod natives;
+mod output;
 mod parser;
-mod pretty_print;
 mod resolver;
 mod vec_map;
-mod xml;
 
 // todo things to check:
 //  let f() = 0:

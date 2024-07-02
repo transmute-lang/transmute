@@ -193,7 +193,7 @@ mod tests {
     use crate::desugar::implicit_ret_converter::ImplicitRetConverter;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
-    use crate::pretty_print::Options;
+    use crate::output::pretty_print::Options;
     use insta::assert_snapshot;
 
     macro_rules! t {

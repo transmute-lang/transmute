@@ -699,9 +699,9 @@ mod tests {
     use crate::desugar::ImplicitRetConverter;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
+    use crate::output::xml::XmlWriter;
     use crate::parser::Parser;
     use crate::resolver::Resolver;
-    use crate::xml::XmlWriter;
     use insta::assert_snapshot;
 
     macro_rules! test_xml_write {

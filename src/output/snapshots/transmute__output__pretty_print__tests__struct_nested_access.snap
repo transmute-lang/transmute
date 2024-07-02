@@ -1,0 +1,6 @@
+---
+source: src/output/pretty_print.rs
+expression: w
+---
+s.f.g;
+

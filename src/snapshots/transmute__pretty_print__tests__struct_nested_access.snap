@@ -1,6 +1,0 @@
----
-source: src/pretty_print.rs
-expression: w
----
-s.f.g;
-

@@ -1,5 +1,5 @@
 ---
-source: src/xml.rs
+source: src/output/xml.rs
 expression: "&xml"
 ---
 <?xml version="1.0" encoding="utf-8"?>

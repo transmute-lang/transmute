@@ -1,5 +1,5 @@
 ---
-source: src/pretty_print.rs
+source: src/output/pretty_print.rs
 expression: w
 ---
 let f(n: number): number = {

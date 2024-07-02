@@ -1088,7 +1088,9 @@ impl Resolver {
             })
             .collect::<Vec<Field<Typed, Bound>>>();
 
-        let symbol_id = state.struct_symbols.get(&stmt_id)
+        let symbol_id = state
+            .struct_symbols
+            .get(&stmt_id)
             .cloned()
             // todo same handling as for visit_function: if not found, return Err()
             //   or, return not_found_symbol_id in visit_function. This requires that the find_*()
@@ -1688,7 +1690,7 @@ mod tests {
     use crate::natives::Natives;
     use crate::parser::Parser;
     use crate::resolver::Resolver;
-    use crate::xml::XmlWriter;
+    use crate::output::xml::XmlWriter;
     use insta::{assert_debug_snapshot, assert_snapshot};
 
     #[test]

@@ -385,8 +385,8 @@ mod tests {
     use crate::ast::Ast;
     use crate::desugar::ImplicitRetConverter;
     use crate::lexer::{Lexer, Span};
+    use crate::output::pretty_print::{AstState, Options, PrettyPrint, PrettyPrintContext};
     use crate::parser::Parser;
-    use crate::pretty_print::{AstState, Options, PrettyPrint, PrettyPrintContext};
     use insta::assert_display_snapshot;
 
     macro_rules! identifiers {

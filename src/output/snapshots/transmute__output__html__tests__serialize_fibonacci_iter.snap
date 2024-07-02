@@ -1,5 +1,5 @@
 ---
-source: src/html.rs
+source: src/output/html.rs
 expression: "&html"
 ---
 <!DOCTYPE html>

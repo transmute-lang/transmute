@@ -1,5 +1,5 @@
 ---
-source: src/xml.rs
+source: src/output/xml.rs
 expression: "&xml"
 ---
 <?xml version="1.0" encoding="utf-8"?>
@@ -22,22 +22,11 @@ expression: "&xml"
       <ident id="ident:13">void</ident>
     </identifiers>
     <stmt id="stmt:0" line="1" column="1" start="0" len="7">
-      <expr id="expr:2" line="1" column="1" start="0" len="6">
-        <call line="1" column="1" start="0" len="6" ident-ref="ident:0" name="add" target-id="native:add:number:number:number">
-          <parameters>
-            <parameter>
-              <expr id="expr:0" line="1" column="1" start="0" len="2">
-                <number>40</number>
-              </expr>
-            </parameter>
-            <parameter>
-              <expr id="expr:1" line="1" column="6" start="5" len="1">
-                <number>2</number>
-              </expr>
-            </parameter>
-          </parameters>
-        </call>
-      </expr>
+      <ret mode="explicit" line="1" column="1" start="0" len="7">
+        <expr id="expr:0" line="1" column="5" start="4" len="2">
+          <number>42</number>
+        </expr>
+      </ret>
     </stmt>
   </ast>
 </unit>
