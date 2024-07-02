@@ -12,8 +12,8 @@ use xml::{EmitterConfig, EventWriter};
 
 const HTML: &str = include_str!("html/template.html");
 
-// todo: color unreachable expressions
-// todo: should not use index but symbol IDs
+// todo color unreachable expressions
+// todo should not use index but symbol IDs
 
 pub struct HtmlWriter<'a> {
     ast: &'a ResolvedAst,
@@ -484,7 +484,7 @@ impl<'a> HtmlWriter<'a> {
         let ident_ref = self.ast.identifier_ref(ident_ref_id);
 
         let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
-            SymbolKind::NotFound => panic!(),
+            SymbolKind::NotFound => panic!("symbol was not resolved"),
             SymbolKind::Let(stmt) => Self::ident_id(*stmt, None),
             SymbolKind::LetFn(stmt, _, _) => Self::ident_id(*stmt, None),
             SymbolKind::Parameter(stmt, index) => Self::ident_id(*stmt, Some(*index)),

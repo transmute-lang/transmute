@@ -215,7 +215,6 @@ impl<'a> Resolver<'a> {
             return (state.void_type_id, state);
         }
 
-        // todo take_kind()
         let (type_id, mut state) = match expr.kind() {
             ExpressionKind::Assignment(Target::Direct(ident_ref), expr) => {
                 self.visit_assignment(state, *ident_ref, *expr)
@@ -1579,6 +1578,7 @@ impl Symbol {
 
 #[derive(Debug, PartialEq)]
 pub enum SymbolKind {
+    // fixme can we remove it? at least in hir
     NotFound,
     Let(StmtId),
     LetFn(StmtId, Vec<TypeId>, TypeId),

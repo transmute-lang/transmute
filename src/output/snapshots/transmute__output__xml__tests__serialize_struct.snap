@@ -27,22 +27,22 @@ expression: "&xml"
     </identifiers>
     <stmt id="stmt:0" line="2" column="13" start="13" len="82">
       <struct>
-        <identifier ref="ident:0" line="2" column="20" start="20" len="5">Point</identifier>
+        <identifier line="2" column="20" start="20" len="5">Point</identifier>
         <fields>
           <field id="stmt:0:0" line="3" column="17" start="44" len="9">
-            <name ref="ident:1" line="3" column="17" start="44" len="1">x</name>
-            <type ref="ident:2" line="3" column="20" start="47" len="6">number</type>
+            <name line="3" column="17" start="44" len="1">x</name>
+            <type line="3" column="20" start="47" len="6">number</type>
           </field>
           <field id="stmt:0:1" line="4" column="17" start="71" len="10">
-            <name ref="ident:3" line="4" column="17" start="71" len="1">y</name>
-            <type ref="ident:4" line="4" column="20" start="74" len="7">boolean</type>
+            <name line="4" column="17" start="71" len="1">y</name>
+            <type line="4" column="20" start="74" len="7">boolean</type>
           </field>
         </fields>
       </struct>
     </stmt>
     <stmt id="stmt:1" line="7" column="13" start="109" len="77">
       <let>
-        <identifier ref="ident:5" line="7" column="17" start="113" len="1">p</identifier>
+        <identifier line="7" column="17" start="113" len="1">p</identifier>
         <expression line="7" column="21" start="117" len="68">
           <expr id="expr:2" line="7" column="21" start="117" len="68">
             <struct_init>

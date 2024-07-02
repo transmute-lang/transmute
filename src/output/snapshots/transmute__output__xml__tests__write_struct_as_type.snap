@@ -28,26 +28,26 @@ expression: "&xml"
     </identifiers>
     <stmt id="stmt:0" line="1" column="1" start="0" len="33">
       <struct>
-        <identifier ref="ident:0" line="1" column="8" start="7" len="1">S</identifier>
+        <identifier line="1" column="8" start="7" len="1">S</identifier>
         <fields>
           <field id="stmt:0:0" line="1" column="12" start="11" len="9">
-            <name ref="ident:1" line="1" column="12" start="11" len="1">a</name>
-            <type ref="ident:2" line="1" column="15" start="14" len="6">number</type>
+            <name line="1" column="12" start="11" len="1">a</name>
+            <type line="1" column="15" start="14" len="6">number</type>
           </field>
           <field id="stmt:0:1" line="1" column="23" start="22" len="9">
-            <name ref="ident:3" line="1" column="23" start="22" len="1">b</name>
-            <type ref="ident:2" line="1" column="26" start="25" len="6">number</type>
+            <name line="1" column="23" start="22" len="1">b</name>
+            <type line="1" column="26" start="25" len="6">number</type>
           </field>
         </fields>
       </struct>
     </stmt>
     <stmt id="stmt:2" line="1" column="35" start="34" len="20">
       <fn>
-        <identifier ref="ident:4" line="1" column="39" start="38" len="1">f</identifier>
+        <identifier line="1" column="39" start="38" len="1">f</identifier>
         <parameters>
           <parameter id="stmt:2:0" line="1" column="41" start="40" len="4">
-            <name ref="ident:5" line="1" column="41" start="40" len="1">s</name>
-            <type ref="ident:0" line="1" column="44" start="43" len="1">S</type>
+            <name line="1" column="41" start="40" len="1">s</name>
+            <type line="1" column="44" start="43" len="1">S</type>
           </parameter>
         </parameters>
         <body line="1" column="49" start="48" len="6">

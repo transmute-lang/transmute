@@ -25,15 +25,15 @@ expression: "XmlWriter::new(&ast).serialize()"
     </identifiers>
     <stmt id="stmt:2" line="1" column="1" start="0" len="35">
       <fn>
-        <identifier ref="ident:0" line="1" column="5" start="4" len="1">x</identifier>
-        <type ref="ident:1" line="1" column="10" start="9" len="6">number</type>
+        <identifier line="1" column="5" start="4" len="1">x</identifier>
+        <type line="1" column="10" start="9" len="6">number</type>
         <parameters />
         <body line="1" column="19" start="18" len="17">
           <expr id="expr:2" line="1" column="19" start="18" len="17">
             <block>
               <stmt id="stmt:0" line="1" column="21" start="20" len="10">
                 <let>
-                  <identifier ref="ident:2" line="1" column="25" start="24" len="1">n</identifier>
+                  <identifier line="1" column="25" start="24" len="1">n</identifier>
                   <expression line="1" column="29" start="28" len="1">
                     <expr id="expr:0" line="1" column="29" start="28" len="1">
                       <number>0</number>

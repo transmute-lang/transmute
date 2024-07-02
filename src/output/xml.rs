@@ -148,7 +148,7 @@ impl<'a> XmlWriter<'a> {
                     SymbolKind::Struct(_) => {
                         unreachable!("cannot assign to Struct")
                     }
-                    SymbolKind::NotFound => panic!(),
+                    SymbolKind::NotFound => panic!("symbol was not resolved"),
                 };
 
                 self.emit(
@@ -234,7 +234,7 @@ impl<'a> XmlWriter<'a> {
             SymbolKind::Struct(_) => {
                 unreachable!("cannot assign to Struct")
             }
-            SymbolKind::NotFound => panic!(),
+            SymbolKind::NotFound => panic!("symbol was not resolved"),
         };
 
         self.emit(
@@ -308,7 +308,7 @@ impl<'a> XmlWriter<'a> {
                     SymbolKind::Struct(_) => {
                         unreachable!("Struct is not a literal")
                     }
-                    SymbolKind::NotFound => panic!(),
+                    SymbolKind::NotFound => panic!("symbol was not resolved"),
                 };
 
                 let ty = self
@@ -413,8 +413,6 @@ impl<'a> XmlWriter<'a> {
                 unreachable!("method call cannot be applied to Struct")
             }
             SymbolKind::NotFound => {
-                // todo we dont want to get there... an unresolved symbol must not lead to a
-                //   resolved AST
                 panic!("symbol was not resolved")
             }
         };
@@ -490,8 +488,6 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("identifier")
-                // todo not sure this is really useful, we have the full name in the tag anyway
-                .attr("ref", &format!("ident:{}", ident.id()))
                 .attr("line", &ident.span().line().to_string())
                 .attr("column", &ident.span().column().to_string())
                 .attr("start", &ident.span().start().to_string())
@@ -540,8 +536,6 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("identifier")
-                // todo not sure this is really useful, we have the full name in the tag anyway
-                .attr("ref", &format!("ident:{}", ident.id()))
                 .attr("line", &ident.span().line().to_string())
                 .attr("column", &ident.span().column().to_string())
                 .attr("start", &ident.span().start().to_string())
@@ -555,8 +549,6 @@ impl<'a> XmlWriter<'a> {
 
             self.emit(
                 XmlEvent::start_element("type")
-                    // todo add ref to actual type
-                    .attr("ref", &format!("ident:{}", ty_ident_ref.ident().id()))
                     .attr("line", &ty_ident_ref.span().line().to_string())
                     .attr("column", &ty_ident_ref.span().column().to_string())
                     .attr("start", &ty_ident_ref.span().start().to_string())
@@ -581,7 +573,6 @@ impl<'a> XmlWriter<'a> {
 
             self.emit(
                 XmlEvent::start_element("name")
-                    .attr("ref", &format!("ident:{}", param.identifier().id()))
                     .attr("line", &param.identifier().span().line().to_string())
                     .attr("column", &param.identifier().span().column().to_string())
                     .attr("start", &param.identifier().span().start().to_string())
@@ -596,8 +587,6 @@ impl<'a> XmlWriter<'a> {
 
             self.emit(
                 XmlEvent::start_element("type")
-                    // todo add ref to actual type
-                    .attr("ref", &format!("ident:{}", ty_ident_ref.ident().id()))
                     .attr("line", &ty_ident_ref.span().line().to_string())
                     .attr("column", &ty_ident_ref.span().column().to_string())
                     .attr("start", &ty_ident_ref.span().start().to_string())
@@ -636,8 +625,6 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("identifier")
-                // todo not sure this is really useful, we have the full name in the tag anyway
-                .attr("ref", &format!("ident:{}", ident.id()))
                 .attr("line", &ident.span().line().to_string())
                 .attr("column", &ident.span().column().to_string())
                 .attr("start", &ident.span().start().to_string())
@@ -659,7 +646,6 @@ impl<'a> XmlWriter<'a> {
 
             self.emit(
                 XmlEvent::start_element("name")
-                    .attr("ref", &format!("ident:{}", param.identifier().id()))
                     .attr("line", &param.identifier().span().line().to_string())
                     .attr("column", &param.identifier().span().column().to_string())
                     .attr("start", &param.identifier().span().start().to_string())
@@ -674,8 +660,6 @@ impl<'a> XmlWriter<'a> {
 
             self.emit(
                 XmlEvent::start_element("type")
-                    // todo add ref to actual type
-                    .attr("ref", &format!("ident:{}", ty_ident_ref.ident().id()))
                     .attr("line", &ty_ident_ref.span().line().to_string())
                     .attr("column", &ty_ident_ref.span().column().to_string())
                     .attr("start", &ty_ident_ref.span().start().to_string())

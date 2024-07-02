@@ -24,7 +24,7 @@ expression: "XmlWriter::new(&ast).serialize()"
     </identifiers>
     <stmt id="stmt:0" line="1" column="1" start="0" len="13">
       <fn>
-        <identifier ref="ident:0" line="1" column="5" start="4" len="1">x</identifier>
+        <identifier line="1" column="5" start="4" len="1">x</identifier>
         <parameters />
         <body line="1" column="11" start="10" len="3">
           <expr id="expr:0" line="1" column="11" start="10" len="3">

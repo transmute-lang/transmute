@@ -257,7 +257,7 @@ impl<'a> Interpreter<'a> {
 
                 Val::of(Ref(self.heap.len() - 1))
             }
-            SymbolKind::NotFound => panic!(),
+            SymbolKind::NotFound => panic!("symbol was not resolved"),
         }
     }
 
