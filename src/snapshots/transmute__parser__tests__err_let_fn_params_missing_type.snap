@@ -6,12 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `)`, expected one of identifier",
+                message: "Unexpected `)`, expected one of (1) identifier 420",
                 span: 1:9; [8, 9],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    338,
+                    417,
                 ),
             },
         ],

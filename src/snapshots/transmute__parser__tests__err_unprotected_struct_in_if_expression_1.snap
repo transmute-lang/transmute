@@ -6,12 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `{`, expected one of identifier, number, `true`, `false`, `let`, `ret`, `if`, `while`, `.`, `(`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
+                message: "Unexpected `{`, expected one of (22) identifier 345, number 346, `true` 348, `false` 349, `let` 351, `ret` 352, `if` 353, `while` 354, `.` 1030, `(` 350, `=` 1092, `*` 1203, `/` 1201, `-` 347, `-` 1197, `+` 1199, `==` 1185, `!=` 1187, `>` 1189, `>=` 1191, `<` 1193, `<=` 1195",
                 span: 1:12; [11, 12],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    269,
+                    341,
                 ),
             },
         ],

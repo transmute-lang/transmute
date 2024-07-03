@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
@@ -494,6 +495,42 @@ pub enum TokenKind {
 }
 
 impl TokenKind {
+    pub fn description(&self) -> Cow<'_, str> {
+        match self {
+            TokenKind::CloseCurlyBracket => Cow::from("`}`"),
+            TokenKind::CloseParenthesis => Cow::from("`)`"),
+            TokenKind::Colon => Cow::from("`:`"),
+            TokenKind::Comma => Cow::from("`,`"),
+            TokenKind::Dot => Cow::from("`.`"),
+            TokenKind::Else => Cow::from("`else`"),
+            TokenKind::Equal => Cow::from("`=`"),
+            TokenKind::EqualEqual => Cow::from("`==`"),
+            TokenKind::ExclaimEqual => Cow::from("`!=`"),
+            TokenKind::False => Cow::from("`false`"),
+            TokenKind::Greater => Cow::from("`>`"),
+            TokenKind::GreaterEqual => Cow::from("`>=`"),
+            TokenKind::Identifier => Cow::from("identifier"),
+            TokenKind::If => Cow::from("`if`"),
+            TokenKind::Let => Cow::from("`let`"),
+            TokenKind::Minus => Cow::from("`-`"),
+            TokenKind::Number(_) => Cow::from("number"),
+            TokenKind::OpenCurlyBracket => Cow::from("`{`"),
+            TokenKind::OpenParenthesis => Cow::from("`(`"),
+            TokenKind::Plus => Cow::from("`+`"),
+            TokenKind::Ret => Cow::from("`ret`"),
+            TokenKind::Semicolon => Cow::from("`;`"),
+            TokenKind::Slash => Cow::from("`/`"),
+            TokenKind::Smaller => Cow::from("`<`"),
+            TokenKind::SmallerEqual => Cow::from("`<=`"),
+            TokenKind::Star => Cow::from("`*`"),
+            TokenKind::True => Cow::from("`true`"),
+            TokenKind::While => Cow::from("`while`"),
+            TokenKind::Bad(s) => Cow::from(format!("`{s}`")),
+            TokenKind::Eof => Cow::from("`eof`"),
+            TokenKind::Struct => Cow::from("`struct`"),
+        }
+    }
+
     fn discriminant(&self) -> u8 {
         match self {
             TokenKind::Identifier => 0,
@@ -602,8 +639,8 @@ impl Display for TokenKind {
             TokenKind::Minus => {
                 write!(f, "`-`")
             }
-            TokenKind::Number(_) => {
-                write!(f, "number") // todo implement description instead
+            TokenKind::Number(n) => {
+                write!(f, "number({n})")
             }
             TokenKind::OpenCurlyBracket => {
                 write!(f, "`{{`")
@@ -638,14 +675,14 @@ impl Display for TokenKind {
             TokenKind::While => {
                 write!(f, "`while`")
             }
-            TokenKind::Bad(c) => {
-                write!(f, "`{}`", c)
+            TokenKind::Bad(s) => {
+                write!(f, "`{s}`")
             }
             TokenKind::Eof => {
                 write!(f, "`eof`")
             }
             TokenKind::Struct => {
-                write!(f, "struct")
+                write!(f, "`struct`")
             }
         }
     }

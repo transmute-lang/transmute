@@ -1,0 +1,19 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"let forty_two = a\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `eof`, expected one of (14) `;` 1597, `.` 1030, `{` 843, `(` 840, `*` 1203, `/` 1201, `-` 1197, `+` 1199, `==` 1185, `!=` 1187, `>` 1189, `>=` 1191, `<` 1193, `<=` 1195",
+                span: 1:18; [17, 17],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    1597,
+                ),
+            },
+        ],
+    },
+)

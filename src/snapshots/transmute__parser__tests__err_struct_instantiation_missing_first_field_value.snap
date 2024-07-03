@@ -1,17 +1,17 @@
 ---
 source: src/parser.rs
-expression: "Parser::new(Lexer::new(\"let f(n) = { }\")).parse()"
+expression: "Parser::new(Lexer::new(\"S { a: , b: a, c: a };\")).parse()"
 ---
 Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Expected `:`, got `)`",
+                message: "Unexpected `,`, expected one of (8) identifier 933, number 934, `true` 936, `false` 937, `if` 931, `while` 932, `(` 938, `-` 935",
                 span: 1:8; [7, 8],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    410,
+                    927,
                 ),
             },
         ],

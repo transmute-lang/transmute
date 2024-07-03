@@ -92,19 +92,19 @@ impl OperatorsConverter {
 
 #[cfg(test)]
 mod tests {
-    use insta::{assert_snapshot};
     use crate::lexer::Lexer;
     use crate::output::pretty_print::Options;
     use crate::parser::Parser;
+    use insta::assert_snapshot;
 
     macro_rules! op {
         ($name: ident, $src:expr) => {
             #[test]
             fn $name() {
                 let ast = Parser::new(Lexer::new($src))
-                .parse()
-                .unwrap()
-                .convert_operators();
+                    .parse()
+                    .unwrap()
+                    .convert_operators();
 
                 let mut w = String::new();
                 ast.pretty_print(&Options::default(), &mut w).unwrap();
@@ -113,7 +113,7 @@ mod tests {
             }
         };
     }
-    
+
     op!(add, "lhs + rhs;");
     op!(sub, "lhs - rhs;");
     op!(mul, "lhs * rhs;");

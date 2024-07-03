@@ -6,21 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected number, expected one of identifier",
+                message: "Unexpected number(1), expected one of (1) identifier 1021",
                 span: 1:3; [2, 3],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    848,
-                ),
-            },
-            Diagnostic {
-                message: "Unexpected number, expected one of `;`, `.`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`",
-                span: 1:3; [2, 3],
-                level: Error,
-                generated_at: (
-                    "src/parser.rs",
-                    1349,
+                    1018,
                 ),
             },
         ],

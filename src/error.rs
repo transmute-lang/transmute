@@ -87,15 +87,28 @@ pub struct Diagnostic {
 
 impl Display for Diagnostic {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "[{}:{}] {} at {}:{}",
-            self.generated_at.0,
-            self.generated_at.1,
-            self.message,
-            self.span.line(),
-            self.span.column()
-        )
+        #[cfg(debug_assertions)]
+        {
+            write!(
+                f,
+                "[{}:{}] {} at {}:{}",
+                self.generated_at.0,
+                self.generated_at.1,
+                self.message,
+                self.span.line(),
+                self.span.column()
+            )
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            write!(
+                f,
+                "{} at {}:{}",
+                self.message,
+                self.span.line(),
+                self.span.column()
+            )
+        }
     }
 }
 

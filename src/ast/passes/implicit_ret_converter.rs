@@ -77,9 +77,8 @@ impl ImplicitRetConverter {
                     || (true_branch_always_return && false_branch_always_return)
             }
             ExpressionKind::Literal(_) => false,
-            ExpressionKind::Binary(..) |  ExpressionKind::Unary(..)=> {
+            ExpressionKind::Binary(..) | ExpressionKind::Unary(..) => {
                 panic!("operators must be converted to functions");
-
             }
             ExpressionKind::Access(expr_id, _) => {
                 self.visit_expression(ast, *expr_id, depth + 1, unreachable)
