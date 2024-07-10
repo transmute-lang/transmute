@@ -1,0 +1,19 @@
+---
+source: src/parser.rs
+expression: "Parser::new(Lexer::new(\"if true { 1; } else{ 1; } - 1 12;\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected number(12), expected one of (13) `;` 1606, `.` 1042, `=` 1100, `*` 1211, `/` 1209, `-` 1205, `+` 1207, `==` 1193, `!=` 1195, `>` 1197, `>=` 1199, `<` 1201, `<=` 1203",
+                span: 1:31; [30, 32],
+                level: Error,
+                generated_at: (
+                    "src/parser.rs",
+                    1606,
+                ),
+            },
+        ],
+    },
+)

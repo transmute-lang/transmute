@@ -74,10 +74,16 @@ macro_rules! report_unexpected_token {
                 .iter()
                 .collect::<Vec<_>>();
             potential_tokens.sort();
+            let span = $token.span().clone();
+            let token_desc = if matches!($token.kind(), TokenKind::Identifier) {
+                format!("{}({})", $token.kind().to_string(), $self.lexer.span(&span))
+            } else {
+                $token.kind().to_string()
+            };
             $self.diagnostics.report_err(
                 format!(
                     "Unexpected {}, expected one of ({}) {}",
-                    $token.kind().to_string(), // todo add identifier text
+                    token_desc,
                     potential_tokens.len(),
                     potential_tokens
                         .into_iter()
@@ -85,7 +91,7 @@ macro_rules! report_unexpected_token {
                         .collect::<Vec<Cow<'_, str>>>()
                         .join(", ")
                 ),
-                $token.span().clone(),
+                span,
                 (file!(), line!()),
             );
         }
@@ -111,11 +117,16 @@ macro_rules! report_missing_token_and_push_back {
                 .iter()
                 .collect::<Vec<_>>();
             potential_tokens.sort();
-
+            let span = $token.span().clone();
+            let token_desc = if matches!($token.kind(), TokenKind::Identifier) {
+                format!("{}({})", $token.kind().to_string(), $self.lexer.span(&span))
+            } else {
+                $token.kind().to_string()
+            };
             $self.diagnostics.report_err(
                 format!(
                     "Unexpected {}, expected one of ({}) {}",
-                    $token.kind().to_string(), // todo add identifier text
+                    token_desc,
                     potential_tokens.len(),
                     potential_tokens
                         .into_iter()
@@ -338,6 +349,7 @@ impl<'s> Parser<'s> {
             }
             TokenKind::Struct => self.parse_struct(),
             _ => {
+                let token = self.lexer.next();
                 report_unexpected_token!(
                     self,
                     token,
@@ -354,7 +366,7 @@ impl<'s> Parser<'s> {
                         expected_token!(TokenKind::While),
                     ]
                 );
-                match self.lexer.next().kind() {
+                match token.kind() {
                     TokenKind::Eof => None,
                     _ => {
                         // try again after having consumed the unexpected token
@@ -1055,10 +1067,6 @@ impl<'s> Parser<'s> {
                             );
                         }
                         _ => {
-                            // fixme this is wrong, the expected token is referring to the already
-                            //   parsed lhs token, not to the one being parsed...we should rather
-                            //   accept whatever literal after the equal sign and deal with it in
-                            //   the next phase
                             self.potential_tokens
                                 .insert(expected_token!(TokenKind::Identifier));
                             self.expressions.push(lhs);
@@ -1594,6 +1602,7 @@ impl<'s> Parser<'s> {
             self.potential_tokens.clear();
             span
         } else {
+            let token = self.lexer.next();
             report_unexpected_token!(self, token, [expected_token!(TokenKind::Semicolon),]);
             self.take_until_one_of(vec![TokenKind::Semicolon]);
             self.lexer.next().span().clone() // consume the semicolon, if it's there (otherwise, we have eof)
@@ -1815,5 +1824,5 @@ mod tests {
     test_syntax!(err_unprotected_struct_in_if_expression_3 => "if 1 - Point{} {}");
     test_syntax!(err_unprotected_struct_in_if_expression_4 => "if (1 + 1) - Point{} {}");
     test_syntax!(err_unprotected_struct_in_while_expression_1 => "while Point{} {}");
-    // fixme should be illegal: `if true { 1; } else{ 1; } - 1 12;`
+    test_syntax!(err_missing_semicolon_after_if_expression => "if true { 1; } else{ 1; } - 1 12;");
 }

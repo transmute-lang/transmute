@@ -6,12 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected identifier, expected one of (15) `;` 1597, `.` 1030, `{` 843, `(` 840, `=` 1092, `*` 1203, `/` 1201, `-` 1197, `+` 1199, `==` 1185, `!=` 1187, `>` 1189, `>=` 1191, `<` 1193, `<=` 1195",
+                message: "Unexpected identifier(a), expected one of (15) `;` 1606, `.` 1042, `{` 855, `(` 852, `=` 1100, `*` 1211, `/` 1209, `-` 1205, `+` 1207, `==` 1193, `!=` 1195, `>` 1197, `>=` 1199, `<` 1201, `<=` 1203",
                 span: 1:3; [2, 3],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    1597,
+                    1606,
                 ),
             },
         ],

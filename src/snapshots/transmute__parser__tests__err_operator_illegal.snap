@@ -6,12 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `$`, expected one of (13) `;` 1597, `.` 1030, `=` 1092, `*` 1203, `/` 1201, `-` 1197, `+` 1199, `==` 1185, `!=` 1187, `>` 1189, `>=` 1191, `<` 1193, `<=` 1195",
+                message: "Unexpected `$`, expected one of (13) `;` 1606, `.` 1042, `=` 1100, `*` 1211, `/` 1209, `-` 1205, `+` 1207, `==` 1193, `!=` 1195, `>` 1197, `>=` 1199, `<` 1201, `<=` 1203",
                 span: 1:4; [3, 4],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    1597,
+                    1606,
                 ),
             },
         ],
