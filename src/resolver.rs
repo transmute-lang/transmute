@@ -89,9 +89,12 @@ impl<'a> Resolver<'a> {
             struct_symbols: Default::default(),
             diagnostics: Default::default(),
             resolution: Resolution {
-                identifiers: VecMap::from_iter(identifiers.into_iter().map(|(a, b)| (b, a))),
+                identifiers: BiHashMap::from_iter(
+                    identifiers.into_iter().map(|(str, ident)| (ident, str)),
+                ),
                 identifier_refs: VecMap::with_reserved_capacity(ident_ref_count),
                 symbols,
+                stmt_symbols: Default::default(),
                 types,
                 expressions: VecMap::with_reserved_capacity(expr_count),
                 statements: VecMap::with_reserved_capacity(stmt_count),
@@ -152,7 +155,7 @@ impl<'a> Resolver<'a> {
         }
 
         let result = Output {
-            identifiers: state.resolution.identifiers,
+            identifiers: VecMap::from_iter(state.resolution.identifiers),
             identifier_refs: state.resolution.identifier_refs,
             symbols: state.resolution.symbols,
             types: state
@@ -263,58 +266,53 @@ impl<'a> Resolver<'a> {
 
                 let ty = state.find_type_by_type_id(expr_type_id);
                 let field_type_id = match ty {
-                    Type::Struct(stmt_id) => {
-                        let stmt_id = *stmt_id;
-
-                        if let Some(statement) = state.statements.remove(stmt_id) {
-                            let (_, new_state) = self.visit_statement(state, statement);
-                            state = new_state;
-                        };
-
-                        let stmt = &state.resolution.statements[stmt_id];
-                        match stmt.kind() {
-                            StatementKind::Struct(ident, fields) => {
-                                // todo find a better way (symbol table per struct? See also
-                                //   find_symbol_id_for_struct_field)
-                                match fields
-                                    .iter()
-                                    .enumerate()
-                                    .find(|(_, f)| f.identifier().id() == ident_ref.ident_id())
-                                {
-                                    Some((index, field)) => {
-                                        let field_symbol_id = state
-                                            .find_symbol_id_for_struct_field(stmt_id, index)
-                                            .expect("field exists");
-                                        let ident_ref = ident_ref.resolved(field_symbol_id);
-                                        state
-                                            .resolution
-                                            .identifier_refs
-                                            .insert(ident_ref.id(), ident_ref);
-                                        field.type_id()
-                                    }
-                                    None => {
-                                        state.diagnostics.report_err(
-                                            format!(
-                                                "No field '{}' found in struct {}",
-                                                state.resolution.identifiers[ident_ref.ident_id()],
-                                                state.resolution.identifiers[ident.id()]
-                                            ),
-                                            ident_ref.ident().span().clone(),
-                                            (file!(), line!()),
-                                        );
-                                        let ident_ref =
-                                            ident_ref.resolved(state.not_found_symbol_id);
-                                        state
-                                            .resolution
-                                            .identifier_refs
-                                            .insert(ident_ref.id(), ident_ref);
-                                        state.invalid_type_id
-                                    }
+                    Type::Struct(stmt_id) => match &state.resolution.statements[*stmt_id].kind() {
+                        StatementKind::Struct(ident, fields) => {
+                            match fields
+                                .iter()
+                                .enumerate()
+                                .find(|(_, field)| field.identifier().id() == ident_ref.ident_id())
+                            {
+                                Some((index, field)) => {
+                                    let field_symbol_id = state
+                                        .find_symbol_id_for_struct_field(*stmt_id, index)
+                                        .expect("field exists");
+                                    let ident_ref = ident_ref.resolved(field_symbol_id);
+                                    state
+                                        .resolution
+                                        .identifier_refs
+                                        .insert(ident_ref.id(), ident_ref);
+                                    field.type_id()
+                                }
+                                None => {
+                                    state.diagnostics.report_err(
+                                        format!(
+                                            "No field '{}' found in struct {}",
+                                            state
+                                                .resolution
+                                                .identifiers
+                                                .get_by_left(&ident_ref.ident_id())
+                                                .unwrap(),
+                                            state
+                                                .resolution
+                                                .identifiers
+                                                .get_by_left(&ident.id())
+                                                .unwrap()
+                                        ),
+                                        ident_ref.ident().span().clone(),
+                                        (file!(), line!()),
+                                    );
+                                    let ident_ref = ident_ref.resolved(state.not_found_symbol_id);
+                                    state
+                                        .resolution
+                                        .identifier_refs
+                                        .insert(ident_ref.id(), ident_ref);
+                                    state.invalid_type_id
                                 }
                             }
-                            _ => panic!("struct expected"),
                         }
-                    }
+                        _ => panic!("struct expected"),
+                    },
                     _ => {
                         state.diagnostics.report_err(
                             format!("Expected struct type, got {}", ty),
@@ -514,7 +512,6 @@ impl<'a> Resolver<'a> {
         }
 
         if param_types.len() != params.len() {
-            // todo better error (diagnostic)
             return (state.invalid_type_id, state);
         }
 
@@ -523,15 +520,11 @@ impl<'a> Resolver<'a> {
             .map(|s| match &state.resolution.symbols[s].kind {
                 SymbolKind::LetFn(_, _, ret_type) => *ret_type,
                 SymbolKind::Native(_, _, ret_type, _) => *ret_type,
-                SymbolKind::Let(_)
-                | SymbolKind::Parameter(_, _)
-                | SymbolKind::NativeType(_, _)
-                | SymbolKind::Field(_, _)
-                | SymbolKind::Struct(_) => {
+                SymbolKind::NotFound => state.invalid_type_id,
+                _ => {
                     // todo better error (diagnostic)
                     panic!("the resolved symbol was not a function")
                 }
-                SymbolKind::NotFound => state.invalid_type_id,
             })
             .unwrap_or(state.invalid_type_id);
 
@@ -631,7 +624,11 @@ impl<'a> Resolver<'a> {
                         state.diagnostics.report_err(
                             format!(
                                 "Invalid type for field '{}': expected {}, got {}",
-                                state.resolution.identifiers[field.identifier().id()],
+                                state
+                                    .resolution
+                                    .identifiers
+                                    .get_by_left(&field.identifier().id())
+                                    .unwrap(),
                                 state.find_type_by_type_id(field.type_id()),
                                 state.find_type_by_type_id(expr_type_id)
                             ),
@@ -821,7 +818,7 @@ impl<'a> Resolver<'a> {
                     state.diagnostics.report_err(
                         format!(
                             "Parameter '{ident}' is already defined",
-                            ident = state.resolution.identifiers[ident_id],
+                            ident = state.resolution.identifiers.get_by_left(&ident_id).unwrap(),
                         ),
                         parameter.identifier().span().clone(),
                         (file!(), line!()),
@@ -951,7 +948,7 @@ impl<'a> Resolver<'a> {
                     state.diagnostics.report_err(
                         format!(
                             "Field '{ident}' is already defined",
-                            ident = state.resolution.identifiers[ident_id],
+                            ident = state.resolution.identifiers.get_by_left(&ident_id).unwrap(),
                         ),
                         field.identifier().span().clone(),
                         (file!(), line!()),
@@ -1031,12 +1028,7 @@ impl State {
             .expect("ident_ref is not resolved");
 
         let ident_id = ident_ref.ident_id();
-        match self
-            .scope_stack
-            .iter()
-            .rev()
-            .find_map(|scope| scope.find(&self.resolution.symbols, &ident_id, param_types))
-        {
+        match self.find_symbol_id_by_ident_and_param_types(ident_id, param_types) {
             Some(s) => {
                 self.resolution
                     .identifier_refs
@@ -1050,7 +1042,7 @@ impl State {
                     self.diagnostics.report_err(
                         format!(
                             "No function '{}' found for parameters of types ({})",
-                            self.resolution.identifiers[ident_id],
+                            self.resolution.identifiers.get_by_left(&ident_id).unwrap(),
                             param_types
                                 .iter()
                                 .map(|t| self.find_type_by_type_id(*t))
@@ -1066,7 +1058,7 @@ impl State {
                     self.diagnostics.report_err(
                         format!(
                             "Identifier '{}' not found",
-                            self.resolution.identifiers[ident_id]
+                            self.resolution.identifiers.get_by_left(&ident_id).unwrap()
                         ),
                         ident_ref.ident().span().clone(),
                         (file!(), line!()),
@@ -1086,7 +1078,6 @@ impl State {
     /// Resolves an identifier by its `IdentId` and returns the corresponding `SymbolId`. The
     /// resolution starts in the current scope and crawls the scopes stack up until the identifier
     /// is found.
-    // todo add coarse-grained kind of expected symbol (var, callable, type)
     fn find_symbol_id_by_ident_and_param_types(
         &self,
         ident: IdentId,
@@ -1098,15 +1089,15 @@ impl State {
             .find_map(|scope| scope.find(&self.resolution.symbols, &ident, param_types))
     }
 
-    // todo there may be a better way that looping through all the symbols (a scope dedicated to
-    //   the struct, maybe?)
     fn find_symbol_id_for_struct_field(&self, stmt_id: StmtId, index: usize) -> Option<SymbolId> {
-        let kind = SymbolKind::Field(stmt_id, index);
         self.resolution
-            .symbols
-            .iter()
-            .find(|(_, symbol)| symbol.kind() == &kind)
-            .map(|(id, _)| id)
+            .stmt_symbols
+            .get(&(stmt_id, index))
+            .and_then(|sid| self.resolution.symbols.get(*sid))
+            .and_then(|s| match s.kind {
+                SymbolKind::Field(_, _) => Some(s.id),
+                _ => None,
+            })
     }
 
     fn insert_functions(&mut self, stmts: &[StmtId]) {
@@ -1208,13 +1199,12 @@ impl State {
                 self.diagnostics.report_err(
                     format!(
                         "Struct '{ident}' is already defined in scope",
-                        ident = self.resolution.identifiers[ident_id],
+                        ident = self.resolution.identifiers.get_by_left(&ident_id).unwrap(),
                     ),
                     identifier.span().clone(),
                     (file!(), line!()),
                 )
             } else {
-                // todo this is not really the struct type ... weird
                 let struct_type_id = self.insert_type(Type::Struct(stmt_id));
                 let symbol_id = self.insert_symbol(ident_id, symbol_kind, struct_type_id);
                 self.struct_symbols.insert(stmt_id, symbol_id);
@@ -1264,11 +1254,22 @@ impl State {
 
     fn insert_symbol(&mut self, ident_id: IdentId, kind: SymbolKind, ty: TypeId) -> SymbolId {
         let symbol_id = SymbolId::from(self.resolution.symbols.len());
+
+        match &kind {
+            SymbolKind::Parameter(stmt_id, index) | SymbolKind::Field(stmt_id, index) => {
+                self.resolution
+                    .stmt_symbols
+                    .insert((*stmt_id, *index), symbol_id);
+            }
+            _ => (),
+        };
+
         self.resolution.symbols.push(Symbol {
             id: symbol_id,
             kind,
             ty,
         });
+
         self.scope_stack
             .last_mut()
             .expect("current scope exists")
@@ -1280,13 +1281,11 @@ impl State {
     }
 
     pub fn find_ident_id_by_str(&self, name: &str) -> IdentId {
-        // todo use a map instead
-        for (id, ident) in self.resolution.identifiers.iter() {
-            if ident == name {
-                return id;
-            }
-        }
-        panic!("Identifier {} not found", name)
+        *self
+            .resolution
+            .identifiers
+            .get_by_right(name)
+            .unwrap_or_else(|| panic!("Identifier {} not found", name))
     }
 
     /// Inserts a `Type` if it does not already exist and returns its `TypeId`. If the type already
@@ -1303,19 +1302,12 @@ impl State {
     }
 
     fn find_type_id_by_identifier(&self, ident_id: IdentId) -> Option<TypeId> {
-        match self.find_symbol_id_by_ident_and_param_types(ident_id, None) {
-            None => None,
-            Some(s) => {
-                let symbol = &self.resolution.symbols[s];
-                match &symbol.kind {
-                    SymbolKind::NativeType(_, ty) => Some(self.find_type_id_by_type(ty)),
-                    SymbolKind::Struct(stmt) => {
-                        Some(self.find_type_id_by_type(&Type::Struct(*stmt)))
-                    }
-                    _ => None,
-                }
-            }
-        }
+        self.find_symbol_id_by_ident_and_param_types(ident_id, None)
+            .and_then(|symbol_id| match &self.resolution.symbols[symbol_id].kind {
+                SymbolKind::NativeType(_, ty) => Some(self.find_type_id_by_type(ty)),
+                SymbolKind::Struct(stmt) => Some(self.find_type_id_by_type(&Type::Struct(*stmt))),
+                _ => None,
+            })
     }
 
     fn find_type_id_by_type(&self, ty: &Type) -> TypeId {
@@ -1343,9 +1335,10 @@ impl State {
 }
 
 pub struct Resolution {
-    pub identifiers: VecMap<IdentId, String>,
+    pub identifiers: BiHashMap<IdentId, String>,
     pub identifier_refs: VecMap<IdentRefId, IdentifierRef<Bound>>,
     pub symbols: VecMap<SymbolId, Symbol>,
+    pub stmt_symbols: HashMap<(StmtId, usize), SymbolId>,
     pub types: BiHashMap<Type, TypeId>,
     pub expressions: VecMap<ExprId, Expression<Typed>>,
     pub statements: VecMap<StmtId, Statement<Typed, Bound>>,
