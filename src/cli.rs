@@ -10,10 +10,6 @@ pub struct Cli {
     #[arg(long, default_value_t = false)]
     pub output_parsed: bool,
 
-    /// Write executable AST file
-    #[arg(long, default_value_t = false)]
-    pub output_executable: bool,
-
     /// Write HTML file
     #[arg(long, default_value_t = false)]
     pub output_html: bool,

@@ -16,7 +16,6 @@ Ok(
                     },
                 ),
                 span: 1:1; [0, 2],
-                typed: Untyped,
             },
         ],
         statements: [
@@ -31,8 +30,5 @@ Ok(
         root: [
             StmtId(0),
         ],
-        symbols: [],
-        types: [],
-        state: Raw,
     },
 )

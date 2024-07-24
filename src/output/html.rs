@@ -1,10 +1,11 @@
-use crate::ast::expression::{ExpressionKind, Target, Typed};
-use crate::ast::identifier_ref::Bound;
-use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
-use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::statement::{Field, Parameter, RetMode, StatementKind};
-use crate::ast::ResolvedAst;
-use crate::resolver::{SymbolKind, Type};
+use crate::ids::{ExprId, IdentId, IdentRefId, StmtId};
+use crate::hir::bound::Bound;
+use crate::hir::expression::{ExpressionKind, Target};
+use crate::hir::literal::{Literal, LiteralKind};
+use crate::hir::statement::{Field, Parameter, RetMode, StatementKind};
+use crate::hir::typed::Typed;
+use crate::hir::ResolvedHir;
+use crate::hir::{SymbolKind, Type};
 use std::io;
 use std::io::Write;
 use xml::writer::XmlEvent;
@@ -16,7 +17,7 @@ const HTML: &str = include_str!("html/template.html");
 // todo should not use index but symbol IDs
 
 pub struct HtmlWriter<'a> {
-    ast: &'a ResolvedAst,
+    hir: &'a ResolvedHir,
     par_id: usize,
     writer: EventWriter<Vec<u8>>,
 }
@@ -32,13 +33,13 @@ macro_rules! make_html_symbol {
 }
 
 impl<'a> HtmlWriter<'a> {
-    pub fn new(ast: &'a ResolvedAst) -> Self {
+    pub fn new(ast: &'a ResolvedHir) -> Self {
         let writer = EmitterConfig::new()
             .perform_indent(true)
             .write_document_declaration(false)
             .create_writer(vec![]);
         Self {
-            ast,
+            hir: ast,
             par_id: 0,
             writer,
         }
@@ -52,7 +53,7 @@ impl<'a> HtmlWriter<'a> {
         self.emit(XmlEvent::start_element("ul"));
 
         #[allow(clippy::unnecessary_to_owned)]
-        for stmt in self.ast.root_statements().to_vec() {
+        for stmt in self.hir.roots().to_vec() {
             self.visit_statement(stmt);
         }
 
@@ -64,13 +65,13 @@ impl<'a> HtmlWriter<'a> {
     }
 
     fn visit_statement(&mut self, stmt: StmtId) {
-        let stmt = self.ast.statement(stmt);
+        let stmt = self.hir.statement(stmt);
 
         match stmt.kind() {
             StatementKind::Expression(expr) => {
                 self.emit(XmlEvent::start_element("li"));
                 self.visit_expression(*expr);
-                match self.ast.expression(*expr).kind() {
+                match self.hir.expression(*expr).kind() {
                     ExpressionKind::Assignment(_, _)
                     | ExpressionKind::Literal(_)
                     | ExpressionKind::Binary(_, _, _)
@@ -203,7 +204,7 @@ impl<'a> HtmlWriter<'a> {
     }
 
     fn visit_expression(&mut self, expr: ExprId) {
-        match self.ast.expression(expr).kind() {
+        match self.hir.expression(expr).kind() {
             ExpressionKind::Assignment(Target::Direct(ident_ref), expr) => {
                 self.visit_assignment(*ident_ref, *expr)
             }
@@ -250,7 +251,6 @@ impl<'a> HtmlWriter<'a> {
 
                 self.emit_curly("}", &par_id);
             }
-            ExpressionKind::Dummy => unimplemented!("invalid source does not reach that point"),
         }
     }
 
@@ -265,7 +265,7 @@ impl<'a> HtmlWriter<'a> {
         // but the `if cond {` ends a line. Thus, we close the <li> tag after the `{`. But
         // as the visit_statement() expects to close one <li> as well, we leave the last one
         // open... This also works with `let a = if cond { ... } else { ... }`. In
-        self.emit_if(self.ast.expression_type(true_branch));
+        self.emit_if(self.hir.expression_type(true_branch));
 
         self.visit_expression(cond);
 
@@ -325,7 +325,7 @@ impl<'a> HtmlWriter<'a> {
 
     fn visit_while(&mut self, cond: ExprId, expr: ExprId) {
         // see explanation on top of visit_id() function
-        self.emit_while(self.ast.expression_type(expr));
+        self.emit_while(self.hir.expression_type(expr));
 
         self.visit_expression(cond);
 
@@ -476,14 +476,14 @@ impl<'a> HtmlWriter<'a> {
                 .attr("id", &Self::ident_id(stmt_id, index))
                 .attr("class", "ident"),
         );
-        self.emit(XmlEvent::Characters(self.ast.identifier(ident)));
+        self.emit(XmlEvent::Characters(self.hir.identifier(ident)));
         self.emit(XmlEvent::end_element());
     }
 
     fn emit_identifier_ref(&mut self, ident_ref_id: IdentRefId) {
-        let ident_ref = self.ast.identifier_ref(ident_ref_id);
+        let ident_ref = self.hir.identifier_ref(ident_ref_id);
 
-        let symbol = match self.ast.symbol(ident_ref.symbol_id()).kind() {
+        let symbol = match self.hir.symbol(ident_ref.symbol_id()).kind() {
             SymbolKind::NotFound => panic!("symbol was not resolved"),
             SymbolKind::Let(stmt) => Self::ident_id(*stmt, None),
             SymbolKind::LetFn(stmt, _, _) => Self::ident_id(*stmt, None),
@@ -491,29 +491,29 @@ impl<'a> HtmlWriter<'a> {
             SymbolKind::Native(ident, parameters, ret_type, _) => {
                 format!(
                     "ident__native_{}_{}_{}",
-                    self.ast.identifier(*ident),
+                    self.hir.identifier(*ident),
                     parameters
                         .iter()
-                        .map(|p| self.ast.ty(*p).to_string())
+                        .map(|p| self.hir.ty(*p).to_string())
                         .collect::<Vec<String>>()
                         .join("_"),
-                    self.ast.ty(*ret_type)
+                    self.hir.ty(*ret_type)
                 )
             }
             SymbolKind::NativeType(ident_id, _) => {
-                format!("ident__native-type_{}", self.ast.identifier(*ident_id))
+                format!("ident__native-type_{}", self.hir.identifier(*ident_id))
             }
             SymbolKind::Field(stmt, index) => Self::ident_id(*stmt, Some(*index)),
             SymbolKind::Struct(stmt) => Self::ident_id(*stmt, None),
         };
 
         let ty = self
-            .ast
-            .ty(self.ast.symbol(ident_ref.symbol_id()).type_id());
+            .hir
+            .ty(self.hir.symbol(ident_ref.symbol_id()).type_id());
         let (type_ref, type_name) = match ty {
             Type::Struct(stmt) => {
-                let name = match self.ast.statement(*stmt).kind() {
-                    StatementKind::Struct(ident, _) => self.ast.identifier(ident.id()),
+                let name = match self.hir.statement(*stmt).kind() {
+                    StatementKind::Struct(ident, _) => self.hir.identifier(ident.id()),
                     _ => unreachable!("must be a struct statement"),
                 };
                 (Some(format!("ident__stmt{stmt}")), format!("struct {name}"))
@@ -530,7 +530,7 @@ impl<'a> HtmlWriter<'a> {
                 .attr("data-type-ident-ref", &type_ref.unwrap_or_default()),
         );
         self.emit(XmlEvent::Characters(
-            self.ast.identifier(ident_ref.ident().id()),
+            self.hir.identifier(ident_ref.ident().id()),
         ));
         self.emit(XmlEvent::end_element());
     }
@@ -538,6 +538,7 @@ impl<'a> HtmlWriter<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::hir::UnresolvedHir;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
     use crate::output::html::HtmlWriter;
@@ -548,16 +549,11 @@ mod tests {
         ($name:ident, $src:expr) => {
             #[test]
             fn $name() {
-                let ast = Parser::new(Lexer::new($src))
-                    .parse()
-                    .unwrap()
-                    .convert_operators()
-                    .convert_implicit_ret()
-                    .resolve_exit_points()
+                let hir = UnresolvedHir::from(Parser::new(Lexer::new($src)).parse().unwrap())
                     .resolve(Natives::default())
                     .unwrap();
 
-                let html = HtmlWriter::new(&ast).serialize();
+                let html = HtmlWriter::new(&hir).serialize();
                 assert_snapshot!(&html);
             }
         };

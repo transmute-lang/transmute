@@ -9,8 +9,5 @@ Ok(
         expressions: [],
         statements: [],
         root: [],
-        symbols: [],
-        types: [],
-        state: Raw,
     },
 )

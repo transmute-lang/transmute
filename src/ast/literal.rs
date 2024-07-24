@@ -1,4 +1,4 @@
-use crate::ast::ids::IdentRefId;
+use crate::ids::IdentRefId;
 use crate::lexer::Span;
 use std::fmt::{Debug, Formatter};
 
@@ -15,6 +15,10 @@ impl Literal {
 
     pub fn kind(&self) -> &LiteralKind {
         &self.kind
+    }
+
+    pub fn take_kind(self) -> LiteralKind {
+        self.kind
     }
 
     pub fn span(&self) -> &Span {

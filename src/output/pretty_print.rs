@@ -1,16 +1,15 @@
-use crate::ast::expression::{Expression, ExpressionKind, Target, Typed, TypedState, Untyped};
-use crate::ast::identifier_ref::{Bound, BoundState, Unbound};
-use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
+use crate::ast::expression::{Expression, ExpressionKind, Target};
+use crate::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
 use crate::ast::statement::{RetMode, Statement, StatementKind};
-use crate::ast::{Ast, ExitPoints, ResolvedAst};
+use crate::ast::Ast;
 use std::fmt::{Result, Write};
 
 pub trait PrettyPrint {
-    fn pretty_print<W, R>(
+    fn pretty_print<W>(
         &self,
-        ctx: &mut PrettyPrintContext<'_, R>,
+        ctx: &mut PrettyPrintContext<'_>,
         opts: &Options,
         f: &mut W,
     ) -> Result
@@ -24,9 +23,9 @@ pub struct Options {
 }
 
 impl PrettyPrint for Literal {
-    fn pretty_print<W, R>(
+    fn pretty_print<W>(
         &self,
-        ctx: &mut PrettyPrintContext<'_, R>,
+        ctx: &mut PrettyPrintContext<'_>,
         _opts: &Options,
         f: &mut W,
     ) -> Result
@@ -47,16 +46,8 @@ impl PrettyPrint for Literal {
     }
 }
 
-impl<T> PrettyPrint for Expression<T>
-where
-    T: TypedState,
-{
-    fn pretty_print<W, R>(
-        &self,
-        ctx: &mut PrettyPrintContext<'_, R>,
-        opts: &Options,
-        f: &mut W,
-    ) -> Result
+impl PrettyPrint for Expression {
+    fn pretty_print<W>(&self, ctx: &mut PrettyPrintContext<'_>, opts: &Options, f: &mut W) -> Result
     where
         W: Write,
     {
@@ -171,17 +162,8 @@ where
     }
 }
 
-impl<T, B> PrettyPrint for Statement<T, B>
-where
-    T: TypedState,
-    B: BoundState,
-{
-    fn pretty_print<W, R>(
-        &self,
-        ctx: &mut PrettyPrintContext<'_, R>,
-        opts: &Options,
-        f: &mut W,
-    ) -> Result
+impl PrettyPrint for Statement {
+    fn pretty_print<W>(&self, ctx: &mut PrettyPrintContext<'_>, opts: &Options, f: &mut W) -> Result
     where
         W: Write,
     {
@@ -271,13 +253,13 @@ where
     }
 }
 
-impl<R> Ast<R, Typed, Bound> {
+impl Ast {
     pub fn pretty_print<W>(&self, opts: &Options, f: &mut W) -> Result
     where
         W: Write,
     {
         let mut ctx = PrettyPrintContext {
-            ast: AstState::TypedBound(self),
+            ast: self,
             level: 0,
             require_semicolon: false,
         };
@@ -288,103 +270,49 @@ impl<R> Ast<R, Typed, Bound> {
     }
 }
 
-impl<R> Ast<R, Untyped, Unbound> {
-    pub fn pretty_print<W>(&self, opts: &Options, f: &mut W) -> Result
-    where
-        W: Write,
-    {
-        let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(self),
-            level: 0,
-            require_semicolon: false,
-        };
-        for stmt_id in self.roots() {
-            ctx.pretty_print_statement(*stmt_id, opts, f)?;
-        }
-        Ok(())
-    }
-}
-
-pub enum AstState<'a, R> {
-    TypedBound(&'a Ast<R, Typed, Bound>),
-    UntypedUnbound(&'a Ast<R, Untyped, Unbound>),
-}
-
-impl<'a, R> From<&'a Ast<R, Untyped, Unbound>> for AstState<'a, R> {
-    fn from(value: &'a Ast<R, Untyped, Unbound>) -> Self {
-        AstState::UntypedUnbound(value)
-    }
-}
-
-pub struct PrettyPrintContext<'a, R> {
-    ast: AstState<'a, R>,
+pub struct PrettyPrintContext<'a> {
+    ast: &'a Ast,
     level: usize,
     require_semicolon: bool,
 }
 
-impl<'a> PrettyPrintContext<'a, ExitPoints> {
-    pub fn from(ast: &'a ResolvedAst) -> Self {
-        Self {
-            ast: AstState::TypedBound(ast),
-            level: 0,
-            require_semicolon: false,
-        }
-    }
-}
-
-impl<R> PrettyPrintContext<'_, R> {
+impl PrettyPrintContext<'_> {
     fn indent(&self) -> String {
         "  ".repeat(self.level)
     }
 
     fn identifier(&self, ident_id: IdentId) -> &str {
-        match self.ast {
-            AstState::TypedBound(ast) => ast.identifier(ident_id),
-            AstState::UntypedUnbound(ast) => ast.identifier(ident_id),
-        }
+        self.ast.identifier(ident_id)
     }
 
     fn identifier_ref(&self, ident_ref_id: IdentRefId) -> &str {
-        match self.ast {
-            AstState::TypedBound(ast) => {
-                self.identifier(ast.identifier_ref(ident_ref_id).ident().id())
-            }
-            AstState::UntypedUnbound(ast) => {
-                self.identifier(ast.identifier_ref(ident_ref_id).ident().id())
-            }
-        }
+        self.identifier(self.ast.identifier_ref(ident_ref_id).ident().id())
     }
 
     fn pretty_print_expression<W>(&mut self, expr_id: ExprId, opts: &Options, f: &mut W) -> Result
     where
         W: Write,
     {
-        match self.ast {
-            AstState::TypedBound(ast) => ast.expression(expr_id).pretty_print(self, opts, f),
-            AstState::UntypedUnbound(ast) => ast.expression(expr_id).pretty_print(self, opts, f),
-        }
+        self.ast.expression(expr_id).pretty_print(self, opts, f)
     }
 
     fn pretty_print_statement<W>(&mut self, stmt_id: StmtId, opts: &Options, f: &mut W) -> Result
     where
         W: Write,
     {
-        match self.ast {
-            AstState::TypedBound(ast) => ast.statement(stmt_id).pretty_print(self, opts, f),
-            AstState::UntypedUnbound(ast) => ast.statement(stmt_id).pretty_print(self, opts, f),
-        }
+        self.ast.statement(stmt_id).pretty_print(self, opts, f)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::ast::identifier::Identifier;
-    use crate::ast::identifier_ref::{IdentifierRef, Unbound};
-    use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
+    use crate::ast::identifier_ref::IdentifierRef;
+    use crate::ids::{ExprId, IdentId, IdentRefId, StmtId};
     use crate::ast::literal::{Literal, LiteralKind};
     use crate::ast::Ast;
     use crate::lexer::{Lexer, Span};
-    use crate::output::pretty_print::{AstState, Options, PrettyPrint, PrettyPrintContext};
+    use crate::output::pretty_print::{Options, PrettyPrint, PrettyPrintContext};
     use crate::parser::Parser;
     use insta::assert_display_snapshot;
 
@@ -405,7 +333,7 @@ mod tests {
         identifier_refs!(0 => $ident, $($tail)*)
     };
     ($ident_ref:expr => $ident:expr) => {
-        vec![IdentifierRef::<Unbound>::new(
+        vec![IdentifierRef::new(
             IdentRefId::from($ident_ref),
             Identifier::new(IdentId::from($ident), Span::default())
         )]
@@ -422,7 +350,7 @@ mod tests {
         let ast = Ast::new(vec![], vec![], vec![], vec![], vec![]);
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -438,7 +366,7 @@ mod tests {
         let ast = Ast::new(vec![], vec![], vec![], vec![], vec![]);
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -460,7 +388,7 @@ mod tests {
         );
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -481,7 +409,7 @@ mod tests {
         let expr = ast.expression(ExprId::from(1));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -497,7 +425,7 @@ mod tests {
         let expr = ast.expression(ExprId::from(ast.expressions().len() - 1));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -513,7 +441,7 @@ mod tests {
         let expr = ast.expression(ExprId::from(1));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -529,7 +457,7 @@ mod tests {
         let expr = ast.expression(ExprId::from(2));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -545,7 +473,7 @@ mod tests {
         let expr = ast.expression(ExprId::from(0));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -561,7 +489,7 @@ mod tests {
         let expr = ast.expression(ExprId::from(1));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -577,7 +505,7 @@ mod tests {
         let expr = ast.expression(ExprId::from(2));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -595,7 +523,7 @@ mod tests {
         let expr = ast.expression(ExprId::from(3));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -616,7 +544,7 @@ mod tests {
         let expr = ast.expression(ExprId::from(3));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -639,7 +567,7 @@ mod tests {
         let expr = ast.expression(ExprId::from(5));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -665,7 +593,7 @@ mod tests {
         let expr = ast.expression(ExprId::from(8));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -693,7 +621,7 @@ mod tests {
         let expr = ast.expression(ExprId::from(10));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -722,7 +650,7 @@ mod tests {
         let stmt = ast.statement(StmtId::from(0));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -738,7 +666,7 @@ mod tests {
         let stmt = ast.statement(StmtId::from(0));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -754,7 +682,7 @@ mod tests {
         let stmt = ast.statement(StmtId::from(0));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -770,7 +698,7 @@ mod tests {
         let stmt = ast.statement(StmtId::from(0));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -786,7 +714,7 @@ mod tests {
         let stmt = ast.statement(StmtId::from(1));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -810,7 +738,7 @@ mod tests {
         let stmt = ast.statement(StmtId::from(1));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -834,7 +762,7 @@ mod tests {
         let stmt = ast.statement(StmtId::from(1));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };
@@ -858,7 +786,7 @@ mod tests {
         let stmt = ast.statement(StmtId::from(1));
 
         let mut ctx = PrettyPrintContext {
-            ast: AstState::UntypedUnbound(&ast),
+            ast: &ast,
             level: 1,
             require_semicolon: false,
         };

@@ -15,7 +15,6 @@ Ok(
                 ident: Identifier {
                     id: IdentId(2),
                     span: 1:18; [17, 23],
-                    bound: Unbound,
                 },
             },
             IdentifierRef {
@@ -23,7 +22,6 @@ Ok(
                 ident: Identifier {
                     id: IdentId(2),
                     span: 1:27; [26, 32],
-                    bound: Unbound,
                 },
             },
             IdentifierRef {
@@ -31,7 +29,6 @@ Ok(
                 ident: Identifier {
                     id: IdentId(1),
                     span: 1:36; [35, 36],
-                    bound: Unbound,
                 },
             },
         ],
@@ -45,7 +42,6 @@ Ok(
                     },
                 ),
                 span: 1:36; [35, 36],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(1),
@@ -56,7 +52,6 @@ Ok(
                     },
                 ),
                 span: 1:40; [39, 40],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(2),
@@ -69,7 +64,6 @@ Ok(
                     ExprId(1),
                 ),
                 span: 1:36; [35, 40],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(3),
@@ -79,7 +73,6 @@ Ok(
                     ],
                 ),
                 span: 1:36; [35, 41],
-                typed: Untyped,
             },
         ],
         statements: [
@@ -96,25 +89,21 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 1:5; [4, 13],
-                        bound: Unbound,
                     },
                     [
                         Parameter {
                             identifier: Identifier {
                                 id: IdentId(1),
                                 span: 1:15; [14, 15],
-                                bound: Unbound,
                             },
                             ty: IdentRefId(0),
                             span: 1:15; [14, 23],
-                            typed: Untyped,
                         },
                     ],
                     Return {
                         ret: Some(
                             IdentRefId(1),
                         ),
-                        typed: Untyped,
                     },
                     ExprId(3),
                 ),
@@ -124,8 +113,5 @@ Ok(
         root: [
             StmtId(1),
         ],
-        symbols: [],
-        types: [],
-        state: Raw,
     },
 )

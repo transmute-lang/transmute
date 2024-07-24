@@ -1,26 +1,26 @@
 use crate::ast;
-use crate::ast::expression::{ExpressionKind, Target, Untyped};
+use crate::ast::expression::{ExpressionKind, Target};
 use crate::ast::identifier::Identifier;
-use crate::ast::identifier_ref::{IdentifierRef, Unbound};
-use crate::ast::ids::{id, ExprId, IdentId, IdentRefId, StmtId};
+use crate::ast::identifier_ref::IdentifierRef;
+use crate::ids::{id, ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{
     BinaryOperator, BinaryOperatorKind, Precedence, UnaryOperator, UnaryOperatorKind,
 };
 use crate::ast::statement::{Field, Parameter, RetMode, Return, StatementKind};
-use crate::ast::{Ast, Raw};
+use crate::ast::Ast;
 use crate::error::Diagnostics;
 use crate::lexer::{Lexer, PeekableLexer, Span, TokenKind};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
-type Expression = ast::expression::Expression<Untyped>;
-type Statement = ast::statement::Statement<Untyped, Unbound>;
+type Expression = ast::expression::Expression;
+type Statement = ast::statement::Statement;
 
 pub struct Parser<'s> {
     lexer: PeekableLexer<'s>,
     identifiers: HashMap<String, IdentId>,
-    identifier_refs: Vec<IdentifierRef<Unbound>>,
+    identifier_refs: Vec<IdentifierRef>,
     expressions: Vec<Expression>,
     statements: Vec<Statement>,
     diagnostics: Diagnostics,
@@ -209,7 +209,7 @@ impl<'s> Parser<'s> {
         }
     }
 
-    pub fn parse(mut self) -> Result<Ast<Raw, Untyped, Unbound>, Diagnostics> {
+    pub fn parse(mut self) -> Result<Ast, Diagnostics> {
         let mut statements = Vec::new();
 
         while let Some(statement) = self.parse_statement() {
@@ -382,11 +382,7 @@ impl<'s> Parser<'s> {
     /// let ident '( param , ... ): type = expr ;
     /// let ident '( param , ... ): type = { expr ; ... } ;
     /// ```
-    fn parse_function(
-        &mut self,
-        span: &Span,
-        identifier: Identifier<Unbound>,
-    ) -> Option<&Statement> {
+    fn parse_function(&mut self, span: &Span, identifier: Identifier) -> Option<&Statement> {
         // let name '( param , ... ): type = expr ;
         let open_parenthesis_token = self.lexer.next();
         self.potential_tokens.clear();
@@ -1377,7 +1373,7 @@ impl<'s> Parser<'s> {
     /// ```
     /// identifier ( expr , ... )
     /// ```
-    fn parse_function_call(&mut self, identifier: Identifier<Unbound>) -> &Expression {
+    fn parse_function_call(&mut self, identifier: Identifier) -> &Expression {
         // identifier '( expr , ... )
         self.potential_tokens.clear();
         let open_parenthesis_token = self.lexer.next();
@@ -1436,7 +1432,7 @@ impl<'s> Parser<'s> {
         &self.expressions[id!(id)]
     }
 
-    fn parse_struct_instantiation(&mut self, struct_identifier: Identifier<Unbound>) -> ExprId {
+    fn parse_struct_instantiation(&mut self, struct_identifier: Identifier) -> ExprId {
         // ident '{ ident : expr , ... }
         let open_curly_bracket_token = self.lexer.next();
         self.potential_tokens.clear();
@@ -1661,10 +1657,9 @@ impl<'s> Parser<'s> {
         }
     }
 
-    fn push_identifier_ref(&mut self, ident: Identifier<Unbound>) -> IdentRefId {
+    fn push_identifier_ref(&mut self, ident: Identifier) -> IdentRefId {
         let id = IdentRefId::from(self.identifier_refs.len());
-        self.identifier_refs
-            .push(IdentifierRef::<Unbound>::new(id, ident));
+        self.identifier_refs.push(IdentifierRef::new(id, ident));
         id
     }
 
@@ -1674,7 +1669,7 @@ impl<'s> Parser<'s> {
         id
     }
 
-    fn push_statement(&mut self, kind: StatementKind<Untyped, Unbound>, span: Span) -> StmtId {
+    fn push_statement(&mut self, kind: StatementKind, span: Span) -> StmtId {
         let id = StmtId::from(self.statements.len());
         self.statements.push(Statement::new(id, kind, span));
         id

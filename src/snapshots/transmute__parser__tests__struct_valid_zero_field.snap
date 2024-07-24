@@ -16,7 +16,6 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 1:8; [7, 8],
-                        bound: Unbound,
                     },
                     [],
                 ),
@@ -26,8 +25,5 @@ Ok(
         root: [
             StmtId(0),
         ],
-        symbols: [],
-        types: [],
-        state: Raw,
     },
 )

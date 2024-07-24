@@ -14,7 +14,6 @@ Ok(
                 ident: Identifier {
                     id: IdentId(0),
                     span: 1:1; [0, 5],
-                    bound: Unbound,
                 },
             },
             IdentifierRef {
@@ -22,7 +21,6 @@ Ok(
                 ident: Identifier {
                     id: IdentId(1),
                     span: 1:9; [8, 11],
-                    bound: Unbound,
                 },
             },
         ],
@@ -36,7 +34,6 @@ Ok(
                     },
                 ),
                 span: 1:1; [0, 5],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(1),
@@ -45,7 +42,6 @@ Ok(
                     IdentRefId(1),
                 ),
                 span: 1:1; [0, 11],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(2),
@@ -56,7 +52,6 @@ Ok(
                     },
                 ),
                 span: 1:15; [14, 15],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(3),
@@ -67,7 +62,6 @@ Ok(
                     ExprId(2),
                 ),
                 span: 1:1; [0, 15],
-                typed: Untyped,
             },
         ],
         statements: [
@@ -82,8 +76,5 @@ Ok(
         root: [
             StmtId(0),
         ],
-        symbols: [],
-        types: [],
-        state: Raw,
     },
 )

@@ -1,14 +1,14 @@
-use crate::ast::expression::{ExpressionKind, Target};
-use crate::ast::ids::{ExprId, IdentId, IdentRefId, StmtId};
-use crate::ast::literal::{Literal, LiteralKind};
-use crate::ast::statement::StatementKind;
-use crate::ast::ResolvedAst;
-use crate::resolver::SymbolKind;
+use crate::ids::{ExprId, IdentId, IdentRefId, StmtId};
+use crate::hir::expression::{ExpressionKind, Target};
+use crate::hir::literal::{Literal, LiteralKind};
+use crate::hir::statement::StatementKind;
+use crate::hir::ResolvedHir;
+use crate::hir::SymbolKind;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 pub struct Interpreter<'a> {
-    ast: &'a ResolvedAst,
+    ast: &'a ResolvedHir,
     /// Maps an identifier in the current frame to the value's index in the heap
     // todo IdentId should be SymbolId
     stack: Vec<HashMap<IdentId, Ref>>,
@@ -16,7 +16,7 @@ pub struct Interpreter<'a> {
 }
 
 impl<'a> Interpreter<'a> {
-    pub fn new(ast: &'a ResolvedAst) -> Self {
+    pub fn new(ast: &'a ResolvedHir) -> Self {
         Self {
             ast,
             stack: vec![Default::default()],
@@ -25,7 +25,7 @@ impl<'a> Interpreter<'a> {
     }
 
     pub fn start(&mut self) -> i64 {
-        let val = self.visit_statements(self.ast.root_statements());
+        let val = self.visit_statements(self.ast.roots());
         let val = val
             .value_ref
             .map(|r| &self.heap[r.0])
@@ -158,9 +158,6 @@ impl<'a> Interpreter<'a> {
                 self.heap.push(Value::Struct(values));
 
                 Val::of(Ref(self.heap.len() - 1))
-            }
-            ExpressionKind::Dummy => {
-                panic!("should not interpret an invalid source code")
             }
         }
     }
@@ -446,6 +443,7 @@ impl Val {
 
 #[cfg(test)]
 mod tests {
+    use crate::hir::UnresolvedHir;
     use crate::interpreter::Interpreter;
     use crate::lexer::Lexer;
     use crate::natives::Natives;
@@ -455,38 +453,31 @@ mod tests {
         ($name:ident, $src:expr => $value:expr) => {
             #[test]
             fn $name() {
-                let parser = Parser::new(Lexer::new($src));
-                let ast = parser
-                    .parse()
-                    .unwrap()
-                    .convert_operators()
-                    .convert_implicit_ret()
-                    .resolve_exit_points()
+                let hir = UnresolvedHir::from(Parser::new(Lexer::new($src)).parse().unwrap())
                     .resolve(Natives::default())
                     .unwrap();
 
-                let actual = Interpreter::new(&ast).start();
+                let actual = Interpreter::new(&hir).start();
 
                 assert_eq!(actual, $value)
             }
-        };
-        ($name:ident, $src:expr => $kind:ident) => {
-            #[test]
-            fn $name() {
-                let parser = Parser::new(Lexer::new($src));
-                let ast = parser
-                    .parse()
-                    .unwrap()
-                    .convert_implicit_ret()
-                    .convert_operators()
-                    .resolve(Natives::new())
-                    .unwrap();
-
-                let actual = Interpreter::new(&ast).start();
-
-                assert_eq!(actual, super::Value::$kind)
-            }
-        };
+        }; // ($name:ident, $src:expr => $kind:ident) => {
+           //     #[test]
+           //     fn $name() {
+           //         let parser = Parser::new(Lexer::new($src));
+           //         let ast = parser
+           //             .parse()
+           //             .unwrap()
+           //             .convert_implicit_ret()
+           //             .convert_operators()
+           //             .resolve(Natives::new())
+           //             .unwrap();
+           //
+           //         let actual = Interpreter::new(&ast).start();
+           //
+           //         assert_eq!(actual, super::Value::$kind)
+           //     }
+           // };
     }
 
     eval!(simple_precedence_1, "2 + 20 * 2;" => 42);

@@ -13,7 +13,6 @@ Ok(
                 ident: Identifier {
                     id: IdentId(0),
                     span: 1:1; [0, 1],
-                    bound: Unbound,
                 },
             },
         ],
@@ -25,7 +24,6 @@ Ok(
                     [],
                 ),
                 span: 1:1; [0, 5],
-                typed: Untyped,
             },
         ],
         statements: [
@@ -40,8 +38,5 @@ Ok(
         root: [
             StmtId(0),
         ],
-        symbols: [],
-        types: [],
-        state: Raw,
     },
 )

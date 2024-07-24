@@ -16,7 +16,6 @@ Ok(
                 ident: Identifier {
                     id: IdentId(2),
                     span: 1:15; [14, 20],
-                    bound: Unbound,
                 },
             },
             IdentifierRef {
@@ -24,7 +23,6 @@ Ok(
                 ident: Identifier {
                     id: IdentId(2),
                     span: 1:26; [25, 31],
-                    bound: Unbound,
                 },
             },
         ],
@@ -36,28 +34,23 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 1:8; [7, 8],
-                        bound: Unbound,
                     },
                     [
                         Field {
                             identifier: Identifier {
                                 id: IdentId(1),
                                 span: 1:12; [11, 12],
-                                bound: Unbound,
                             },
                             ty: IdentRefId(0),
                             span: 1:12; [11, 20],
-                            typed: Untyped,
                         },
                         Field {
                             identifier: Identifier {
                                 id: IdentId(3),
                                 span: 1:23; [22, 23],
-                                bound: Unbound,
                             },
                             ty: IdentRefId(1),
                             span: 1:23; [22, 31],
-                            typed: Untyped,
                         },
                     ],
                 ),
@@ -67,8 +60,5 @@ Ok(
         root: [
             StmtId(0),
         ],
-        symbols: [],
-        types: [],
-        state: Raw,
     },
 )

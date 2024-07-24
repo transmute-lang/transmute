@@ -1,50 +1,31 @@
-use crate::ast::ids::{ExprId, IdentRefId, StmtId, TypeId};
+use crate::ids::{ExprId, IdentRefId, StmtId};
 use crate::ast::literal::Literal;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::lexer::Span;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Expression<T>
-where
-    T: TypedState,
-{
+pub struct Expression {
     id: ExprId,
     kind: ExpressionKind,
     span: Span,
-    typed: T,
 }
 
-impl Expression<Untyped> {
+impl Expression {
     pub fn new(id: ExprId, kind: ExpressionKind, span: Span) -> Self {
-        Self {
-            id,
-            kind,
-            span,
-            typed: Untyped,
-        }
+        Self { id, kind, span }
     }
 
-    pub fn typed(self, ty: TypeId) -> Expression<Typed> {
-        Expression {
-            id: self.id,
-            kind: self.kind,
-            span: self.span,
-            typed: Typed(ty),
-        }
-    }
-}
-
-impl<T> Expression<T>
-where
-    T: TypedState,
-{
     pub fn id(&self) -> ExprId {
         self.id
     }
 
     pub fn kind(&self) -> &ExpressionKind {
         &self.kind
+    }
+
+    pub fn take_kind(self) -> ExpressionKind {
+        self.kind
     }
 
     pub fn set_span(&mut self, span: Span) {
@@ -54,11 +35,9 @@ where
     pub fn span(&self) -> &Span {
         &self.span
     }
-}
 
-impl Expression<Typed> {
-    pub fn type_id(&self) -> TypeId {
-        self.typed.0
+    pub fn take_span(self) -> Span {
+        self.span
     }
 }
 
@@ -82,24 +61,6 @@ pub enum ExpressionKind {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Target {
     Direct(IdentRefId),
-    // The expression id if of kind ExpressionKind::Access
+    // The expression id is of kind ExpressionKind::Access
     Indirect(ExprId),
-}
-
-pub trait TypedState {}
-
-#[derive(Debug)]
-pub struct Untyped;
-
-impl TypedState for Untyped {}
-
-#[derive(Clone)]
-pub struct Typed(pub TypeId);
-
-impl TypedState for Typed {}
-
-impl Debug for Typed {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Typed({})", self.0)
-    }
 }

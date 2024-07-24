@@ -6,12 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected number(1), expected one of (2) `{` 512, `=` 511",
+                message: "Unexpected number(1), expected one of (2) `{` 508, `=` 507",
                 span: 1:9; [8, 9],
                 level: Error,
                 generated_at: (
                     "src/parser.rs",
-                    507,
+                    503,
                 ),
             },
         ],

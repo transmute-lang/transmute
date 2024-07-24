@@ -15,7 +15,6 @@ Ok(
                     [],
                 ),
                 span: 1:9; [8, 10],
-                typed: Untyped,
             },
         ],
         statements: [
@@ -25,12 +24,10 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 1:5; [4, 5],
-                        bound: Unbound,
                     },
                     [],
                     Return {
                         ret: None,
-                        typed: Untyped,
                     },
                     ExprId(0),
                 ),
@@ -40,8 +37,5 @@ Ok(
         root: [
             StmtId(0),
         ],
-        symbols: [],
-        types: [],
-        state: Raw,
     },
 )

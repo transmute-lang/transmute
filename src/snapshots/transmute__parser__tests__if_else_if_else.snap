@@ -16,7 +16,6 @@ Ok(
                     },
                 ),
                 span: 1:4; [3, 7],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(1),
@@ -27,7 +26,6 @@ Ok(
                     },
                 ),
                 span: 1:11; [10, 12],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(2),
@@ -37,7 +35,6 @@ Ok(
                     ],
                 ),
                 span: 1:9; [8, 15],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(3),
@@ -48,7 +45,6 @@ Ok(
                     },
                 ),
                 span: 1:25; [24, 29],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(4),
@@ -59,7 +55,6 @@ Ok(
                     },
                 ),
                 span: 1:33; [32, 34],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(5),
@@ -69,7 +64,6 @@ Ok(
                     ],
                 ),
                 span: 1:31; [30, 37],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(6),
@@ -80,7 +74,6 @@ Ok(
                     },
                 ),
                 span: 1:46; [45, 47],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(7),
@@ -90,7 +83,6 @@ Ok(
                     ],
                 ),
                 span: 1:44; [43, 50],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(8),
@@ -102,7 +94,6 @@ Ok(
                     ),
                 ),
                 span: 1:22; [21, 50],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(9),
@@ -112,7 +103,6 @@ Ok(
                     ],
                 ),
                 span: 1:22; [21, 50],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(10),
@@ -124,7 +114,6 @@ Ok(
                     ),
                 ),
                 span: 1:1; [0, 50],
-                typed: Untyped,
             },
         ],
         statements: [
@@ -167,8 +156,5 @@ Ok(
         root: [
             StmtId(4),
         ],
-        symbols: [],
-        types: [],
-        state: Raw,
     },
 )

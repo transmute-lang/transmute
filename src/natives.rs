@@ -1,5 +1,5 @@
+use crate::hir::Type;
 use crate::interpreter::Value;
-use crate::resolver::Type;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};

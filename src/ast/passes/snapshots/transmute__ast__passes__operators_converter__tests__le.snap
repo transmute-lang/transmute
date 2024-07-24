@@ -1,6 +1,0 @@
----
-source: src/ast/passes/operators_converter.rs
-expression: w
----
-le(lhs, rhs);
-

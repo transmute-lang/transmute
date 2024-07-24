@@ -2,6 +2,7 @@
 extern crate core;
 
 use crate::cli::parse_args;
+use crate::hir::UnresolvedHir;
 use crate::interpreter::Interpreter;
 use crate::lexer::Lexer;
 use crate::natives::Natives;
@@ -15,13 +16,14 @@ use std::{fs, process};
 mod ast;
 mod cli;
 mod error;
+mod hir;
 mod interpreter;
 mod lexer;
 mod natives;
 mod output;
 mod parser;
-mod resolver;
 mod vec_map;
+pub mod ids;
 
 // todo things to check:
 //  let f() = 0:
@@ -52,15 +54,9 @@ fn main() {
         None
     };
 
-    exec(
-        &script,
-        cli.output_parsed,
-        cli.output_executable,
-        html_file_name,
-    );
+    exec(&script, cli.output_parsed, html_file_name);
 }
-
-fn exec(src: &str, print_ast: bool, print_executable_ast: bool, html_file_name: Option<PathBuf>) {
+fn exec(src: &str, print_ast: bool, html_file_name: Option<PathBuf>) {
     let result = Parser::new(Lexer::new(src))
         .parse()
         .peek(|ast| {
@@ -70,16 +66,9 @@ fn exec(src: &str, print_ast: bool, print_executable_ast: bool, html_file_name: 
                 print!("Parsed AST:\n{w}\n");
             }
         })
-        .map(|ast| ast.convert_operators())
-        .map(|ast| ast.convert_implicit_ret())
-        .map(|ast| ast.resolve_exit_points())
-        .and_then(|ast| ast.resolve(Natives::new()))
+        .map(UnresolvedHir::from)
+        .and_then(|hir| hir.resolve(Natives::new()))
         .peek(|ast| {
-            if print_executable_ast {
-                let mut w = String::new();
-                let _ = ast.pretty_print(&Options::default(), &mut w);
-                print!("Executable AST:\n{w}\n");
-            }
             if let Some(html_file_name) = &html_file_name {
                 HtmlWriter::new(ast)
                     .write(&mut File::create(html_file_name).unwrap())

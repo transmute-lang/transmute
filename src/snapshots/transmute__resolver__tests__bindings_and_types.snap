@@ -2,7 +2,7 @@
 source: src/resolver.rs
 expression: "&ast"
 ---
-Ast {
+Hir {
     identifiers: [
         "S",
         "f",
@@ -221,7 +221,7 @@ Ast {
             TypeId(5),
         ),
     ],
-    state: ExitPoints {
+    exit_points: ExitPoints {
         exit_points: {
             ExprId(1): [
                 Implicit(

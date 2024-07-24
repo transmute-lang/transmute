@@ -16,7 +16,6 @@ Ok(
                     },
                 ),
                 span: 1:1; [0, 1],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(1),
@@ -27,7 +26,6 @@ Ok(
                     },
                 ),
                 span: 1:5; [4, 6],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(2),
@@ -38,7 +36,6 @@ Ok(
                     },
                 ),
                 span: 1:10; [9, 10],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(3),
@@ -51,7 +48,6 @@ Ok(
                     ExprId(2),
                 ),
                 span: 1:5; [4, 10],
-                typed: Untyped,
             },
             Expression {
                 id: ExprId(4),
@@ -64,7 +60,6 @@ Ok(
                     ExprId(3),
                 ),
                 span: 1:1; [0, 10],
-                typed: Untyped,
             },
         ],
         statements: [
@@ -79,8 +74,5 @@ Ok(
         root: [
             StmtId(0),
         ],
-        symbols: [],
-        types: [],
-        state: Raw,
     },
 )

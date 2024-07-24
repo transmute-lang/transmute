@@ -6,7 +6,7 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `{`, expected one of (22) identifier 357, number 358, `true` 360, `false` 361, `let` 363, `ret` 364, `if` 365, `while` 366, `.` 1042, `(` 362, `=` 1100, `*` 1211, `/` 1209, `-` 359, `-` 1205, `+` 1207, `==` 1193, `!=` 1195, `>` 1197, `>=` 1199, `<` 1201, `<=` 1203",
+                message: "Unexpected `{`, expected one of (22) identifier 357, number 358, `true` 360, `false` 361, `let` 363, `ret` 364, `if` 365, `while` 366, `.` 1038, `(` 362, `=` 1096, `*` 1207, `/` 1205, `-` 359, `-` 1201, `+` 1203, `==` 1189, `!=` 1191, `>` 1193, `>=` 1195, `<` 1197, `<=` 1199",
                 span: 1:16; [15, 16],
                 level: Error,
                 generated_at: (
