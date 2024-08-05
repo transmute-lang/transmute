@@ -1,5 +1,5 @@
-use crate::ids::{IdentId, SymbolId};
 use crate::hir::bound::{Bound, BoundState, Unbound};
+use crate::ids::{IdentId, SymbolId};
 use crate::lexer::Span;
 
 use crate::ast::identifier::Identifier as AstIdentifier;

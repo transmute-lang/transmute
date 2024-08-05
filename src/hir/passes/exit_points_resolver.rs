@@ -1,6 +1,6 @@
 use crate::ast::expression::{Expression, ExpressionKind};
-use crate::ids::{ExprId, StmtId};
 use crate::ast::statement::{RetMode, Statement, StatementKind};
+use crate::ids::{ExprId, StmtId};
 use crate::vec_map::VecMap;
 
 pub struct ExitPointsResolver<'a> {
@@ -259,7 +259,7 @@ mod tests {
 
         let expr = ExprId::from(1);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let expected = vec![ExitPoint::Explicit(ExprId::from(0))];
@@ -283,7 +283,7 @@ mod tests {
 
         let expr = ExprId::from(6);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![
@@ -313,7 +313,7 @@ mod tests {
 
         let expr = ExprId::from(6);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![
@@ -345,7 +345,7 @@ mod tests {
 
         let expr = ExprId::from(7);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![
@@ -374,7 +374,7 @@ mod tests {
 
         let expr = ExprId::from(10);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![
@@ -403,7 +403,7 @@ mod tests {
 
         let expr = ExprId::from(5);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![ExitPoint::Explicit(ExprId::from(1))];
@@ -427,7 +427,7 @@ mod tests {
 
         let expr = ExprId::from(4);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![ExitPoint::Explicit(ExprId::from(3))];
@@ -453,7 +453,7 @@ mod tests {
 
         let expr = ExprId::from(10);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![
@@ -480,7 +480,7 @@ mod tests {
 
         let expr = ExprId::from(8);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![
@@ -509,7 +509,7 @@ mod tests {
         .unwrap();
         let expr = ExprId::from(14);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![
@@ -539,7 +539,7 @@ mod tests {
 
         let expr = ExprId::from(14);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![
@@ -567,7 +567,7 @@ mod tests {
 
         let expr = ExprId::from(9);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![
@@ -594,7 +594,7 @@ mod tests {
 
         let expr = ExprId::from(4);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![ExitPoint::Explicit(ExprId::from(3))];
@@ -618,7 +618,7 @@ mod tests {
 
         let expr = ExprId::from(8);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![
@@ -644,7 +644,7 @@ mod tests {
 
         let expr = ExprId::from(8);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![
@@ -674,7 +674,7 @@ mod tests {
 
         let expr = ExprId::from(7);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .unreachable;
         let mut expected = vec![ExprId::from(2), ExprId::from(6)];
@@ -701,7 +701,7 @@ mod tests {
 
         let expr = ExprId::from(10);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .exit_points;
         let mut expected = vec![
@@ -731,7 +731,7 @@ mod tests {
 
         let expr = ExprId::from(10);
 
-        let actual = ExitPointsResolver::new(ast.expressions(), ast.statements())
+        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
             .exit_points(expr)
             .unreachable;
         let mut expected = vec![ExprId::from(8)];

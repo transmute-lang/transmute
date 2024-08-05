@@ -1,13 +1,6 @@
 use crate::lexer::Span;
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug)]
-pub enum Error {
-    // NoMatch,
-    UnexpectedChar(Span),
-    ExpectedSemicolon(Span),
-}
-
 #[derive(Debug, Default, PartialEq)]
 pub struct Diagnostics {
     diagnostics: Vec<Diagnostic>,

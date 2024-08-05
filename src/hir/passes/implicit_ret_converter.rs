@@ -1,6 +1,6 @@
 use crate::ast::expression::{Expression, ExpressionKind};
-use crate::ids::{ExprId, StmtId};
 use crate::ast::statement::{RetMode, Statement, StatementKind};
+use crate::ids::{ExprId, StmtId};
 use crate::vec_map::VecMap;
 
 pub struct ImplicitRetConverter {
@@ -209,9 +209,9 @@ mod tests {
                 let mut ast = Parser::new(Lexer::new($src)).parse().unwrap();
 
                 for new_statement in ImplicitRetConverter::new().convert(
-                    &ast.root,
-                    ast.statements(),
-                    ast.expressions(),
+                    &ast.roots,
+                    &ast.statements,
+                    &ast.expressions,
                 ) {
                     ast.statements.insert(new_statement.id(), new_statement);
                 }

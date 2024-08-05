@@ -1,10 +1,9 @@
 use crate::ast::expression::Expression as AstExpression;
 use crate::ast::expression::ExpressionKind as AstExpressionKind;
 use crate::ast::expression::Target as AstTarget;
-use crate::ids::{ExprId, IdentRefId, StmtId, TypeId};
-use crate::ast::operators::{BinaryOperator, UnaryOperator};
 use crate::hir::literal::Literal;
 use crate::hir::typed::{Typed, TypedState, Untyped};
+use crate::ids::{ExprId, IdentRefId, StmtId, TypeId};
 use crate::lexer::Span;
 use std::fmt::Debug;
 
@@ -99,8 +98,6 @@ pub enum ExpressionKind {
     Assignment(Target, ExprId),
     If(ExprId, ExprId, Option<ExprId>),
     Literal(Literal),
-    Binary(ExprId, BinaryOperator, ExprId),
-    Unary(UnaryOperator, ExprId),
     Access(ExprId, IdentRefId),
     FunctionCall(IdentRefId, Vec<ExprId>),
     While(ExprId, ExprId),

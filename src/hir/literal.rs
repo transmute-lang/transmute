@@ -1,6 +1,6 @@
-use crate::ids::IdentRefId;
 use crate::ast::literal::Literal as AstLiteral;
 use crate::ast::literal::LiteralKind as AstLiteralKind;
+use crate::ids::IdentRefId;
 use crate::lexer::Span;
 use std::fmt::{Debug, Formatter};
 

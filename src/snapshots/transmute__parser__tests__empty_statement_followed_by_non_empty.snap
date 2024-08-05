@@ -28,7 +28,7 @@ Ok(
                 span: 1:3; [2, 9],
             },
         ],
-        root: [
+        roots: [
             StmtId(0),
         ],
     },

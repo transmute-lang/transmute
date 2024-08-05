@@ -1,9 +1,9 @@
 use crate::ast::expression::{Expression, ExpressionKind, Target};
-use crate::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{BinaryOperatorKind, UnaryOperatorKind};
 use crate::ast::statement::{RetMode, Statement, StatementKind};
 use crate::ast::Ast;
+use crate::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use std::fmt::{Result, Write};
 
 pub trait PrettyPrint {
@@ -263,7 +263,7 @@ impl Ast {
             level: 0,
             require_semicolon: false,
         };
-        for stmt_id in self.roots() {
+        for stmt_id in self.roots.iter() {
             ctx.pretty_print_statement(*stmt_id, opts, f)?;
         }
         Ok(())
@@ -282,25 +282,25 @@ impl PrettyPrintContext<'_> {
     }
 
     fn identifier(&self, ident_id: IdentId) -> &str {
-        self.ast.identifier(ident_id)
+        &self.ast.identifiers[ident_id]
     }
 
     fn identifier_ref(&self, ident_ref_id: IdentRefId) -> &str {
-        self.identifier(self.ast.identifier_ref(ident_ref_id).ident().id())
+        self.identifier(self.ast.identifier_refs[ident_ref_id].ident().id())
     }
 
     fn pretty_print_expression<W>(&mut self, expr_id: ExprId, opts: &Options, f: &mut W) -> Result
     where
         W: Write,
     {
-        self.ast.expression(expr_id).pretty_print(self, opts, f)
+        self.ast.expressions[expr_id].pretty_print(self, opts, f)
     }
 
     fn pretty_print_statement<W>(&mut self, stmt_id: StmtId, opts: &Options, f: &mut W) -> Result
     where
         W: Write,
     {
-        self.ast.statement(stmt_id).pretty_print(self, opts, f)
+        self.ast.statements[stmt_id].pretty_print(self, opts, f)
     }
 }
 
@@ -308,9 +308,9 @@ impl PrettyPrintContext<'_> {
 mod tests {
     use crate::ast::identifier::Identifier;
     use crate::ast::identifier_ref::IdentifierRef;
-    use crate::ids::{ExprId, IdentId, IdentRefId, StmtId};
     use crate::ast::literal::{Literal, LiteralKind};
     use crate::ast::Ast;
+    use crate::ids::{ExprId, IdentId, IdentRefId, StmtId};
     use crate::lexer::{Lexer, Span};
     use crate::output::pretty_print::{Options, PrettyPrint, PrettyPrintContext};
     use crate::parser::Parser;
@@ -406,7 +406,7 @@ mod tests {
     #[test]
     fn expression_assignment() {
         let ast = Parser::new(Lexer::new("a = true;")).parse().unwrap();
-        let expr = ast.expression(ExprId::from(1));
+        let expr = &ast.expressions[ExprId::from(1)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -422,7 +422,7 @@ mod tests {
     #[test]
     fn expression_assignment_indirect() {
         let ast = Parser::new(Lexer::new("a.b.c = true;")).parse().unwrap();
-        let expr = ast.expression(ExprId::from(ast.expressions().len() - 1));
+        let expr = &ast.expressions[ExprId::from(ast.expressions.len() - 1)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -438,7 +438,7 @@ mod tests {
     #[test]
     fn expression_unary() {
         let ast = Parser::new(Lexer::new("-a;")).parse().unwrap();
-        let expr = ast.expression(ExprId::from(1));
+        let expr = &ast.expressions[ExprId::from(1)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -454,7 +454,7 @@ mod tests {
     #[test]
     fn expression_binary() {
         let ast = Parser::new(Lexer::new("a+b;")).parse().unwrap();
-        let expr = ast.expression(ExprId::from(2));
+        let expr = &ast.expressions[ExprId::from(2)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -470,7 +470,7 @@ mod tests {
     #[test]
     fn expression_function_call_0() {
         let ast = Parser::new(Lexer::new("f();")).parse().unwrap();
-        let expr = ast.expression(ExprId::from(0));
+        let expr = &ast.expressions[ExprId::from(0)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -486,7 +486,7 @@ mod tests {
     #[test]
     fn expression_function_call_1() {
         let ast = Parser::new(Lexer::new("f(1);")).parse().unwrap();
-        let expr = ast.expression(ExprId::from(1));
+        let expr = &ast.expressions[ExprId::from(1)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -502,7 +502,7 @@ mod tests {
     #[test]
     fn expression_function_call_2() {
         let ast = Parser::new(Lexer::new("f(1,2);")).parse().unwrap();
-        let expr = ast.expression(ExprId::from(2));
+        let expr = &ast.expressions[ExprId::from(2)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -520,7 +520,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("while true { 1; }"))
             .parse()
             .unwrap();
-        let expr = ast.expression(ExprId::from(3));
+        let expr = &ast.expressions[ExprId::from(3)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -541,7 +541,7 @@ mod tests {
     #[test]
     fn expression_if() {
         let ast = Parser::new(Lexer::new("if true { 1; }")).parse().unwrap();
-        let expr = ast.expression(ExprId::from(3));
+        let expr = &ast.expressions[ExprId::from(3)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -564,7 +564,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("if true { 1; } else { 2; }"))
             .parse()
             .unwrap();
-        let expr = ast.expression(ExprId::from(5));
+        let expr = &ast.expressions[ExprId::from(5)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -590,7 +590,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("if true { 1; } else if b { 2; }"))
             .parse()
             .unwrap();
-        let expr = ast.expression(ExprId::from(8));
+        let expr = &ast.expressions[ExprId::from(8)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -618,7 +618,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("if true { 1; } else if b { 2; } else { 3; }"))
             .parse()
             .unwrap();
-        let expr = ast.expression(ExprId::from(10));
+        let expr = &ast.expressions[ExprId::from(10)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -647,7 +647,7 @@ mod tests {
     #[test]
     fn statement_expression() {
         let ast = Parser::new(Lexer::new("1;")).parse().unwrap();
-        let stmt = ast.statement(StmtId::from(0));
+        let stmt = &ast.statements[StmtId::from(0)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -663,7 +663,7 @@ mod tests {
     #[test]
     fn statement_let() {
         let ast = Parser::new(Lexer::new("let a = 1;")).parse().unwrap();
-        let stmt = ast.statement(StmtId::from(0));
+        let stmt = &ast.statements[StmtId::from(0)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -679,7 +679,7 @@ mod tests {
     #[test]
     fn statement_ret_explicit() {
         let ast = Parser::new(Lexer::new("ret a;")).parse().unwrap();
-        let stmt = ast.statement(StmtId::from(0));
+        let stmt = &ast.statements[StmtId::from(0)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -695,7 +695,7 @@ mod tests {
     #[test]
     fn statement_ret_implicit() {
         let ast = Parser::new(Lexer::new("let f() = { a; }")).parse().unwrap();
-        let stmt = ast.statement(StmtId::from(0));
+        let stmt = &ast.statements[StmtId::from(0)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -711,7 +711,7 @@ mod tests {
     #[test]
     fn statement_let_fn() {
         let ast = Parser::new(Lexer::new("let f() = { a; }")).parse().unwrap();
-        let stmt = ast.statement(StmtId::from(1));
+        let stmt = &ast.statements[StmtId::from(1)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -735,7 +735,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let f(): number = { a; }"))
             .parse()
             .unwrap();
-        let stmt = ast.statement(StmtId::from(1));
+        let stmt = &ast.statements[StmtId::from(1)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -759,7 +759,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let f(x: number) = { a; }"))
             .parse()
             .unwrap();
-        let stmt = ast.statement(StmtId::from(1));
+        let stmt = &ast.statements[StmtId::from(1)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -783,7 +783,7 @@ mod tests {
         let ast = Parser::new(Lexer::new("let f(x: number, y: number) = { a; }"))
             .parse()
             .unwrap();
-        let stmt = ast.statement(StmtId::from(1));
+        let stmt = &ast.statements[StmtId::from(1)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,

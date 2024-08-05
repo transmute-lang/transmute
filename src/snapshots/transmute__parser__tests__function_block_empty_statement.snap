@@ -34,7 +34,7 @@ Ok(
                 span: 1:1; [0, 11],
             },
         ],
-        root: [
+        roots: [
             StmtId(0),
         ],
     },

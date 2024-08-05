@@ -1,6 +1,6 @@
-use crate::ids::{ExprId, IdentRefId, StmtId};
 use crate::ast::literal::Literal;
 use crate::ast::operators::{BinaryOperator, UnaryOperator};
+use crate::ids::{ExprId, IdentRefId, StmtId};
 use crate::lexer::Span;
 use std::fmt::Debug;
 
@@ -54,7 +54,6 @@ pub enum ExpressionKind {
     Block(Vec<StmtId>),
     StructInstantiation(IdentRefId, Vec<(IdentRefId, ExprId)>),
     /// A dummy expression kind, inserted by the parser when the expression could not be parsed
-    // todo probably remove (in hir)...
     Dummy,
 }
 

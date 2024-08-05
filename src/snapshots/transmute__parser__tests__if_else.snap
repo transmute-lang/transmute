@@ -90,7 +90,7 @@ Ok(
                 span: 1:1; [0, 28],
             },
         ],
-        root: [
+        roots: [
             StmtId(2),
         ],
     },

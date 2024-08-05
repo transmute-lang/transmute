@@ -2,7 +2,6 @@ use crate::ast;
 use crate::ast::expression::{ExpressionKind, Target};
 use crate::ast::identifier::Identifier;
 use crate::ast::identifier_ref::IdentifierRef;
-use crate::ids::{id, ExprId, IdentId, IdentRefId, StmtId};
 use crate::ast::literal::{Literal, LiteralKind};
 use crate::ast::operators::{
     BinaryOperator, BinaryOperatorKind, Precedence, UnaryOperator, UnaryOperatorKind,
@@ -10,6 +9,7 @@ use crate::ast::operators::{
 use crate::ast::statement::{Field, Parameter, RetMode, Return, StatementKind};
 use crate::ast::Ast;
 use crate::error::Diagnostics;
+use crate::ids::{id, ExprId, IdentId, IdentRefId, StmtId};
 use crate::lexer::{Lexer, PeekableLexer, Span, TokenKind};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};

@@ -33,7 +33,7 @@ Ok(
                 span: 1:14; [13, 25],
             },
         ],
-        root: [
+        roots: [
             StmtId(0),
             StmtId(1),
         ],

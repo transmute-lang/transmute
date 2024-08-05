@@ -153,7 +153,7 @@ Ok(
                 span: 1:1; [0, 50],
             },
         ],
-        root: [
+        roots: [
             StmtId(4),
         ],
     },

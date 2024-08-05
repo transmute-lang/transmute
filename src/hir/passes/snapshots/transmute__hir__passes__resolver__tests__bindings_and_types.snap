@@ -150,7 +150,7 @@ Hir {
             span: 1:19; [18, 45],
         },
     ],
-    root: [
+    roots: [
         StmtId(0),
         StmtId(2),
     ],

@@ -17,13 +17,13 @@ mod ast;
 mod cli;
 mod error;
 mod hir;
+mod ids;
 mod interpreter;
 mod lexer;
 mod natives;
 mod output;
 mod parser;
 mod vec_map;
-pub mod ids;
 
 // todo things to check:
 //  let f() = 0:

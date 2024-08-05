@@ -1,6 +1,6 @@
-use crate::ids::{IdentId, IdentRefId, SymbolId};
 use crate::hir::bound::{Bound, BoundState, Unbound};
 use crate::hir::identifier::Identifier;
+use crate::ids::{IdentId, IdentRefId, SymbolId};
 use crate::lexer::Span;
 use std::fmt::Debug;
 

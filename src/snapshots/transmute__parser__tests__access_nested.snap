@@ -69,7 +69,7 @@ Ok(
                 span: 1:1; [0, 24],
             },
         ],
-        root: [
+        roots: [
             StmtId(0),
         ],
     },

@@ -422,7 +422,7 @@ Hir {
             span: 10:1; [106, 115],
         },
     ],
-    root: [
+    roots: [
         StmtId(3),
         StmtId(4),
     ],

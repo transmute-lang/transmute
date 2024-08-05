@@ -1,4 +1,3 @@
-use crate::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use crate::error::Diagnostics;
 use crate::hir::bound::{Bound, Unbound};
 use crate::hir::expression::{Expression, ExpressionKind, Target};
@@ -8,6 +7,7 @@ use crate::hir::literal::LiteralKind;
 use crate::hir::passes::exit_points_resolver::ExitPoint;
 use crate::hir::statement::{Field, Parameter, Return, Statement, StatementKind};
 use crate::hir::typed::{Typed, Untyped};
+use crate::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use crate::interpreter::Value;
 use crate::lexer::Span;
 use crate::natives::{Native, Natives};
@@ -254,9 +254,6 @@ impl<'a> Resolver<'a> {
                 self.visit_if(state, *cond, *true_branch, *false_branch)
             }
             ExpressionKind::Literal(literal) => self.visit_literal(state, literal.kind().clone()),
-            ExpressionKind::Binary(..) | ExpressionKind::Unary(..) => {
-                panic!("operators must be converted to functions")
-            }
             ExpressionKind::Access(expr_id, ident_ref_id) => {
                 let ident_ref = state
                     .identifier_refs
@@ -1431,7 +1428,7 @@ impl Symbol {
 
 #[derive(Debug, PartialEq)]
 pub enum SymbolKind {
-    // fixme can we remove it? at least in hir
+    // fixme can we remove it? at least in mir
     NotFound,
     Let(StmtId),
     LetFn(StmtId, Vec<TypeId>, TypeId),

@@ -1,5 +1,3 @@
-// todo move out of ast module, it's more generic that that
-
 macro_rules! make_id {
     ($name:ident) => {
         #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]

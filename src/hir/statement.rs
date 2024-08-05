@@ -1,4 +1,3 @@
-use crate::ids::{ExprId, IdentRefId, StmtId, SymbolId, TypeId};
 use crate::ast::statement::Field as AstField;
 use crate::ast::statement::Parameter as AstParameter;
 use crate::ast::statement::RetMode as AstRetMode;
@@ -8,6 +7,7 @@ use crate::ast::statement::StatementKind as AstStatementKind;
 use crate::hir::bound::{Bound, BoundState, Unbound};
 use crate::hir::identifier::Identifier;
 use crate::hir::typed::{Typed, TypedState, Untyped};
+use crate::ids::{ExprId, IdentRefId, StmtId, SymbolId, TypeId};
 use crate::lexer::Span;
 
 #[derive(Debug, Clone, PartialEq)]

@@ -49,7 +49,7 @@ Ok(
                 span: 1:1; [0, 7],
             },
         ],
-        root: [
+        roots: [
             StmtId(0),
         ],
     },

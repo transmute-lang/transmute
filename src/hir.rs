@@ -8,7 +8,6 @@ pub mod passes;
 pub mod statement;
 pub mod typed;
 
-use crate::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use crate::ast::statement::StatementKind;
 use crate::ast::Ast;
 use crate::error::Diagnostics;
@@ -22,6 +21,7 @@ use crate::hir::passes::operators_converter::OperatorsConverter;
 use crate::hir::passes::resolver::{Resolver, Symbol};
 use crate::hir::statement::Statement;
 use crate::hir::typed::{Typed, TypedState, Untyped};
+use crate::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use crate::natives::Natives;
 use crate::vec_map::VecMap;
 use std::collections::HashMap;
@@ -32,7 +32,6 @@ pub use crate::hir::passes::resolver::Type;
 pub type UnresolvedHir = Hir<Untyped, Unbound>;
 pub type ResolvedHir = Hir<Typed, Bound>;
 
-// todo fields are public, cleanup getters
 #[derive(Debug, PartialEq)]
 pub struct Hir<T, B>
 where
@@ -48,53 +47,13 @@ where
     /// All statements
     pub statements: VecMap<StmtId, Statement<T, B>>,
     /// Root statements
-    pub root: Vec<StmtId>,
+    pub roots: Vec<StmtId>,
     /// All symbols
     pub symbols: VecMap<SymbolId, Symbol>,
     /// All types
     pub types: VecMap<TypeId, Type>,
     /// All exit exit points
     pub exit_points: ExitPoints,
-}
-
-impl<T, B> Hir<T, B>
-where
-    T: TypedState,
-    B: BoundState,
-{
-    pub fn identifiers(&self) -> &VecMap<IdentId, String> {
-        &self.identifiers
-    }
-
-    pub fn identifier(&self, id: IdentId) -> &str {
-        &self.identifiers[id]
-    }
-
-    pub fn identifier_ref(&self, id: IdentRefId) -> &IdentifierRef<B> {
-        &self.identifier_refs[id]
-    }
-
-    pub fn expression(&self, id: ExprId) -> &Expression<T> {
-        &self.expressions[id]
-    }
-
-    pub fn statement(&self, id: StmtId) -> &Statement<T, B> {
-        &self.statements[id]
-    }
-
-    pub fn roots(&self) -> &Vec<StmtId> {
-        &self.root
-    }
-
-    #[cfg(test)]
-    pub fn expressions(&self) -> &VecMap<ExprId, Expression<T>> {
-        &self.expressions
-    }
-
-    #[cfg(test)]
-    pub fn statements(&self) -> &VecMap<StmtId, Statement<T, B>> {
-        &self.statements
-    }
 }
 
 impl Hir<Untyped, Unbound> {
@@ -108,7 +67,7 @@ impl Hir<Untyped, Unbound> {
                 self.identifier_refs,
                 self.expressions,
                 self.statements,
-                self.root,
+                self.roots,
                 natives,
             )
             .map(|r| {
@@ -130,7 +89,7 @@ impl Hir<Untyped, Unbound> {
                     identifier_refs: r.identifier_refs,
                     expressions: r.expressions,
                     statements: r.statements,
-                    root: r.root,
+                    roots: r.root,
                     symbols: r.symbols,
                     types: r.types,
                     exit_points: self.exit_points,
@@ -147,7 +106,7 @@ impl From<Ast> for Hir<Untyped, Unbound> {
 
         // convert implicit ret to explicit ret
         for new_statement in ImplicitRetConverter::new().convert(
-            &ast.root,
+            &ast.roots,
             &ast.statements,
             &operator_free.expressions,
         ) {
@@ -188,7 +147,7 @@ impl From<Ast> for Hir<Untyped, Unbound> {
                 .into_iter()
                 .map(|s| (s.0, crate::hir::statement::Statement::from(s.1)))
                 .collect::<VecMap<StmtId, Statement<Untyped, Unbound>>>(),
-            root: ast.root,
+            roots: ast.roots,
             symbols: Default::default(),
             types: Default::default(),
             exit_points: ExitPoints {
@@ -206,13 +165,5 @@ impl Hir<Typed, Bound> {
 
     pub fn expression_type(&self, id: ExprId) -> &Type {
         &self.types[self.expressions[id].type_id()]
-    }
-
-    pub fn symbol(&self, id: SymbolId) -> &Symbol {
-        &self.symbols[id]
-    }
-
-    pub fn ty(&self, id: TypeId) -> &Type {
-        &self.types[id]
     }
 }

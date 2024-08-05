@@ -1,4 +1,3 @@
-use crate::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use crate::hir::bound::Bound;
 use crate::hir::expression::{ExpressionKind, Target};
 use crate::hir::literal::{Literal, LiteralKind};
@@ -6,6 +5,7 @@ use crate::hir::statement::{Field, Parameter, RetMode, StatementKind};
 use crate::hir::typed::Typed;
 use crate::hir::ResolvedHir;
 use crate::hir::{SymbolKind, Type};
+use crate::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use std::io;
 use std::io::Write;
 use xml::writer::XmlEvent;
@@ -53,8 +53,8 @@ impl<'a> HtmlWriter<'a> {
         self.emit(XmlEvent::start_element("ul"));
 
         #[allow(clippy::unnecessary_to_owned)]
-        for stmt in self.hir.roots().to_vec() {
-            self.visit_statement(stmt);
+        for stmt in self.hir.roots.iter() {
+            self.visit_statement(*stmt);
         }
 
         self.emit(XmlEvent::end_element());
@@ -65,17 +65,15 @@ impl<'a> HtmlWriter<'a> {
     }
 
     fn visit_statement(&mut self, stmt: StmtId) {
-        let stmt = self.hir.statement(stmt);
+        let stmt = &self.hir.statements[stmt];
 
         match stmt.kind() {
             StatementKind::Expression(expr) => {
                 self.emit(XmlEvent::start_element("li"));
                 self.visit_expression(*expr);
-                match self.hir.expression(*expr).kind() {
+                match self.hir.expressions[*expr].kind() {
                     ExpressionKind::Assignment(_, _)
                     | ExpressionKind::Literal(_)
-                    | ExpressionKind::Binary(_, _, _)
-                    | ExpressionKind::Unary(_, _)
                     | ExpressionKind::FunctionCall(_, _)
                     | ExpressionKind::Access(_, _) => {
                         self.emit_semicolon();
@@ -204,7 +202,7 @@ impl<'a> HtmlWriter<'a> {
     }
 
     fn visit_expression(&mut self, expr: ExprId) {
-        match self.hir.expression(expr).kind() {
+        match self.hir.expressions[expr].kind() {
             ExpressionKind::Assignment(Target::Direct(ident_ref), expr) => {
                 self.visit_assignment(*ident_ref, *expr)
             }
@@ -217,12 +215,6 @@ impl<'a> HtmlWriter<'a> {
                 self.visit_if(*cond, *true_branch, *false_branch)
             }
             ExpressionKind::Literal(lit) => self.visit_literal(lit),
-            ExpressionKind::Binary(_left, _op, _right) => {
-                unimplemented!("turned into functions during the resolution pass")
-            }
-            ExpressionKind::Unary(_, _) => {
-                unimplemented!("turned into functions during the resolution pass")
-            }
             ExpressionKind::Access(expr_id, ident_ref_id) => {
                 self.visit_expression(*expr_id);
                 self.emit_dot();
@@ -460,10 +452,6 @@ impl<'a> HtmlWriter<'a> {
         )
     }
 
-    fn type_id(stmt: StmtId) -> String {
-        format!("type__stmt{}", stmt)
-    }
-
     fn par_id(&mut self) -> String {
         self.par_id += 1;
         format!("par_{}", self.par_id - 1)
@@ -476,14 +464,14 @@ impl<'a> HtmlWriter<'a> {
                 .attr("id", &Self::ident_id(stmt_id, index))
                 .attr("class", "ident"),
         );
-        self.emit(XmlEvent::Characters(self.hir.identifier(ident)));
+        self.emit(XmlEvent::Characters(&self.hir.identifiers[ident]));
         self.emit(XmlEvent::end_element());
     }
 
     fn emit_identifier_ref(&mut self, ident_ref_id: IdentRefId) {
-        let ident_ref = self.hir.identifier_ref(ident_ref_id);
+        let ident_ref = &self.hir.identifier_refs[ident_ref_id];
 
-        let symbol = match self.hir.symbol(ident_ref.symbol_id()).kind() {
+        let symbol = match self.hir.symbols[ident_ref.symbol_id()].kind() {
             SymbolKind::NotFound => panic!("symbol was not resolved"),
             SymbolKind::Let(stmt) => Self::ident_id(*stmt, None),
             SymbolKind::LetFn(stmt, _, _) => Self::ident_id(*stmt, None),
@@ -491,29 +479,27 @@ impl<'a> HtmlWriter<'a> {
             SymbolKind::Native(ident, parameters, ret_type, _) => {
                 format!(
                     "ident__native_{}_{}_{}",
-                    self.hir.identifier(*ident),
+                    &self.hir.identifiers[*ident],
                     parameters
                         .iter()
-                        .map(|p| self.hir.ty(*p).to_string())
+                        .map(|p| self.hir.types[*p].to_string())
                         .collect::<Vec<String>>()
                         .join("_"),
-                    self.hir.ty(*ret_type)
+                    self.hir.types[*ret_type]
                 )
             }
             SymbolKind::NativeType(ident_id, _) => {
-                format!("ident__native-type_{}", self.hir.identifier(*ident_id))
+                format!("ident__native-type_{}", self.hir.identifiers[*ident_id])
             }
             SymbolKind::Field(stmt, index) => Self::ident_id(*stmt, Some(*index)),
             SymbolKind::Struct(stmt) => Self::ident_id(*stmt, None),
         };
 
-        let ty = self
-            .hir
-            .ty(self.hir.symbol(ident_ref.symbol_id()).type_id());
+        let ty = &self.hir.types[self.hir.symbols[ident_ref.symbol_id()].type_id()];
         let (type_ref, type_name) = match ty {
             Type::Struct(stmt) => {
-                let name = match self.hir.statement(*stmt).kind() {
-                    StatementKind::Struct(ident, _) => self.hir.identifier(ident.id()),
+                let name = match self.hir.statements[*stmt].kind() {
+                    StatementKind::Struct(ident, _) => &self.hir.identifiers[ident.id()],
                     _ => unreachable!("must be a struct statement"),
                 };
                 (Some(format!("ident__stmt{stmt}")), format!("struct {name}"))
@@ -530,7 +516,7 @@ impl<'a> HtmlWriter<'a> {
                 .attr("data-type-ident-ref", &type_ref.unwrap_or_default()),
         );
         self.emit(XmlEvent::Characters(
-            self.hir.identifier(ident_ref.ident().id()),
+            &self.hir.identifiers[ident_ref.ident().id()],
         ));
         self.emit(XmlEvent::end_element());
     }

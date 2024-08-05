@@ -112,7 +112,7 @@ mod tests {
                     identifier_refs: output.identifier_refs,
                     expressions: output.expressions,
                     statements: ast.statements,
-                    root: ast.root,
+                    roots: ast.roots,
                 };
 
                 let mut w = String::new();
