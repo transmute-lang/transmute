@@ -5,18 +5,10 @@ use transmute_core::ids::{IdentId, StmtId, SymbolId, TypeId};
 pub struct Symbol {
     pub id: SymbolId,
     pub kind: SymbolKind,
-    pub ty: TypeId,
+    pub type_id: TypeId,
 }
 
 impl Symbol {
-    pub fn kind(&self) -> &SymbolKind {
-        &self.kind
-    }
-
-    pub fn type_id(&self) -> TypeId {
-        self.ty
-    }
-
     pub fn as_function(&self) -> (&Vec<TypeId>, TypeId) {
         match &self.kind {
             SymbolKind::LetFn(_, params, ret_type_id) => (params, *ret_type_id),

@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-transmute-core = {path = "../core"}
-transmute-ast = {path = "../ast"}
+transmute-core = {path = "../core" }
+transmute-ast = {path = "../ast" }
 bimap = "0.6.3"
 xml-rs = "0.8.19"
 

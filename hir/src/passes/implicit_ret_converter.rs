@@ -22,11 +22,11 @@ impl ImplicitRetConverter {
     ) -> Vec<Statement> {
         for expr_id in root_statements
             .iter()
-            .filter_map(|stmt_id| match statements[*stmt_id].kind() {
+            .filter_map(|stmt_id| match &statements[*stmt_id].kind {
                 StatementKind::LetFn(_, _, _, expr_id) => Some(*expr_id),
                 _ => None,
             })
-            .filter(|expr_id| match expressions[*expr_id].kind() {
+            .filter(|expr_id| match &expressions[*expr_id].kind {
                 ExpressionKind::Block(_) => true,
                 e => panic!("expected block, got {:?}", e),
             })
@@ -50,7 +50,7 @@ impl ImplicitRetConverter {
             return false;
         }
 
-        match expressions[expr].kind() {
+        match &expressions[expr].kind {
             ExpressionKind::Assignment(_, expr) => {
                 self.visit_expression(statements, expressions, *expr, depth + 1, unreachable)
             }
@@ -162,7 +162,7 @@ impl ImplicitRetConverter {
         unreachable: bool,
         last: bool,
     ) -> bool {
-        match statements[stmt_id].kind() {
+        match &statements[stmt_id].kind {
             StatementKind::Expression(expr) => {
                 let expr = *expr;
                 let always_returns =
@@ -172,7 +172,7 @@ impl ImplicitRetConverter {
                     self.replacements.push(Statement::new(
                         stmt_id,
                         StatementKind::Ret(expr, RetMode::Implicit),
-                        statements[stmt_id].span().clone(),
+                        statements[stmt_id].span.clone(),
                     ));
                 }
 
@@ -213,7 +213,7 @@ mod tests {
                     &ast.statements,
                     &ast.expressions,
                 ) {
-                    ast.statements.insert(new_statement.id(), new_statement);
+                    ast.statements.insert(new_statement.id, new_statement);
                 }
 
                 let mut w = String::new();

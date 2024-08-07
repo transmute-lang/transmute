@@ -2,8 +2,7 @@ use crate::bound::{Bound, BoundState, Unbound};
 use crate::identifier::Identifier;
 use std::fmt::Debug;
 use transmute_ast::identifier_ref::IdentifierRef as AstIdentifierRef;
-use transmute_core::ids::{IdentId, IdentRefId, SymbolId};
-use transmute_core::span::Span;
+use transmute_core::ids::{IdentRefId, SymbolId};
 
 /// Represents an identifier when used as a reference
 #[derive(Debug, Clone, PartialEq)]
@@ -12,30 +11,9 @@ where
     B: BoundState,
 {
     /// ID of this identifier reference
-    id: IdentRefId,
+    pub id: IdentRefId,
     /// The referenced symbol identifier
-    ident: Identifier<B>,
-}
-
-impl<B> IdentifierRef<B>
-where
-    B: BoundState,
-{
-    pub fn id(&self) -> IdentRefId {
-        self.id
-    }
-
-    pub fn ident(&self) -> &Identifier<B> {
-        &self.ident
-    }
-
-    pub fn ident_id(&self) -> IdentId {
-        self.ident.id()
-    }
-
-    pub fn span(&self) -> &Span {
-        self.ident.span()
-    }
+    pub ident: Identifier<B>,
 }
 
 impl IdentifierRef<Unbound> {
@@ -50,8 +28,8 @@ impl IdentifierRef<Unbound> {
 impl From<AstIdentifierRef> for IdentifierRef<Unbound> {
     fn from(value: AstIdentifierRef) -> Self {
         Self {
-            id: value.id(),
-            ident: Identifier::from(value.take_ident()),
+            id: value.id,
+            ident: Identifier::from(value.ident),
         }
     }
 }

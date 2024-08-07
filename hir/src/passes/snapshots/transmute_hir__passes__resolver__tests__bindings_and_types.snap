@@ -158,14 +158,14 @@ Hir {
         Symbol {
             id: SymbolId(0),
             kind: NotFound,
-            ty: TypeId(0),
+            type_id: TypeId(0),
         },
         Symbol {
             id: SymbolId(1),
             kind: Struct(
                 StmtId(0),
             ),
-            ty: TypeId(5),
+            type_id: TypeId(5),
         },
         Symbol {
             id: SymbolId(2),
@@ -177,7 +177,7 @@ Hir {
                 ],
                 TypeId(5),
             ),
-            ty: TypeId(6),
+            type_id: TypeId(6),
         },
         Symbol {
             id: SymbolId(3),
@@ -185,7 +185,7 @@ Hir {
                 StmtId(0),
                 0,
             ),
-            ty: TypeId(5),
+            type_id: TypeId(5),
         },
         Symbol {
             id: SymbolId(4),
@@ -193,7 +193,7 @@ Hir {
                 StmtId(2),
                 0,
             ),
-            ty: TypeId(5),
+            type_id: TypeId(5),
         },
         Symbol {
             id: SymbolId(5),
@@ -201,7 +201,7 @@ Hir {
                 StmtId(2),
                 1,
             ),
-            ty: TypeId(5),
+            type_id: TypeId(5),
         },
     ],
     types: [

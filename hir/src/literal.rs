@@ -6,29 +6,21 @@ use transmute_core::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Literal {
-    kind: LiteralKind,
-    span: Span,
+    pub kind: LiteralKind,
+    pub span: Span,
 }
 
 impl Literal {
     pub fn new(kind: LiteralKind, span: Span) -> Self {
         Self { kind, span }
     }
-
-    pub fn kind(&self) -> &LiteralKind {
-        &self.kind
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
-    }
 }
 
 impl From<AstLiteral> for Literal {
     fn from(value: AstLiteral) -> Self {
         Self {
-            span: value.span().clone(),
-            kind: LiteralKind::from(value.take_kind()),
+            span: value.span.clone(),
+            kind: LiteralKind::from(value.kind),
         }
     }
 }

@@ -430,7 +430,7 @@ Hir {
         Symbol {
             id: SymbolId(0),
             kind: NotFound,
-            ty: TypeId(0),
+            type_id: TypeId(0),
         },
         Symbol {
             id: SymbolId(1),
@@ -438,7 +438,7 @@ Hir {
                 IdentId(15),
                 Void,
             ),
-            ty: TypeId(2),
+            type_id: TypeId(2),
         },
         Symbol {
             id: SymbolId(2),
@@ -446,7 +446,7 @@ Hir {
                 IdentId(2),
                 Number,
             ),
-            ty: TypeId(2),
+            type_id: TypeId(2),
         },
         Symbol {
             id: SymbolId(3),
@@ -454,7 +454,7 @@ Hir {
                 IdentId(6),
                 Boolean,
             ),
-            ty: TypeId(2),
+            type_id: TypeId(2),
         },
         Symbol {
             id: SymbolId(4),
@@ -467,7 +467,7 @@ Hir {
                 TypeId(4),
                 native,
             ),
-            ty: TypeId(5),
+            type_id: TypeId(5),
         },
         Symbol {
             id: SymbolId(5),
@@ -480,7 +480,7 @@ Hir {
                 TypeId(3),
                 native,
             ),
-            ty: TypeId(6),
+            type_id: TypeId(6),
         },
         Symbol {
             id: SymbolId(6),
@@ -493,7 +493,7 @@ Hir {
                 TypeId(3),
                 native,
             ),
-            ty: TypeId(7),
+            type_id: TypeId(7),
         },
         Symbol {
             id: SymbolId(7),
@@ -505,7 +505,7 @@ Hir {
                 TypeId(4),
                 native,
             ),
-            ty: TypeId(8),
+            type_id: TypeId(8),
         },
         Symbol {
             id: SymbolId(8),
@@ -518,7 +518,7 @@ Hir {
                 TypeId(4),
                 native,
             ),
-            ty: TypeId(5),
+            type_id: TypeId(5),
         },
         Symbol {
             id: SymbolId(9),
@@ -531,7 +531,7 @@ Hir {
                 TypeId(3),
                 native,
             ),
-            ty: TypeId(6),
+            type_id: TypeId(6),
         },
         Symbol {
             id: SymbolId(10),
@@ -544,7 +544,7 @@ Hir {
                 TypeId(3),
                 native,
             ),
-            ty: TypeId(6),
+            type_id: TypeId(6),
         },
         Symbol {
             id: SymbolId(11),
@@ -557,7 +557,7 @@ Hir {
                 TypeId(3),
                 native,
             ),
-            ty: TypeId(6),
+            type_id: TypeId(6),
         },
         Symbol {
             id: SymbolId(12),
@@ -570,7 +570,7 @@ Hir {
                 TypeId(3),
                 native,
             ),
-            ty: TypeId(6),
+            type_id: TypeId(6),
         },
         Symbol {
             id: SymbolId(13),
@@ -583,7 +583,7 @@ Hir {
                 TypeId(3),
                 native,
             ),
-            ty: TypeId(6),
+            type_id: TypeId(6),
         },
         Symbol {
             id: SymbolId(14),
@@ -596,7 +596,7 @@ Hir {
                 TypeId(3),
                 native,
             ),
-            ty: TypeId(7),
+            type_id: TypeId(7),
         },
         Symbol {
             id: SymbolId(15),
@@ -609,7 +609,7 @@ Hir {
                 TypeId(4),
                 native,
             ),
-            ty: TypeId(5),
+            type_id: TypeId(5),
         },
         Symbol {
             id: SymbolId(16),
@@ -622,7 +622,7 @@ Hir {
                 TypeId(4),
                 native,
             ),
-            ty: TypeId(5),
+            type_id: TypeId(5),
         },
         Symbol {
             id: SymbolId(17),
@@ -633,7 +633,7 @@ Hir {
                 ],
                 TypeId(4),
             ),
-            ty: TypeId(8),
+            type_id: TypeId(8),
         },
         Symbol {
             id: SymbolId(18),
@@ -641,7 +641,7 @@ Hir {
                 StmtId(3),
                 0,
             ),
-            ty: TypeId(4),
+            type_id: TypeId(4),
         },
     ],
     types: [

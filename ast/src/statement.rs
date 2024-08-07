@@ -4,30 +4,14 @@ use transmute_core::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Statement {
-    id: StmtId,
-    kind: StatementKind,
-    span: Span,
+    pub id: StmtId,
+    pub kind: StatementKind,
+    pub span: Span,
 }
 
 impl Statement {
     pub fn new(id: StmtId, kind: StatementKind, span: Span) -> Self {
         Self { id, kind, span }
-    }
-
-    pub fn id(&self) -> StmtId {
-        self.id
-    }
-
-    pub fn kind(&self) -> &StatementKind {
-        &self.kind
-    }
-
-    pub fn take_kind(self) -> StatementKind {
-        self.kind
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
     }
 }
 
@@ -57,27 +41,9 @@ impl RetMode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Parameter {
-    identifier: Identifier,
-    ty: IdentRefId,
-    span: Span,
-}
-
-impl Parameter {
-    pub fn identifier(&self) -> &Identifier {
-        &self.identifier
-    }
-
-    pub fn take_identifier(self) -> Identifier {
-        self.identifier
-    }
-
-    pub fn ty(&self) -> IdentRefId {
-        self.ty
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
-    }
+    pub identifier: Identifier,
+    pub ty: IdentRefId,
+    pub span: Span,
 }
 
 impl Parameter {
@@ -92,7 +58,7 @@ impl Parameter {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Return {
-    ret: Option<IdentRefId>,
+    pub ret: Option<IdentRefId>,
 }
 
 impl Return {
@@ -107,17 +73,11 @@ impl Return {
     }
 }
 
-impl Return {
-    pub fn ident_ret_id(&self) -> Option<IdentRefId> {
-        self.ret
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
-    identifier: Identifier,
-    ty: IdentRefId,
-    span: Span,
+    pub identifier: Identifier,
+    pub ty: IdentRefId,
+    pub span: Span,
 }
 
 impl Field {

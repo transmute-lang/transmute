@@ -72,10 +72,10 @@ impl<'a> Iterator for DiagnosticsIterator<'a> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Diagnostic {
-    message: String,
-    span: Span,
-    level: Level,
-    generated_at: (&'static str, u32),
+    pub message: String,
+    pub span: Span,
+    pub level: Level,
+    pub generated_at: (&'static str, u32),
 }
 
 impl Display for Diagnostic {
@@ -88,8 +88,8 @@ impl Display for Diagnostic {
                 self.generated_at.0,
                 self.generated_at.1,
                 self.message,
-                self.span.line(),
-                self.span.column()
+                self.span.line,
+                self.span.column
             )
         }
         #[cfg(not(debug_assertions))]
@@ -126,18 +126,6 @@ impl Diagnostic {
         generated_at: (&'static str, u32),
     ) -> Self {
         Self::new(message, span, Level::Error, generated_at)
-    }
-
-    pub fn message(&self) -> &str {
-        &self.message
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
-    }
-
-    pub fn level(&self) -> Level {
-        self.level
     }
 }
 

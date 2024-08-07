@@ -81,7 +81,7 @@ impl<'a> ExitPointsResolver<'a> {
     }
 
     pub fn exit_points(&self, expr: ExprId) -> Output {
-        match self.expressions[expr].kind() {
+        match &self.expressions[expr].kind {
             ExpressionKind::Block(_) => {}
             e => panic!("expected block got {:?}", e),
         };
@@ -95,7 +95,7 @@ impl<'a> ExitPointsResolver<'a> {
             return (Collected::unreachable(expr), false);
         }
 
-        let always_returns = match self.expressions[expr].kind() {
+        match &self.expressions[expr].kind {
             ExpressionKind::Assignment(_, expr) => {
                 self.visit_expression(*expr, depth + 1, unreachable)
             }
@@ -199,9 +199,7 @@ impl<'a> ExitPointsResolver<'a> {
             ExpressionKind::Dummy => {
                 panic!("cannot compute exit points of an invalid source code")
             }
-        };
-
-        always_returns
+        }
     }
 
     fn visit_statement(
@@ -210,7 +208,7 @@ impl<'a> ExitPointsResolver<'a> {
         depth: usize,
         unreachable: bool,
     ) -> (Collected, bool) {
-        match self.statements[stmt_id].kind() {
+        match &self.statements[stmt_id].kind {
             StatementKind::Expression(expr) => self.visit_expression(*expr, depth + 1, unreachable),
             StatementKind::Let(_, expr) => self.visit_expression(*expr, depth + 1, unreachable),
             StatementKind::Ret(expr, mode) => {
@@ -244,6 +242,7 @@ mod tests {
     use super::*;
     use transmute_ast::lexer::Lexer;
     use transmute_ast::parser::Parser;
+    use transmute_core::ids::ExprId;
 
     #[test]
     fn single_explicit_exit_point() {

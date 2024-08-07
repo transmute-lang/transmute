@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use transmute_core::value::Value;
 
-// fixme parts of that does not belong to the hir
+// fixme probably does not (at least fully) belong to the hir
 pub struct Natives {
     functions: HashMap<&'static str, Vec<NativeFn>>,
     types: Vec<NativeType>,
@@ -244,28 +244,10 @@ pub enum Native {
 }
 
 pub struct NativeFn {
-    name: &'static str,
-    parameters: Vec<Type>,
-    return_type: Type,
-    body: fn(Vec<Value>) -> Value,
-}
-
-impl NativeFn {
-    pub fn name(&self) -> &'static str {
-        self.name
-    }
-
-    pub fn parameters(&self) -> &Vec<Type> {
-        &self.parameters
-    }
-
-    pub fn return_type(&self) -> &Type {
-        &self.return_type
-    }
-
-    pub fn body(self) -> fn(Vec<Value>) -> Value {
-        self.body
-    }
+    pub name: &'static str,
+    pub parameters: Vec<Type>,
+    pub return_type: Type,
+    pub body: fn(Vec<Value>) -> Value,
 }
 
 impl PartialEq<Self> for NativeFn {
@@ -314,18 +296,8 @@ impl Debug for NativeFn {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub struct NativeType {
-    name: &'static str,
-    ty: Type,
-}
-
-impl NativeType {
-    pub fn name(&self) -> &'static str {
-        self.name
-    }
-
-    pub fn ty(&self) -> &Type {
-        &self.ty
-    }
+    pub name: &'static str,
+    pub ty: Type,
 }
 
 #[cfg(test)]

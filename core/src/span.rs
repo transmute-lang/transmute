@@ -42,22 +42,6 @@ impl Span {
         }
     }
 
-    pub fn len(&self) -> usize {
-        self.len
-    }
-
-    pub fn line(&self) -> usize {
-        self.line
-    }
-
-    pub fn column(&self) -> usize {
-        self.column
-    }
-
-    pub fn start(&self) -> usize {
-        self.start
-    }
-
     pub fn end(&self) -> usize {
         self.start + self.len
     }

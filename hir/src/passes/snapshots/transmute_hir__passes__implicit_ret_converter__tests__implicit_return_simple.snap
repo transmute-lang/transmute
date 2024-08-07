@@ -6,4 +6,3 @@ let f(): number = {
   41;
   ret 42;
 }
-

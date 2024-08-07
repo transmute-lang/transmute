@@ -9,8 +9,8 @@ pub struct Identifier<B>
 where
     B: BoundState,
 {
-    id: IdentId,
-    span: Span,
+    pub id: IdentId,
+    pub span: Span,
     bound: B,
 }
 
@@ -27,8 +27,8 @@ impl Identifier<Unbound> {
 impl From<AstIdentifier> for Identifier<Unbound> {
     fn from(value: AstIdentifier) -> Self {
         Identifier {
-            id: value.id(),
-            span: value.take_span(),
+            id: value.id,
+            span: value.span,
             bound: Unbound,
         }
     }
@@ -37,18 +37,5 @@ impl From<AstIdentifier> for Identifier<Unbound> {
 impl Identifier<Bound> {
     pub fn symbol_id(&self) -> SymbolId {
         self.bound.0
-    }
-}
-
-impl<B> Identifier<B>
-where
-    B: BoundState,
-{
-    pub fn id(&self) -> IdentId {
-        self.id
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
     }
 }

@@ -63,18 +63,18 @@ impl<'a> XmlWriter<'a> {
 
     fn visit_statement(&mut self, stmt: StmtId) {
         let stmt = &self.hir.statements[stmt];
-        let id = stmt.id().to_string();
+        let id = stmt.id.to_string();
 
         self.emit(
             XmlEvent::start_element("stmt")
                 .attr("id", &format!("stmt:{id}"))
-                .attr("line", &stmt.span().line().to_string())
-                .attr("column", &stmt.span().column().to_string())
-                .attr("start", &stmt.span().start().to_string())
-                .attr("len", &stmt.span().len().to_string()),
+                .attr("line", &stmt.span.line.to_string())
+                .attr("column", &stmt.span.column.to_string())
+                .attr("start", &stmt.span.start.to_string())
+                .attr("len", &stmt.span.len.to_string()),
         );
 
-        match stmt.kind() {
+        match &stmt.kind {
             StatementKind::Expression(expr) => {
                 self.visit_expression(*expr);
             }
@@ -85,10 +85,10 @@ impl<'a> XmlWriter<'a> {
                 self.visit_ret(stmt, expr, mode);
             }
             StatementKind::LetFn(ident, params, ty, expr) => {
-                self.visit_function(stmt.id(), ident, params, ty, expr);
+                self.visit_function(stmt.id, ident, params, ty, expr);
             }
             StatementKind::Struct(ident, fields) => {
-                self.visit_struct(stmt.id(), ident, fields);
+                self.visit_struct(stmt.id, ident, fields);
             }
         }
 
@@ -100,14 +100,14 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("expr")
-                .attr("id", &format!("expr:{}", expr.id()))
-                .attr("line", &expr.span().line().to_string())
-                .attr("column", &expr.span().column().to_string())
-                .attr("start", &expr.span().start().to_string())
-                .attr("len", &expr.span().len().to_string()),
+                .attr("id", &format!("expr:{}", expr.id))
+                .attr("line", &expr.span.line.to_string())
+                .attr("column", &expr.span.column.to_string())
+                .attr("start", &expr.span.start.to_string())
+                .attr("len", &expr.span.len.to_string()),
         );
 
-        match expr.kind() {
+        match &expr.kind {
             ExpressionKind::Assignment(Target::Direct(ident_ref), rhs_expr_id) => {
                 self.visit_assignment(ident_ref, rhs_expr_id);
             }
@@ -128,7 +128,7 @@ impl<'a> XmlWriter<'a> {
                 self.visit_expression(*expr_id);
 
                 let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
-                let symbol = match self.hir.symbols[ident_ref.symbol_id()].kind() {
+                let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
                     SymbolKind::Let(stmt) => {
                         format!("stmt:{stmt}")
                     }
@@ -150,7 +150,7 @@ impl<'a> XmlWriter<'a> {
 
                 self.emit(
                     XmlEvent::start_element("ident")
-                        .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
+                        .attr("ident-ref", &format!("ident:{}", ident_ref.ident.id))
                         .attr("target-id", &symbol),
                 );
 
@@ -169,7 +169,7 @@ impl<'a> XmlWriter<'a> {
             ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
                 let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
 
-                let symbol = match self.hir.symbols[ident_ref.symbol_id()].kind() {
+                let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
                     SymbolKind::Struct(stmt_id) => {
                         format!("stmt:{stmt_id}")
                     }
@@ -179,13 +179,13 @@ impl<'a> XmlWriter<'a> {
                 self.emit(XmlEvent::start_element("struct_init"));
                 self.emit(
                     XmlEvent::start_element("ident")
-                        .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
+                        .attr("ident-ref", &format!("ident:{}", ident_ref.ident.id))
                         .attr("target-id", &symbol),
                 );
                 self.emit(XmlEvent::start_element("fields"));
                 for (ident_ref_id, expr_id) in fields {
                     let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
-                    let symbol = match self.hir.symbols[ident_ref.symbol_id()].kind() {
+                    let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
                         SymbolKind::Field(stmt_id, index) => {
                             format!("stmt:{}:{}", stmt_id, index)
                         }
@@ -207,7 +207,7 @@ impl<'a> XmlWriter<'a> {
     fn visit_assignment(&mut self, ident_ref_id: &IdentRefId, expr: &ExprId) {
         let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
 
-        let symbol = match self.hir.symbols[ident_ref.symbol_id()].kind() {
+        let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
             SymbolKind::Let(stmt) => {
                 format!("stmt:{stmt}")
             }
@@ -232,13 +232,13 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("assign")
-                .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
+                .attr("ident-ref", &format!("ident:{}", ident_ref.ident.id))
                 .attr("target-id", &symbol),
         );
 
         self.emit(XmlEvent::start_element("identifier"));
         self.emit(XmlEvent::characters(
-            &self.hir.identifiers[ident_ref.ident().id()],
+            &self.hir.identifiers[ident_ref.ident.id],
         ));
         self.emit(XmlEvent::end_element());
 
@@ -258,13 +258,13 @@ impl<'a> XmlWriter<'a> {
 
         let true_branch = &self.hir.expressions[*true_branch];
         self.emit(XmlEvent::start_element("true"));
-        self.visit_expression(true_branch.id());
+        self.visit_expression(true_branch.id);
         self.emit(XmlEvent::end_element());
 
         if let Some(false_branch) = false_branch {
             let false_branch = &self.hir.expressions[*false_branch];
             self.emit(XmlEvent::start_element("false"));
-            self.visit_expression(false_branch.id());
+            self.visit_expression(false_branch.id);
             self.emit(XmlEvent::end_element());
         }
 
@@ -272,7 +272,7 @@ impl<'a> XmlWriter<'a> {
     }
 
     fn visit_literal(&mut self, literal: &Literal) {
-        match literal.kind() {
+        match &literal.kind {
             LiteralKind::Boolean(b) => {
                 self.emit(XmlEvent::start_element("bool"));
                 self.emit(XmlEvent::characters(&b.to_string()));
@@ -281,7 +281,7 @@ impl<'a> XmlWriter<'a> {
             LiteralKind::Identifier(ident_ref_id) => {
                 let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
 
-                let symbol = match self.hir.symbols[ident_ref.symbol_id()].kind() {
+                let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
                     SymbolKind::Let(stmt) => {
                         format!("stmt:{stmt}")
                     }
@@ -304,9 +304,9 @@ impl<'a> XmlWriter<'a> {
                     SymbolKind::NotFound => panic!("symbol was not resolved"),
                 };
 
-                let ty = &self.hir.types[self.hir.symbols[ident_ref.symbol_id()].type_id()];
+                let ty = &self.hir.types[self.hir.symbols[ident_ref.symbol_id()].type_id];
                 let type_ref = match ty {
-                    Type::Struct(stmt) => match &self.hir.statements[*stmt].kind() {
+                    Type::Struct(stmt) => match &self.hir.statements[*stmt].kind {
                         StatementKind::Struct(_, _) => Some(format!("stmt:{stmt}")),
                         _ => unreachable!("must be a struct statement"),
                     },
@@ -316,12 +316,12 @@ impl<'a> XmlWriter<'a> {
                 self.emit(
                     XmlEvent::start_element("identifier-ref")
                         .attr("id", &format!("ident-ref:{}", ident_ref_id))
-                        .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
+                        .attr("ident-ref", &format!("ident:{}", ident_ref.ident.id))
                         .attr("target-id", &symbol)
                         .attr("type-ref", &type_ref.unwrap_or_default()),
                 );
                 self.emit(XmlEvent::characters(
-                    &self.hir.identifiers[ident_ref.ident().id()],
+                    &self.hir.identifiers[ident_ref.ident.id],
                 ));
                 self.emit(XmlEvent::end_element());
             }
@@ -341,7 +341,7 @@ impl<'a> XmlWriter<'a> {
     ) {
         let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
 
-        let symbol = match self.hir.symbols[ident_ref.symbol_id()].kind() {
+        let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
             SymbolKind::Let(stmt) => {
                 format!("stmt:{stmt}")
             }
@@ -349,11 +349,11 @@ impl<'a> XmlWriter<'a> {
                 format!("stmt:{stmt}")
             }
             SymbolKind::Parameter(stmt, index) => {
-                let param = match &self.hir.statements[*stmt].kind() {
+                let param = match &self.hir.statements[*stmt].kind {
                     StatementKind::LetFn(_, params, _, _) => &params[*index],
                     _ => panic!(),
                 };
-                format!("ident:{}", param.identifier().id())
+                format!("ident:{}", param.identifier.id)
             }
             SymbolKind::Native(ident, parameters, ret_type, _) => {
                 format!(
@@ -383,12 +383,12 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("call")
-                .attr("line", &expr.span().line().to_string())
-                .attr("column", &expr.span().column().to_string())
-                .attr("start", &expr.span().start().to_string())
-                .attr("len", &expr.span().len().to_string())
-                .attr("ident-ref", &format!("ident:{}", ident_ref.ident().id()))
-                .attr("name", &self.hir.identifiers[ident_ref.ident().id()])
+                .attr("line", &expr.span.line.to_string())
+                .attr("column", &expr.span.column.to_string())
+                .attr("start", &expr.span.start.to_string())
+                .attr("len", &expr.span.len.to_string())
+                .attr("ident-ref", &format!("ident:{}", ident_ref.ident.id))
+                .attr("name", &self.hir.identifiers[ident_ref.ident.id])
                 .attr("target-id", &symbol),
         );
 
@@ -412,17 +412,17 @@ impl<'a> XmlWriter<'a> {
         let cond = &self.hir.expressions[*cond];
         self.emit(
             XmlEvent::start_element("condition")
-                .attr("line", &cond.span().line().to_string())
-                .attr("column", &cond.span().column().to_string())
-                .attr("start", &cond.span().start().to_string())
-                .attr("len", &cond.span().len().to_string()),
+                .attr("line", &cond.span.line.to_string())
+                .attr("column", &cond.span.column.to_string())
+                .attr("start", &cond.span.start.to_string())
+                .attr("len", &cond.span.len.to_string()),
         );
-        self.visit_expression(cond.id());
+        self.visit_expression(cond.id);
         self.emit(XmlEvent::end_element());
 
         let expr = &self.hir.expressions[*expr];
         self.emit(XmlEvent::start_element("body"));
-        self.visit_expression(expr.id());
+        self.visit_expression(expr.id);
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::end_element());
@@ -444,24 +444,24 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("identifier")
-                .attr("line", &ident.span().line().to_string())
-                .attr("column", &ident.span().column().to_string())
-                .attr("start", &ident.span().start().to_string())
-                .attr("len", &ident.span().len().to_string()),
+                .attr("line", &ident.span.line.to_string())
+                .attr("column", &ident.span.column.to_string())
+                .attr("start", &ident.span.start.to_string())
+                .attr("len", &ident.span.len.to_string()),
         );
-        self.emit(XmlEvent::characters(&self.hir.identifiers[ident.id()]));
+        self.emit(XmlEvent::characters(&self.hir.identifiers[ident.id]));
         self.emit(XmlEvent::end_element());
 
         let expr = &self.hir.expressions[*expr];
 
         self.emit(
             XmlEvent::start_element("expression")
-                .attr("line", &expr.span().line().to_string())
-                .attr("column", &expr.span().column().to_string())
-                .attr("start", &expr.span().start().to_string())
-                .attr("len", &expr.span().len().to_string()),
+                .attr("line", &expr.span.line.to_string())
+                .attr("column", &expr.span.column.to_string())
+                .attr("start", &expr.span.start.to_string())
+                .attr("len", &expr.span.len.to_string()),
         );
-        self.visit_expression(expr.id());
+        self.visit_expression(expr.id);
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::end_element());
@@ -471,10 +471,10 @@ impl<'a> XmlWriter<'a> {
         self.emit(
             XmlEvent::start_element("ret")
                 .attr("mode", mode.as_str())
-                .attr("line", &stmt.span().line().to_string())
-                .attr("column", &stmt.span().column().to_string())
-                .attr("start", &stmt.span().start().to_string())
-                .attr("len", &stmt.span().len().to_string()),
+                .attr("line", &stmt.span.line.to_string())
+                .attr("column", &stmt.span.column.to_string())
+                .attr("start", &stmt.span.start.to_string())
+                .attr("len", &stmt.span.len.to_string()),
         );
         self.visit_expression(*expr);
         self.emit(XmlEvent::end_element());
@@ -492,26 +492,26 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("identifier")
-                .attr("line", &ident.span().line().to_string())
-                .attr("column", &ident.span().column().to_string())
-                .attr("start", &ident.span().start().to_string())
-                .attr("len", &ident.span().len().to_string()),
+                .attr("line", &ident.span.line.to_string())
+                .attr("column", &ident.span.column.to_string())
+                .attr("start", &ident.span.start.to_string())
+                .attr("len", &ident.span.len.to_string()),
         );
-        self.emit(XmlEvent::characters(&self.hir.identifiers[ident.id()]));
+        self.emit(XmlEvent::characters(&self.hir.identifiers[ident.id]));
         self.emit(XmlEvent::end_element());
 
-        if let Some(ty_ident_ref_id) = return_type.ident_ret_id() {
+        if let Some(ty_ident_ref_id) = return_type.ret {
             let ty_ident_ref = &self.hir.identifier_refs[ty_ident_ref_id];
 
             self.emit(
                 XmlEvent::start_element("type")
-                    .attr("line", &ty_ident_ref.span().line().to_string())
-                    .attr("column", &ty_ident_ref.span().column().to_string())
-                    .attr("start", &ty_ident_ref.span().start().to_string())
-                    .attr("len", &ty_ident_ref.span().len().to_string()),
+                    .attr("line", &ty_ident_ref.ident.span.line.to_string())
+                    .attr("column", &ty_ident_ref.ident.span.column.to_string())
+                    .attr("start", &ty_ident_ref.ident.span.start.to_string())
+                    .attr("len", &ty_ident_ref.ident.span.len.to_string()),
             );
             self.emit(XmlEvent::characters(
-                &self.hir.identifiers[ty_ident_ref.ident().id()],
+                &self.hir.identifiers[ty_ident_ref.ident.id],
             ));
             self.emit(XmlEvent::end_element());
         }
@@ -521,35 +521,35 @@ impl<'a> XmlWriter<'a> {
             self.emit(
                 XmlEvent::start_element("parameter")
                     .attr("id", &format!("stmt:{stmt_id}:{index}"))
-                    .attr("line", &param.span().line().to_string())
-                    .attr("column", &param.span().column().to_string())
-                    .attr("start", &param.span().start().to_string())
-                    .attr("len", &param.span().len().to_string()),
+                    .attr("line", &param.span.line.to_string())
+                    .attr("column", &param.span.column.to_string())
+                    .attr("start", &param.span.start.to_string())
+                    .attr("len", &param.span.len.to_string()),
             );
 
             self.emit(
                 XmlEvent::start_element("name")
-                    .attr("line", &param.identifier().span().line().to_string())
-                    .attr("column", &param.identifier().span().column().to_string())
-                    .attr("start", &param.identifier().span().start().to_string())
-                    .attr("len", &param.identifier().span().len().to_string()),
+                    .attr("line", &param.identifier.span.line.to_string())
+                    .attr("column", &param.identifier.span.column.to_string())
+                    .attr("start", &param.identifier.span.start.to_string())
+                    .attr("len", &param.identifier.span.len.to_string()),
             );
             self.emit(XmlEvent::characters(
-                &self.hir.identifiers[param.identifier().id()],
+                &self.hir.identifiers[param.identifier.id],
             ));
             self.emit(XmlEvent::end_element());
 
-            let ty_ident_ref = &self.hir.identifier_refs[param.ty()];
+            let ty_ident_ref = &self.hir.identifier_refs[param.ty];
 
             self.emit(
                 XmlEvent::start_element("type")
-                    .attr("line", &ty_ident_ref.span().line().to_string())
-                    .attr("column", &ty_ident_ref.span().column().to_string())
-                    .attr("start", &ty_ident_ref.span().start().to_string())
-                    .attr("len", &ty_ident_ref.span().len().to_string()),
+                    .attr("line", &ty_ident_ref.ident.span.line.to_string())
+                    .attr("column", &ty_ident_ref.ident.span.column.to_string())
+                    .attr("start", &ty_ident_ref.ident.span.start.to_string())
+                    .attr("len", &ty_ident_ref.ident.span.len.to_string()),
             );
             self.emit(XmlEvent::characters(
-                &self.hir.identifiers[ty_ident_ref.ident().id()],
+                &self.hir.identifiers[ty_ident_ref.ident.id],
             ));
             self.emit(XmlEvent::end_element());
 
@@ -560,12 +560,12 @@ impl<'a> XmlWriter<'a> {
         let expr = &self.hir.expressions[*expr];
         self.emit(
             XmlEvent::start_element("body")
-                .attr("line", &expr.span().line().to_string())
-                .attr("column", &expr.span().column().to_string())
-                .attr("start", &expr.span().start().to_string())
-                .attr("len", &expr.span().len().to_string()),
+                .attr("line", &expr.span.line.to_string())
+                .attr("column", &expr.span.column.to_string())
+                .attr("start", &expr.span.start.to_string())
+                .attr("len", &expr.span.len.to_string()),
         );
-        self.visit_expression(expr.id());
+        self.visit_expression(expr.id);
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::end_element());
@@ -581,12 +581,12 @@ impl<'a> XmlWriter<'a> {
 
         self.emit(
             XmlEvent::start_element("identifier")
-                .attr("line", &ident.span().line().to_string())
-                .attr("column", &ident.span().column().to_string())
-                .attr("start", &ident.span().start().to_string())
-                .attr("len", &ident.span().len().to_string()),
+                .attr("line", &ident.span.line.to_string())
+                .attr("column", &ident.span.column.to_string())
+                .attr("start", &ident.span.start.to_string())
+                .attr("len", &ident.span.len.to_string()),
         );
-        self.emit(XmlEvent::characters(&self.hir.identifiers[ident.id()]));
+        self.emit(XmlEvent::characters(&self.hir.identifiers[ident.id]));
         self.emit(XmlEvent::end_element());
 
         self.emit(XmlEvent::start_element("fields"));
@@ -594,35 +594,35 @@ impl<'a> XmlWriter<'a> {
             self.emit(
                 XmlEvent::start_element("field")
                     .attr("id", &format!("stmt:{stmt_id}:{index}"))
-                    .attr("line", &param.span().line().to_string())
-                    .attr("column", &param.span().column().to_string())
-                    .attr("start", &param.span().start().to_string())
-                    .attr("len", &param.span().len().to_string()),
+                    .attr("line", &param.span.line.to_string())
+                    .attr("column", &param.span.column.to_string())
+                    .attr("start", &param.span.start.to_string())
+                    .attr("len", &param.span.len.to_string()),
             );
 
             self.emit(
                 XmlEvent::start_element("name")
-                    .attr("line", &param.identifier().span().line().to_string())
-                    .attr("column", &param.identifier().span().column().to_string())
-                    .attr("start", &param.identifier().span().start().to_string())
-                    .attr("len", &param.identifier().span().len().to_string()),
+                    .attr("line", &param.identifier.span.line.to_string())
+                    .attr("column", &param.identifier.span.column.to_string())
+                    .attr("start", &param.identifier.span.start.to_string())
+                    .attr("len", &param.identifier.span.len.to_string()),
             );
             self.emit(XmlEvent::characters(
-                &self.hir.identifiers[param.identifier().id()],
+                &self.hir.identifiers[param.identifier.id],
             ));
             self.emit(XmlEvent::end_element());
 
-            let ty_ident_ref = &self.hir.identifier_refs[param.ty()];
+            let ty_ident_ref = &self.hir.identifier_refs[param.ty];
 
             self.emit(
                 XmlEvent::start_element("type")
-                    .attr("line", &ty_ident_ref.span().line().to_string())
-                    .attr("column", &ty_ident_ref.span().column().to_string())
-                    .attr("start", &ty_ident_ref.span().start().to_string())
-                    .attr("len", &ty_ident_ref.span().len().to_string()),
+                    .attr("line", &ty_ident_ref.ident.span.line.to_string())
+                    .attr("column", &ty_ident_ref.ident.span.column.to_string())
+                    .attr("start", &ty_ident_ref.ident.span.start.to_string())
+                    .attr("len", &ty_ident_ref.ident.span.len.to_string()),
             );
             self.emit(XmlEvent::characters(
-                &self.hir.identifiers[ty_ident_ref.ident().id()],
+                &self.hir.identifiers[ty_ident_ref.ident.id],
             ));
             self.emit(XmlEvent::end_element());
 

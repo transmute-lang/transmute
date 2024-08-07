@@ -16,31 +16,9 @@ where
     T: TypedState,
     B: BoundState,
 {
-    id: StmtId,
-    kind: StatementKind<T, B>,
-    span: Span,
-}
-
-impl<T, B> Statement<T, B>
-where
-    T: TypedState,
-    B: BoundState,
-{
-    pub fn id(&self) -> StmtId {
-        self.id
-    }
-
-    pub fn kind(&self) -> &StatementKind<T, B> {
-        &self.kind
-    }
-
-    pub fn take_kind(self) -> StatementKind<T, B> {
-        self.kind
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
-    }
+    pub id: StmtId,
+    pub kind: StatementKind<T, B>,
+    pub span: Span,
 }
 
 impl Statement<Typed, Bound> {
@@ -56,9 +34,9 @@ impl Statement<Typed, Bound> {
 impl From<AstStatement> for Statement<Untyped, Unbound> {
     fn from(value: AstStatement) -> Self {
         Self {
-            id: value.id(),
-            span: value.span().clone(),
-            kind: match value.take_kind() {
+            id: value.id,
+            span: value.span.clone(),
+            kind: match value.kind {
                 AstStatementKind::Expression(expr_id) => StatementKind::Expression(expr_id),
                 AstStatementKind::Let(identifier, expr_id) => {
                     StatementKind::Let(Identifier::from(identifier), expr_id)
@@ -132,30 +110,12 @@ where
     T: TypedState,
     B: BoundState,
 {
-    identifier: Identifier<B>,
-    ty: IdentRefId,
-    span: Span,
+    pub identifier: Identifier<B>,
+    pub ty: IdentRefId,
+    pub span: Span,
     /// When `Typed`, corresponds to the `TypeId` of the parameter, as derived from the `ty` during
     /// resolution
     typed: T,
-}
-
-impl<T, B> Parameter<T, B>
-where
-    T: TypedState,
-    B: BoundState,
-{
-    pub fn identifier(&self) -> &Identifier<B> {
-        &self.identifier
-    }
-
-    pub fn ty(&self) -> IdentRefId {
-        self.ty
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
-    }
 }
 
 impl Parameter<Untyped, Unbound> {
@@ -173,9 +133,9 @@ impl Parameter<Untyped, Unbound> {
 impl From<AstParameter> for Parameter<Untyped, Unbound> {
     fn from(value: AstParameter) -> Self {
         Self {
-            span: value.span().clone(),
-            ty: value.ty(),
-            identifier: Identifier::from(value.take_identifier()),
+            span: value.span.clone(),
+            ty: value.ty,
+            identifier: Identifier::from(value.identifier),
             typed: Untyped,
         }
     }
@@ -195,7 +155,7 @@ pub struct Return<T>
 where
     T: TypedState,
 {
-    ret: Option<IdentRefId>,
+    pub ret: Option<IdentRefId>,
     typed: T,
 }
 
@@ -211,18 +171,9 @@ impl Return<Untyped> {
 impl From<AstReturn> for Return<Untyped> {
     fn from(value: AstReturn) -> Self {
         Self {
-            ret: value.ident_ret_id(),
+            ret: value.ret,
             typed: Untyped,
         }
-    }
-}
-
-impl<T> Return<T>
-where
-    T: TypedState,
-{
-    pub fn ident_ret_id(&self) -> Option<IdentRefId> {
-        self.ret
     }
 }
 
@@ -232,9 +183,9 @@ where
     T: TypedState,
     B: BoundState,
 {
-    identifier: Identifier<B>,
-    ty: IdentRefId,
-    span: Span,
+    pub identifier: Identifier<B>,
+    pub ty: IdentRefId,
+    pub span: Span,
     /// When `Typed`, corresponds to the `TypeId` of the field, as derived from the `ty` during
     /// resolution
     typed: T,
@@ -296,23 +247,5 @@ where
             span: self.span,
             typed: self.typed,
         }
-    }
-}
-
-impl<T, B> Field<T, B>
-where
-    T: TypedState,
-    B: BoundState,
-{
-    pub fn identifier(&self) -> &Identifier<B> {
-        &self.identifier
-    }
-
-    pub fn ty(&self) -> IdentRefId {
-        self.ty
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
     }
 }

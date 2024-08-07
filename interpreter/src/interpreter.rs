@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId};
-use transmute_core::value::Ref;
-use transmute_core::value::Value;
+use transmute_core::value::{Ref, Value};
 use transmute_hir::expression::{ExpressionKind, Target};
 use transmute_hir::literal::{Literal, LiteralKind};
 use transmute_hir::statement::StatementKind;
@@ -49,7 +48,7 @@ impl<'a> Interpreter<'a> {
         let mut value = Val::none();
 
         for statement in statements {
-            value = self.visit_statement(self.hir.statements[*statement].id());
+            value = self.visit_statement(self.hir.statements[*statement].id);
 
             if value.is_ret {
                 return value;
@@ -61,7 +60,7 @@ impl<'a> Interpreter<'a> {
 
     fn visit_statement(&mut self, stmt: StmtId) -> Val {
         let stmt = &self.hir.statements[stmt];
-        match stmt.kind() {
+        match &stmt.kind {
             StatementKind::Expression(e) => self.visit_expression(*e),
             StatementKind::Let(ident, expr) => {
                 let val = self.visit_expression(*expr);
@@ -72,7 +71,7 @@ impl<'a> Interpreter<'a> {
                 self.stack
                     .last_mut()
                     .expect("there is an env")
-                    .insert(ident.id(), val.value_ref.expect("rhs has value"));
+                    .insert(ident.id, val.value_ref.expect("rhs has value"));
 
                 Val::none()
             }
@@ -84,7 +83,7 @@ impl<'a> Interpreter<'a> {
 
     fn visit_expression(&mut self, expr: ExprId) -> Val {
         let expr = &self.hir.expressions[expr];
-        match expr.kind() {
+        match &expr.kind {
             ExpressionKind::Literal(n) => Val::of(self.visit_literal(n)),
             ExpressionKind::Access(expr_id, ident_ref_id) => {
                 let val = self.visit_expression(*expr_id);
@@ -95,7 +94,7 @@ impl<'a> Interpreter<'a> {
 
                 let values = self.heap[val.value_ref.expect("expr exists").0].as_struct();
 
-                match self.hir.symbol_by_ident_ref_id(*ident_ref_id).kind() {
+                match &self.hir.symbol_by_ident_ref_id(*ident_ref_id).kind {
                     SymbolKind::Field(_, index) => Val::of(values[*index]),
                     _ => panic!(),
                 }
@@ -107,7 +106,7 @@ impl<'a> Interpreter<'a> {
                 self.visit_assignment(ident, expr)
             }
             ExpressionKind::Assignment(Target::Indirect(lhs_expr_id), rhs_expr_id) => {
-                let (lhs_val, index) = match self.hir.expressions[*lhs_expr_id].kind() {
+                let (lhs_val, index) = match &self.hir.expressions[*lhs_expr_id].kind {
                     ExpressionKind::Access(expr_id, ident_ref_id) => {
                         let val = self.visit_expression(*expr_id);
                         if val.is_ret {
@@ -115,7 +114,7 @@ impl<'a> Interpreter<'a> {
                         }
 
                         let symbol = self.hir.symbol_by_ident_ref_id(*ident_ref_id);
-                        match symbol.kind() {
+                        match &symbol.kind {
                             SymbolKind::Field(_, index) => (val, index),
                             _ => panic!("field expected"),
                         }
@@ -162,21 +161,21 @@ impl<'a> Interpreter<'a> {
     }
 
     fn visit_literal(&mut self, literal: &Literal) -> Ref {
-        match literal.kind() {
+        match &literal.kind {
             LiteralKind::Number(n) => {
                 self.heap.push(Value::Number(*n));
                 Ref(self.heap.len() - 1)
             }
             LiteralKind::Identifier(ident_ref_id) => {
-                let ident = self.hir.identifier_refs[*ident_ref_id].ident();
+                let ident = &self.hir.identifier_refs[*ident_ref_id].ident;
                 match self
                     .stack
                     .last_mut()
                     .expect("there is an env")
-                    .get(&ident.id())
+                    .get(&ident.id)
                 {
                     None => {
-                        panic!("{} not in scope", self.hir.identifiers[ident.id()])
+                        panic!("{} not in scope", self.hir.identifiers[ident.id])
                     }
                     Some(v) => *v,
                 }
@@ -189,7 +188,7 @@ impl<'a> Interpreter<'a> {
     }
 
     fn visit_function_call(&mut self, ident: &IdentRefId, arguments: &[ExprId]) -> Val {
-        match self.hir.symbol_by_ident_ref_id(*ident).kind() {
+        match &self.hir.symbol_by_ident_ref_id(*ident).kind {
             SymbolKind::Let(_)
             | SymbolKind::Parameter(_, _)
             | SymbolKind::Field(_, _)
@@ -199,10 +198,10 @@ impl<'a> Interpreter<'a> {
             }
             SymbolKind::LetFn(stmt, _, _) => {
                 let stmt = &self.hir.statements[*stmt];
-                match stmt.kind() {
+                match &stmt.kind {
                     StatementKind::LetFn(_, parameters, _, expr) => {
                         let expr = &self.hir.expressions[*expr];
-                        match expr.kind() {
+                        match &expr.kind {
                             ExpressionKind::Block(stmts) => {
                                 let mut env = HashMap::with_capacity(parameters.len());
 
@@ -212,7 +211,7 @@ impl<'a> Interpreter<'a> {
                                         return val;
                                     }
                                     env.insert(
-                                        param.identifier().id(),
+                                        param.identifier.id,
                                         val.value_ref.expect("param has value"),
                                     );
                                 }
@@ -258,14 +257,14 @@ impl<'a> Interpreter<'a> {
     }
 
     fn visit_assignment(&mut self, ident_ref_id: &IdentRefId, expr: &ExprId) -> Val {
-        let ident = self.hir.identifier_refs[*ident_ref_id].ident();
+        let ident = &self.hir.identifier_refs[*ident_ref_id].ident;
         if !self
             .stack
             .last()
             .expect("there is an env")
-            .contains_key(&ident.id())
+            .contains_key(&ident.id)
         {
-            panic!("{} not in scope", self.hir.identifiers[ident.id()]);
+            panic!("{} not in scope", self.hir.identifiers[ident.id]);
         }
 
         let val = self.visit_expression(*expr);
@@ -273,7 +272,7 @@ impl<'a> Interpreter<'a> {
             self.stack
                 .last_mut()
                 .expect("there is an env")
-                .insert(ident.id(), val.value_ref.expect("rhs has value"));
+                .insert(ident.id, val.value_ref.expect("rhs has value"));
         }
 
         val
@@ -296,7 +295,7 @@ impl<'a> Interpreter<'a> {
         } else {
             false_branch.as_ref()
         }
-        .map(|expr| match self.hir.expressions[*expr].kind() {
+        .map(|expr| match &self.hir.expressions[*expr].kind {
             ExpressionKind::Block(statements) => statements,
             _ => panic!("block expected"),
         });
@@ -309,7 +308,7 @@ impl<'a> Interpreter<'a> {
     }
 
     fn visit_while(&mut self, cond: &ExprId, expr: &ExprId) -> Val {
-        let statements = match self.hir.expressions[*expr].kind() {
+        let statements = match &self.hir.expressions[*expr].kind {
             ExpressionKind::Block(statements) => statements,
             _ => panic!("block expected"),
         };

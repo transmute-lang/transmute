@@ -6,4 +6,3 @@ struct Point {
   x: number,
   y: number,
 }
-

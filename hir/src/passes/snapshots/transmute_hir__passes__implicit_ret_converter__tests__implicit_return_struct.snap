@@ -11,4 +11,3 @@ let f(): number = {
     ret 1;
   }, y: 1,};
 }
-

@@ -68,11 +68,11 @@ impl<'a> HtmlWriter<'a> {
     fn visit_statement(&mut self, stmt: StmtId) {
         let stmt = &self.hir.statements[stmt];
 
-        match stmt.kind() {
+        match &stmt.kind {
             StatementKind::Expression(expr) => {
                 self.emit(XmlEvent::start_element("li"));
                 self.visit_expression(*expr);
-                match self.hir.expressions[*expr].kind() {
+                match &self.hir.expressions[*expr].kind {
                     ExpressionKind::Assignment(_, _)
                     | ExpressionKind::Literal(_)
                     | ExpressionKind::FunctionCall(_, _)
@@ -84,21 +84,15 @@ impl<'a> HtmlWriter<'a> {
                 self.emit(XmlEvent::end_element());
             }
             StatementKind::Let(ident, expr) => {
-                self.visit_let(stmt.id(), ident.id(), *expr);
+                self.visit_let(stmt.id, ident.id, *expr);
             }
             StatementKind::Ret(expr, mode) => {
                 self.visit_ret(*expr, *mode);
             }
-            StatementKind::LetFn(ident, params, ret_type, expr) => self.visit_function(
-                stmt.id(),
-                ident.id(),
-                params,
-                ret_type.ident_ret_id(),
-                *expr,
-            ),
-            StatementKind::Struct(ident, fields) => {
-                self.visit_struct(stmt.id(), ident.id(), fields)
+            StatementKind::LetFn(ident, params, ret_type, expr) => {
+                self.visit_function(stmt.id, ident.id, params, ret_type.ret, *expr)
             }
+            StatementKind::Struct(ident, fields) => self.visit_struct(stmt.id, ident.id, fields),
         }
     }
 
@@ -128,9 +122,9 @@ impl<'a> HtmlWriter<'a> {
         self.emit_par("(", &par_id);
 
         for (i, param) in params.iter().enumerate() {
-            self.emit_identifier(stmt_id, param.identifier().id(), Some(i));
+            self.emit_identifier(stmt_id, param.identifier.id, Some(i));
             self.emit_colon();
-            self.emit_identifier_ref(param.ty());
+            self.emit_identifier_ref(param.ty);
 
             if i < params.len() - 1 {
                 self.emit_comma();
@@ -177,9 +171,9 @@ impl<'a> HtmlWriter<'a> {
 
         for (i, field) in fields.iter().enumerate() {
             self.emit(XmlEvent::start_element("li"));
-            self.emit_identifier(stmt_id, field.identifier().id(), Some(i));
+            self.emit_identifier(stmt_id, field.identifier.id, Some(i));
             self.emit_colon();
-            self.emit_identifier_ref(field.ty());
+            self.emit_identifier_ref(field.ty);
             self.emit_comma();
             self.emit(XmlEvent::end_element());
         }
@@ -203,7 +197,7 @@ impl<'a> HtmlWriter<'a> {
     }
 
     fn visit_expression(&mut self, expr: ExprId) {
-        match self.hir.expressions[expr].kind() {
+        match &self.hir.expressions[expr].kind {
             ExpressionKind::Assignment(Target::Direct(ident_ref), expr) => {
                 self.visit_assignment(*ident_ref, *expr)
             }
@@ -293,7 +287,7 @@ impl<'a> HtmlWriter<'a> {
     }
 
     fn visit_literal(&mut self, literal: &Literal) {
-        match literal.kind() {
+        match &literal.kind {
             LiteralKind::Boolean(b) => self.emit_boolean(*b),
             LiteralKind::Identifier(ident) => self.emit_identifier_ref(*ident),
             LiteralKind::Number(n) => self.emit_number(*n),
@@ -472,7 +466,7 @@ impl<'a> HtmlWriter<'a> {
     fn emit_identifier_ref(&mut self, ident_ref_id: IdentRefId) {
         let ident_ref = &self.hir.identifier_refs[ident_ref_id];
 
-        let symbol = match self.hir.symbols[ident_ref.symbol_id()].kind() {
+        let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
             SymbolKind::NotFound => panic!("symbol was not resolved"),
             SymbolKind::Let(stmt) => Self::ident_id(*stmt, None),
             SymbolKind::LetFn(stmt, _, _) => Self::ident_id(*stmt, None),
@@ -496,11 +490,11 @@ impl<'a> HtmlWriter<'a> {
             SymbolKind::Struct(stmt) => Self::ident_id(*stmt, None),
         };
 
-        let ty = &self.hir.types[self.hir.symbols[ident_ref.symbol_id()].type_id()];
+        let ty = &self.hir.types[self.hir.symbols[ident_ref.symbol_id()].type_id];
         let (type_ref, type_name) = match ty {
             Type::Struct(stmt) => {
-                let name = match self.hir.statements[*stmt].kind() {
-                    StatementKind::Struct(ident, _) => &self.hir.identifiers[ident.id()],
+                let name = match &self.hir.statements[*stmt].kind {
+                    StatementKind::Struct(ident, _) => &self.hir.identifiers[ident.id],
                     _ => unreachable!("must be a struct statement"),
                 };
                 (Some(format!("ident__stmt{stmt}")), format!("struct {name}"))
@@ -517,7 +511,7 @@ impl<'a> HtmlWriter<'a> {
                 .attr("data-type-ident-ref", &type_ref.unwrap_or_default()),
         );
         self.emit(XmlEvent::Characters(
-            &self.hir.identifiers[ident_ref.ident().id()],
+            &self.hir.identifiers[ident_ref.ident.id],
         ));
         self.emit(XmlEvent::end_element());
     }

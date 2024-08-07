@@ -68,7 +68,7 @@ impl<'a> Resolver<'a> {
         symbols.push(Symbol {
             id: not_found_symbol_id,
             kind: SymbolKind::NotFound,
-            ty: invalid_type_id,
+            type_id: invalid_type_id,
         });
 
         // just append all native names, if they are missing
@@ -115,13 +115,13 @@ impl<'a> Resolver<'a> {
         for native in natives.into_iter() {
             match native {
                 Native::Fn(native) => {
-                    let ident = state.find_ident_id_by_str(native.name());
+                    let ident = state.find_ident_id_by_str(native.name);
                     let parameters = native
-                        .parameters()
+                        .parameters
                         .iter()
                         .map(|t| state.find_type_id_by_type(t))
                         .collect::<Vec<TypeId>>();
-                    let ret_type = state.find_type_id_by_type(native.return_type());
+                    let ret_type = state.find_type_id_by_type(&native.return_type);
                     let fn_type_id =
                         state.insert_type(Type::Function(parameters.clone(), ret_type));
 
@@ -131,16 +131,16 @@ impl<'a> Resolver<'a> {
                             ident,
                             parameters,
                             ret_type,
-                            NativeImplementation(native.body()),
+                            NativeImplementation(native.body),
                         ),
                         fn_type_id,
                     );
                 }
                 Native::Type(native) => {
-                    let id = state.find_ident_id_by_str(native.name());
+                    let id = state.find_ident_id_by_str(native.name);
                     state.insert_symbol(
                         id,
-                        SymbolKind::NativeType(id, native.ty().clone()),
+                        SymbolKind::NativeType(id, native.ty.clone()),
                         state.none_type_id,
                     );
                 }
@@ -216,11 +216,11 @@ impl<'a> Resolver<'a> {
             state
                 .resolution
                 .expressions
-                .insert(expr.id(), expr.typed(state.void_type_id));
+                .insert(expr.id, expr.typed(state.void_type_id));
             return (state.void_type_id, state);
         }
 
-        let (type_id, mut state) = match expr.kind() {
+        let (type_id, mut state) = match &expr.kind {
             ExpressionKind::Assignment(Target::Direct(ident_ref), expr) => {
                 self.visit_assignment(state, *ident_ref, *expr)
             }
@@ -243,7 +243,7 @@ impl<'a> Resolver<'a> {
                             state.find_type_by_type_id(lhs_type_id),
                             state.find_type_by_type_id(rhs_type_id)
                         ),
-                        state.resolution.expressions[*rhs_expr_id].span().clone(),
+                        state.resolution.expressions[*rhs_expr_id].span.clone(),
                         (file!(), line!()),
                     );
                     return (state.invalid_type_id, state);
@@ -254,7 +254,7 @@ impl<'a> Resolver<'a> {
             ExpressionKind::If(cond, true_branch, false_branch) => {
                 self.visit_if(state, *cond, *true_branch, *false_branch)
             }
-            ExpressionKind::Literal(literal) => self.visit_literal(state, literal.kind().clone()),
+            ExpressionKind::Literal(literal) => self.visit_literal(state, literal.kind.clone()),
             ExpressionKind::Access(expr_id, ident_ref_id) => {
                 let ident_ref = state
                     .identifier_refs
@@ -266,12 +266,12 @@ impl<'a> Resolver<'a> {
 
                 let ty = state.find_type_by_type_id(expr_type_id);
                 let field_type_id = match ty {
-                    Type::Struct(stmt_id) => match &state.resolution.statements[*stmt_id].kind() {
+                    Type::Struct(stmt_id) => match &state.resolution.statements[*stmt_id].kind {
                         StatementKind::Struct(ident, fields) => {
                             match fields
                                 .iter()
                                 .enumerate()
-                                .find(|(_, field)| field.identifier().id() == ident_ref.ident_id())
+                                .find(|(_, field)| field.identifier.id == ident_ref.ident.id)
                             {
                                 Some((index, field)) => {
                                     let field_symbol_id = state
@@ -281,7 +281,7 @@ impl<'a> Resolver<'a> {
                                     state
                                         .resolution
                                         .identifier_refs
-                                        .insert(ident_ref.id(), ident_ref);
+                                        .insert(ident_ref.id, ident_ref);
                                     field.type_id()
                                 }
                                 None => {
@@ -291,22 +291,22 @@ impl<'a> Resolver<'a> {
                                             state
                                                 .resolution
                                                 .identifiers
-                                                .get_by_left(&ident_ref.ident_id())
+                                                .get_by_left(&ident_ref.ident.id)
                                                 .unwrap(),
                                             state
                                                 .resolution
                                                 .identifiers
-                                                .get_by_left(&ident.id())
+                                                .get_by_left(&ident.id)
                                                 .unwrap()
                                         ),
-                                        ident_ref.ident().span().clone(),
+                                        ident_ref.ident.span.clone(),
                                         (file!(), line!()),
                                     );
                                     let ident_ref = ident_ref.resolved(state.not_found_symbol_id);
                                     state
                                         .resolution
                                         .identifier_refs
-                                        .insert(ident_ref.id(), ident_ref);
+                                        .insert(ident_ref.id, ident_ref);
                                     state.invalid_type_id
                                 }
                             }
@@ -316,7 +316,7 @@ impl<'a> Resolver<'a> {
                     _ => {
                         state.diagnostics.report_err(
                             format!("Expected struct type, got {}", ty),
-                            state.resolution.expressions[*expr_id].span().clone(),
+                            state.resolution.expressions[*expr_id].span.clone(),
                             (file!(), line!()),
                         );
 
@@ -327,7 +327,7 @@ impl<'a> Resolver<'a> {
                         state
                             .resolution
                             .identifier_refs
-                            .insert(ident_ref.id(), ident_ref);
+                            .insert(ident_ref.id, ident_ref);
                         state.invalid_type_id
                     }
                 };
@@ -340,7 +340,7 @@ impl<'a> Resolver<'a> {
             ExpressionKind::While(cond, expr) => self.visit_while(state, *cond, *expr),
             ExpressionKind::Block(stmts) => self.visit_block(state, &stmts.clone()),
             ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
-                self.visit_struct_instantiation(state, *ident_ref_id, fields, expr.span())
+                self.visit_struct_instantiation(state, *ident_ref_id, fields, &expr.span)
             }
         };
 
@@ -388,7 +388,7 @@ impl<'a> Resolver<'a> {
             //  information yet and thus we cannot assign to a variable holding a function
             //  (yet).
             .resolve_ident_ref(ident_ref, None)
-            .map(|s| state.resolution.symbols[s].ty)
+            .map(|s| state.resolution.symbols[s].type_id)
             .unwrap_or(state.invalid_type_id);
 
         if lhs_type_id == state.invalid_type_id {
@@ -406,7 +406,7 @@ impl<'a> Resolver<'a> {
                     state.find_type_by_type_id(lhs_type_id),
                     state.find_type_by_type_id(rhs_type_id)
                 ),
-                state.resolution.expressions[expr].span().clone(),
+                state.resolution.expressions[expr].span.clone(),
                 (file!(), line!()),
             );
             return (state.invalid_type_id, state);
@@ -431,7 +431,7 @@ impl<'a> Resolver<'a> {
                     Type::Boolean,
                     state.find_type_by_type_id(cond_type)
                 ),
-                state.resolution.expressions[cond].span().clone(),
+                state.resolution.expressions[cond].span.clone(),
                 (file!(), line!()),
             );
         }
@@ -460,7 +460,7 @@ impl<'a> Resolver<'a> {
                     &state.resolution.expressions[false_branch.expect("false branch exists")];
                 state.diagnostics.report_err(
                     format!("Expected type {tt}, got {ft}"),
-                    false_branch.span().clone(),
+                    false_branch.span.clone(),
                     (file!(), line!()),
                 );
                 state.invalid_type_id
@@ -481,7 +481,7 @@ impl<'a> Resolver<'a> {
                 // todo resolve function ref, see comment in resolve_assignment
                 state
                     .resolve_ident_ref(ident_ref, None)
-                    .map(|s| state.resolution.symbols[s].ty)
+                    .map(|s| state.resolution.symbols[s].type_id)
                     // fixme must issue a diagnostic when the identifier is not found
                     .unwrap_or(state.invalid_type_id)
             }
@@ -538,7 +538,7 @@ impl<'a> Resolver<'a> {
                     Type::Boolean,
                     state.find_type_by_type_id(cond_type)
                 ),
-                state.resolution.expressions[cond].span().clone(),
+                state.resolution.expressions[cond].span.clone(),
                 (file!(), line!()),
             );
         }
@@ -579,9 +579,9 @@ impl<'a> Resolver<'a> {
                 SymbolKind::Struct(stmt_id) => Some(&state.resolution.statements[stmt_id]),
                 _ => None,
             })
-            .map(|s| match s.kind() {
+            .map(|s| match &s.kind {
                 StatementKind::Struct(struct_identifier, struct_fields) => {
-                    (s.id(), struct_identifier, struct_fields)
+                    (s.id, struct_identifier, struct_fields)
                 }
                 _ => panic!("must be a struct"),
             });
@@ -606,7 +606,7 @@ impl<'a> Resolver<'a> {
                 if let Some((index, field)) = field_types
                     .iter()
                     .enumerate()
-                    .find(|(_, field)| field.identifier().id() == field_ident_ref.ident_id())
+                    .find(|(_, field)| field.identifier.id == field_ident_ref.ident.id)
                 {
                     let field_symbol_id = state
                         .find_symbol_id_for_struct_field(struct_stmt_id, index)
@@ -624,12 +624,12 @@ impl<'a> Resolver<'a> {
                                 state
                                     .resolution
                                     .identifiers
-                                    .get_by_left(&field.identifier().id())
+                                    .get_by_left(&field.identifier.id)
                                     .unwrap(),
                                 state.find_type_by_type_id(field.type_id()),
                                 state.find_type_by_type_id(expr_type_id)
                             ),
-                            state.resolution.expressions[*field_expr_id].span().clone(),
+                            state.resolution.expressions[*field_expr_id].span.clone(),
                             (file!(), line!()),
                         )
                     }
@@ -644,7 +644,7 @@ impl<'a> Resolver<'a> {
 
             (
                 state
-                    .find_type_id_by_identifier(struct_identifier.id())
+                    .find_type_id_by_identifier(struct_identifier.id)
                     .expect("type exists"),
                 state,
             )
@@ -668,7 +668,7 @@ impl<'a> Resolver<'a> {
                     .statements
                     .get(stmt_id)
                     .expect("no unbound statement found");
-                match stmt.kind() {
+                match &stmt.kind {
                     StatementKind::Expression(e) => state
                         .resolution
                         .expressions
@@ -695,10 +695,10 @@ impl<'a> Resolver<'a> {
         mut state: State,
         stmt: Statement<Untyped, Unbound>,
     ) -> (TypeId, State) {
-        let stmt_id = stmt.id();
-        let span = stmt.span().clone();
+        let stmt_id = stmt.id;
+        let span = stmt.span.clone();
 
-        match stmt.take_kind() {
+        match stmt.kind {
             StatementKind::Expression(expr) => {
                 state.resolution.statements.insert(
                     stmt_id,
@@ -770,12 +770,12 @@ impl<'a> Resolver<'a> {
             let expr = &state.resolution.expressions[expr];
             state.diagnostics.report_err(
                 format!("Expected some type, got {}", Type::None),
-                expr.span().clone(),
+                expr.span.clone(),
                 (file!(), line!()),
             );
         }
 
-        let symbol_id = state.insert_symbol(ident.id(), SymbolKind::Let(stmt), expr_type_id);
+        let symbol_id = state.insert_symbol(ident.id, SymbolKind::Let(stmt), expr_type_id);
 
         (ident.bind(symbol_id), state)
     }
@@ -808,7 +808,7 @@ impl<'a> Resolver<'a> {
             .zip(param_types)
             .enumerate()
             .filter_map(|(index, (parameter, type_id))| {
-                let ident_id = parameter.identifier().id();
+                let ident_id = parameter.identifier.id;
                 let symbol_kind = SymbolKind::Parameter(stmt_id, index);
 
                 if state.symbol_exists(ident_id, &symbol_kind) {
@@ -817,7 +817,7 @@ impl<'a> Resolver<'a> {
                             "Parameter '{ident}' is already defined",
                             ident = state.resolution.identifiers.get_by_left(&ident_id).unwrap(),
                         ),
-                        parameter.identifier().span().clone(),
+                        parameter.identifier.span.clone(),
                         (file!(), line!()),
                     );
                     None
@@ -878,7 +878,7 @@ impl<'a> Resolver<'a> {
                                 ret_type =
                                     state.resolution.types.get_by_right(&ret_type_id).unwrap()
                             ),
-                            expr.span().clone(),
+                            expr.span.clone(),
                             (file!(), line!()),
                         );
                     }
@@ -892,7 +892,7 @@ impl<'a> Resolver<'a> {
 
         if success {
             if let Some(symbol_id) = state.find_symbol_id_by_ident_and_param_types(
-                ident.id(),
+                ident.id,
                 Some(
                     &parameters
                         .iter()
@@ -924,10 +924,10 @@ impl<'a> Resolver<'a> {
         let fields = fields
             .into_iter()
             .map(|field| {
-                let type_identifier = state.resolution.identifier_refs[field.ty()].ident();
+                let type_identifier = &state.resolution.identifier_refs[field.ty].ident;
 
                 let ty = state
-                    .find_type_id_by_identifier(type_identifier.id())
+                    .find_type_id_by_identifier(type_identifier.id)
                     .unwrap_or(state.invalid_type_id);
 
                 field.typed(ty)
@@ -938,7 +938,7 @@ impl<'a> Resolver<'a> {
             .into_iter()
             .enumerate()
             .map(|(index, field)| {
-                let ident_id = field.identifier().id();
+                let ident_id = field.identifier.id;
                 let symbol_kind = SymbolKind::Field(stmt_id, index);
 
                 if state.symbol_exists(ident_id, &symbol_kind) {
@@ -947,7 +947,7 @@ impl<'a> Resolver<'a> {
                             "Field '{ident}' is already defined",
                             ident = state.resolution.identifiers.get_by_left(&ident_id).unwrap(),
                         ),
-                        field.identifier().span().clone(),
+                        field.identifier.span.clone(),
                         (file!(), line!()),
                     );
                     field.bind(state.not_found_symbol_id)
@@ -1016,12 +1016,12 @@ impl State {
             .remove(ident_ref_id)
             .expect("ident_ref is not resolved");
 
-        let ident_id = ident_ref.ident_id();
+        let ident_id = ident_ref.ident.id;
         match self.find_symbol_id_by_ident_and_param_types(ident_id, param_types) {
             Some(s) => {
                 self.resolution
                     .identifier_refs
-                    .insert(ident_ref.id(), ident_ref.resolved(s));
+                    .insert(ident_ref.id, ident_ref.resolved(s));
                 Some(s)
             }
             None => {
@@ -1039,7 +1039,7 @@ impl State {
                                 .collect::<Vec<String>>()
                                 .join(", ")
                         ),
-                        ident_ref.ident().span().clone(),
+                        ident_ref.ident.span.clone(),
                         (file!(), line!()),
                     );
                 } else {
@@ -1049,7 +1049,7 @@ impl State {
                             "Identifier '{}' not found",
                             self.resolution.identifiers.get_by_left(&ident_id).unwrap()
                         ),
-                        ident_ref.ident().span().clone(),
+                        ident_ref.ident.span.clone(),
                         (file!(), line!()),
                     );
                 }
@@ -1057,7 +1057,7 @@ impl State {
                 // still, resolve it to an unknown symbol
                 self.resolution
                     .identifier_refs
-                    .insert(ident_ref.id(), ident_ref.resolved(self.not_found_symbol_id));
+                    .insert(ident_ref.id, ident_ref.resolved(self.not_found_symbol_id));
 
                 None
             }
@@ -1093,12 +1093,12 @@ impl State {
         // first, we resolve all the identifier refs for parameter types and return type ...
         let ident_ref_ids = stmts
             .iter()
-            .filter_map(|stmt_id| match self.statements[*stmt_id].kind() {
+            .filter_map(|stmt_id| match &self.statements[*stmt_id].kind {
                 StatementKind::LetFn(_, params, ret, ..) => {
                     let mut ident_ref_ids =
-                        params.iter().map(|p| p.ty()).collect::<Vec<IdentRefId>>();
+                        params.iter().map(|p| p.ty).collect::<Vec<IdentRefId>>();
 
-                    if let Some(ident_ref_id) = ret.ident_ret_id() {
+                    if let Some(ident_ref_id) = ret.ret {
                         ident_ref_ids.push(ident_ref_id);
                     }
 
@@ -1117,25 +1117,25 @@ impl State {
         let functions = stmts
             .iter()
             .filter_map(|stmt_id| {
-                match self.statements[*stmt_id].kind() {
+                match &self.statements[*stmt_id].kind {
                     StatementKind::LetFn(ident, params, ret_type, expr_id) => {
                         let parameter_types = params
                             .iter()
                             .map(|p| {
-                                let identifier = self.resolution.identifier_refs[p.ty()].ident();
+                                let identifier = &self.resolution.identifier_refs[p.ty].ident;
 
-                                self.find_type_id_by_identifier(identifier.id())
+                                self.find_type_id_by_identifier(identifier.id)
                                     .unwrap_or(self.invalid_type_id)
                             })
                             .collect::<Vec<TypeId>>();
 
                         let ret_type_id = ret_type
-                            .ident_ret_id()
+                            .ret
                             .map(|ident_ref_id| {
                                 let identifier =
-                                    self.resolution.identifier_refs[ident_ref_id].ident();
+                                    &self.resolution.identifier_refs[ident_ref_id].ident;
 
-                                self.find_type_id_by_identifier(identifier.id())
+                                self.find_type_id_by_identifier(identifier.id)
                                     .unwrap_or(self.invalid_type_id)
                             })
                             .unwrap_or(self.void_type_id);
@@ -1158,7 +1158,7 @@ impl State {
             let fn_type_id = self.insert_type(Type::Function(parameter_types.clone(), ret_type));
 
             let symbol_id = self.insert_symbol(
-                ident.id(),
+                ident.id,
                 SymbolKind::LetFn(stmt_id, parameter_types, ret_type),
                 fn_type_id,
             );
@@ -1174,14 +1174,14 @@ impl State {
         // first, we insert all structs
         let structs = stmts
             .iter()
-            .filter_map(|stmt| match self.statements[*stmt].kind() {
+            .filter_map(|stmt| match &self.statements[*stmt].kind {
                 StatementKind::Struct(ident, _) => Some((*stmt, ident.clone())),
                 _ => None,
             })
             .collect::<Vec<(StmtId, Identifier<Unbound>)>>();
 
         for (stmt_id, identifier) in structs.into_iter() {
-            let ident_id = identifier.id();
+            let ident_id = identifier.id;
             let symbol_kind = SymbolKind::Struct(stmt_id);
 
             if self.symbol_exists(ident_id, &symbol_kind) {
@@ -1190,7 +1190,7 @@ impl State {
                         "Struct '{ident}' is already defined in scope",
                         ident = self.resolution.identifiers.get_by_left(&ident_id).unwrap(),
                     ),
-                    identifier.span().clone(),
+                    identifier.span.clone(),
                     (file!(), line!()),
                 )
             } else {
@@ -1203,9 +1203,9 @@ impl State {
         // then we resolve their fields types
         let ident_ref_ids = stmts
             .iter()
-            .filter_map(|stmt_id| match self.statements[*stmt_id].kind() {
+            .filter_map(|stmt_id| match &self.statements[*stmt_id].kind {
                 StatementKind::Struct(_, fields) => {
-                    Some(fields.iter().map(|p| p.ty()).collect::<Vec<IdentRefId>>())
+                    Some(fields.iter().map(|p| p.ty).collect::<Vec<IdentRefId>>())
                 }
                 _ => None,
             })
@@ -1232,7 +1232,7 @@ impl State {
                 .map(|s| &self.resolution.symbols[*s])
                 .any(|s| {
                     matches!(
-                        (&s.kind(), kind),
+                        (&s.kind, kind),
                         (SymbolKind::Parameter(_, _), SymbolKind::Parameter(_, _))
                             | (SymbolKind::Field(_, _), SymbolKind::Field(_, _))
                             | (SymbolKind::Struct(_), SymbolKind::Struct(_))
@@ -1256,7 +1256,7 @@ impl State {
         self.resolution.symbols.push(Symbol {
             id: symbol_id,
             kind,
-            ty,
+            type_id: ty,
         });
 
         self.scope_stack
@@ -1551,7 +1551,7 @@ mod tests {
 
         let actual_diagnostics = actual_diagnostics
             .iter()
-            .map(|d| (d.message(), d.span().clone(), d.level()))
+            .map(|d| (d.message.as_str(), d.span.clone(), d.level))
             .collect::<Vec<(&str, Span, Level)>>();
 
         let expected_diagnostics = vec![(
@@ -1613,7 +1613,7 @@ mod tests {
 
                 let actual_diagnostics_str = actual_diagnostics
                     .iter()
-                    .map(|d| (d.message(), d.span().clone(), d.level()))
+                    .map(|d| (d.message.as_str(), d.span.clone(), d.level))
                     .collect::<Vec<(&str, Span, Level)>>();
 
                 let expected_diagnostics = vec![($error, $span, Level::Error)];

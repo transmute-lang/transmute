@@ -3,21 +3,13 @@ use transmute_core::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BinaryOperator {
-    kind: BinaryOperatorKind,
-    span: Span,
+    pub kind: BinaryOperatorKind,
+    pub span: Span,
 }
 
 impl BinaryOperator {
     pub fn new(kind: BinaryOperatorKind, span: Span) -> Self {
         Self { kind, span }
-    }
-
-    pub fn kind(&self) -> &BinaryOperatorKind {
-        &self.kind
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
     }
 }
 
@@ -102,21 +94,13 @@ pub enum Precedence {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnaryOperator {
-    kind: UnaryOperatorKind,
-    span: Span,
+    pub kind: UnaryOperatorKind,
+    pub span: Span,
 }
 
 impl UnaryOperator {
     pub fn new(kind: UnaryOperatorKind, span: Span) -> Self {
         Self { kind, span }
-    }
-
-    pub fn kind(&self) -> &UnaryOperatorKind {
-        &self.kind
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
     }
 }
 

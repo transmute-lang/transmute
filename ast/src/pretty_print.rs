@@ -32,7 +32,7 @@ impl PrettyPrint for Literal {
     where
         W: Write,
     {
-        match self.kind() {
+        match &self.kind {
             LiteralKind::Boolean(b) => {
                 write!(f, "{b}")
             }
@@ -51,7 +51,7 @@ impl PrettyPrint for Expression {
     where
         W: Write,
     {
-        match self.kind() {
+        match &self.kind {
             ExpressionKind::Assignment(Target::Direct(target), expr_id) => {
                 write!(f, "{ident} = ", ident = ctx.identifier_ref(*target))?;
                 ctx.pretty_print_expression(*expr_id, opts, f)
@@ -88,7 +88,7 @@ impl PrettyPrint for Expression {
             ExpressionKind::Binary(left_id, op, right_id) => {
                 ctx.pretty_print_expression(*left_id, opts, f)?;
 
-                match op.kind() {
+                match &op.kind {
                     BinaryOperatorKind::Addition => write!(f, " + "),
                     BinaryOperatorKind::Division => write!(f, " / "),
                     BinaryOperatorKind::Equality => write!(f, " == "),
@@ -104,7 +104,7 @@ impl PrettyPrint for Expression {
                 ctx.pretty_print_expression(*right_id, opts, f)
             }
             ExpressionKind::Unary(op, expr_id) => {
-                match op.kind() {
+                match &op.kind {
                     UnaryOperatorKind::Minus => {
                         write!(f, "-")?;
                     }
@@ -167,7 +167,7 @@ impl PrettyPrint for Statement {
     where
         W: Write,
     {
-        match self.kind() {
+        match &self.kind {
             StatementKind::Expression(expr_id) => {
                 write!(f, "{indent}", indent = ctx.indent())?;
                 ctx.require_semicolon = true;
@@ -183,7 +183,7 @@ impl PrettyPrint for Statement {
                     f,
                     "{indent}let {ident} = ",
                     indent = ctx.indent(),
-                    ident = ctx.identifier(ident.id())
+                    ident = ctx.identifier(ident.id)
                 )?;
                 ctx.pretty_print_expression(*expr_id, opts, f)?;
                 writeln!(f, ";")
@@ -203,11 +203,7 @@ impl PrettyPrint for Statement {
             }
             StatementKind::LetFn(ident, parameters, ret_type, expr_id) => {
                 let indent = ctx.indent();
-                write!(
-                    f,
-                    "{indent}let {ident}(",
-                    ident = ctx.identifier(ident.id())
-                )?;
+                write!(f, "{indent}let {ident}(", ident = ctx.identifier(ident.id))?;
 
                 for (i, parameter) in parameters.iter().enumerate() {
                     if i > 0 {
@@ -216,13 +212,13 @@ impl PrettyPrint for Statement {
                     write!(
                         f,
                         "{ident}: {ty}",
-                        ident = ctx.identifier(parameter.identifier().id()),
-                        ty = ctx.identifier_ref(parameter.ty())
+                        ident = ctx.identifier(parameter.identifier.id),
+                        ty = ctx.identifier_ref(parameter.ty)
                     )?;
                 }
 
                 write!(f, ")")?;
-                if let Some(ret_type) = ret_type.ident_ret_id() {
+                if let Some(ret_type) = ret_type.ret {
                     write!(f, ": {ret_type}", ret_type = ctx.identifier_ref(ret_type))?;
                 }
                 writeln!(f, " = {{")?;
@@ -236,14 +232,14 @@ impl PrettyPrint for Statement {
                 writeln!(
                     f,
                     "{indent}struct {ident} {{",
-                    ident = ctx.identifier(ident.id())
+                    ident = ctx.identifier(ident.id)
                 )?;
 
                 for field in fields.iter() {
                     writeln!(
                         f,
                         "{indent}  {ident}: {ty},",
-                        ident = ctx.identifier(field.identifier().id()),
+                        ident = ctx.identifier(field.identifier.id),
                         ty = ctx.identifier_ref(field.ty())
                     )?;
                 }
@@ -286,7 +282,7 @@ impl PrettyPrintContext<'_> {
     }
 
     fn identifier_ref(&self, ident_ref_id: IdentRefId) -> &str {
-        self.identifier(self.ast.identifier_refs[ident_ref_id].ident().id())
+        self.identifier(self.ast.identifier_refs[ident_ref_id].ident.id)
     }
 
     fn pretty_print_expression<W>(&mut self, expr_id: ExprId, opts: &Options, f: &mut W) -> Result
@@ -313,7 +309,7 @@ mod tests {
     use crate::parser::Parser;
     use crate::pretty_print::{Options, PrettyPrint, PrettyPrintContext};
     use crate::Ast;
-    use insta::assert_display_snapshot;
+    use insta::assert_snapshot;
     use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId};
     use transmute_core::span::Span;
 
@@ -815,7 +811,7 @@ mod tests {
 
         ast.pretty_print(&Options::default(), &mut w).unwrap();
 
-        assert_display_snapshot!(w);
+        assert_snapshot!(w);
     }
 
     #[test]
@@ -828,7 +824,7 @@ mod tests {
 
         ast.pretty_print(&Options::default(), &mut w).unwrap();
 
-        assert_display_snapshot!(w);
+        assert_snapshot!(w);
     }
 
     #[test]
@@ -841,7 +837,7 @@ mod tests {
 
         ast.pretty_print(&Options::default(), &mut w).unwrap();
 
-        assert_display_snapshot!(w);
+        assert_snapshot!(w);
     }
 
     #[test]
@@ -854,7 +850,7 @@ mod tests {
 
         ast.pretty_print(&Options::default(), &mut w).unwrap();
 
-        assert_display_snapshot!(w);
+        assert_snapshot!(w);
     }
 
     #[test]
@@ -865,6 +861,6 @@ mod tests {
 
         ast.pretty_print(&Options::default(), &mut w).unwrap();
 
-        assert_display_snapshot!(w);
+        assert_snapshot!(w);
     }
 }

@@ -6,38 +6,14 @@ use transmute_core::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expression {
-    id: ExprId,
-    kind: ExpressionKind,
-    span: Span,
+    pub id: ExprId,
+    pub kind: ExpressionKind,
+    pub span: Span,
 }
 
 impl Expression {
     pub fn new(id: ExprId, kind: ExpressionKind, span: Span) -> Self {
         Self { id, kind, span }
-    }
-
-    pub fn id(&self) -> ExprId {
-        self.id
-    }
-
-    pub fn kind(&self) -> &ExpressionKind {
-        &self.kind
-    }
-
-    pub fn take_kind(self) -> ExpressionKind {
-        self.kind
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        self.span = span;
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
-    }
-
-    pub fn take_span(self) -> Span {
-        self.span
     }
 }
 

@@ -11,7 +11,7 @@ use crate::statement::Statement;
 use crate::symbol::Symbol;
 use crate::typed::{Typed, TypedState, Untyped};
 use std::collections::HashMap;
-use transmute_ast::statement::StatementKind;
+use transmute_ast::statement::StatementKind as AstStatementKind;
 use transmute_ast::Ast;
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
@@ -111,7 +111,7 @@ impl From<Ast> for Hir<Untyped, Unbound> {
             &ast.statements,
             &operator_free.expressions,
         ) {
-            ast.statements.insert(new_statement.id(), new_statement);
+            ast.statements.insert(new_statement.id, new_statement);
         }
 
         // compute exit points
@@ -119,7 +119,7 @@ impl From<Ast> for Hir<Untyped, Unbound> {
         let mut unreachable = vec![];
 
         for (_, stmt) in ast.statements.iter() {
-            if let &StatementKind::LetFn(_, _, _, expr_id) = stmt.kind() {
+            if let &AstStatementKind::LetFn(_, _, _, expr_id) = &stmt.kind {
                 let mut output =
                     ExitPointsResolver::new(&operator_free.expressions, &ast.statements)
                         .exit_points(expr_id);

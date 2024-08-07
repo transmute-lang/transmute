@@ -3,4 +3,3 @@ source: hir/src/passes/operators_converter.rs
 expression: w
 ---
 neq(lhs, rhs);
-

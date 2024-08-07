@@ -12,9 +12,9 @@ pub struct Expression<T>
 where
     T: TypedState,
 {
-    id: ExprId,
-    kind: ExpressionKind,
-    span: Span,
+    pub id: ExprId,
+    pub kind: ExpressionKind,
+    pub span: Span,
     typed: T,
 }
 
@@ -32,9 +32,9 @@ impl Expression<Untyped> {
 impl From<AstExpression> for Expression<Untyped> {
     fn from(value: AstExpression) -> Self {
         Self {
-            id: value.id(),
-            span: value.span().clone(),
-            kind: match value.take_kind() {
+            id: value.id,
+            span: value.span.clone(),
+            kind: match value.kind {
                 AstExpressionKind::Assignment(target, expr_id) => {
                     ExpressionKind::Assignment(Target::from(target), expr_id)
                 }
@@ -63,27 +63,6 @@ impl From<AstExpression> for Expression<Untyped> {
             },
             typed: Untyped,
         }
-    }
-}
-
-impl<T> Expression<T>
-where
-    T: TypedState,
-{
-    pub fn id(&self) -> ExprId {
-        self.id
-    }
-
-    pub fn kind(&self) -> &ExpressionKind {
-        &self.kind
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        self.span = span;
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
     }
 }
 

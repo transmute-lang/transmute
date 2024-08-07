@@ -3,5 +3,3 @@ name = "transmute-core"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-bimap = "0.6.3"

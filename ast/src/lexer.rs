@@ -27,13 +27,13 @@ impl<'s> Lexer<'s> {
         loop {
             let mut read = false;
             if let Some(span) = self.take_while(|c| c.is_whitespace()) {
-                self.advance_consumed(span.len());
+                self.advance_consumed(span.len);
                 read = true;
             }
             if let Some('#') = self.remaining.chars().next() {
                 self.advance_consumed(1);
                 if let Some(span) = self.take_while(|c| c != '\n') {
-                    self.advance_consumed(span.len() + 1);
+                    self.advance_consumed(span.len + 1);
                 }
                 read = true;
             }
@@ -226,7 +226,7 @@ impl<'s> Lexer<'s> {
             .expect("we have at least one digit");
 
         let mut parsed = 0i64;
-        for ch in self.remaining[..digits_span.len()].chars() {
+        for ch in self.remaining[..digits_span.len].chars() {
             parsed *= 10;
             if ch == '_' {
                 continue;
@@ -238,7 +238,7 @@ impl<'s> Lexer<'s> {
             parsed = -parsed;
         }
 
-        self.advance_consumed(digits_span.len());
+        self.advance_consumed(digits_span.len);
 
         (
             TokenKind::Number(parsed),
@@ -438,25 +438,13 @@ impl<'s> PeekableLexer<'s> {
 
 #[derive(Debug, PartialEq)]
 pub struct Token {
-    kind: TokenKind,
-    span: Span,
+    pub kind: TokenKind,
+    pub span: Span,
 }
 
 impl Token {
     pub fn new(kind: TokenKind, span: Span) -> Token {
         Self { kind, span }
-    }
-
-    pub fn kind(&self) -> &TokenKind {
-        &self.kind
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
-    }
-
-    pub fn take_span(self) -> Span {
-        self.span
     }
 }
 
@@ -723,7 +711,6 @@ impl Display for Location {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use transmute_core::span::Span;
 
     macro_rules! lexer_test_next {
         ($name:ident, $src:expr => $expected:expr; loc: $line:expr,$column:expr; span: $start:expr,$len:expr) => {
@@ -940,13 +927,13 @@ mod tests {
     #[test]
     fn peek_nth() {
         let mut lexer = PeekableLexer::new(Lexer::new("1 2 3 4"), 1);
-        let span1 = lexer.peek().span().clone();
-        let span2 = lexer.peek_nth(0).span().clone();
+        let span1 = lexer.peek().span.clone();
+        let span2 = lexer.peek_nth(0).span.clone();
         assert_eq!(span1, span2);
 
         let mut lexer = PeekableLexer::new(Lexer::new("1 2 3 4"), 2);
-        let span1 = lexer.peek_nth(2).span().clone();
-        let span2 = lexer.peek_nth(2).span().clone();
+        let span1 = lexer.peek_nth(2).span.clone();
+        let span2 = lexer.peek_nth(2).span.clone();
         assert_eq!(span1, span2);
     }
 
