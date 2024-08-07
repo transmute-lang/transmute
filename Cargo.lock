@@ -206,12 +206,40 @@ dependencies = [
 ]
 
 [[package]]
-name = "transmute"
+name = "tmi"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "transmute-ast",
+ "transmute-core",
+ "transmute-hir",
+]
+
+[[package]]
+name = "transmute-ast"
 version = "0.1.0"
 dependencies = [
  "bimap",
- "clap",
  "insta",
+ "transmute-core",
+ "xml-rs",
+]
+
+[[package]]
+name = "transmute-core"
+version = "0.1.0"
+dependencies = [
+ "bimap",
+]
+
+[[package]]
+name = "transmute-hir"
+version = "0.1.0"
+dependencies = [
+ "bimap",
+ "insta",
+ "transmute-ast",
+ "transmute-core",
  "xml-rs",
 ]
 

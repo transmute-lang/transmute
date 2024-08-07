@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"^42;\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `^`, expected one of (10) identifier 357, number 358, `true` 360, `false` 361, `let` 363, `ret` 364, `if` 365, `while` 366, `(` 362, `-` 359",
+                span: 1:1; [0, 1],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    353,
+                ),
+            },
+        ],
+    },
+)

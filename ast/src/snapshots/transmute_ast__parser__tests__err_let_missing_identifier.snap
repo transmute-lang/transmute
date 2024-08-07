@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"let = 42;\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `=`, expected one of (1) identifier 280",
+                span: 1:5; [4, 5],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    277,
+                ),
+            },
+        ],
+    },
+)

@@ -1,0 +1,108 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"let times_two(a: number) { a * 2; }\")).parse()"
+---
+Ok(
+    Ast {
+        identifiers: [
+            "times_two",
+            "a",
+            "number",
+        ],
+        identifier_refs: [
+            IdentifierRef {
+                id: IdentRefId(0),
+                ident: Identifier {
+                    id: IdentId(2),
+                    span: 1:18; [17, 23],
+                },
+            },
+            IdentifierRef {
+                id: IdentRefId(1),
+                ident: Identifier {
+                    id: IdentId(1),
+                    span: 1:28; [27, 28],
+                },
+            },
+        ],
+        expressions: [
+            Expression {
+                id: ExprId(0),
+                kind: Literal(
+                    Literal {
+                        kind: IdentRefId(1),
+                        span: 1:28; [27, 28],
+                    },
+                ),
+                span: 1:28; [27, 28],
+            },
+            Expression {
+                id: ExprId(1),
+                kind: Literal(
+                    Literal {
+                        kind: Number(2),
+                        span: 1:32; [31, 32],
+                    },
+                ),
+                span: 1:32; [31, 32],
+            },
+            Expression {
+                id: ExprId(2),
+                kind: Binary(
+                    ExprId(0),
+                    BinaryOperator {
+                        kind: Multiplication,
+                        span: 1:30; [29, 30],
+                    },
+                    ExprId(1),
+                ),
+                span: 1:28; [27, 32],
+            },
+            Expression {
+                id: ExprId(3),
+                kind: Block(
+                    [
+                        StmtId(0),
+                    ],
+                ),
+                span: 1:26; [25, 35],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId(0),
+                kind: Expression(
+                    ExprId(2),
+                ),
+                span: 1:28; [27, 33],
+            },
+            Statement {
+                id: StmtId(1),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 1:5; [4, 13],
+                    },
+                    [
+                        Parameter {
+                            identifier: Identifier {
+                                id: IdentId(1),
+                                span: 1:15; [14, 15],
+                            },
+                            ty: IdentRefId(0),
+                            span: 1:15; [14, 23],
+                        },
+                    ],
+                    Return {
+                        ret: None,
+                    },
+                    ExprId(3),
+                ),
+                span: 1:1; [0, 35],
+            },
+        ],
+        roots: [
+            StmtId(1),
+        ],
+    },
+)

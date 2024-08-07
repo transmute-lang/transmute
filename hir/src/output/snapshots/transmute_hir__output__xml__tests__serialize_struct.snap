@@ -1,0 +1,88 @@
+---
+source: hir/src/output/xml.rs
+expression: "&xml"
+---
+<?xml version="1.0" encoding="utf-8"?>
+<unit>
+  <ast>
+    <identifiers>
+      <ident id="ident:0">Point</ident>
+      <ident id="ident:1">x</ident>
+      <ident id="ident:2">number</ident>
+      <ident id="ident:3">y</ident>
+      <ident id="ident:4">boolean</ident>
+      <ident id="ident:5">p</ident>
+      <ident id="ident:6">add</ident>
+      <ident id="ident:7">div</ident>
+      <ident id="ident:8">eq</ident>
+      <ident id="ident:9">ge</ident>
+      <ident id="ident:10">gt</ident>
+      <ident id="ident:11">le</ident>
+      <ident id="ident:12">lt</ident>
+      <ident id="ident:13">mul</ident>
+      <ident id="ident:14">neg</ident>
+      <ident id="ident:15">neq</ident>
+      <ident id="ident:16">sub</ident>
+      <ident id="ident:17">void</ident>
+    </identifiers>
+    <stmt id="stmt:0" line="2" column="13" start="13" len="82">
+      <struct>
+        <identifier line="2" column="20" start="20" len="5">Point</identifier>
+        <fields>
+          <field id="stmt:0:0" line="3" column="17" start="44" len="9">
+            <name line="3" column="17" start="44" len="1">x</name>
+            <type line="3" column="20" start="47" len="6">number</type>
+          </field>
+          <field id="stmt:0:1" line="4" column="17" start="71" len="10">
+            <name line="4" column="17" start="71" len="1">y</name>
+            <type line="4" column="20" start="74" len="7">boolean</type>
+          </field>
+        </fields>
+      </struct>
+    </stmt>
+    <stmt id="stmt:1" line="7" column="13" start="109" len="77">
+      <let>
+        <identifier line="7" column="17" start="113" len="1">p</identifier>
+        <expression line="7" column="21" start="117" len="68">
+          <expr id="expr:2" line="7" column="21" start="117" len="68">
+            <struct_init>
+              <ident ident-ref="ident:0" target-id="stmt:0">
+                <fields>
+                  <field target-id="stmt:0:0">
+                    <expr id="expr:0" line="8" column="20" start="144" len="1">
+                      <number>1</number>
+                    </expr>
+                  </field>
+                  <field target-id="stmt:0:1">
+                    <expr id="expr:1" line="9" column="20" start="166" len="5">
+                      <bool>false</bool>
+                    </expr>
+                  </field>
+                </fields>
+              </ident>
+            </struct_init>
+          </expr>
+        </expression>
+      </let>
+      <stmt id="stmt:2" line="12" column="13" start="200" len="4">
+        <expr id="expr:4" line="12" column="13" start="200" len="3">
+          <access>
+            <expr id="expr:3" line="12" column="13" start="200" len="1">
+              <identifier-ref id="ident-ref:5" ident-ref="ident:5" target-id="stmt:1" type-ref="stmt:0">p</identifier-ref>
+            </expr>
+            <ident ident-ref="ident:1" target-id="stmt:0:0" />
+          </access>
+        </expr>
+      </stmt>
+      <stmt id="stmt:3" line="13" column="13" start="217" len="4">
+        <expr id="expr:6" line="13" column="13" start="217" len="3">
+          <access>
+            <expr id="expr:5" line="13" column="13" start="217" len="1">
+              <identifier-ref id="ident-ref:7" ident-ref="ident:5" target-id="stmt:1" type-ref="stmt:0">p</identifier-ref>
+            </expr>
+            <ident ident-ref="ident:3" target-id="stmt:0:1" />
+          </access>
+        </expr>
+      </stmt>
+    </stmt>
+  </ast>

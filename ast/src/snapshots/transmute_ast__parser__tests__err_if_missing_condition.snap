@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"if { }\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `{`, expected one of (8) identifier 941, number 942, `true` 944, `false` 945, `if` 939, `while` 940, `(` 946, `-` 943",
+                span: 1:4; [3, 4],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    935,
+                ),
+            },
+        ],
+    },
+)

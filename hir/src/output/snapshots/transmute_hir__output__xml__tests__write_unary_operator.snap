@@ -1,0 +1,38 @@
+---
+source: hir/src/output/xml.rs
+expression: "&xml"
+---
+<?xml version="1.0" encoding="utf-8"?>
+<unit>
+  <ast>
+    <identifiers>
+      <ident id="ident:0">neg</ident>
+      <ident id="ident:1">add</ident>
+      <ident id="ident:2">boolean</ident>
+      <ident id="ident:3">div</ident>
+      <ident id="ident:4">eq</ident>
+      <ident id="ident:5">ge</ident>
+      <ident id="ident:6">gt</ident>
+      <ident id="ident:7">le</ident>
+      <ident id="ident:8">lt</ident>
+      <ident id="ident:9">mul</ident>
+      <ident id="ident:10">neq</ident>
+      <ident id="ident:11">number</ident>
+      <ident id="ident:12">sub</ident>
+      <ident id="ident:13">void</ident>
+    </identifiers>
+    <stmt id="stmt:0" line="1" column="1" start="0" len="5">
+      <expr id="expr:1" line="1" column="1" start="0" len="4">
+        <call line="1" column="1" start="0" len="4" ident-ref="ident:0" name="neg" target-id="native:neg:number:number">
+          <parameters>
+            <parameter>
+              <expr id="expr:0" line="1" column="3" start="2" len="2">
+                <number>42</number>
+              </expr>
+            </parameter>
+          </parameters>
+        </call>
+      </expr>
+    </stmt>
+  </ast>
+</unit>

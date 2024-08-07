@@ -1,0 +1,69 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"if true { 42; }\")).parse()"
+---
+Ok(
+    Ast {
+        identifiers: [],
+        identifier_refs: [],
+        expressions: [
+            Expression {
+                id: ExprId(0),
+                kind: Literal(
+                    Literal {
+                        kind: Boolean(true),
+                        span: 1:4; [3, 7],
+                    },
+                ),
+                span: 1:4; [3, 7],
+            },
+            Expression {
+                id: ExprId(1),
+                kind: Literal(
+                    Literal {
+                        kind: Number(42),
+                        span: 1:11; [10, 12],
+                    },
+                ),
+                span: 1:11; [10, 12],
+            },
+            Expression {
+                id: ExprId(2),
+                kind: Block(
+                    [
+                        StmtId(0),
+                    ],
+                ),
+                span: 1:9; [8, 15],
+            },
+            Expression {
+                id: ExprId(3),
+                kind: If(
+                    ExprId(0),
+                    ExprId(2),
+                    None,
+                ),
+                span: 1:1; [0, 15],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId(0),
+                kind: Expression(
+                    ExprId(1),
+                ),
+                span: 1:11; [10, 13],
+            },
+            Statement {
+                id: StmtId(1),
+                kind: Expression(
+                    ExprId(3),
+                ),
+                span: 1:1; [0, 15],
+            },
+        ],
+        roots: [
+            StmtId(1),
+        ],
+    },
+)

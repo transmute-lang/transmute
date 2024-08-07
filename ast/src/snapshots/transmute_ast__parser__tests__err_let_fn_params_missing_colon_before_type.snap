@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"let f(n integer) = { }\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Expected `:`, got identifier",
+                span: 1:9; [8, 15],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    418,
+                ),
+            },
+        ],
+    },
+)

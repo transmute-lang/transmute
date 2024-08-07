@@ -1,0 +1,66 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"let forty_two = 42; forty_two;\")).parse()"
+---
+Ok(
+    Ast {
+        identifiers: [
+            "forty_two",
+        ],
+        identifier_refs: [
+            IdentifierRef {
+                id: IdentRefId(0),
+                ident: Identifier {
+                    id: IdentId(0),
+                    span: 1:21; [20, 29],
+                },
+            },
+        ],
+        expressions: [
+            Expression {
+                id: ExprId(0),
+                kind: Literal(
+                    Literal {
+                        kind: Number(42),
+                        span: 1:17; [16, 18],
+                    },
+                ),
+                span: 1:17; [16, 18],
+            },
+            Expression {
+                id: ExprId(1),
+                kind: Literal(
+                    Literal {
+                        kind: IdentRefId(0),
+                        span: 1:21; [20, 29],
+                    },
+                ),
+                span: 1:21; [20, 29],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId(0),
+                kind: Let(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 1:5; [4, 13],
+                    },
+                    ExprId(0),
+                ),
+                span: 1:1; [0, 19],
+            },
+            Statement {
+                id: StmtId(1),
+                kind: Expression(
+                    ExprId(1),
+                ),
+                span: 1:21; [20, 30],
+            },
+        ],
+        roots: [
+            StmtId(0),
+            StmtId(1),
+        ],
+    },
+)

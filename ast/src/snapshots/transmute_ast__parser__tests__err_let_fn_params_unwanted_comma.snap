@@ -1,0 +1,28 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"let x(,n:i,,m:j,) = { }\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `,`, expected one of (1) `)` 461",
+                span: 1:7; [6, 7],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    458,
+                ),
+            },
+            Diagnostic {
+                message: "Unexpected `,`, expected one of (2) identifier 406, `)` 461",
+                span: 1:12; [11, 12],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    458,
+                ),
+            },
+        ],
+    },
+)

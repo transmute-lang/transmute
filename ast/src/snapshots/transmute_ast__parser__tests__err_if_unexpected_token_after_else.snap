@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"if true { } else 42\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected number(42), expected one of (2) `if` 1307, `{` 1308",
+                span: 1:18; [17, 19],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    1303,
+                ),
+            },
+        ],
+    },
+)

@@ -1,0 +1,68 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"while true { 42; }\")).parse()"
+---
+Ok(
+    Ast {
+        identifiers: [],
+        identifier_refs: [],
+        expressions: [
+            Expression {
+                id: ExprId(0),
+                kind: Literal(
+                    Literal {
+                        kind: Boolean(true),
+                        span: 1:7; [6, 10],
+                    },
+                ),
+                span: 1:7; [6, 10],
+            },
+            Expression {
+                id: ExprId(1),
+                kind: Literal(
+                    Literal {
+                        kind: Number(42),
+                        span: 1:14; [13, 15],
+                    },
+                ),
+                span: 1:14; [13, 15],
+            },
+            Expression {
+                id: ExprId(2),
+                kind: Block(
+                    [
+                        StmtId(0),
+                    ],
+                ),
+                span: 1:12; [11, 18],
+            },
+            Expression {
+                id: ExprId(3),
+                kind: While(
+                    ExprId(0),
+                    ExprId(2),
+                ),
+                span: 1:1; [0, 18],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId(0),
+                kind: Expression(
+                    ExprId(1),
+                ),
+                span: 1:14; [13, 16],
+            },
+            Statement {
+                id: StmtId(1),
+                kind: Expression(
+                    ExprId(3),
+                ),
+                span: 1:1; [0, 18],
+            },
+        ],
+        roots: [
+            StmtId(1),
+        ],
+    },
+)

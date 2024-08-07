@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"a.1;\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected number(1), expected one of (1) identifier 1029",
+                span: 1:3; [2, 3],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    1026,
+                ),
+            },
+        ],
+    },
+)

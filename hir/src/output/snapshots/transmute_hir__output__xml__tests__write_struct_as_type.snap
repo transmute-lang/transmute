@@ -1,0 +1,69 @@
+---
+source: hir/src/output/xml.rs
+expression: "&xml"
+---
+<?xml version="1.0" encoding="utf-8"?>
+<unit>
+  <ast>
+    <identifiers>
+      <ident id="ident:0">S</ident>
+      <ident id="ident:1">a</ident>
+      <ident id="ident:2">number</ident>
+      <ident id="ident:3">b</ident>
+      <ident id="ident:4">f</ident>
+      <ident id="ident:5">s</ident>
+      <ident id="ident:6">add</ident>
+      <ident id="ident:7">boolean</ident>
+      <ident id="ident:8">div</ident>
+      <ident id="ident:9">eq</ident>
+      <ident id="ident:10">ge</ident>
+      <ident id="ident:11">gt</ident>
+      <ident id="ident:12">le</ident>
+      <ident id="ident:13">lt</ident>
+      <ident id="ident:14">mul</ident>
+      <ident id="ident:15">neg</ident>
+      <ident id="ident:16">neq</ident>
+      <ident id="ident:17">sub</ident>
+      <ident id="ident:18">void</ident>
+    </identifiers>
+    <stmt id="stmt:0" line="1" column="1" start="0" len="33">
+      <struct>
+        <identifier line="1" column="8" start="7" len="1">S</identifier>
+        <fields>
+          <field id="stmt:0:0" line="1" column="12" start="11" len="9">
+            <name line="1" column="12" start="11" len="1">a</name>
+            <type line="1" column="15" start="14" len="6">number</type>
+          </field>
+          <field id="stmt:0:1" line="1" column="23" start="22" len="9">
+            <name line="1" column="23" start="22" len="1">b</name>
+            <type line="1" column="26" start="25" len="6">number</type>
+          </field>
+        </fields>
+      </struct>
+    </stmt>
+    <stmt id="stmt:2" line="1" column="35" start="34" len="20">
+      <fn>
+        <identifier line="1" column="39" start="38" len="1">f</identifier>
+        <parameters>
+          <parameter id="stmt:2:0" line="1" column="41" start="40" len="4">
+            <name line="1" column="41" start="40" len="1">s</name>
+            <type line="1" column="44" start="43" len="1">S</type>
+          </parameter>
+        </parameters>
+        <body line="1" column="49" start="48" len="6">
+          <expr id="expr:1" line="1" column="49" start="48" len="6">
+            <block>
+              <stmt id="stmt:1" line="1" column="51" start="50" len="2">
+                <ret mode="implicit" line="1" column="51" start="50" len="2">
+                  <expr id="expr:0" line="1" column="51" start="50" len="1">
+                    <identifier-ref id="ident-ref:3" ident-ref="ident:5" target-id="stmt:2:0" type-ref="stmt:0">s</identifier-ref>
+                  </expr>
+                </ret>
+              </stmt>
+            </block>
+          </expr>
+        </body>
+      </fn>
+    </stmt>
+  </ast>
+</unit>

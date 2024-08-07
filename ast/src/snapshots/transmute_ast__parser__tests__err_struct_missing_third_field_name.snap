@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"struct S { a: number, b: number, : number }\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `:`, expected one of (2) identifier 780, `}` 779",
+                span: 1:34; [33, 34],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    775,
+                ),
+            },
+        ],
+    },
+)

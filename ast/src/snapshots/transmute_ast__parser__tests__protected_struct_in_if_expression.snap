@@ -1,0 +1,58 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"if (Struct {}) {}\")).parse()"
+---
+Ok(
+    Ast {
+        identifiers: [
+            "Struct",
+        ],
+        identifier_refs: [
+            IdentifierRef {
+                id: IdentRefId(0),
+                ident: Identifier {
+                    id: IdentId(0),
+                    span: 1:5; [4, 10],
+                },
+            },
+        ],
+        expressions: [
+            Expression {
+                id: ExprId(0),
+                kind: StructInstantiation(
+                    IdentRefId(0),
+                    [],
+                ),
+                span: 1:4; [3, 14],
+            },
+            Expression {
+                id: ExprId(1),
+                kind: Block(
+                    [],
+                ),
+                span: 1:16; [15, 17],
+            },
+            Expression {
+                id: ExprId(2),
+                kind: If(
+                    ExprId(0),
+                    ExprId(1),
+                    None,
+                ),
+                span: 1:1; [0, 17],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId(0),
+                kind: Expression(
+                    ExprId(2),
+                ),
+                span: 1:1; [0, 17],
+            },
+        ],
+        roots: [
+            StmtId(0),
+        ],
+    },
+)

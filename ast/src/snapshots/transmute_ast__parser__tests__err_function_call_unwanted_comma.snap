@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"f(42,,43);\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `,`, expected one of (9) identifier 1403, number 1404, `true` 1406, `false` 1407, `if` 1409, `while` 1410, `)` 1402, `(` 1408, `-` 1405",
+                span: 1:6; [5, 6],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    1398,
+                ),
+            },
+        ],
+    },
+)

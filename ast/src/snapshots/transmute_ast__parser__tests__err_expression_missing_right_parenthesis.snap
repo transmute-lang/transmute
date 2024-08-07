@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"(42;\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Expected `)` to close `(` at 1:1, got `;`",
+                span: 1:4; [3, 4],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    917,
+                ),
+            },
+        ],
+    },
+)

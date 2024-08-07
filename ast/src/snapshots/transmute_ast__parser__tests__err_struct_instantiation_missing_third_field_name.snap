@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"S { a: a, b: a, : a };\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `:`, expected one of (2) identifier 1570, `}` 1569",
+                span: 1:17; [16, 17],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    1565,
+                ),
+            },
+        ],
+    },
+)

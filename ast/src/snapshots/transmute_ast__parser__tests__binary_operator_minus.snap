@@ -1,0 +1,56 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"43 - 1;\")).parse()"
+---
+Ok(
+    Ast {
+        identifiers: [],
+        identifier_refs: [],
+        expressions: [
+            Expression {
+                id: ExprId(0),
+                kind: Literal(
+                    Literal {
+                        kind: Number(43),
+                        span: 1:1; [0, 2],
+                    },
+                ),
+                span: 1:1; [0, 2],
+            },
+            Expression {
+                id: ExprId(1),
+                kind: Literal(
+                    Literal {
+                        kind: Number(1),
+                        span: 1:6; [5, 6],
+                    },
+                ),
+                span: 1:6; [5, 6],
+            },
+            Expression {
+                id: ExprId(2),
+                kind: Binary(
+                    ExprId(0),
+                    BinaryOperator {
+                        kind: Subtraction,
+                        span: 1:4; [3, 4],
+                    },
+                    ExprId(1),
+                ),
+                span: 1:1; [0, 6],
+            },
+        ],
+        statements: [
+            Statement {
+                id: StmtId(0),
+                kind: Expression(
+                    ExprId(2),
+                ),
+                span: 1:1; [0, 7],
+            },
+        ],
+        roots: [
+            StmtId(0),
+        ],
+    },
+)

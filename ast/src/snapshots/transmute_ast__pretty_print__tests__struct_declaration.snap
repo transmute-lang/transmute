@@ -1,0 +1,9 @@
+---
+source: ast/src/pretty_print.rs
+expression: w
+---
+struct Point {
+  x: number,
+  y: number,
+}
+

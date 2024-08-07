@@ -1,0 +1,13 @@
+---
+source: hir/src/passes/implicit_ret_converter.rs
+expression: w
+---
+let f(): number = {
+  ret if c {
+    ret 42;
+  }
+  else {
+    43;
+  };
+}
+

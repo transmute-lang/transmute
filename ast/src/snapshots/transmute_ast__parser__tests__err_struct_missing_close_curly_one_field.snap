@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"struct S { a: number\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `eof`, expected one of (2) `,` 766, `}` 765",
+                span: 1:21; [20, 20],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    761,
+                ),
+            },
+        ],
+    },
+)

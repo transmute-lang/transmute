@@ -1,0 +1,6 @@
+---
+source: hir/src/passes/operators_converter.rs
+expression: w
+---
+eq(lhs, rhs);
+

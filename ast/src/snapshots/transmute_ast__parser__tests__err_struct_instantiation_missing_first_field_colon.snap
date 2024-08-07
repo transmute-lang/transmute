@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"S { a a, b: a, c: a };\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected identifier(a), expected one of (1) `:` 1476",
+                span: 1:7; [6, 7],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    1473,
+                ),
+            },
+        ],
+    },
+)

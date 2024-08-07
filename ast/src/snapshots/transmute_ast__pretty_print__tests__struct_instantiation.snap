@@ -1,0 +1,6 @@
+---
+source: ast/src/pretty_print.rs
+expression: w
+---
+Point {x: 1, y: 2,};
+

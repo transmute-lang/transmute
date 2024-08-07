@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"let forty_two 42;\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Expected `=`, got number",
+                span: 1:15; [14, 16],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    297,
+                ),
+            },
+        ],
+    },
+)

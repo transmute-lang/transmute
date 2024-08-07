@@ -1,0 +1,14 @@
+---
+source: hir/src/passes/implicit_ret_converter.rs
+expression: w
+---
+struct S {
+  x: number,
+  y: number,
+}
+let f(): number = {
+  ret S {x: if true {
+    ret 1;
+  }, y: 1,};
+}
+
