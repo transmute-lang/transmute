@@ -1,4 +1,5 @@
-use crate::passes::resolver::{NativeImplementation, Type};
+use crate::passes::resolver::NativeImplementation;
+use crate::typed::Type;
 use transmute_core::ids::{IdentId, StmtId, SymbolId, TypeId};
 
 #[derive(Debug, PartialEq)]

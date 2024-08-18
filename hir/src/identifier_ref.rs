@@ -35,7 +35,7 @@ impl From<AstIdentifierRef> for IdentifierRef<Unbound> {
 }
 
 impl IdentifierRef<Bound> {
-    pub fn symbol_id(&self) -> SymbolId {
-        self.ident.symbol_id()
+    pub fn resolved_symbol_id(&self) -> SymbolId {
+        self.ident.resolved_symbol_id()
     }
 }

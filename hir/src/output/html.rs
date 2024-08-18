@@ -1,10 +1,9 @@
 use crate::bound::Bound;
 use crate::expression::{ExpressionKind, Target};
 use crate::literal::{Literal, LiteralKind};
-use crate::passes::resolver::Type;
 use crate::statement::{Field, Parameter, RetMode, StatementKind};
 use crate::symbol::SymbolKind;
-use crate::typed::Typed;
+use crate::typed::{Type, Typed};
 use crate::ResolvedHir;
 use std::io;
 use std::io::Write;
@@ -466,7 +465,7 @@ impl<'a> HtmlWriter<'a> {
     fn emit_identifier_ref(&mut self, ident_ref_id: IdentRefId) {
         let ident_ref = &self.hir.identifier_refs[ident_ref_id];
 
-        let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
+        let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
             SymbolKind::NotFound => panic!("symbol was not resolved"),
             SymbolKind::Let(stmt) => Self::ident_id(*stmt, None),
             SymbolKind::LetFn(stmt, _, _) => Self::ident_id(*stmt, None),
@@ -490,7 +489,7 @@ impl<'a> HtmlWriter<'a> {
             SymbolKind::Struct(stmt) => Self::ident_id(*stmt, None),
         };
 
-        let ty = &self.hir.types[self.hir.symbols[ident_ref.symbol_id()].type_id];
+        let ty = &self.hir.types[self.hir.symbols[ident_ref.resolved_symbol_id()].type_id];
         let (type_ref, type_name) = match ty {
             Type::Struct(stmt) => {
                 let name = match &self.hir.statements[*stmt].kind {

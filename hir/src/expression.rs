@@ -67,7 +67,7 @@ impl From<AstExpression> for Expression<Untyped> {
 }
 
 impl Expression<Typed> {
-    pub fn type_id(&self) -> TypeId {
+    pub fn resolved_type_id(&self) -> TypeId {
         self.typed.0
     }
 }

@@ -1,4 +1,4 @@
-use crate::passes::resolver::Type;
+use crate::typed::Type;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};

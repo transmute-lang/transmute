@@ -80,6 +80,7 @@ where
     Struct(Identifier<B>, Vec<Field<T, B>>),
 }
 
+// todo remove: does not really make sense in HIR
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RetMode {
     Explicit,
@@ -145,8 +146,17 @@ impl<B> Parameter<Typed, B>
 where
     B: BoundState,
 {
-    pub fn type_id(&self) -> TypeId {
+    pub fn resolved_type_id(&self) -> TypeId {
         self.typed.0
+    }
+}
+
+impl<T> Parameter<T, Bound>
+where
+    T: TypedState,
+{
+    pub fn resolved_symobl_id(&self) -> SymbolId {
+        self.identifier.resolved_symbol_id()
     }
 }
 
@@ -174,6 +184,12 @@ impl From<AstReturn> for Return<Untyped> {
             ret: value.ret,
             typed: Untyped,
         }
+    }
+}
+
+impl Return<Typed> {
+    pub fn resolved_type_id(&self) -> TypeId {
+        self.typed.0
     }
 }
 

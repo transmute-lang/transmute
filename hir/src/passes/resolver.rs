@@ -7,10 +7,10 @@ use crate::natives::{Native, Natives};
 use crate::passes::exit_points_resolver::ExitPoint;
 use crate::statement::{Field, Parameter, Return, Statement, StatementKind};
 use crate::symbol::{Symbol, SymbolKind};
-use crate::typed::{Typed, Untyped};
+use crate::typed::{Type, Typed, Untyped};
 use bimap::BiHashMap;
 use std::collections::HashMap;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Formatter};
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use transmute_core::span::Span;
@@ -204,7 +204,7 @@ impl<'a> Resolver<'a> {
 
     fn visit_expression(&self, mut state: State, expr_id: ExprId) -> (TypeId, State) {
         if let Some(expr) = state.resolution.expressions.get(expr_id) {
-            return (expr.type_id(), state);
+            return (expr.resolved_type_id(), state);
         }
 
         let expr = state
@@ -674,7 +674,7 @@ impl<'a> Resolver<'a> {
                         .expressions
                         .get(*e)
                         .expect("expression was visited")
-                        .type_id(),
+                        .resolved_type_id(),
                     StatementKind::Let(..) => state.void_type_id,
                     StatementKind::Ret(..) => state.none_type_id,
                     StatementKind::LetFn(..) => state.void_type_id,
@@ -896,7 +896,7 @@ impl<'a> Resolver<'a> {
                 Some(
                     &parameters
                         .iter()
-                        .map(|p| p.type_id())
+                        .map(|p| p.resolved_type_id())
                         .collect::<Vec<TypeId>>(),
                 ),
             ) {
@@ -1008,7 +1008,7 @@ impl State {
         param_types: Option<&[TypeId]>,
     ) -> Option<SymbolId> {
         if let Some(ident_ref) = &self.resolution.identifier_refs.get(ident_ref_id) {
-            return Some(ident_ref.symbol_id());
+            return Some(ident_ref.resolved_symbol_id());
         }
 
         let ident_ref = self
@@ -1415,65 +1415,6 @@ impl NativeImplementation {
 impl Debug for NativeImplementation {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "native")
-    }
-}
-
-// todo think about it being in Native
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
-pub enum Type {
-    /// The type is invalid
-    Invalid,
-
-    Boolean,
-    Function(Vec<TypeId>, TypeId),
-    Struct(StmtId),
-    Number,
-
-    /// This value is used when the statement/expression does not have any value. This is the
-    /// case for `let` and `let fn`.
-    #[default]
-    Void,
-
-    /// This value is used when the statement/expression does not return any value. This is the
-    /// case for `ret`.
-    None,
-}
-
-impl Type {
-    pub fn identifier(&self) -> &'static str {
-        match self {
-            Type::Invalid | Type::None | Type::Function(..) | Type::Struct(..) => unimplemented!(),
-            Type::Boolean => "boolean",
-            Type::Number => "number",
-            Type::Void => "void",
-        }
-    }
-}
-
-impl Display for Type {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Type::Boolean => write!(f, "boolean"),
-            Type::Function(..) => write!(f, "function"),
-            Type::Struct(..) => write!(f, "struct"),
-            Type::Number => write!(f, "number"),
-            Type::Void => write!(f, "void"),
-            Type::None => write!(f, "no type"),
-            Type::Invalid => write!(f, "invalid"),
-        }
-    }
-}
-
-impl TryFrom<&str> for Type {
-    type Error = String;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "boolean" => Ok(Type::Boolean),
-            "number" => Ok(Type::Number),
-            "void" => Ok(Type::Void),
-            &_ => Err(format!("'{}' is not a known type", value)),
-        }
     }
 }
 

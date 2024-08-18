@@ -2,10 +2,9 @@ use crate::bound::Bound;
 use crate::expression::{Expression, ExpressionKind, Target};
 use crate::identifier::Identifier;
 use crate::literal::{Literal, LiteralKind};
-use crate::passes::resolver::Type;
 use crate::statement::{Field, Parameter, RetMode, Return, Statement, StatementKind};
 use crate::symbol::SymbolKind;
-use crate::typed::Typed;
+use crate::typed::{Type, Typed};
 use crate::ResolvedHir;
 use std::io::{self, Write};
 use transmute_core::ids::{ExprId, IdentRefId, StmtId};
@@ -128,7 +127,7 @@ impl<'a> XmlWriter<'a> {
                 self.visit_expression(*expr_id);
 
                 let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
-                let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
+                let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
                     SymbolKind::Let(stmt) => {
                         format!("stmt:{stmt}")
                     }
@@ -169,7 +168,7 @@ impl<'a> XmlWriter<'a> {
             ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
                 let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
 
-                let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
+                let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
                     SymbolKind::Struct(stmt_id) => {
                         format!("stmt:{stmt_id}")
                     }
@@ -185,7 +184,7 @@ impl<'a> XmlWriter<'a> {
                 self.emit(XmlEvent::start_element("fields"));
                 for (ident_ref_id, expr_id) in fields {
                     let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
-                    let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
+                    let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
                         SymbolKind::Field(stmt_id, index) => {
                             format!("stmt:{}:{}", stmt_id, index)
                         }
@@ -207,7 +206,7 @@ impl<'a> XmlWriter<'a> {
     fn visit_assignment(&mut self, ident_ref_id: &IdentRefId, expr: &ExprId) {
         let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
 
-        let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
+        let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
             SymbolKind::Let(stmt) => {
                 format!("stmt:{stmt}")
             }
@@ -281,7 +280,7 @@ impl<'a> XmlWriter<'a> {
             LiteralKind::Identifier(ident_ref_id) => {
                 let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
 
-                let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
+                let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
                     SymbolKind::Let(stmt) => {
                         format!("stmt:{stmt}")
                     }
@@ -304,7 +303,7 @@ impl<'a> XmlWriter<'a> {
                     SymbolKind::NotFound => panic!("symbol was not resolved"),
                 };
 
-                let ty = &self.hir.types[self.hir.symbols[ident_ref.symbol_id()].type_id];
+                let ty = &self.hir.types[self.hir.symbols[ident_ref.resolved_symbol_id()].type_id];
                 let type_ref = match ty {
                     Type::Struct(stmt) => match &self.hir.statements[*stmt].kind {
                         StatementKind::Struct(_, _) => Some(format!("stmt:{stmt}")),
@@ -341,7 +340,7 @@ impl<'a> XmlWriter<'a> {
     ) {
         let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
 
-        let symbol = match &self.hir.symbols[ident_ref.symbol_id()].kind {
+        let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
             SymbolKind::Let(stmt) => {
                 format!("stmt:{stmt}")
             }
