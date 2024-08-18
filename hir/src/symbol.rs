@@ -1,5 +1,4 @@
-use crate::passes::resolver::NativeImplementation;
-use crate::typed::Type;
+use crate::natives::{NativeFnKind, Type};
 use transmute_core::ids::{IdentId, StmtId, SymbolId, TypeId};
 
 #[derive(Debug, PartialEq)]
@@ -30,5 +29,5 @@ pub enum SymbolKind {
     // todo could StmtId be replaced with SymbolId (the symbol that defines the struct)
     Field(StmtId, usize),
     NativeType(IdentId, Type),
-    Native(IdentId, Vec<TypeId>, TypeId, NativeImplementation),
+    Native(IdentId, Vec<TypeId>, TypeId, NativeFnKind),
 }

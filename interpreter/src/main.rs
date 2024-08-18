@@ -15,6 +15,7 @@ use transmute_hir::UnresolvedHir;
 
 mod cli;
 mod interpreter;
+pub mod value;
 
 // todo things to check:
 //  let f() = 0:

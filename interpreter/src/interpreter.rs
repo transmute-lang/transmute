@@ -1,8 +1,9 @@
+use crate::value::{Ref, Value};
 use std::collections::HashMap;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId};
-use transmute_core::value::{Ref, Value};
 use transmute_hir::expression::{ExpressionKind, Target};
 use transmute_hir::literal::{Literal, LiteralKind};
+use transmute_hir::natives::NativeFnKind;
 use transmute_hir::statement::StatementKind;
 use transmute_hir::symbol::SymbolKind;
 use transmute_hir::ResolvedHir;
@@ -230,7 +231,7 @@ impl<'a> Interpreter<'a> {
                     _ => panic!("let fn expected"),
                 }
             }
-            SymbolKind::Native(_, _, _, body) => {
+            SymbolKind::Native(_, _, _, kind) => {
                 let mut env = Vec::with_capacity(arguments.len());
 
                 for expr_id in arguments {
@@ -248,7 +249,7 @@ impl<'a> Interpreter<'a> {
                     .map(|val| self.heap[val.value_ref.expect("param has value").0].clone())
                     .collect::<Vec<Value>>();
 
-                self.heap.push(body.call(env));
+                self.heap.push(kind.call(env));
 
                 Val::of(Ref(self.heap.len() - 1))
             }
@@ -365,6 +366,78 @@ impl Val {
     }
 }
 
+trait RuntimeImpl {
+    fn call(&self, parameters: Vec<Value>) -> Value;
+}
+
+impl RuntimeImpl for NativeFnKind {
+    fn call(&self, mut parameters: Vec<Value>) -> Value {
+        match self {
+            NativeFnKind::NegNumber => Value::Number(-parameters.pop().unwrap().as_i64()),
+            NativeFnKind::AddNumberNumber => {
+                let right = parameters.pop().unwrap().as_i64();
+                let left = parameters.pop().unwrap().as_i64();
+                Value::Number(left + right)
+            }
+            NativeFnKind::SubNumberNumber => {
+                let right = parameters.pop().unwrap().as_i64();
+                let left = parameters.pop().unwrap().as_i64();
+                Value::Number(left - right)
+            }
+            NativeFnKind::MulNumberNumber => {
+                let right = parameters.pop().unwrap().as_i64();
+                let left = parameters.pop().unwrap().as_i64();
+                Value::Number(left * right)
+            }
+            NativeFnKind::DivNumberNumber => {
+                let right = parameters.pop().unwrap().as_i64();
+                let left = parameters.pop().unwrap().as_i64();
+                Value::Number(left / right)
+            }
+            NativeFnKind::EqNumberNumber => {
+                let right = parameters.pop().unwrap().as_i64();
+                let left = parameters.pop().unwrap().as_i64();
+                Value::Boolean(left == right)
+            }
+            NativeFnKind::NeqNumberNumber => {
+                let right = parameters.pop().unwrap().as_i64();
+                let left = parameters.pop().unwrap().as_i64();
+                Value::Boolean(left != right)
+            }
+            NativeFnKind::GtNumberNumber => {
+                let right = parameters.pop().unwrap().as_i64();
+                let left = parameters.pop().unwrap().as_i64();
+                Value::Boolean(left > right)
+            }
+            NativeFnKind::LtNumberNumber => {
+                let right = parameters.pop().unwrap().as_i64();
+                let left = parameters.pop().unwrap().as_i64();
+                Value::Boolean(left < right)
+            }
+            NativeFnKind::GeNumberNumber => {
+                let right = parameters.pop().unwrap().as_i64();
+                let left = parameters.pop().unwrap().as_i64();
+                Value::Boolean(left >= right)
+            }
+            NativeFnKind::LeNumberNumber => {
+                let right = parameters.pop().unwrap().as_i64();
+                let left = parameters.pop().unwrap().as_i64();
+                Value::Boolean(left <= right)
+            }
+            NativeFnKind::EqBooleanBoolean => {
+                let right = parameters.pop().unwrap().as_bool();
+                let left = parameters.pop().unwrap().as_bool();
+                Value::Boolean(left == right)
+            }
+            NativeFnKind::NeqBooleanBoolean => {
+                let right = parameters.pop().unwrap().as_bool();
+                let left = parameters.pop().unwrap().as_bool();
+                Value::Boolean(left != right)
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::interpreter::Interpreter;
@@ -428,11 +501,15 @@ mod tests {
     eval!(equality_booleans_eq_false, "true == false;" => 0);
     eval!(equality_booleans_neq_true, "true != true;" => 0);
     eval!(equality_booleans_neq_false, "true != false;" => 1);
-    eval!(comaprison_1, "(42 > 42) != (42 >= 42);" => 1);
-    eval!(comaprison_2, "(42 > 42) != (42 <= 42);" => 1);
-    eval!(comaprison_3, "(42 == 42) == (42 >= 42);" => 1);
-    eval!(comaprison_4, "(42 == 42) == (42 <= 42);" => 1);
-    eval!(comaprison_5, "(42 > 42) == (42 < 42);" => 1);
+    eval!(gt, "42 > 42;" => 0);
+    eval!(lt, "42 < 42;" => 0);
+    eval!(ge, "42 >= 42;" => 1);
+    eval!(le, "42 <= 42;" => 1);
+    eval!(comparison_1, "(42 > 42) != (42 >= 42);" => 1);
+    eval!(comparison_2, "(42 > 42) != (42 <= 42);" => 1);
+    eval!(comparison_3, "(42 == 42) == (42 >= 42);" => 1);
+    eval!(comparison_4, "(42 == 42) == (42 <= 42);" => 1);
+    eval!(comparison_5, "(42 > 42) == (42 < 42);" => 1);
     eval!(equality_bool_eq1, "true == true;" => 1);
     eval!(equality_bool_eq2, "false == false;" => 1);
     eval!(equality_bool_neq1, "true == false;" => 0);

@@ -1,6 +1,5 @@
 use std::fmt::{Display, Formatter};
 
-// fixme does not belong to the core
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub enum Value {
     Boolean(bool),

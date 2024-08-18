@@ -1,10 +1,8 @@
-use crate::typed::Type;
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::fmt::{Debug, Formatter};
-use transmute_core::value::Value;
+use std::fmt::{Debug, Display, Formatter};
+use transmute_core::ids::{StmtId, TypeId};
 
-// fixme probably does not (at least fully) belong to the hir
 pub struct Natives {
     functions: HashMap<&'static str, Vec<NativeFn>>,
     types: Vec<NativeType>,
@@ -25,134 +23,57 @@ impl Natives {
 
         natives.insert_fn(NativeFn {
             name: "neg",
-            parameters: vec![Type::Number],
-            return_type: Type::Number,
-            body: |mut params| {
-                let v = params.pop().unwrap().as_i64();
-                Value::Number(-v)
-            },
+            kind: NativeFnKind::NegNumber,
         });
 
         natives.insert_fn(NativeFn {
             name: "add",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Number,
-            body: |mut params| {
-                let right = params.pop().unwrap().as_i64();
-                let left = params.pop().unwrap().as_i64();
-                Value::Number(left + right)
-            },
+            kind: NativeFnKind::AddNumberNumber,
         });
         natives.insert_fn(NativeFn {
             name: "sub",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Number,
-            body: |mut params| {
-                let right = params.pop().unwrap().as_i64();
-                let left = params.pop().unwrap().as_i64();
-                Value::Number(left - right)
-            },
+            kind: NativeFnKind::SubNumberNumber,
         });
         natives.insert_fn(NativeFn {
             name: "mul",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Number,
-            body: |mut params| {
-                let right = params.pop().unwrap().as_i64();
-                let left = params.pop().unwrap().as_i64();
-                Value::Number(left * right)
-            },
+            kind: NativeFnKind::MulNumberNumber,
         });
         natives.insert_fn(NativeFn {
             name: "div",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Number,
-            body: |mut params| {
-                let right = params.pop().unwrap().as_i64();
-                let left = params.pop().unwrap().as_i64();
-                Value::Number(left / right)
-            },
+            kind: NativeFnKind::DivNumberNumber,
         });
         natives.insert_fn(NativeFn {
             name: "eq",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Boolean,
-            body: |mut params| {
-                let right = params.pop().unwrap().as_i64();
-                let left = params.pop().unwrap().as_i64();
-                Value::Boolean(left == right)
-            },
+            kind: NativeFnKind::EqNumberNumber,
         });
         natives.insert_fn(NativeFn {
             name: "neq",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Boolean,
-            body: |mut params| {
-                let right = params.pop().unwrap().as_i64();
-                let left = params.pop().unwrap().as_i64();
-                Value::Boolean(left != right)
-            },
+            kind: NativeFnKind::NeqNumberNumber,
         });
         natives.insert_fn(NativeFn {
             name: "gt",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Boolean,
-            body: |mut params| {
-                let right = params.pop().unwrap().as_i64();
-                let left = params.pop().unwrap().as_i64();
-                Value::Boolean(left > right)
-            },
+            kind: NativeFnKind::GtNumberNumber,
         });
         natives.insert_fn(NativeFn {
             name: "lt",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Boolean,
-            body: |mut params| {
-                let right = params.pop().unwrap().as_i64();
-                let left = params.pop().unwrap().as_i64();
-                Value::Boolean(left < right)
-            },
+            kind: NativeFnKind::LtNumberNumber,
         });
         natives.insert_fn(NativeFn {
             name: "ge",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Boolean,
-            body: |mut params| {
-                let right = params.pop().unwrap().as_i64();
-                let left = params.pop().unwrap().as_i64();
-                Value::Boolean(left >= right)
-            },
+            kind: NativeFnKind::GeNumberNumber,
         });
         natives.insert_fn(NativeFn {
             name: "le",
-            parameters: vec![Type::Number, Type::Number],
-            return_type: Type::Boolean,
-            body: |mut params| {
-                let right = params.pop().unwrap().as_i64();
-                let left = params.pop().unwrap().as_i64();
-                Value::Boolean(left <= right)
-            },
+            kind: NativeFnKind::LeNumberNumber,
         });
 
         natives.insert_fn(NativeFn {
             name: "eq",
-            parameters: vec![Type::Boolean, Type::Boolean],
-            return_type: Type::Boolean,
-            body: |mut params| {
-                let right = params.pop().unwrap().as_bool();
-                let left = params.pop().unwrap().as_bool();
-                Value::Boolean(left == right)
-            },
+            kind: NativeFnKind::EqBooleanBoolean,
         });
         natives.insert_fn(NativeFn {
             name: "neq",
-            parameters: vec![Type::Boolean, Type::Boolean],
-            return_type: Type::Boolean,
-            body: |mut params| {
-                let right = params.pop().unwrap().as_bool();
-                let left = params.pop().unwrap().as_bool();
-                Value::Boolean(left != right)
-            },
+            kind: NativeFnKind::NeqBooleanBoolean,
         });
 
         natives.insert_type(NativeType {
@@ -245,9 +166,7 @@ pub enum Native {
 
 pub struct NativeFn {
     pub name: &'static str,
-    pub parameters: Vec<Type>,
-    pub return_type: Type,
-    pub body: fn(Vec<Value>) -> Value,
+    pub kind: NativeFnKind,
 }
 
 impl PartialEq<Self> for NativeFn {
@@ -270,11 +189,17 @@ impl Ord for NativeFn {
             Ordering::Equal => {}
             o => return o,
         };
-        match self.parameters.iter().cmp(other.parameters.iter()) {
+        match self
+            .kind
+            .signature()
+            .0
+            .iter()
+            .cmp(other.kind.signature().0.iter())
+        {
             Ordering::Equal => {}
             o => return o,
         };
-        self.return_type.cmp(&other.return_type)
+        self.kind.signature().1.cmp(&other.kind.signature().1)
     }
 }
 
@@ -284,13 +209,53 @@ impl Debug for NativeFn {
             f,
             "native#{}({}): {:?}",
             self.name,
-            self.parameters
+            self.kind
+                .signature()
+                .0
                 .iter()
                 .map(|p| format!("{:?}", p))
                 .collect::<Vec<String>>()
                 .join(", "),
-            self.return_type
+            self.kind.signature().1
         )
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum NativeFnKind {
+    NegNumber,
+    AddNumberNumber,
+    SubNumberNumber,
+    MulNumberNumber,
+    DivNumberNumber,
+    EqNumberNumber,
+    NeqNumberNumber,
+    GtNumberNumber,
+    LtNumberNumber,
+    GeNumberNumber,
+    LeNumberNumber,
+    EqBooleanBoolean,
+    NeqBooleanBoolean,
+}
+
+impl NativeFnKind {
+    pub fn signature(&self) -> (&[Type], Type) {
+        match self {
+            NativeFnKind::NegNumber => (&[Type::Number], Type::Number),
+            NativeFnKind::AddNumberNumber
+            | NativeFnKind::SubNumberNumber
+            | NativeFnKind::MulNumberNumber
+            | NativeFnKind::DivNumberNumber => (&[Type::Number, Type::Number], Type::Number),
+            NativeFnKind::EqNumberNumber
+            | NativeFnKind::NeqNumberNumber
+            | NativeFnKind::GtNumberNumber
+            | NativeFnKind::LtNumberNumber
+            | NativeFnKind::GeNumberNumber
+            | NativeFnKind::LeNumberNumber => (&[Type::Number, Type::Number], Type::Boolean),
+            NativeFnKind::EqBooleanBoolean | NativeFnKind::NeqBooleanBoolean => {
+                (&[Type::Boolean, Type::Boolean], Type::Boolean)
+            }
+        }
     }
 }
 
@@ -300,50 +265,60 @@ pub struct NativeType {
     pub ty: Type,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+pub enum Type {
+    /// The type is invalid
+    Invalid, // todo can we remove that from HIR? Or lower HIR to MIR to get rid of it...
 
-    macro_rules! native {
-        ($name:ident: $function:expr, [$($ty:expr,)*], [$($value:expr,)*] => $expected:expr) => {
-            #[test]
-            fn $name() {
-                let native = Natives::default();
-                let values = vec![$($value),*];
-                let types = vec![$($ty),*];
+    Boolean,
+    Function(Vec<TypeId>, TypeId),
+    Struct(StmtId),
+    Number,
 
-                let f = if let Some(function) = native.functions.get($function) {
-                    function.iter().find(|f| f.parameters == types)
-                } else {
-                    None
-                };
+    /// This value is used when the statement/expression does not have any value. This is the
+    /// case for `let` and `let fn`.
+    #[default]
+    Void,
 
-                let actual = (f
-                    .unwrap()
-                    .body)(values);
+    /// This value is used when the statement/expression does not return any value. This is the
+    /// case for `ret`.
+    None,
+}
 
-                assert_eq!(actual, $expected);
-            }
-        };
+impl Type {
+    pub fn identifier(&self) -> &'static str {
+        match self {
+            Type::Invalid | Type::None | Type::Function(..) | Type::Struct(..) => unimplemented!(),
+            Type::Boolean => "boolean",
+            Type::Number => "number",
+            Type::Void => "void",
+        }
     }
+}
 
-    native!(neg_number: "neg", [Type::Number,], [Value::Number(1),] => Value::Number(-1));
+impl Display for Type {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::Boolean => write!(f, "boolean"),
+            Type::Function(..) => write!(f, "function"),
+            Type::Struct(..) => write!(f, "struct"),
+            Type::Number => write!(f, "number"),
+            Type::Void => write!(f, "void"),
+            Type::None => write!(f, "no type"),
+            Type::Invalid => write!(f, "invalid"),
+        }
+    }
+}
 
-    native!(add_number_number: "add", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Number(3));
-    native!(sum_number_number: "sub", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Number(-1));
-    native!(mul_number_number: "mul", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Number(2));
-    native!(div_number_number: "div", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Number(0));
-    native!(gt_number_number: "gt", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Boolean(false));
-    native!(ge_number_number: "ge", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Boolean(false));
-    native!(lt_number_number: "lt", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Boolean(true));
-    native!(le_number_number: "le", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Boolean(true));
-    native!(eq_number_number_false: "eq", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Boolean(false));
-    native!(eq_number_number_true: "eq", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(1),] => Value::Boolean(true));
-    native!(neq_number_number_false: "neq", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(1),] => Value::Boolean(false));
-    native!(neq_number_number_true: "neq", [Type::Number, Type::Number,], [Value::Number(1), Value::Number(2),] => Value::Boolean(true));
+impl TryFrom<&str> for Type {
+    type Error = String;
 
-    native!(eq_boolean_boolean_false: "eq", [Type::Boolean, Type::Boolean,], [Value::Boolean(true), Value::Boolean(false),] => Value::Boolean(false));
-    native!(eq_boolean_boolean_true: "eq", [Type::Boolean, Type::Boolean,], [Value::Boolean(true), Value::Boolean(true),] => Value::Boolean(true));
-    native!(neq_boolean_boolean_false: "neq", [Type::Boolean, Type::Boolean,], [Value::Boolean(false), Value::Boolean(false),] => Value::Boolean(false));
-    native!(neq_boolean_boolean_true: "neq", [Type::Boolean, Type::Boolean,], [Value::Boolean(true), Value::Boolean(false),] => Value::Boolean(true));
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "boolean" => Ok(Type::Boolean),
+            "number" => Ok(Type::Number),
+            "void" => Ok(Type::Void),
+            &_ => Err(format!("'{}' is not a known type", value)),
+        }
+    }
 }

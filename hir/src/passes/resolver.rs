@@ -3,18 +3,16 @@ use crate::expression::{Expression, ExpressionKind, Target};
 use crate::identifier::Identifier;
 use crate::identifier_ref::IdentifierRef;
 use crate::literal::LiteralKind;
-use crate::natives::{Native, Natives};
+use crate::natives::{Native, Natives, Type};
 use crate::passes::exit_points_resolver::ExitPoint;
 use crate::statement::{Field, Parameter, Return, Statement, StatementKind};
 use crate::symbol::{Symbol, SymbolKind};
-use crate::typed::{Type, Typed, Untyped};
+use crate::typed::{Typed, Untyped};
 use bimap::BiHashMap;
 use std::collections::HashMap;
-use std::fmt::{Debug, Formatter};
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use transmute_core::span::Span;
-use transmute_core::value::Value;
 use transmute_core::vec_map::VecMap;
 
 pub struct Resolver<'a> {
@@ -117,22 +115,19 @@ impl<'a> Resolver<'a> {
                 Native::Fn(native) => {
                     let ident = state.find_ident_id_by_str(native.name);
                     let parameters = native
-                        .parameters
+                        .kind
+                        .signature()
+                        .0
                         .iter()
                         .map(|t| state.find_type_id_by_type(t))
                         .collect::<Vec<TypeId>>();
-                    let ret_type = state.find_type_id_by_type(&native.return_type);
+                    let ret_type = state.find_type_id_by_type(&native.kind.signature().1);
                     let fn_type_id =
                         state.insert_type(Type::Function(parameters.clone(), ret_type));
 
                     state.insert_symbol(
                         ident,
-                        SymbolKind::Native(
-                            ident,
-                            parameters,
-                            ret_type,
-                            NativeImplementation(native.body),
-                        ),
+                        SymbolKind::Native(ident, parameters, ret_type, native.kind),
                         fn_type_id,
                     );
                 }
@@ -1383,8 +1378,8 @@ impl Scope {
                             // not found can be anything
                             SymbolKind::NotFound => true,
                             // if params, the symbol can be a function
-                            SymbolKind::LetFn(_, ref fn_param_type, _) => {
-                                param_types == fn_param_type.as_slice()
+                            SymbolKind::LetFn(_, parameters, _) => {
+                                param_types == parameters.as_slice()
                             }
                             SymbolKind::Native(_, parameters, _, _) => {
                                 param_types == parameters.as_slice()
@@ -1400,21 +1395,6 @@ impl Scope {
                 })
                 .copied()
         })
-    }
-}
-
-#[derive(PartialEq)]
-pub struct NativeImplementation(fn(Vec<Value>) -> Value);
-
-impl NativeImplementation {
-    pub fn call(&self, parameters: Vec<Value>) -> Value {
-        self.0(parameters)
-    }
-}
-
-impl Debug for NativeImplementation {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "native")
     }
 }
 

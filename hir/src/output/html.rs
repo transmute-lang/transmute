@@ -1,9 +1,10 @@
 use crate::bound::Bound;
 use crate::expression::{ExpressionKind, Target};
 use crate::literal::{Literal, LiteralKind};
+use crate::natives::Type;
 use crate::statement::{Field, Parameter, RetMode, StatementKind};
 use crate::symbol::SymbolKind;
-use crate::typed::{Type, Typed};
+use crate::typed::Typed;
 use crate::ResolvedHir;
 use std::io;
 use std::io::Write;
