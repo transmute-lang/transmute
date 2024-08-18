@@ -25,7 +25,6 @@ impl Natives {
             name: "neg",
             kind: NativeFnKind::NegNumber,
         });
-
         natives.insert_fn(NativeFn {
             name: "add",
             kind: NativeFnKind::AddNumberNumber,
