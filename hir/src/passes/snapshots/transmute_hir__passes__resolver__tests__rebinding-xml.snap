@@ -19,8 +19,9 @@ expression: "XmlWriter::new(&hir).serialize()"
       <ident id="ident:10">neg</ident>
       <ident id="ident:11">neq</ident>
       <ident id="ident:12">number</ident>
-      <ident id="ident:13">sub</ident>
-      <ident id="ident:14">void</ident>
+      <ident id="ident:13">print</ident>
+      <ident id="ident:14">sub</ident>
+      <ident id="ident:15">void</ident>
     </identifiers>
     <stmt id="stmt:0" line="1" column="1" start="0" len="13">
       <let>

@@ -1,0 +1,14 @@
+---
+source: llvm/src/lib.rs
+expression: res
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+declare void @print(i64)
+
+define void @a(i64 %"n__#sym19") {
+entry:
+  call void @print(i64 %"n__#sym19")
+  ret void
+}

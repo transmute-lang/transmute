@@ -19,6 +19,7 @@ Hir {
         "mul",
         "neg",
         "neq",
+        "print",
         "void",
     ],
     identifier_refs: [
@@ -43,7 +44,7 @@ Hir {
             ident: Identifier {
                 id: IdentId(1),
                 span: 3:8; [47, 48],
-                bound: Bound(18),
+                bound: Bound(19),
             },
         },
         IdentifierRef {
@@ -51,7 +52,7 @@ Hir {
             ident: Identifier {
                 id: IdentId(1),
                 span: 4:13; [68, 69],
-                bound: Bound(18),
+                bound: Bound(19),
             },
         },
         IdentifierRef {
@@ -59,7 +60,7 @@ Hir {
             ident: Identifier {
                 id: IdentId(1),
                 span: 7:7; [84, 85],
-                bound: Bound(18),
+                bound: Bound(19),
             },
         },
         IdentifierRef {
@@ -67,7 +68,7 @@ Hir {
             ident: Identifier {
                 id: IdentId(0),
                 span: 7:5; [82, 83],
-                bound: Bound(17),
+                bound: Bound(18),
             },
         },
         IdentifierRef {
@@ -75,7 +76,7 @@ Hir {
             ident: Identifier {
                 id: IdentId(1),
                 span: 7:18; [95, 96],
-                bound: Bound(18),
+                bound: Bound(19),
             },
         },
         IdentifierRef {
@@ -83,7 +84,7 @@ Hir {
             ident: Identifier {
                 id: IdentId(0),
                 span: 7:16; [93, 94],
-                bound: Bound(17),
+                bound: Bound(18),
             },
         },
         IdentifierRef {
@@ -91,7 +92,7 @@ Hir {
             ident: Identifier {
                 id: IdentId(0),
                 span: 10:1; [106, 107],
-                bound: Bound(17),
+                bound: Bound(18),
             },
         },
         IdentifierRef {
@@ -99,7 +100,7 @@ Hir {
             ident: Identifier {
                 id: IdentId(3),
                 span: 3:10; [49, 51],
-                bound: Bound(10),
+                bound: Bound(11),
             },
         },
         IdentifierRef {
@@ -123,7 +124,7 @@ Hir {
             ident: Identifier {
                 id: IdentId(5),
                 span: 7:14; [91, 92],
-                bound: Bound(16),
+                bound: Bound(17),
             },
         },
         IdentifierRef {
@@ -131,7 +132,7 @@ Hir {
             ident: Identifier {
                 id: IdentId(5),
                 span: 10:6; [111, 112],
-                bound: Bound(16),
+                bound: Bound(17),
             },
         },
     ],
@@ -390,14 +391,14 @@ Hir {
                 Identifier {
                     id: IdentId(0),
                     span: 2:5; [17, 18],
-                    bound: Bound(17),
+                    bound: Bound(18),
                 },
                 [
                     Parameter {
                         identifier: Identifier {
                             id: IdentId(1),
                             span: 2:7; [19, 20],
-                            bound: Bound(18),
+                            bound: Bound(19),
                         },
                         ty: IdentRefId(0),
                         span: 2:7; [19, 28],
@@ -435,7 +436,7 @@ Hir {
         Symbol {
             id: SymbolId(1),
             kind: NativeType(
-                IdentId(15),
+                IdentId(16),
                 Void,
             ),
             type_id: TypeId(2),
@@ -472,6 +473,18 @@ Hir {
         Symbol {
             id: SymbolId(5),
             kind: Native(
+                IdentId(15),
+                [
+                    TypeId(4),
+                ],
+                TypeId(1),
+                PrintNumber,
+            ),
+            type_id: TypeId(6),
+        },
+        Symbol {
+            id: SymbolId(6),
+            kind: Native(
                 IdentId(14),
                 [
                     TypeId(4),
@@ -480,10 +493,10 @@ Hir {
                 TypeId(3),
                 NeqNumberNumber,
             ),
-            type_id: TypeId(6),
+            type_id: TypeId(7),
         },
         Symbol {
-            id: SymbolId(6),
+            id: SymbolId(7),
             kind: Native(
                 IdentId(14),
                 [
@@ -493,10 +506,10 @@ Hir {
                 TypeId(3),
                 NeqBooleanBoolean,
             ),
-            type_id: TypeId(7),
+            type_id: TypeId(8),
         },
         Symbol {
-            id: SymbolId(7),
+            id: SymbolId(8),
             kind: Native(
                 IdentId(13),
                 [
@@ -505,10 +518,10 @@ Hir {
                 TypeId(4),
                 NegNumber,
             ),
-            type_id: TypeId(8),
+            type_id: TypeId(9),
         },
         Symbol {
-            id: SymbolId(8),
+            id: SymbolId(9),
             kind: Native(
                 IdentId(12),
                 [
@@ -521,7 +534,7 @@ Hir {
             type_id: TypeId(5),
         },
         Symbol {
-            id: SymbolId(9),
+            id: SymbolId(10),
             kind: Native(
                 IdentId(11),
                 [
@@ -531,10 +544,10 @@ Hir {
                 TypeId(3),
                 LtNumberNumber,
             ),
-            type_id: TypeId(6),
+            type_id: TypeId(7),
         },
         Symbol {
-            id: SymbolId(10),
+            id: SymbolId(11),
             kind: Native(
                 IdentId(3),
                 [
@@ -544,10 +557,10 @@ Hir {
                 TypeId(3),
                 LeNumberNumber,
             ),
-            type_id: TypeId(6),
+            type_id: TypeId(7),
         },
         Symbol {
-            id: SymbolId(11),
+            id: SymbolId(12),
             kind: Native(
                 IdentId(10),
                 [
@@ -557,10 +570,10 @@ Hir {
                 TypeId(3),
                 GtNumberNumber,
             ),
-            type_id: TypeId(6),
+            type_id: TypeId(7),
         },
         Symbol {
-            id: SymbolId(12),
+            id: SymbolId(13),
             kind: Native(
                 IdentId(9),
                 [
@@ -570,10 +583,10 @@ Hir {
                 TypeId(3),
                 GeNumberNumber,
             ),
-            type_id: TypeId(6),
+            type_id: TypeId(7),
         },
         Symbol {
-            id: SymbolId(13),
+            id: SymbolId(14),
             kind: Native(
                 IdentId(8),
                 [
@@ -583,10 +596,10 @@ Hir {
                 TypeId(3),
                 EqNumberNumber,
             ),
-            type_id: TypeId(6),
+            type_id: TypeId(7),
         },
         Symbol {
-            id: SymbolId(14),
+            id: SymbolId(15),
             kind: Native(
                 IdentId(8),
                 [
@@ -596,10 +609,10 @@ Hir {
                 TypeId(3),
                 EqBooleanBoolean,
             ),
-            type_id: TypeId(7),
+            type_id: TypeId(8),
         },
         Symbol {
-            id: SymbolId(15),
+            id: SymbolId(16),
             kind: Native(
                 IdentId(7),
                 [
@@ -612,7 +625,7 @@ Hir {
             type_id: TypeId(5),
         },
         Symbol {
-            id: SymbolId(16),
+            id: SymbolId(17),
             kind: Native(
                 IdentId(5),
                 [
@@ -625,7 +638,7 @@ Hir {
             type_id: TypeId(5),
         },
         Symbol {
-            id: SymbolId(17),
+            id: SymbolId(18),
             kind: LetFn(
                 StmtId(3),
                 [
@@ -633,10 +646,10 @@ Hir {
                 ],
                 TypeId(4),
             ),
-            type_id: TypeId(8),
+            type_id: TypeId(9),
         },
         Symbol {
-            id: SymbolId(18),
+            id: SymbolId(19),
             kind: Parameter(
                 StmtId(3),
                 0,
@@ -656,6 +669,12 @@ Hir {
                 TypeId(4),
             ],
             TypeId(4),
+        ),
+        Function(
+            [
+                TypeId(4),
+            ],
+            TypeId(1),
         ),
         Function(
             [

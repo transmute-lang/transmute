@@ -21,8 +21,9 @@ expression: "&xml"
       <ident id="ident:12">mul</ident>
       <ident id="ident:13">neg</ident>
       <ident id="ident:14">neq</ident>
-      <ident id="ident:15">sub</ident>
-      <ident id="ident:16">void</ident>
+      <ident id="ident:15">print</ident>
+      <ident id="ident:16">sub</ident>
+      <ident id="ident:17">void</ident>
     </identifiers>
     <stmt id="stmt:0" line="1" column="1" start="0" len="33">
       <struct>

@@ -434,6 +434,11 @@ impl RuntimeImpl for NativeFnKind {
                 let left = parameters.pop().unwrap().as_bool();
                 Value::Boolean(left != right)
             }
+            NativeFnKind::PrintNumber => {
+                let number = parameters.pop().unwrap().as_i64();
+                println!("{number}");
+                Value::Void
+            }
         }
     }
 }

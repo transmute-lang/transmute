@@ -25,7 +25,8 @@ expression: "&xml"
       <ident id="ident:16">mul</ident>
       <ident id="ident:17">neg</ident>
       <ident id="ident:18">neq</ident>
-      <ident id="ident:19">void</ident>
+      <ident id="ident:19">print</ident>
+      <ident id="ident:20">void</ident>
     </identifiers>
     <stmt id="stmt:14" line="2" column="13" start="13" len="470">
       <fn>

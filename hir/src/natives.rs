@@ -25,6 +25,7 @@ impl Natives {
             name: "neg",
             kind: NativeFnKind::NegNumber,
         });
+
         natives.insert_fn(NativeFn {
             name: "add",
             kind: NativeFnKind::AddNumberNumber,
@@ -73,6 +74,11 @@ impl Natives {
         natives.insert_fn(NativeFn {
             name: "neq",
             kind: NativeFnKind::NeqBooleanBoolean,
+        });
+
+        natives.insert_fn(NativeFn {
+            name: "print",
+            kind: NativeFnKind::PrintNumber,
         });
 
         natives.insert_type(NativeType {
@@ -235,6 +241,7 @@ pub enum NativeFnKind {
     LeNumberNumber,
     EqBooleanBoolean,
     NeqBooleanBoolean,
+    PrintNumber, // fixme not actually a native, but part of some prelude
 }
 
 impl NativeFnKind {
@@ -254,6 +261,7 @@ impl NativeFnKind {
             NativeFnKind::EqBooleanBoolean | NativeFnKind::NeqBooleanBoolean => {
                 (&[Type::Boolean, Type::Boolean], Type::Boolean)
             }
+            NativeFnKind::PrintNumber => (&[Type::Number], Type::Void),
         }
     }
 }

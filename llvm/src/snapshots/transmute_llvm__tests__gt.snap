@@ -1,0 +1,14 @@
+---
+source: llvm/src/lib.rs
+expression: res
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+declare void @print(i64)
+
+define i1 @f(i64 %"l__#sym19", i64 %"r__#sym20") {
+entry:
+  %gt = icmp sgt i64 %"l__#sym19", %"r__#sym20"
+  ret i1 %gt
+}
