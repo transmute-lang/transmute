@@ -7,8 +7,8 @@ source_filename = "main"
 
 declare void @print(i64)
 
-define i1 @f(i1 %"l__#sym19", i1 %"r__#sym20") {
+define i1 @f(i1 %"l#sym19#", i1 %"r#sym20#") {
 entry:
-  %ne = icmp ne i1 %"l__#sym19", %"r__#sym20"
-  ret i1 %ne
+  %"ne#" = icmp ne i1 %"l#sym19#", %"r#sym20#"
+  ret i1 %"ne#"
 }

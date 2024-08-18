@@ -7,8 +7,8 @@ source_filename = "main"
 
 declare void @print(i64)
 
-define i64 @f(i64 %"l__#sym19", i64 %"r__#sym20") {
+define i64 @f(i64 %"l#sym19#", i64 %"r#sym20#") {
 entry:
-  %add = add i64 %"l__#sym19", %"r__#sym20"
-  ret i64 %add
+  %"add#" = add i64 %"l#sym19#", %"r#sym20#"
+  ret i64 %"add#"
 }

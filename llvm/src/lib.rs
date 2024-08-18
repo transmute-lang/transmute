@@ -1,12 +1,16 @@
-#![allow(dead_code)] // fixme eventually remove
+#![allow(dead_code)]
+
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
-use inkwell::types::{BasicMetadataTypeEnum, IntType, VoidType};
-use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue};
-use inkwell::IntPredicate;
+use inkwell::passes::PassBuilderOptions;
+use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetMachine};
+use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum, IntType, VoidType};
+use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue};
+use inkwell::{IntPredicate, OptimizationLevel};
+use std::collections::HashMap;
 use transmute_core::error::Diagnostics;
-use transmute_core::ids::ExprId;
+use transmute_core::ids::{ExprId, SymbolId, TypeId};
 use transmute_hir::expression::ExpressionKind;
 use transmute_hir::literal::LiteralKind;
 use transmute_hir::natives::{NativeFnKind, Type};
@@ -24,6 +28,8 @@ struct Codegen<'ctx> {
     bool_type: IntType<'ctx>,
     i64_type: IntType<'ctx>,
     void_type: VoidType<'ctx>,
+
+    variables: HashMap<SymbolId, PointerValue<'ctx>>,
 }
 
 impl<'ctx> Codegen<'ctx> {
@@ -45,24 +51,70 @@ impl<'ctx> Codegen<'ctx> {
             bool_type,
             i64_type,
             void_type,
+            variables: HashMap::default(),
         }
     }
 
-    pub fn gen(self, hir: &ResolvedHir) -> Result<Module<'ctx>, Diagnostics> {
+    pub fn gen(mut self, hir: &ResolvedHir) -> Result<Module<'ctx>, Diagnostics> {
         for stmt_id in hir.roots.iter() {
             self.gen_statement(hir, &hir.statements[*stmt_id]);
         }
 
+        // println!("{}", self.module.to_string().as_str());
+        #[cfg(not(test))]
+        self.optimize();
+
         Ok(self.module)
     }
 
-    fn gen_statement(&self, hir: &ResolvedHir, stmt: &ResolvedStatement) {
+    fn optimize(&self) {
+        Target::initialize_all(&InitializationConfig::default());
+        let target_triple = TargetMachine::get_default_triple();
+        let target = Target::from_triple(&target_triple).unwrap();
+        let target_machine = target
+            .create_target_machine(
+                &target_triple,
+                "generic",
+                "",
+                OptimizationLevel::None,
+                RelocMode::PIC,
+                CodeModel::Default,
+            )
+            .unwrap();
+        let passes: &[&str] = &[
+            "instcombine",
+            "reassociate",
+            "gvn",
+            "simplifycfg",
+            "mem2reg",
+        ];
+
+        self.module
+            .run_passes(
+                passes.join(",").as_str(),
+                &target_machine,
+                PassBuilderOptions::create(),
+            )
+            .unwrap();
+
+        // target_machine
+        //     .write_to_file(
+        //         &self.module,
+        //         FileType::Assembly,
+        //         &PathBuf::from(".".to_string()).join("assembly"),
+        //     )
+        //     .unwrap()
+    }
+
+    fn gen_statement(&mut self, hir: &ResolvedHir, stmt: &ResolvedStatement) -> Value<'ctx> {
         match &stmt.kind {
-            StatementKind::Expression(_) => todo!(),
-            StatementKind::Let(_, _) => todo!(),
-            StatementKind::Ret(expr_id, _ret_mode) => {
-                self.gen_ret(hir, &hir.expressions[*expr_id]);
+            StatementKind::Expression(expr_id) => {
+                self.gen_expression(hir, &hir.expressions[*expr_id])
             }
+            StatementKind::Let(ident, expr_id) => {
+                self.gen_let(hir, ident, &hir.expressions[*expr_id])
+            }
+            StatementKind::Ret(expr_id, _ret_mode) => self.gen_ret(hir, &hir.expressions[*expr_id]),
             StatementKind::LetFn(ident, params, ret_type, expr_id) => {
                 self.gen_function(hir, ident, params, ret_type, *expr_id)
             }
@@ -70,40 +122,67 @@ impl<'ctx> Codegen<'ctx> {
         }
     }
 
-    fn gen_ret(&self, hir: &ResolvedHir, expr: &ResolvedExpression) {
+    fn gen_ret(&mut self, hir: &ResolvedHir, expr: &ResolvedExpression) -> Value<'ctx> {
         match self.gen_expression(hir, expr) {
-            None => {
+            Value::Never => panic!(),
+            Value::None => {
                 // fixme a ret always has an expression, otherwise, no ret...
                 self.builder.build_return(None).unwrap()
             }
-            Some(BasicValueEnum::ArrayValue(_)) => todo!(),
-            Some(BasicValueEnum::IntValue(val)) => self.builder.build_return(Some(&val)).unwrap(),
-            Some(BasicValueEnum::FloatValue(_)) => todo!(),
-            Some(BasicValueEnum::PointerValue(_)) => todo!(),
-            Some(BasicValueEnum::StructValue(_)) => todo!(),
-            Some(BasicValueEnum::VectorValue(_)) => todo!(),
+            Value::Some(BasicValueEnum::ArrayValue(_)) => todo!(),
+            Value::Some(BasicValueEnum::IntValue(val)) => {
+                self.builder.build_return(Some(&val)).unwrap()
+            }
+            Value::Some(BasicValueEnum::FloatValue(_)) => todo!(),
+            Value::Some(BasicValueEnum::PointerValue(_)) => todo!(),
+            Value::Some(BasicValueEnum::StructValue(_)) => todo!(),
+            Value::Some(BasicValueEnum::VectorValue(_)) => todo!(),
         };
+        Value::Never
+    }
+
+    fn gen_let(
+        &mut self,
+        hir: &ResolvedHir,
+        ident: &ResolvedIdentifier,
+        expr: &ResolvedExpression,
+    ) -> Value<'ctx> {
+        let builder = self.context.create_builder();
+        let entry_block = self.current_function().get_first_basic_block().unwrap();
+        match entry_block.get_first_instruction() {
+            None => builder.position_at_end(entry_block),
+            Some(first_instruction) => builder.position_before(&first_instruction),
+        };
+
+
+        let symbol = &hir.symbols[ident.resolved_symbol_id()];
+        let llvm_type = self.llvm_type(hir, symbol.type_id);
+        let ptr = builder
+            .build_alloca(
+                llvm_type,
+                &format!("{}#sym{}#", &hir.identifiers[ident.id], symbol.id),
+            )
+            .unwrap();
+
+        self.variables.insert(symbol.id, ptr);
+
+        let val = self.gen_expression(hir, expr).unwrap();
+        self.builder.build_store(ptr, val).unwrap();
+
+        Value::None
     }
 
     fn gen_function(
-        &self,
+        &mut self,
         hir: &ResolvedHir,
         ident: &ResolvedIdentifier,
         params: &[ResolvedParameter],
         ret_type: &ResolvedReturn,
         expr_id: ExprId,
-    ) {
+    ) -> Value<'ctx> {
         let parameters_types = params
             .iter()
-            .map(|p| match &hir.types[p.resolved_type_id()] {
-                Type::Invalid => todo!(),
-                Type::Boolean => self.bool_type.into(),
-                Type::Function(_, _) => todo!(),
-                Type::Struct(_) => todo!(),
-                Type::Number => self.i64_type.into(),
-                Type::Void => todo!(),
-                Type::None => todo!(),
-            })
+            .map(|p| self.llvm_type(hir, p.resolved_type_id()).into())
             .collect::<Vec<BasicMetadataTypeEnum>>();
 
         let resolved_ret_type = &hir.types[ret_type.resolved_type_id()];
@@ -123,7 +202,7 @@ impl<'ctx> Codegen<'ctx> {
 
         for (i, param) in function.get_param_iter().enumerate() {
             let name = &hir.identifiers[params[i].identifier.id];
-            let name = format!("{}__#sym{}", name, params[i].resolved_symobl_id());
+            let name = format!("{}#sym{}#", name, params[i].resolved_symobl_id());
             match param {
                 BasicValueEnum::ArrayValue(_) => todo!(),
                 BasicValueEnum::IntValue(val) => val.set_name(&name),
@@ -138,22 +217,30 @@ impl<'ctx> Codegen<'ctx> {
         self.builder.position_at_end(entry);
 
         self.gen_expression(hir, &hir.expressions[expr_id]);
+
+        Value::None
     }
 
-    fn gen_expression(
-        &self,
-        hir: &ResolvedHir,
-        expr: &ResolvedExpression,
-    ) -> Option<BasicValueEnum<'ctx>> {
+    fn gen_expression(&mut self, hir: &ResolvedHir, expr: &ResolvedExpression) -> Value<'ctx> {
         match &expr.kind {
             ExpressionKind::Assignment(_, _) => todo!(),
-            ExpressionKind::If(_, _, _) => todo!(),
+            ExpressionKind::If(cond_expr_id, true_expr_id, false_expr_id) => self.gen_if(
+                hir,
+                &hir.expressions[*cond_expr_id],
+                &hir.expressions[*true_expr_id],
+                false_expr_id.map(|expr_id| &hir.expressions[expr_id]),
+            ),
             ExpressionKind::Literal(literal) => match &literal.kind {
-                LiteralKind::Boolean(_) => todo!(),
-                LiteralKind::Identifier(ident_ref_id) => {
-                    self.gen_expression_ident(hir, &hir.identifier_refs[*ident_ref_id])
+                LiteralKind::Boolean(bool) => {
+                    Value::Some(self.bool_type.const_int(*bool as u64, false).into())
                 }
-                LiteralKind::Number(_) => todo!(),
+                LiteralKind::Identifier(ident_ref_id) => {
+                    Value::Some(self.gen_expression_ident(hir, &hir.identifier_refs[*ident_ref_id]))
+                }
+                LiteralKind::Number(number) => {
+                    // todo check what happens for negative numbers
+                    Value::Some(self.i64_type.const_int(*number as u64, false).into())
+                }
             },
             ExpressionKind::Access(_, _) => todo!(),
             ExpressionKind::FunctionCall(ident_ref_id, params) => {
@@ -161,12 +248,87 @@ impl<'ctx> Codegen<'ctx> {
             }
             ExpressionKind::While(_, _) => todo!(),
             ExpressionKind::Block(stmt_ids) => {
+                let mut value = Value::None;
                 for stmt_id in stmt_ids {
-                    self.gen_statement(hir, &hir.statements[*stmt_id]);
+                    value = self.gen_statement(hir, &hir.statements[*stmt_id]);
+                    if matches!(value, Value::Never) {
+                        return value;
+                    }
                 }
-                None
+                value
             }
             ExpressionKind::StructInstantiation(_, _) => todo!(),
+        }
+    }
+
+    fn gen_if(
+        &mut self,
+        hir: &ResolvedHir,
+        cond: &ResolvedExpression,
+        true_branch: &ResolvedExpression,
+        false_branch: Option<&ResolvedExpression>,
+    ) -> Value<'ctx> {
+        let then_block = self
+            .context
+            .append_basic_block(self.current_function(), "true_branch");
+
+        let end_block = self
+            .context
+            .append_basic_block(self.current_function(), "end_if");
+
+        let else_block = if false_branch.is_some() {
+            let else_block = self
+                .context
+                .insert_basic_block_after(then_block, "false_branch");
+            else_block
+        } else {
+            end_block
+        };
+
+        let cond = self.gen_expression(hir, cond).unwrap().into_int_value();
+        self.builder
+            .build_conditional_branch(cond, then_block, else_block)
+            .unwrap();
+
+        self.builder.position_at_end(then_block);
+        let then_value = self.gen_expression(hir, true_branch);
+        if !matches!(then_value, Value::Never) {
+            self.builder.build_unconditional_branch(end_block).unwrap();
+        }
+
+        let else_value = if false_branch.is_some() {
+            self.builder.position_at_end(else_block);
+            let value = self.gen_expression(hir, false_branch.unwrap());
+            if !matches!(value, Value::Never) {
+                self.builder.build_unconditional_branch(end_block).unwrap();
+            }
+            value
+        } else {
+            Value::None
+        };
+
+        self.builder.position_at_end(end_block);
+        match (then_value, else_value) {
+            (Value::Some(then_value), Value::Some(else_value)) => {
+                let if_value = self
+                    .builder
+                    .build_phi(then_value.get_type(), "if_result")
+                    .unwrap();
+                if_value.add_incoming(&[(&then_value, then_block), (&else_value, else_block)]);
+                Value::Some(if_value.as_basic_value())
+            }
+            (Value::Some(then_value), Value::None) | (Value::Some(then_value), Value::Never) => {
+                Value::Some(then_value)
+            }
+            (Value::None, Value::Some(else_value)) | (Value::Never, Value::Some(else_value)) => {
+                Value::Some(else_value)
+            }
+            (Value::None, _) => Value::None,
+            (_, Value::None) => Value::None,
+            (Value::Never, Value::Never) => {
+                self.builder.build_unreachable().unwrap();
+                Value::Never
+            }
         }
     }
 
@@ -174,12 +336,26 @@ impl<'ctx> Codegen<'ctx> {
         &self,
         hir: &ResolvedHir,
         ident_ref: &ResolvedIdentifierRef,
-    ) -> Option<BasicValueEnum<'ctx>> {
+    ) -> BasicValueEnum<'ctx> {
         match &hir.symbols[ident_ref.resolved_symbol_id()].kind {
             SymbolKind::NotFound => todo!(),
-            SymbolKind::Let(_) => todo!(),
+            SymbolKind::Let(_) => self
+                .builder
+                .build_load(
+                    self.llvm_type(hir, hir.symbols[ident_ref.resolved_symbol_id()].type_id),
+                    self.variables[&ident_ref.resolved_symbol_id()],
+                    &format!(
+                        "{}#sym{}#",
+                        &hir.identifiers[ident_ref.ident.id],
+                        ident_ref.resolved_symbol_id()
+                    ),
+                )
+                .unwrap(),
             SymbolKind::LetFn(_, _, _) => todo!(),
-            SymbolKind::Parameter(_, index) => self.current_function().get_nth_param(*index as u32),
+            SymbolKind::Parameter(_, index) => self
+                .current_function()
+                .get_nth_param(*index as u32)
+                .unwrap(),
             SymbolKind::Struct(_) => todo!(),
             SymbolKind::Field(_, _) => todo!(),
             SymbolKind::NativeType(_, _) => todo!(),
@@ -188,12 +364,12 @@ impl<'ctx> Codegen<'ctx> {
     }
 
     fn gen_function_call(
-        &self,
+        &mut self,
         hir: &ResolvedHir,
         ident_ref: &ResolvedIdentifierRef,
         params: &[ExprId],
-    ) -> Option<BasicValueEnum<'ctx>> {
-        let symbol = &hir.symbols[(&hir.identifier_refs[ident_ref.id]).resolved_symbol_id()];
+    ) -> Value<'ctx> {
+        let symbol = &hir.symbols[hir.identifier_refs[ident_ref.id].resolved_symbol_id()];
         if let SymbolKind::Native(_, _, _, kind) = &symbol.kind {
             if kind.is_instr() {
                 return kind.gen_instr(hir, self, params);
@@ -203,13 +379,13 @@ impl<'ctx> Codegen<'ctx> {
         let parameters = params
             .iter()
             .map(|e| match self.gen_expression(hir, &hir.expressions[*e]) {
-                None => panic!(),
-                Some(BasicValueEnum::ArrayValue(_)) => todo!(),
-                Some(BasicValueEnum::IntValue(val)) => BasicMetadataValueEnum::IntValue(val),
-                Some(BasicValueEnum::FloatValue(_)) => todo!(),
-                Some(BasicValueEnum::PointerValue(_)) => todo!(),
-                Some(BasicValueEnum::StructValue(_)) => todo!(),
-                Some(BasicValueEnum::VectorValue(_)) => todo!(),
+                Value::None | Value::Never => panic!(),
+                Value::Some(BasicValueEnum::ArrayValue(_)) => todo!(),
+                Value::Some(BasicValueEnum::IntValue(val)) => BasicMetadataValueEnum::IntValue(val),
+                Value::Some(BasicValueEnum::FloatValue(_)) => todo!(),
+                Value::Some(BasicValueEnum::PointerValue(_)) => todo!(),
+                Value::Some(BasicValueEnum::StructValue(_)) => todo!(),
+                Value::Some(BasicValueEnum::VectorValue(_)) => todo!(),
             })
             .collect::<Vec<BasicMetadataValueEnum>>();
 
@@ -222,11 +398,12 @@ impl<'ctx> Codegen<'ctx> {
             .build_call(
                 called_function,
                 &parameters,
-                &format!("{function_name}__#res",),
+                &format!("{function_name}#res#",),
             )
             .unwrap()
             .try_as_basic_value()
             .left()
+            .into()
     }
 
     fn current_function(&self) -> FunctionValue<'ctx> {
@@ -236,6 +413,42 @@ impl<'ctx> Codegen<'ctx> {
             .get_parent()
             .unwrap()
     }
+
+    fn llvm_type(&self, hir: &ResolvedHir, type_id: TypeId) -> BasicTypeEnum<'ctx> {
+        match &hir.types[type_id] {
+            Type::Invalid => unreachable!(),
+            Type::Boolean => self.bool_type.as_basic_type_enum(),
+            Type::Function(_, _) => todo!(),
+            Type::Struct(_) => todo!(),
+            Type::Number => self.i64_type.as_basic_type_enum(),
+            Type::Void => unreachable!(),
+            Type::None => todo!(),
+        }
+    }
+}
+
+enum Value<'ctx> {
+    Never,
+    None,
+    Some(BasicValueEnum<'ctx>),
+}
+
+impl<'ctx> Value<'ctx> {
+    fn unwrap(self) -> BasicValueEnum<'ctx> {
+        match self {
+            Value::Never | Value::None => panic!(),
+            Value::Some(val) => val,
+        }
+    }
+}
+
+impl<'ctx> From<Option<BasicValueEnum<'ctx>>> for Value<'ctx> {
+    fn from(value: Option<BasicValueEnum<'ctx>>) -> Self {
+        match value {
+            None => Value::None,
+            Some(val) => Value::Some(val),
+        }
+    }
 }
 
 trait LlvmImpl {
@@ -244,9 +457,9 @@ trait LlvmImpl {
     fn gen_instr<'ctx>(
         &self,
         hir: &ResolvedHir,
-        codegen: &Codegen<'ctx>,
+        codegen: &mut Codegen<'ctx>,
         params: &[ExprId],
-    ) -> Option<BasicValueEnum<'ctx>>;
+    ) -> Value<'ctx>;
 }
 
 impl LlvmImpl for NativeFnKind {
@@ -272,9 +485,9 @@ impl LlvmImpl for NativeFnKind {
     fn gen_instr<'ctx>(
         &self,
         hir: &ResolvedHir,
-        codegen: &Codegen<'ctx>,
+        codegen: &mut Codegen<'ctx>,
         params: &[ExprId],
-    ) -> Option<BasicValueEnum<'ctx>> {
+    ) -> Value<'ctx> {
         match self {
             NativeFnKind::NegNumber => todo!(),
             NativeFnKind::AddNumberNumber => {
@@ -286,10 +499,10 @@ impl LlvmImpl for NativeFnKind {
                     .gen_expression(hir, &hir.expressions[params[1]])
                     .unwrap()
                     .into_int_value();
-                Some(
+                Value::Some(
                     codegen
                         .builder
-                        .build_int_add(lhs, rhs, "add")
+                        .build_int_add(lhs, rhs, "add#")
                         .unwrap()
                         .into(),
                 )
@@ -303,10 +516,10 @@ impl LlvmImpl for NativeFnKind {
                     .gen_expression(hir, &hir.expressions[params[1]])
                     .unwrap()
                     .into_int_value();
-                Some(
+                Value::Some(
                     codegen
                         .builder
-                        .build_int_sub(lhs, rhs, "sub")
+                        .build_int_sub(lhs, rhs, "sub#")
                         .unwrap()
                         .into(),
                 )
@@ -320,10 +533,10 @@ impl LlvmImpl for NativeFnKind {
                     .gen_expression(hir, &hir.expressions[params[1]])
                     .unwrap()
                     .into_int_value();
-                Some(
+                Value::Some(
                     codegen
                         .builder
-                        .build_int_mul(lhs, rhs, "mul")
+                        .build_int_mul(lhs, rhs, "mul#")
                         .unwrap()
                         .into(),
                 )
@@ -337,10 +550,10 @@ impl LlvmImpl for NativeFnKind {
                     .gen_expression(hir, &hir.expressions[params[1]])
                     .unwrap()
                     .into_int_value();
-                Some(
+                Value::Some(
                     codegen
                         .builder
-                        .build_int_signed_div(lhs, rhs, "div")
+                        .build_int_signed_div(lhs, rhs, "div#")
                         .unwrap()
                         .into(),
                 )
@@ -354,10 +567,10 @@ impl LlvmImpl for NativeFnKind {
                     .gen_expression(hir, &hir.expressions[params[1]])
                     .unwrap()
                     .into_int_value();
-                Some(
+                Value::Some(
                     codegen
                         .builder
-                        .build_int_compare(IntPredicate::EQ, lhs, rhs, "eq")
+                        .build_int_compare(IntPredicate::EQ, lhs, rhs, "eq#")
                         .unwrap()
                         .into(),
                 )
@@ -371,10 +584,10 @@ impl LlvmImpl for NativeFnKind {
                     .gen_expression(hir, &hir.expressions[params[1]])
                     .unwrap()
                     .into_int_value();
-                Some(
+                Value::Some(
                     codegen
                         .builder
-                        .build_int_compare(IntPredicate::NE, lhs, rhs, "ne")
+                        .build_int_compare(IntPredicate::NE, lhs, rhs, "ne#")
                         .unwrap()
                         .into(),
                 )
@@ -388,10 +601,10 @@ impl LlvmImpl for NativeFnKind {
                     .gen_expression(hir, &hir.expressions[params[1]])
                     .unwrap()
                     .into_int_value();
-                Some(
+                Value::Some(
                     codegen
                         .builder
-                        .build_int_compare(IntPredicate::SGT, lhs, rhs, "gt")
+                        .build_int_compare(IntPredicate::SGT, lhs, rhs, "gt#")
                         .unwrap()
                         .into(),
                 )
@@ -405,10 +618,10 @@ impl LlvmImpl for NativeFnKind {
                     .gen_expression(hir, &hir.expressions[params[1]])
                     .unwrap()
                     .into_int_value();
-                Some(
+                Value::Some(
                     codegen
                         .builder
-                        .build_int_compare(IntPredicate::SLT, lhs, rhs, "lt")
+                        .build_int_compare(IntPredicate::SLT, lhs, rhs, "lt#")
                         .unwrap()
                         .into(),
                 )
@@ -422,10 +635,10 @@ impl LlvmImpl for NativeFnKind {
                     .gen_expression(hir, &hir.expressions[params[1]])
                     .unwrap()
                     .into_int_value();
-                Some(
+                Value::Some(
                     codegen
                         .builder
-                        .build_int_compare(IntPredicate::SGE, lhs, rhs, "ge")
+                        .build_int_compare(IntPredicate::SGE, lhs, rhs, "ge#")
                         .unwrap()
                         .into(),
                 )
@@ -439,10 +652,10 @@ impl LlvmImpl for NativeFnKind {
                     .gen_expression(hir, &hir.expressions[params[1]])
                     .unwrap()
                     .into_int_value();
-                Some(
+                Value::Some(
                     codegen
                         .builder
-                        .build_int_compare(IntPredicate::SGT, lhs, rhs, "le")
+                        .build_int_compare(IntPredicate::SGT, lhs, rhs, "le#")
                         .unwrap()
                         .into(),
                 )
@@ -456,10 +669,10 @@ impl LlvmImpl for NativeFnKind {
                     .gen_expression(hir, &hir.expressions[params[1]])
                     .unwrap()
                     .into_int_value();
-                Some(
+                Value::Some(
                     codegen
                         .builder
-                        .build_int_compare(IntPredicate::EQ, lhs, rhs, "eq")
+                        .build_int_compare(IntPredicate::EQ, lhs, rhs, "eq#")
                         .unwrap()
                         .into(),
                 )
@@ -473,15 +686,15 @@ impl LlvmImpl for NativeFnKind {
                     .gen_expression(hir, &hir.expressions[params[1]])
                     .unwrap()
                     .into_int_value();
-                Some(
+                Value::Some(
                     codegen
                         .builder
-                        .build_int_compare(IntPredicate::NE, lhs, rhs, "ne")
+                        .build_int_compare(IntPredicate::NE, lhs, rhs, "ne#")
                         .unwrap()
                         .into(),
                 )
             }
-            NativeFnKind::PrintNumber => None,
+            NativeFnKind::PrintNumber => Value::None,
         }
     }
 }
@@ -538,4 +751,70 @@ mod tests {
     );
     gen!(print, "let a(n: number) { print(n); }");
 
+    gen!(
+        fibo_rec,
+        r#"
+        let f(n: number): number = {
+            if n <= 1 {
+                ret n;
+            }
+            f(n - 1) + f(n - 2);
+        }
+        "#
+    );
+
+    gen!(
+        let_produces_alloca_at_entry,
+        r#"
+        let f(n: number): number = {
+            if n == 42 {
+                let m = 0;
+                ret m + 1;
+            } else {
+                let m = 0;
+                ret m - 1;
+            };
+        }
+        "#
+    );
+
+    gen!(
+        if_then_else_value,
+        r#"
+        let f(n: number, c: boolean): boolean = {
+            let m = if c {
+                n - 1;
+            } else {
+                n + 1;
+            };
+            ret m == 42;
+        }
+        "#
+    );
+    gen!(
+        if_then_value,
+        r#"
+        let f(n: number): boolean = {
+            let m = if n != 42 {
+                n - 1;
+            } else {
+                ret true;
+            };
+            ret m == 42;
+        }
+        "#
+    );
+    gen!(
+        if_else_value,
+        r#"
+        let f(n: number): boolean = {
+            let m = if n == 42 {
+                ret true;
+            } else {
+                n - 1;
+            };
+            ret m == 42;
+        }
+        "#
+    );
 }

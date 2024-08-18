@@ -1611,6 +1611,41 @@ mod tests {
         "Expected type boolean, got number",
         Span::new(1, 24, 23, 7)
     );
+    // todo this should rather be of type option<number>
+    test_type_error!(
+        if_no_false_branch_to_val,
+        "let n = 0; n = if true { 42; };",
+        "Expected type number, got void",
+        Span::new(1, 16, 15, 15)
+    );
+    test_type_ok!(
+        if_false_branch_returns_to_val,
+        r#"
+            let f(): boolean = {
+                let n = 0;
+                n = if true {
+                    42;
+                } else {
+                    ret false;
+                };
+                ret 42 == n;
+            };
+        "#
+    );
+    test_type_ok!(
+        if_true_branch_returns_to_val,
+        r#"
+            let f(): boolean = {
+                let n = 0;
+                n = if true {
+                    ret false;
+                } else {
+                    42;
+                };
+                ret 42 == n;
+            };
+        "#
+    );
     test_type_ok!(if_no_false_branch, "if true { 42; }");
     test_type_ok!(if_type, "let n = 0 + if true { 42; } else { 0; };");
     test_type_error!(
@@ -1900,6 +1935,37 @@ mod tests {
         "let n = 10; n();",
         "No function 'n' found for parameters of types ()",
         Span::new(1, 13, 12, 1)
+    );
+    // fixme un-comment the following test
+    // test_type_ok!(
+    //     unreachable_statement1,
+    //     r#"
+    //     let f(n: number): number = {
+    //         if n == 42 {
+    //             let m = 0;
+    //             ret m + 1;
+    //         } else {
+    //             let m = 0;
+    //             ret m - 1;
+    //         };
+    //         ret f(42);
+    //     }
+    //     "#
+    // );
+    test_type_ok!(
+        unreachable_statement2,
+        r#"
+        let f(n: number): number = {
+            if n == 42 {
+                let m = 0;
+                ret m + 1;
+            } else {
+                let m = 0;
+                ret m - 1;
+            };
+            ret 42;
+        }
+        "#
     );
     // fixme un-comment the following test
     // test_type_ok!(

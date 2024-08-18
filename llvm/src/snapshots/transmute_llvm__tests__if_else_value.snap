@@ -1,0 +1,28 @@
+---
+source: llvm/src/lib.rs
+expression: res
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+declare void @print(i64)
+
+define i1 @f(i64 %"n#sym19#") {
+entry:
+  %"m#sym20#" = alloca i64, align 8
+  %"eq#" = icmp eq i64 %"n#sym19#", 42
+  br i1 %"eq#", label %true_branch, label %false_branch
+
+true_branch:                                      ; preds = %entry
+  ret i1 true
+
+false_branch:                                     ; preds = %entry
+  %"sub#" = sub i64 %"n#sym19#", 1
+  br label %end_if
+
+end_if:                                           ; preds = %false_branch
+  store i64 %"sub#", ptr %"m#sym20#", align 4
+  %"m#sym20#1" = load i64, ptr %"m#sym20#", align 4
+  %"eq#2" = icmp eq i64 %"m#sym20#1", 42
+  ret i1 %"eq#2"
+}

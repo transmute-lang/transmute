@@ -1,0 +1,25 @@
+---
+source: llvm/src/lib.rs
+expression: res
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+declare void @print(i64)
+
+define i64 @f(i64 %"n#sym19#") {
+entry:
+  %"le#" = icmp sgt i64 %"n#sym19#", 1
+  br i1 %"le#", label %true_branch, label %end_if
+
+true_branch:                                      ; preds = %entry
+  ret i64 %"n#sym19#"
+
+end_if:                                           ; preds = %entry
+  %"sub#" = sub i64 %"n#sym19#", 1
+  %"f#res#" = call i64 @f(i64 %"sub#")
+  %"sub#1" = sub i64 %"n#sym19#", 2
+  %"f#res#2" = call i64 @f(i64 %"sub#1")
+  %"add#" = add i64 %"f#res#", %"f#res#2"
+  ret i64 %"add#"
+}
