@@ -1,0 +1,22 @@
+---
+source: llvm/src/lib.rs
+expression: res
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+declare void @print(i64)
+
+define void @f() {
+entry:
+  br i1 true, label %true_branch, label %false_branch
+
+true_branch:                                      ; preds = %entry
+  br label %end_if
+
+false_branch:                                     ; preds = %entry
+  br label %end_if
+
+end_if:                                           ; preds = %false_branch, %true_branch
+  ret void
+}

@@ -794,6 +794,16 @@ mod tests {
     );
 
     gen!(
+        if_simple,
+        r#"
+        let f() = {
+            if true {
+            } else {
+            };
+        }
+        "#
+    );
+    gen!(
         if_then_else_value,
         r#"
         let f(n: number, c: boolean): boolean = {

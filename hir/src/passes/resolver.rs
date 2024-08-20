@@ -1936,7 +1936,7 @@ mod tests {
         "No function 'n' found for parameters of types ()",
         Span::new(1, 13, 12, 1)
     );
-    // fixme un-comment the following test
+    // fixme un-comment the following tests
     // test_type_ok!(
     //     unreachable_statement1,
     //     r#"
@@ -1949,6 +1949,17 @@ mod tests {
     //             ret m - 1;
     //         };
     //         ret f(42);
+    //     }
+    //     "#
+    // );
+    // test_type_ok!(
+    //     unreachable_statement1,
+    //     r#"
+    //     let f(n: number): number = {
+    //         while n != 42 {
+    //             ret n;
+    //         }
+    //         ret n;
     //     }
     //     "#
     // );
