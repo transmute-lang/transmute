@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, SymbolId, TypeId};
 use transmute_hir::expression::ExpressionKind;
+use transmute_hir::expression::Target as AssignmentTarget;
 use transmute_hir::literal::LiteralKind;
 use transmute_hir::natives::{NativeFnKind, Type};
 use transmute_hir::statement::StatementKind;
@@ -147,22 +148,13 @@ impl<'ctx> Codegen<'ctx> {
         ident: &ResolvedIdentifier,
         expr: &ResolvedExpression,
     ) -> Value<'ctx> {
-        let builder = self.context.create_builder();
-        let entry_block = self.current_function().get_first_basic_block().unwrap();
-        match entry_block.get_first_instruction() {
-            None => builder.position_at_end(entry_block),
-            Some(first_instruction) => builder.position_before(&first_instruction),
-        };
-
         let symbol = &hir.symbols[ident.resolved_symbol_id()];
         let llvm_type = self.llvm_type(hir, symbol.type_id);
-        let ptr = builder
-            .build_alloca(
-                llvm_type,
-                &format!("{}#sym{}#", &hir.identifiers[ident.id], symbol.id),
-            )
-            .unwrap();
 
+        let ptr = self.gen_alloca(
+            llvm_type,
+            &format!("{}#local#sym{}#", &hir.identifiers[ident.id], symbol.id),
+        );
         self.variables.insert(symbol.id, ptr);
 
         let val = self.gen_expression(hir, expr).unwrap();
@@ -201,6 +193,7 @@ impl<'ctx> Codegen<'ctx> {
 
         for (i, param) in function.get_param_iter().enumerate() {
             let name = &hir.identifiers[params[i].identifier.id];
+            // todo name may be made of the form {name}#param#sym{sid}
             let name = format!("{}#sym{}#", name, params[i].resolved_symobl_id());
             match param {
                 BasicValueEnum::ArrayValue(_) => todo!(),
@@ -222,7 +215,9 @@ impl<'ctx> Codegen<'ctx> {
 
     fn gen_expression(&mut self, hir: &ResolvedHir, expr: &ResolvedExpression) -> Value<'ctx> {
         let value = match &expr.kind {
-            ExpressionKind::Assignment(_, _) => todo!(),
+            ExpressionKind::Assignment(target, expr) => {
+                self.gen_assignment(hir, target, &hir.expressions[*expr])
+            }
             ExpressionKind::If(cond_expr_id, true_expr_id, false_expr_id) => self.gen_if(
                 hir,
                 &hir.expressions[*cond_expr_id],
@@ -269,6 +264,54 @@ impl<'ctx> Codegen<'ctx> {
         }
 
         value
+    }
+
+    fn gen_assignment(
+        &mut self,
+        hir: &ResolvedHir,
+        target: &AssignmentTarget,
+        expr: &ResolvedExpression,
+    ) -> Value<'ctx> {
+        let ptr = match target {
+            AssignmentTarget::Direct(ident_ref_id) => {
+                let symbol_id = hir.identifier_refs[*ident_ref_id].resolved_symbol_id();
+
+                #[allow(clippy::map_entry)]
+                if !self.variables.contains_key(&symbol_id) {
+                    match hir.symbols[symbol_id].kind {
+                        SymbolKind::NotFound => todo!(),
+                        SymbolKind::Let(_) => panic!("variable already exists"),
+                        SymbolKind::LetFn(_, _, _) => todo!(),
+                        SymbolKind::Parameter(_, index) => {
+                            let param =
+                                self.current_function().get_nth_param(index as u32).unwrap();
+                            let ptr = self.gen_alloca(
+                                param.get_type(),
+                                &format!(
+                                    "{}#local#sym{}#",
+                                    hir.identifiers[hir.identifier_refs[*ident_ref_id].ident.id],
+                                    symbol_id
+                                ),
+                            );
+                            self.builder.build_store(ptr, param).unwrap();
+                            self.variables.insert(symbol_id, ptr);
+                        }
+                        SymbolKind::Struct(_) => todo!(),
+                        SymbolKind::Field(_, _) => todo!(),
+                        SymbolKind::NativeType(_, _) => todo!(),
+                        SymbolKind::Native(_, _, _, _) => todo!(),
+                    }
+                }
+                self.variables[&symbol_id]
+            }
+            AssignmentTarget::Indirect(_) => todo!(),
+        };
+
+        let val = self.gen_expression(hir, expr).unwrap();
+
+        self.builder.build_store(ptr, val).unwrap();
+
+        Value::None
     }
 
     fn gen_if(
@@ -351,20 +394,24 @@ impl<'ctx> Codegen<'ctx> {
         hir: &ResolvedHir,
         ident_ref: &ResolvedIdentifierRef,
     ) -> BasicValueEnum<'ctx> {
-        match &hir.symbols[ident_ref.resolved_symbol_id()].kind {
-            SymbolKind::NotFound => todo!(),
-            SymbolKind::Let(_) => self
+        if self.variables.contains_key(&ident_ref.resolved_symbol_id()) {
+            return self
                 .builder
                 .build_load(
                     self.llvm_type(hir, hir.symbols[ident_ref.resolved_symbol_id()].type_id),
                     self.variables[&ident_ref.resolved_symbol_id()],
                     &format!(
-                        "{}#sym{}#",
+                        "{}#local#sym{}#",
                         &hir.identifiers[ident_ref.ident.id],
                         ident_ref.resolved_symbol_id()
                     ),
                 )
-                .unwrap(),
+                .unwrap();
+        };
+
+        match &hir.symbols[ident_ref.resolved_symbol_id()].kind {
+            SymbolKind::NotFound => todo!(),
+            SymbolKind::Let(_) => unreachable!("handled in the if variable.contains_key(..) above"),
             SymbolKind::LetFn(_, _, _) => todo!(),
             SymbolKind::Parameter(_, index) => self
                 .current_function()
@@ -438,6 +485,17 @@ impl<'ctx> Codegen<'ctx> {
             Type::Void => unreachable!(),
             Type::None => todo!(),
         }
+    }
+
+    fn gen_alloca(&mut self, t: BasicTypeEnum<'ctx>, identifier: &str) -> PointerValue<'ctx> {
+        let builder = self.context.create_builder();
+        let entry_block = self.current_function().get_first_basic_block().unwrap();
+        match entry_block.get_first_instruction() {
+            None => builder.position_at_end(entry_block),
+            Some(first_instruction) => builder.position_before(&first_instruction),
+        };
+
+        builder.build_alloca(t, identifier).unwrap()
     }
 }
 
@@ -765,6 +823,26 @@ mod tests {
         "let f(l: boolean, r: boolean): boolean { l != r; }"
     );
     gen!(print, "let a(n: number) { print(n); }");
+
+    gen!(
+        assign_parameter,
+        r#"
+        let f(n: number): number = {
+            n = n + 1;
+            ret n;
+        }
+        "#
+    );
+    gen!(
+        assign_local,
+        r#"
+        let f(n: number): number = {
+            let m = n;
+            m = m + 1;
+            ret m;
+        }
+        "#
+    );
 
     gen!(
         fibo_rec,

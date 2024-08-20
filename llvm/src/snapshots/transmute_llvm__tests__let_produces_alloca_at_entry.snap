@@ -9,21 +9,21 @@ declare void @print(i64)
 
 define i64 @f(i64 %"n#sym19#") {
 entry:
-  %"m#sym21#" = alloca i64, align 8
-  %"m#sym20#" = alloca i64, align 8
+  %"m#local#sym21#" = alloca i64, align 8
+  %"m#local#sym20#" = alloca i64, align 8
   %"eq#" = icmp eq i64 %"n#sym19#", 42
   br i1 %"eq#", label %true_branch, label %false_branch
 
 true_branch:                                      ; preds = %entry
-  store i64 0, ptr %"m#sym20#", align 4
-  %"m#sym20#1" = load i64, ptr %"m#sym20#", align 4
-  %"add#" = add i64 %"m#sym20#1", 1
+  store i64 0, ptr %"m#local#sym20#", align 4
+  %"m#local#sym20#1" = load i64, ptr %"m#local#sym20#", align 4
+  %"add#" = add i64 %"m#local#sym20#1", 1
   ret i64 %"add#"
 
 false_branch:                                     ; preds = %entry
-  store i64 0, ptr %"m#sym21#", align 4
-  %"m#sym21#2" = load i64, ptr %"m#sym21#", align 4
-  %"sub#" = sub i64 %"m#sym21#2", 1
+  store i64 0, ptr %"m#local#sym21#", align 4
+  %"m#local#sym21#2" = load i64, ptr %"m#local#sym21#", align 4
+  %"sub#" = sub i64 %"m#local#sym21#2", 1
   ret i64 %"sub#"
 
 end_if:                                           ; No predecessors!

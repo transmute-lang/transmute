@@ -9,7 +9,7 @@ declare void @print(i64)
 
 define i1 @f(i64 %"n#sym19#") {
 entry:
-  %"m#sym20#" = alloca i64, align 8
+  %"m#local#sym20#" = alloca i64, align 8
   %"eq#" = icmp eq i64 %"n#sym19#", 42
   br i1 %"eq#", label %true_branch, label %false_branch
 
@@ -21,8 +21,8 @@ false_branch:                                     ; preds = %entry
   br label %end_if
 
 end_if:                                           ; preds = %false_branch
-  store i64 %"sub#", ptr %"m#sym20#", align 4
-  %"m#sym20#1" = load i64, ptr %"m#sym20#", align 4
-  %"eq#2" = icmp eq i64 %"m#sym20#1", 42
+  store i64 %"sub#", ptr %"m#local#sym20#", align 4
+  %"m#local#sym20#1" = load i64, ptr %"m#local#sym20#", align 4
+  %"eq#2" = icmp eq i64 %"m#local#sym20#1", 42
   ret i1 %"eq#2"
 }
