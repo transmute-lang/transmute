@@ -126,12 +126,12 @@ impl<'ctx> Codegen<'ctx> {
         match self.gen_expression(hir, expr) {
             Value::Never => panic!(),
             Value::None => {
-                // fixme a ret always has an expression, otherwise, no ret...
-                self.builder.build_return(None).unwrap()
+                // this is used for implicit ret, where we can return nothing.
+                self.builder.build_return(None).unwrap();
             }
             Value::Some(BasicValueEnum::ArrayValue(_)) => todo!(),
             Value::Some(BasicValueEnum::IntValue(val)) => {
-                self.builder.build_return(Some(&val)).unwrap()
+                self.builder.build_return(Some(&val)).unwrap();
             }
             Value::Some(BasicValueEnum::FloatValue(_)) => todo!(),
             Value::Some(BasicValueEnum::PointerValue(_)) => todo!(),
@@ -153,7 +153,6 @@ impl<'ctx> Codegen<'ctx> {
             None => builder.position_at_end(entry_block),
             Some(first_instruction) => builder.position_before(&first_instruction),
         };
-
 
         let symbol = &hir.symbols[ident.resolved_symbol_id()];
         let llvm_type = self.llvm_type(hir, symbol.type_id);
@@ -222,7 +221,7 @@ impl<'ctx> Codegen<'ctx> {
     }
 
     fn gen_expression(&mut self, hir: &ResolvedHir, expr: &ResolvedExpression) -> Value<'ctx> {
-        match &expr.kind {
+        let value = match &expr.kind {
             ExpressionKind::Assignment(_, _) => todo!(),
             ExpressionKind::If(cond_expr_id, true_expr_id, false_expr_id) => self.gen_if(
                 hir,
@@ -258,7 +257,18 @@ impl<'ctx> Codegen<'ctx> {
                 value
             }
             ExpressionKind::StructInstantiation(_, _) => todo!(),
+        };
+
+        #[cfg(debug_assertions)]
+        {
+            let t = &hir.types[expr.resolved_type_id()];
+            debug_assert!(
+                t != &Type::None && value != Value::Never
+                    || t == &Type::None && value == Value::Never
+            );
         }
+
+        value
     }
 
     fn gen_if(
@@ -296,15 +306,19 @@ impl<'ctx> Codegen<'ctx> {
             self.builder.build_unconditional_branch(end_block).unwrap();
         }
 
-        let else_value = if false_branch.is_some() {
-            self.builder.position_at_end(else_block);
-            let value = self.gen_expression(hir, false_branch.unwrap());
-            if !matches!(value, Value::Never) {
-                self.builder.build_unconditional_branch(end_block).unwrap();
+        let else_value = match false_branch {
+            None => Value::None,
+            Some(false_branch) => {
+                self.builder.position_at_end(else_block);
+
+                let value = self.gen_expression(hir, false_branch);
+
+                if !matches!(value, Value::Never) {
+                    self.builder.build_unconditional_branch(end_block).unwrap();
+                }
+
+                value
             }
-            value
-        } else {
-            Value::None
         };
 
         self.builder.position_at_end(end_block);
@@ -427,6 +441,7 @@ impl<'ctx> Codegen<'ctx> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Value<'ctx> {
     Never,
     None,
