@@ -296,7 +296,7 @@ impl<'ctx> Codegen<'ctx> {
                                     hir.identifiers[hir.identifier_refs[*ident_ref_id].ident.id],
                                     symbol_id
                                 ),
-                                Some(param)
+                                Some(param),
                             );
                             self.variables.insert(symbol_id, ptr);
                         }
@@ -530,7 +530,12 @@ impl<'ctx> Codegen<'ctx> {
     }
 
     /// Generates an `alloca` instruction, optionally storing a value inside, if provided.
-    fn gen_alloca(&mut self, t: BasicTypeEnum<'ctx>, identifier: &str, val: Option<BasicValueEnum<'ctx>>) -> PointerValue<'ctx> {
+    fn gen_alloca(
+        &mut self,
+        t: BasicTypeEnum<'ctx>,
+        identifier: &str,
+        val: Option<BasicValueEnum<'ctx>>,
+    ) -> PointerValue<'ctx> {
         let builder = self.context.create_builder();
         let entry_block = self.current_function().get_first_basic_block().unwrap();
         match entry_block.get_first_instruction() {
@@ -777,7 +782,7 @@ impl LlvmImpl for NativeFnKind {
                 Value::Some(
                     codegen
                         .builder
-                        .build_int_compare(IntPredicate::SGT, lhs, rhs, "le#")
+                        .build_int_compare(IntPredicate::SLE, lhs, rhs, "le#")
                         .unwrap()
                         .into(),
                 )

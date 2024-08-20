@@ -9,7 +9,7 @@ declare void @print(i64)
 
 define i64 @f(i64 %"n#sym19#") {
 entry:
-  %"le#" = icmp sgt i64 %"n#sym19#", 1
+  %"le#" = icmp sle i64 %"n#sym19#", 1
   br i1 %"le#", label %true_branch, label %end_if
 
 true_branch:                                      ; preds = %entry
