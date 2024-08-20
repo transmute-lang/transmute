@@ -4,11 +4,14 @@ use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
-use inkwell::targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine};
+use inkwell::targets::{
+    CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine,
+};
 use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum, IntType, VoidType};
 use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue};
 use inkwell::{IntPredicate, OptimizationLevel};
 use std::collections::HashMap;
+use std::fs;
 use std::path::PathBuf;
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, SymbolId, TypeId};
@@ -92,6 +95,10 @@ impl<'ctx> Codegen<'ctx> {
         ];
 
         self.module
+            .set_data_layout(&target_machine.get_target_data().get_data_layout());
+        self.module.set_triple(&target_triple);
+
+        self.module
             .run_passes(
                 passes.join(",").as_str(),
                 &target_machine,
@@ -99,12 +106,25 @@ impl<'ctx> Codegen<'ctx> {
             )
             .unwrap();
 
+        let path = fs::canonicalize(&PathBuf::from(".".to_string()))
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("exp");
+
+        let ll_path = path.clone().join("assembly.ll");
+        self.module.print_to_file(ll_path).unwrap();
+
+        let asm_path = path.clone().join("assembly.s");
+        println!("Writing assembly to {}", asm_path.display());
         target_machine
-            .write_to_file(
-                &self.module,
-                FileType::Assembly,
-                &PathBuf::from("..".to_string()).join("target").join("assembly"),
-            )
+            .write_to_file(&self.module, FileType::Assembly, &asm_path)
+            .unwrap();
+
+        let object_path = path.clone().join("object.o");
+        println!("Writing object to {}", asm_path.display());
+        target_machine
+            .write_to_file(&self.module, FileType::Object, &object_path)
             .unwrap()
     }
 
