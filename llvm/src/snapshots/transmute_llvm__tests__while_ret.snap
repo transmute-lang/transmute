@@ -1,0 +1,23 @@
+---
+source: llvm/src/lib.rs
+expression: res
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+declare void @print(i64)
+
+define i64 @f(i64 %"n#sym19#") {
+entry:
+  br label %cond
+
+cond:                                             ; preds = %entry
+  %"ne#" = icmp ne i64 %"n#sym19#", 42
+  br i1 %"ne#", label %body, label %end_while
+
+body:                                             ; preds = %cond
+  ret i64 %"n#sym19#"
+
+end_while:                                        ; preds = %cond
+  unreachable
+}

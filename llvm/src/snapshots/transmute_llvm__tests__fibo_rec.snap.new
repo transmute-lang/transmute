@@ -1,0 +1,27 @@
+---
+source: llvm/src/lib.rs
+assertion_line: 895
+expression: res
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+declare void @print(i64)
+
+define i64 @f(i64 %"n#sym19#") {
+entry:
+  %"le#" = icmp sgt i64 %"n#sym19#", 1
+  br i1 %"le#", label %common.ret, label %end_if
+
+common.ret:                                       ; preds = %entry, %end_if
+  %common.ret.op = phi i64 [ %"add#", %end_if ], [ %"n#sym19#", %entry ]
+  ret i64 %common.ret.op
+
+end_if:                                           ; preds = %entry
+  %"sub#" = add i64 %"n#sym19#", -1
+  %"f#res#" = call i64 @f(i64 %"sub#")
+  %"sub#1" = add i64 %"n#sym19#", -2
+  %"f#res#2" = call i64 @f(i64 %"sub#1")
+  %"add#" = add i64 %"f#res#2", %"f#res#"
+  br label %common.ret
+}

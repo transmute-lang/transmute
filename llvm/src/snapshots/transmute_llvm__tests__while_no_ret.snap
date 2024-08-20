@@ -1,0 +1,24 @@
+---
+source: llvm/src/lib.rs
+expression: res
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+declare void @print(i64)
+
+define i1 @f(i64 %"n#sym19#") {
+entry:
+  br label %cond
+
+cond:                                             ; preds = %body, %entry
+  %"lt#" = icmp slt i64 %"n#sym19#", 42
+  br i1 %"lt#", label %body, label %end_while
+
+body:                                             ; preds = %cond
+  %"add#" = add i64 %"n#sym19#", 1
+  br label %cond
+
+end_while:                                        ; preds = %cond
+  ret i1 true
+}

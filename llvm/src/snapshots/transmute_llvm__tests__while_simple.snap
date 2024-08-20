@@ -1,0 +1,22 @@
+---
+source: llvm/src/lib.rs
+expression: res
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+declare void @print(i64)
+
+define void @f(i64 %"n#sym19#") {
+entry:
+  br label %cond
+
+cond:                                             ; preds = %body, %entry
+  br i1 true, label %body, label %end_while
+
+body:                                             ; preds = %cond
+  br label %cond
+
+end_while:                                        ; preds = %cond
+  ret void
+}

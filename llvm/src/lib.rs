@@ -4,11 +4,12 @@ use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
-use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetMachine};
+use inkwell::targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine};
 use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum, IntType, VoidType};
 use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue};
 use inkwell::{IntPredicate, OptimizationLevel};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, SymbolId, TypeId};
 use transmute_hir::expression::ExpressionKind;
@@ -98,13 +99,13 @@ impl<'ctx> Codegen<'ctx> {
             )
             .unwrap();
 
-        // target_machine
-        //     .write_to_file(
-        //         &self.module,
-        //         FileType::Assembly,
-        //         &PathBuf::from(".".to_string()).join("assembly"),
-        //     )
-        //     .unwrap()
+        target_machine
+            .write_to_file(
+                &self.module,
+                FileType::Assembly,
+                &PathBuf::from("..".to_string()).join("target").join("assembly"),
+            )
+            .unwrap()
     }
 
     fn gen_statement(&mut self, hir: &ResolvedHir, stmt: &ResolvedStatement) -> Value<'ctx> {
@@ -154,6 +155,7 @@ impl<'ctx> Codegen<'ctx> {
         let ptr = self.gen_alloca(
             llvm_type,
             &format!("{}#local#sym{}#", &hir.identifiers[ident.id], symbol.id),
+            None,
         );
         self.variables.insert(symbol.id, ptr);
 
@@ -240,7 +242,9 @@ impl<'ctx> Codegen<'ctx> {
             ExpressionKind::FunctionCall(ident_ref_id, params) => {
                 self.gen_function_call(hir, &hir.identifier_refs[*ident_ref_id], params)
             }
-            ExpressionKind::While(_, _) => todo!(),
+            ExpressionKind::While(cond, body) => {
+                self.gen_while(hir, &hir.expressions[*cond], &hir.expressions[*body])
+            }
             ExpressionKind::Block(stmt_ids) => {
                 let mut value = Value::None;
                 for stmt_id in stmt_ids {
@@ -292,8 +296,8 @@ impl<'ctx> Codegen<'ctx> {
                                     hir.identifiers[hir.identifier_refs[*ident_ref_id].ident.id],
                                     symbol_id
                                 ),
+                                Some(param)
                             );
-                            self.builder.build_store(ptr, param).unwrap();
                             self.variables.insert(symbol_id, ptr);
                         }
                         SymbolKind::Struct(_) => todo!(),
@@ -467,6 +471,44 @@ impl<'ctx> Codegen<'ctx> {
             .into()
     }
 
+    fn gen_while(
+        &mut self,
+        hir: &ResolvedHir,
+        cond: &ResolvedExpression,
+        body: &ResolvedExpression,
+    ) -> Value<'ctx> {
+        let cond_block = self
+            .context
+            .append_basic_block(self.current_function(), "cond");
+        let body_block = self
+            .context
+            .append_basic_block(self.current_function(), "body");
+        let end_block = self
+            .context
+            .append_basic_block(self.current_function(), "end_while");
+
+        self.builder.build_unconditional_branch(cond_block).unwrap();
+
+        self.builder.position_at_end(cond_block);
+        let cond = self.gen_expression(hir, cond).unwrap().into_int_value();
+        self.builder
+            .build_conditional_branch(cond, body_block, end_block)
+            .unwrap();
+
+        self.builder.position_at_end(body_block);
+        let value = self.gen_expression(hir, body);
+        if !matches!(value, Value::Never) {
+            self.builder.build_unconditional_branch(cond_block).unwrap();
+        }
+
+        self.builder.position_at_end(end_block);
+        if matches!(value, Value::Never) {
+            self.builder.build_unreachable().unwrap();
+        }
+
+        value
+    }
+
     fn current_function(&self) -> FunctionValue<'ctx> {
         self.builder
             .get_insert_block()
@@ -487,7 +529,8 @@ impl<'ctx> Codegen<'ctx> {
         }
     }
 
-    fn gen_alloca(&mut self, t: BasicTypeEnum<'ctx>, identifier: &str) -> PointerValue<'ctx> {
+    /// Generates an `alloca` instruction, optionally storing a value inside, if provided.
+    fn gen_alloca(&mut self, t: BasicTypeEnum<'ctx>, identifier: &str, val: Option<BasicValueEnum<'ctx>>) -> PointerValue<'ctx> {
         let builder = self.context.create_builder();
         let entry_block = self.current_function().get_first_basic_block().unwrap();
         match entry_block.get_first_instruction() {
@@ -495,7 +538,13 @@ impl<'ctx> Codegen<'ctx> {
             Some(first_instruction) => builder.position_before(&first_instruction),
         };
 
-        builder.build_alloca(t, identifier).unwrap()
+        let ptr = builder.build_alloca(t, identifier).unwrap();
+
+        if let Some(val) = val {
+            builder.build_store(ptr, val).unwrap();
+        }
+
+        ptr
     }
 }
 
@@ -855,6 +904,28 @@ mod tests {
         }
         "#
     );
+    gen!(
+        fibo_iter,
+        r#"
+        let f(n: number): number = {
+            if n == 0 { ret 0; }
+            if n == 1 { ret 1; }
+
+            let prev_prev = 0;
+            let prev = 1;
+            let current = 0;
+
+            while n > 1 {
+                current = prev_prev + prev;
+                prev_prev = prev;
+                prev = current;
+                n = n - 1;
+            }
+
+            current;
+        }
+        "#
+    );
 
     gen!(
         let_produces_alloca_at_entry,
@@ -917,6 +988,49 @@ mod tests {
                 n - 1;
             };
             ret m == 42;
+        }
+        "#
+    );
+
+    gen!(
+        while_simple,
+        r#"
+        let f(n: number) = {
+            while true {
+            }
+        }
+        "#
+    );
+    gen!(
+        while_no_ret,
+        r#"
+        let f(n: number): boolean = {
+            while n < 42 {
+                n + 1;
+            }
+            ret true;
+        }
+        "#
+    );
+    gen!(
+        while_ret,
+        r#"
+        let f(n: number): number = {
+            while n != 42 {
+                ret n;
+            }
+            ret 42;
+        }
+        "#
+    );
+    gen!(
+        while_value,
+        r#"
+        let f(n: number): number = {
+            while n < 42 {
+                n = n + 1;
+            }
+            ret n;
         }
         "#
     );
