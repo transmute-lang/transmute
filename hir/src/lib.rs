@@ -41,6 +41,10 @@ pub type ResolvedIdentifierRef = IdentifierRef<Bound>;
 pub type ResolvedParameter = Parameter<Typed, Bound>;
 pub type ResolvedReturn = Return<Typed>;
 
+pub fn resolve(ast: Ast) -> Result<ResolvedHir, Diagnostics> {
+    UnresolvedHir::from(ast).resolve(Natives::default())
+}
+
 #[derive(Debug, PartialEq)]
 pub struct Hir<T, B>
 where

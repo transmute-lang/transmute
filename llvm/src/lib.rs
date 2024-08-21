@@ -5,7 +5,7 @@ use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::{
-    CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine,
+    CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine, TargetTriple,
 };
 use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum, IntType, VoidType};
 use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue};
@@ -13,6 +13,7 @@ use inkwell::{IntPredicate, OptimizationLevel};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, SymbolId, TypeId};
 use transmute_hir::expression::ExpressionKind;
@@ -26,7 +27,85 @@ use transmute_hir::{
     ResolvedReturn, ResolvedStatement,
 };
 
-struct Codegen<'ctx> {
+pub struct LlvmIrGen {
+    context: Context,
+    target_triple: TargetTriple,
+}
+
+impl LlvmIrGen {
+    pub fn gen(&self, hir: &ResolvedHir) -> Result<LlvmIr, Diagnostics> {
+        Target::initialize_all(&InitializationConfig::default());
+        let target = Target::from_triple(&self.target_triple).unwrap();
+        let target_machine = target
+            .create_target_machine(
+                &self.target_triple,
+                "generic",
+                "",
+                OptimizationLevel::None,
+                RelocMode::PIC,
+                CodeModel::Default,
+            )
+            .unwrap();
+
+        Codegen::new(&self.context, &self.target_triple, &target_machine)
+            .gen(hir)
+            .map(|module| LlvmIr {
+                module,
+                target_machine,
+            })
+    }
+}
+
+impl Default for LlvmIrGen {
+    fn default() -> Self {
+        Self {
+            context: Context::create(),
+            target_triple: TargetMachine::get_default_triple(),
+        }
+    }
+}
+
+pub struct LlvmIr<'ctx> {
+    module: Module<'ctx>,
+    target_machine: TargetMachine,
+}
+
+impl<'ctx> LlvmIr<'ctx> {
+    // todo error handling
+    pub fn build_bin<P: Into<PathBuf>>(&self, rt: &[u8], path: P) -> Result<(), Diagnostics> {
+        let path = path.into();
+
+        let main_object_path = path.parent().unwrap().with_file_name("main.0");
+        fs::write(&main_object_path, rt).unwrap();
+
+        let tm_object_path = path.clone().with_extension("o");
+        self.target_machine
+            .write_to_file(&self.module, FileType::Object, &tm_object_path)
+            .unwrap();
+
+        match Command::new("clang")
+            .arg(&tm_object_path)
+            .arg(&main_object_path)
+            .arg("-o")
+            .arg(path)
+            .output()
+        {
+            Ok(_) => {
+                println!("Done");
+            }
+            Err(err) => {
+                eprintln!("{err}");
+            }
+        }
+
+        fs::remove_file(main_object_path).unwrap();
+        fs::remove_file(tm_object_path).unwrap();
+
+        Ok(())
+    }
+}
+
+struct Codegen<'ctx, 't> {
     context: &'ctx Context,
     module: Module<'ctx>,
     builder: Builder<'ctx>,
@@ -35,10 +114,17 @@ struct Codegen<'ctx> {
     void_type: VoidType<'ctx>,
 
     variables: HashMap<SymbolId, PointerValue<'ctx>>,
+
+    target_triple: &'t TargetTriple,
+    target_machine: &'t TargetMachine,
 }
 
-impl<'ctx> Codegen<'ctx> {
-    pub fn new(context: &'ctx Context) -> Self {
+impl<'ctx, 't> Codegen<'ctx, 't> {
+    pub fn new(
+        context: &'ctx Context,
+        target_triple: &'t TargetTriple,
+        target_machine: &'t TargetMachine,
+    ) -> Self {
         let module = context.create_module("main");
         let builder = context.create_builder();
 
@@ -57,6 +143,8 @@ impl<'ctx> Codegen<'ctx> {
             i64_type,
             void_type,
             variables: HashMap::default(),
+            target_triple,
+            target_machine,
         }
     }
 
@@ -73,19 +161,6 @@ impl<'ctx> Codegen<'ctx> {
     }
 
     fn optimize(&self) {
-        Target::initialize_all(&InitializationConfig::default());
-        let target_triple = TargetMachine::get_default_triple();
-        let target = Target::from_triple(&target_triple).unwrap();
-        let target_machine = target
-            .create_target_machine(
-                &target_triple,
-                "generic",
-                "",
-                OptimizationLevel::None,
-                RelocMode::PIC,
-                CodeModel::Default,
-            )
-            .unwrap();
         let passes: &[&str] = &[
             "instcombine",
             "reassociate",
@@ -95,37 +170,37 @@ impl<'ctx> Codegen<'ctx> {
         ];
 
         self.module
-            .set_data_layout(&target_machine.get_target_data().get_data_layout());
-        self.module.set_triple(&target_triple);
+            .set_data_layout(&self.target_machine.get_target_data().get_data_layout());
+        self.module.set_triple(self.target_triple);
 
         self.module
             .run_passes(
                 passes.join(",").as_str(),
-                &target_machine,
+                self.target_machine,
                 PassBuilderOptions::create(),
             )
             .unwrap();
 
-        let path = fs::canonicalize(&PathBuf::from(".".to_string()))
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join("exp");
-
-        let ll_path = path.clone().join("assembly.ll");
-        self.module.print_to_file(ll_path).unwrap();
-
-        let asm_path = path.clone().join("assembly.s");
-        println!("Writing assembly to {}", asm_path.display());
-        target_machine
-            .write_to_file(&self.module, FileType::Assembly, &asm_path)
-            .unwrap();
-
-        let object_path = path.clone().join("object.o");
-        println!("Writing object to {}", asm_path.display());
-        target_machine
-            .write_to_file(&self.module, FileType::Object, &object_path)
-            .unwrap()
+        // let path = fs::canonicalize(&PathBuf::from(".".to_string()))
+        //     .unwrap()
+        //     .parent()
+        //     .unwrap()
+        //     .join("exp");
+        //
+        // let ll_path = path.clone().join("assembly.ll");
+        // self.module.print_to_file(ll_path).unwrap();
+        //
+        // let asm_path = path.clone().join("assembly.s");
+        // println!("Writing assembly to {}", asm_path.display());
+        // target_machine
+        //     .write_to_file(&self.module, FileType::Assembly, &asm_path)
+        //     .unwrap();
+        //
+        // let object_path = path.clone().join("object.o");
+        // println!("Writing object to {}", asm_path.display());
+        // target_machine
+        //     .write_to_file(&self.module, FileType::Object, &object_path)
+        //     .unwrap()
     }
 
     fn gen_statement(&mut self, hir: &ResolvedHir, stmt: &ResolvedStatement) -> Value<'ctx> {
@@ -604,7 +679,7 @@ trait LlvmImpl {
     fn gen_instr<'ctx>(
         &self,
         hir: &ResolvedHir,
-        codegen: &mut Codegen<'ctx>,
+        codegen: &mut Codegen<'ctx, '_>,
         params: &[ExprId],
     ) -> Value<'ctx>;
 }
@@ -632,7 +707,7 @@ impl LlvmImpl for NativeFnKind {
     fn gen_instr<'ctx>(
         &self,
         hir: &ResolvedHir,
-        codegen: &mut Codegen<'ctx>,
+        codegen: &mut Codegen<'ctx, '_>,
         params: &[ExprId],
     ) -> Value<'ctx> {
         match self {

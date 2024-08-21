@@ -1,6 +1,9 @@
 use crate::expression::Expression;
 use crate::identifier_ref::IdentifierRef;
+use crate::lexer::Lexer;
+use crate::parser::Parser;
 use crate::statement::Statement;
+use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use transmute_core::vec_map::VecMap;
 
@@ -13,6 +16,10 @@ pub mod operators;
 pub mod parser;
 pub mod pretty_print;
 pub mod statement;
+
+pub fn parse(input: &str) -> Result<Ast, Diagnostics> {
+    Parser::new(Lexer::new(input)).parse()
+}
 
 #[derive(Debug, PartialEq)]
 pub struct Ast {

@@ -6,4 +6,8 @@ members = [
     "hir",
     "interpreter",
     "rt/rust",
-    "llvm"]
+    "rt/c",
+    "llvm",
+    "compiler"]
+
+default-members = ["compiler"]
