@@ -925,6 +925,8 @@ impl LlvmImpl for NativeFnKind {
 mod tests {
     use crate::Codegen;
     use inkwell::context::Context;
+    use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetMachine};
+    use inkwell::OptimizationLevel;
     use insta::assert_snapshot;
     use transmute_ast::lexer::Lexer;
     use transmute_ast::parser::Parser;
@@ -938,8 +940,23 @@ mod tests {
                 let ast = Parser::new(Lexer::new($src)).parse().unwrap();
                 let hir = UnresolvedHir::from(ast).resolve(Natives::new()).unwrap();
 
+                Target::initialize_all(&InitializationConfig::default());
+
+                let target_triple = TargetMachine::get_default_triple();
+                let target = Target::from_triple(&target_triple).unwrap();
+                let target_machine = target
+                    .create_target_machine(
+                        &target_triple,
+                        "generic",
+                        "",
+                        OptimizationLevel::None,
+                        RelocMode::PIC,
+                        CodeModel::Default,
+                    )
+                    .unwrap();
+
                 let context = Context::create();
-                let codegen = Codegen::new(&context);
+                let codegen = Codegen::new(&context, &target_triple, &target_machine);
                 let res = codegen.gen(&hir).unwrap().print_to_string().to_string();
 
                 assert_snapshot!(res);
