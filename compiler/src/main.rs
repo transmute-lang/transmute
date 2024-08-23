@@ -36,6 +36,6 @@ fn main() {
         }
     };
 
-    ir.build_bin(transmute_crt::get_main(), args.output())
+    ir.build_bin(transmute_crt::get_crt(), args.output())
         .unwrap();
 }

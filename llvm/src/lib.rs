@@ -75,8 +75,8 @@ impl<'ctx> LlvmIr<'ctx> {
     pub fn build_bin<P: Into<PathBuf>>(&self, rt: &[u8], path: P) -> Result<(), Diagnostics> {
         let path = path.into();
 
-        let main_object_path = path.parent().unwrap().with_file_name("main.0");
-        fs::write(&main_object_path, rt).unwrap();
+        let crt_bitcode_path = path.with_file_name("crt.bc");
+        fs::write(&crt_bitcode_path, rt).unwrap();
 
         let tm_object_path = path.clone().with_extension("o");
         self.target_machine
@@ -85,7 +85,7 @@ impl<'ctx> LlvmIr<'ctx> {
 
         match Command::new("clang")
             .arg(&tm_object_path)
-            .arg(&main_object_path)
+            .arg(&crt_bitcode_path)
             .arg("-o")
             .arg(path)
             .output()
@@ -98,7 +98,7 @@ impl<'ctx> LlvmIr<'ctx> {
             }
         }
 
-        fs::remove_file(main_object_path).unwrap();
+        fs::remove_file(crt_bitcode_path).unwrap();
         fs::remove_file(tm_object_path).unwrap();
 
         Ok(())
