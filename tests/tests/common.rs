@@ -1,6 +1,7 @@
 use std::process::Command;
 
 pub fn compile(program: &str) -> Command {
+    // todo should have a lib of compiler that can output binary
     let output = Command::new("cargo")
         .current_dir("..")
         .arg("run")

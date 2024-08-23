@@ -250,9 +250,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let ptr = self.gen_alloca(
             llvm_type,
             &format!("{}#local#sym{}#", &hir.identifiers[ident.id], symbol.id),
+            symbol.id,
             None,
         );
-        self.variables.insert(symbol.id, ptr);
 
         let val = self.gen_expression(hir, expr).unwrap();
         self.builder.build_store(ptr, val).unwrap();
@@ -287,11 +287,12 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let function = self
             .module
             .add_function(&hir.identifiers[ident.id], fn_type, None);
+        let entry = self.context.append_basic_block(function, "entry");
+        self.builder.position_at_end(entry);
 
         for (i, param) in function.get_param_iter().enumerate() {
-            let name = &hir.identifiers[params[i].identifier.id];
             // todo name may be made of the form {name}#param#sym{sid}
-            let name = format!("{}#sym{}#", name, params[i].resolved_symobl_id());
+            let name = format!("{}#sym{}#", &hir.identifiers[params[i].identifier.id], params[i].resolved_symobl_id());
             match param {
                 BasicValueEnum::ArrayValue(_) => todo!(),
                 BasicValueEnum::IntValue(val) => val.set_name(&name),
@@ -300,10 +301,14 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 BasicValueEnum::StructValue(_) => todo!(),
                 BasicValueEnum::VectorValue(_) => todo!(),
             }
+            // todo remove once we know what params are muted in function
+            self.gen_alloca(
+                param.get_type(),
+                &format!("{}#local#sym{}#", &hir.identifiers[params[i].identifier.id], params[i].resolved_symobl_id()),
+                params[i].resolved_symobl_id(),
+                Some(param)
+            );
         }
-
-        let entry = self.context.append_basic_block(function, "entry");
-        self.builder.position_at_end(entry);
 
         self.gen_expression(hir, &hir.expressions[expr_id]);
 
@@ -384,16 +389,16 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                         SymbolKind::Parameter(_, index) => {
                             let param =
                                 self.current_function().get_nth_param(index as u32).unwrap();
-                            let ptr = self.gen_alloca(
+                            self.gen_alloca(
                                 param.get_type(),
                                 &format!(
                                     "{}#local#sym{}#",
                                     hir.identifiers[hir.identifier_refs[*ident_ref_id].ident.id],
                                     symbol_id
                                 ),
+                                symbol_id,
                                 Some(param),
                             );
-                            self.variables.insert(symbol_id, ptr);
                         }
                         SymbolKind::Struct(_) => todo!(),
                         SymbolKind::Field(_, _) => todo!(),
@@ -629,6 +634,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         &mut self,
         t: BasicTypeEnum<'ctx>,
         identifier: &str,
+        symbol_id: SymbolId,
         val: Option<BasicValueEnum<'ctx>>,
     ) -> PointerValue<'ctx> {
         let builder = self.context.create_builder();
@@ -643,6 +649,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         if let Some(val) = val {
             builder.build_store(ptr, val).unwrap();
         }
+
+        self.variables.insert(symbol_id, ptr);
 
         ptr
     }

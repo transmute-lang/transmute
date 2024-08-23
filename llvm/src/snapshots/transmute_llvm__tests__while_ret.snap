@@ -9,14 +9,18 @@ declare void @print(i64)
 
 define i64 @f(i64 %"n#sym19#") {
 entry:
+  %"n#local#sym19#" = alloca i64, align 8
+  store i64 %"n#sym19#", ptr %"n#local#sym19#", align 4
   br label %cond
 
 cond:                                             ; preds = %entry
-  %"ne#" = icmp ne i64 %"n#sym19#", 42
+  %"n#local#sym19#1" = load i64, ptr %"n#local#sym19#", align 4
+  %"ne#" = icmp ne i64 %"n#local#sym19#1", 42
   br i1 %"ne#", label %body, label %end_while
 
 body:                                             ; preds = %cond
-  ret i64 %"n#sym19#"
+  %"n#local#sym19#2" = load i64, ptr %"n#local#sym19#", align 4
+  ret i64 %"n#local#sym19#2"
 
 end_while:                                        ; preds = %cond
   unreachable
