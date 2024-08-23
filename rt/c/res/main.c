@@ -15,4 +15,6 @@ int main(int argc, char** argv) {
     for (int64_t i = 0; i < n; i++) {
         printf("f(%li) = %li\n", i, f(i));
     }
+
+    return 0;
 }

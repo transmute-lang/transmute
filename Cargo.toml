@@ -8,6 +8,8 @@ members = [
     "rt/rust",
     "rt/c",
     "llvm",
-    "compiler"]
+    "compiler",
+    "tests"]
+
 
 default-members = ["compiler"]
