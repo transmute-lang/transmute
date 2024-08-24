@@ -87,11 +87,11 @@ impl<'ctx> LlvmIr<'ctx> {
             .arg(&tm_object_path)
             .arg(&crt_bitcode_path)
             .arg("-o")
-            .arg(path)
+            .arg(&path)
             .output()
         {
             Ok(_) => {
-                println!("Done");
+                println!("Wrote executable to {}", path.display());
             }
             Err(err) => {
                 eprintln!("{err}");

@@ -1,5 +1,5 @@
 ---
-source: tests/tests/fibo_iter.rs
+source: compiler/tests/fibo_rec.rs
 expression: "String::from_utf8(output.stdout).unwrap()"
 ---
 f(0) = 0
