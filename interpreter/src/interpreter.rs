@@ -96,7 +96,7 @@ impl<'a> Interpreter<'a> {
                 let values = self.heap[val.value_ref.expect("expr exists").0].as_struct();
 
                 match &self.hir.symbol_by_ident_ref_id(*ident_ref_id).kind {
-                    SymbolKind::Field(_, index) => Val::of(values[*index]),
+                    SymbolKind::Field(_, _, index) => Val::of(values[*index]),
                     _ => panic!(),
                 }
             }
@@ -116,7 +116,7 @@ impl<'a> Interpreter<'a> {
 
                         let symbol = self.hir.symbol_by_ident_ref_id(*ident_ref_id);
                         match &symbol.kind {
-                            SymbolKind::Field(_, index) => (val, index),
+                            SymbolKind::Field(_, _, index) => (val, index),
                             _ => panic!("field expected"),
                         }
                     }
@@ -190,14 +190,14 @@ impl<'a> Interpreter<'a> {
 
     fn visit_function_call(&mut self, ident: &IdentRefId, arguments: &[ExprId]) -> Val {
         match &self.hir.symbol_by_ident_ref_id(*ident).kind {
-            SymbolKind::Let(_)
-            | SymbolKind::Parameter(_, _)
-            | SymbolKind::Field(_, _)
-            | SymbolKind::Struct(_)
+            SymbolKind::Let(_, _)
+            | SymbolKind::Parameter(_, _, _)
+            | SymbolKind::Field(_, _, _)
+            | SymbolKind::Struct(_, _)
             | SymbolKind::NativeType(_, _) => {
                 panic!("let fn expected")
             }
-            SymbolKind::LetFn(stmt, _, _) => {
+            SymbolKind::LetFn(_, stmt, _, _) => {
                 let stmt = &self.hir.statements[*stmt];
                 match &stmt.kind {
                     StatementKind::LetFn(_, parameters, _, expr) => {

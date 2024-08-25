@@ -468,9 +468,9 @@ impl<'a> HtmlWriter<'a> {
 
         let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
             SymbolKind::NotFound => panic!("symbol was not resolved"),
-            SymbolKind::Let(stmt) => Self::ident_id(*stmt, None),
-            SymbolKind::LetFn(stmt, _, _) => Self::ident_id(*stmt, None),
-            SymbolKind::Parameter(stmt, index) => Self::ident_id(*stmt, Some(*index)),
+            SymbolKind::Let(_, stmt) => Self::ident_id(*stmt, None),
+            SymbolKind::LetFn(_, stmt, _, _) => Self::ident_id(*stmt, None),
+            SymbolKind::Parameter(_, stmt, index) => Self::ident_id(*stmt, Some(*index)),
             SymbolKind::Native(ident, parameters, ret_type, _) => {
                 format!(
                     "ident__native_{}_{}_{}",
@@ -486,8 +486,8 @@ impl<'a> HtmlWriter<'a> {
             SymbolKind::NativeType(ident_id, _) => {
                 format!("ident__native-type_{}", self.hir.identifiers[*ident_id])
             }
-            SymbolKind::Field(stmt, index) => Self::ident_id(*stmt, Some(*index)),
-            SymbolKind::Struct(stmt) => Self::ident_id(*stmt, None),
+            SymbolKind::Field(_, stmt, index) => Self::ident_id(*stmt, Some(*index)),
+            SymbolKind::Struct(_, stmt) => Self::ident_id(*stmt, None),
         };
 
         let ty = &self.hir.types[self.hir.symbols[ident_ref.resolved_symbol_id()].type_id];

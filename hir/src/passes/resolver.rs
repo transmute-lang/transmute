@@ -510,7 +510,7 @@ impl<'a> Resolver<'a> {
         let ret_type_id = state
             .resolve_ident_ref(ident_ref, Some(&param_types))
             .map(|s| match &state.resolution.symbols[s].kind {
-                SymbolKind::LetFn(_, _, ret_type) => *ret_type,
+                SymbolKind::LetFn(_, _, _, ret_type) => *ret_type,
                 SymbolKind::Native(_, _, ret_type, _) => *ret_type,
                 SymbolKind::NotFound => state.invalid_type_id,
                 _ => {
@@ -571,7 +571,7 @@ impl<'a> Resolver<'a> {
             .resolve_ident_ref(ident_ref_id, None)
             .map(|sid| &state.resolution.symbols[sid])
             .and_then(|s| match s.kind {
-                SymbolKind::Struct(stmt_id) => Some(&state.resolution.statements[stmt_id]),
+                SymbolKind::Struct(_, stmt_id) => Some(&state.resolution.statements[stmt_id]),
                 _ => None,
             })
             .map(|s| match &s.kind {
@@ -770,7 +770,8 @@ impl<'a> Resolver<'a> {
             );
         }
 
-        let symbol_id = state.insert_symbol(ident.id, SymbolKind::Let(stmt), expr_type_id);
+        let symbol_id =
+            state.insert_symbol(ident.id, SymbolKind::Let(ident.id, stmt), expr_type_id);
 
         (ident.bind(symbol_id), state)
     }
@@ -804,7 +805,7 @@ impl<'a> Resolver<'a> {
             .enumerate()
             .filter_map(|(index, (parameter, type_id))| {
                 let ident_id = parameter.identifier.id;
-                let symbol_kind = SymbolKind::Parameter(stmt_id, index);
+                let symbol_kind = SymbolKind::Parameter(ident_id, stmt_id, index);
 
                 if state.symbol_exists(ident_id, &symbol_kind) {
                     state.diagnostics.report_err(
@@ -934,7 +935,7 @@ impl<'a> Resolver<'a> {
             .enumerate()
             .map(|(index, field)| {
                 let ident_id = field.identifier.id;
-                let symbol_kind = SymbolKind::Field(stmt_id, index);
+                let symbol_kind = SymbolKind::Field(ident_id, stmt_id, index);
 
                 if state.symbol_exists(ident_id, &symbol_kind) {
                     state.diagnostics.report_err(
@@ -1079,7 +1080,7 @@ impl State {
             .get(&(stmt_id, index))
             .and_then(|sid| self.resolution.symbols.get(*sid))
             .and_then(|s| match s.kind {
-                SymbolKind::Field(_, _) => Some(s.id),
+                SymbolKind::Field(_, _, _) => Some(s.id),
                 _ => None,
             })
     }
@@ -1154,7 +1155,7 @@ impl State {
 
             let symbol_id = self.insert_symbol(
                 ident.id,
-                SymbolKind::LetFn(stmt_id, parameter_types, ret_type),
+                SymbolKind::LetFn(ident.id, stmt_id, parameter_types, ret_type),
                 fn_type_id,
             );
 
@@ -1177,7 +1178,7 @@ impl State {
 
         for (stmt_id, identifier) in structs.into_iter() {
             let ident_id = identifier.id;
-            let symbol_kind = SymbolKind::Struct(stmt_id);
+            let symbol_kind = SymbolKind::Struct(ident_id, stmt_id);
 
             if self.symbol_exists(ident_id, &symbol_kind) {
                 self.diagnostics.report_err(
@@ -1228,9 +1229,11 @@ impl State {
                 .any(|s| {
                     matches!(
                         (&s.kind, kind),
-                        (SymbolKind::Parameter(_, _), SymbolKind::Parameter(_, _))
-                            | (SymbolKind::Field(_, _), SymbolKind::Field(_, _))
-                            | (SymbolKind::Struct(_), SymbolKind::Struct(_))
+                        (
+                            SymbolKind::Parameter(_, _, _),
+                            SymbolKind::Parameter(_, _, _)
+                        ) | (SymbolKind::Field(_, _, _), SymbolKind::Field(_, _, _))
+                            | (SymbolKind::Struct(_, _), SymbolKind::Struct(_, _))
                     )
                 }),
         }
@@ -1240,7 +1243,7 @@ impl State {
         let symbol_id = SymbolId::from(self.resolution.symbols.len());
 
         match &kind {
-            SymbolKind::Parameter(stmt_id, index) | SymbolKind::Field(stmt_id, index) => {
+            SymbolKind::Parameter(_, stmt_id, index) | SymbolKind::Field(_, stmt_id, index) => {
                 self.resolution
                     .stmt_symbols
                     .insert((*stmt_id, *index), symbol_id);
@@ -1289,7 +1292,9 @@ impl State {
         self.find_symbol_id_by_ident_and_param_types(ident_id, None)
             .and_then(|symbol_id| match &self.resolution.symbols[symbol_id].kind {
                 SymbolKind::NativeType(_, ty) => Some(self.find_type_id_by_type(ty)),
-                SymbolKind::Struct(stmt) => Some(self.find_type_id_by_type(&Type::Struct(*stmt))),
+                SymbolKind::Struct(_, stmt) => {
+                    Some(self.find_type_id_by_type(&Type::Struct(*stmt)))
+                }
                 _ => None,
             })
     }
@@ -1365,31 +1370,31 @@ impl Scope {
                     match param_types {
                         None => match symbol.kind {
                             // if no params, the symbol cannot be a function
-                            SymbolKind::LetFn(_, _, _) | SymbolKind::Native(_, _, _, _) => false,
+                            SymbolKind::LetFn(_, _, _, _) | SymbolKind::Native(_, _, _, _) => false,
                             // but it can be any of the others
-                            SymbolKind::Let(_)
-                            | SymbolKind::Parameter(_, _)
+                            SymbolKind::Let(_, _)
+                            | SymbolKind::Parameter(_, _, _)
                             | SymbolKind::NativeType(_, _)
-                            | SymbolKind::Field(_, _)
-                            | SymbolKind::Struct(_)
+                            | SymbolKind::Field(_, _, _)
+                            | SymbolKind::Struct(_, _)
                             | SymbolKind::NotFound => true,
                         },
                         Some(param_types) => match &symbol.kind {
                             // not found can be anything
                             SymbolKind::NotFound => true,
                             // if params, the symbol can be a function
-                            SymbolKind::LetFn(_, parameters, _) => {
+                            SymbolKind::LetFn(_, _, parameters, _) => {
                                 param_types == parameters.as_slice()
                             }
                             SymbolKind::Native(_, parameters, _, _) => {
                                 param_types == parameters.as_slice()
                             }
                             // but is cannot any of the others
-                            SymbolKind::Let(_)
-                            | SymbolKind::Parameter(_, _)
+                            SymbolKind::Let(_, _)
+                            | SymbolKind::Parameter(_, _, _)
                             | SymbolKind::NativeType(_, _)
-                            | SymbolKind::Field(_, _)
-                            | SymbolKind::Struct(_) => false,
+                            | SymbolKind::Field(_, _, _)
+                            | SymbolKind::Struct(_, _) => false,
                         },
                     }
                 })

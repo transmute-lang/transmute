@@ -640,6 +640,7 @@ Hir {
         Symbol {
             id: SymbolId(18),
             kind: LetFn(
+                IdentId(0),
                 StmtId(3),
                 [
                     TypeId(4),
@@ -651,6 +652,7 @@ Hir {
         Symbol {
             id: SymbolId(19),
             kind: Parameter(
+                IdentId(1),
                 StmtId(3),
                 0,
             ),

@@ -15,14 +15,16 @@ use transmute_hir::expression::{ExpressionKind as HirExpressionKind, Target as H
 use transmute_hir::literal::{Literal as HirLiteral, LiteralKind as HirLiteralKind};
 use transmute_hir::natives::Type as HirType;
 use transmute_hir::statement::{Field, RetMode, Return, StatementKind as HirStatementKind};
-use transmute_hir::symbol::Symbol;
+use transmute_hir::symbol::{Symbol as HirSymbol, SymbolKind as HirSymbolKind};
 use transmute_hir::typed::{Typed, TypedState};
 use transmute_hir::{
     ResolvedExpression as HirExpression, ResolvedIdentifier as HirIdentifier,
-    ResolvedParameter as HirParameter, ResolvedStatement as HirStatement,
-    ResolvedIdentifierRef as HirIdentifierRef
+    ResolvedIdentifierRef as HirIdentifierRef, ResolvedParameter as HirParameter,
+    ResolvedStatement as HirStatement,
 };
 use transmute_hir::{ResolvedHir as Hir, ResolvedReturn as HirReturn};
+
+pub use transmute_hir::natives::NativeFnKind;
 
 pub fn make_mir(hir: Hir) -> Result<Mir, Diagnostics> {
     Mir::try_from(hir)
@@ -80,12 +82,74 @@ impl Transformer {
             functions: self.functions,
             structs: self.structs,
             identifiers: hir.identifiers,
-            identifier_refs: hir.identifier_refs.into_iter().map(|(ident_ref_id, ident_ref)| {
-                (ident_ref_id, IdentifierRef::from(ident_ref))
-            }).collect::<VecMap<IdentRefId, IdentifierRef>>(),
+            // identifier_refs: hir
+            //     .identifier_refs
+            //     .into_iter()
+            //     .map(|(ident_ref_id, ident_ref)| (ident_ref_id, IdentifierRef::from(ident_ref)))
+            //     .collect::<VecMap<IdentRefId, IdentifierRef>>(),
             expressions: self.expressions,
             statements: self.statements,
-            symbols: hir.symbols,
+            symbols: hir
+                .symbols
+                .into_iter()
+                .filter_map(|(symbol_id, symbol)| {
+                    if matches!(&symbol.kind, &HirSymbolKind::NotFound) {
+                        return None;
+                    }
+
+                    let ident_id = &match symbol.kind {
+                        HirSymbolKind::NotFound => unreachable!(),
+                        HirSymbolKind::Let(ident_id, _) => ident_id,
+                        HirSymbolKind::LetFn(ident_id, _, _, _) => ident_id,
+                        HirSymbolKind::Parameter(ident_id, _, _) => ident_id,
+                        HirSymbolKind::Struct(ident_id, _) => ident_id,
+                        HirSymbolKind::Field(ident_id, _, _) => ident_id,
+                        HirSymbolKind::NativeType(ident_id, _) => ident_id,
+                        HirSymbolKind::Native(ident_id, _, _, _) => ident_id,
+                    };
+                    Some((
+                        symbol_id,
+                        Symbol {
+                            id: symbol.id,
+                            type_id: symbol.type_id,
+                            ident_id: *ident_id,
+                            kind: match symbol.kind {
+                                HirSymbolKind::NotFound => unreachable!(),
+                                HirSymbolKind::Let(_, stmt_id) => SymbolKind::Let(stmt_id),
+                                HirSymbolKind::LetFn(_, stmt_id, params, ret_type_id) => {
+                                    SymbolKind::LetFn(stmt_id, params, ret_type_id)
+                                }
+                                HirSymbolKind::Parameter(_, stmt_id, index) => {
+                                    SymbolKind::Parameter(stmt_id, index)
+                                }
+                                HirSymbolKind::Struct(_, stmt_id) => SymbolKind::Struct(stmt_id),
+                                HirSymbolKind::Field(_, stmt_id, index) => {
+                                    SymbolKind::Field(stmt_id, index)
+                                }
+                                HirSymbolKind::NativeType(ident_id, t) => SymbolKind::NativeType(
+                                    ident_id,
+                                    match t {
+                                        // todo there is something to do about types (same code as
+                                        //   for the types field)
+                                        HirType::Invalid => unreachable!(),
+                                        HirType::Boolean => Type::Boolean,
+                                        HirType::Function(params, ret_type) => {
+                                            Type::Function(params, ret_type)
+                                        }
+                                        HirType::Struct(_) => todo!(),
+                                        HirType::Number => Type::Number,
+                                        HirType::Void => Type::Void,
+                                        HirType::None => Type::None,
+                                    },
+                                ),
+                                HirSymbolKind::Native(ident_id, params, ret_type_id, kind) => {
+                                    SymbolKind::Native(ident_id, params, ret_type_id, kind)
+                                }
+                            },
+                        },
+                    ))
+                })
+                .collect::<VecMap<SymbolId, Symbol>>(),
             types: hir
                 .types
                 .into_iter()
@@ -401,7 +465,7 @@ pub struct Mir {
     pub identifiers: VecMap<IdentId, String>,
     // todo remove once we have what we need in symbols so the LLVM pass can get the identifier
     //  from the symbol id
-    pub identifier_refs: VecMap<IdentRefId, IdentifierRef>,
+    // pub identifier_refs: VecMap<IdentRefId, IdentifierRef>,
     pub expressions: VecMap<ExprId, Expression>,
     pub statements: VecMap<StmtId, Statement>,
     pub symbols: VecMap<SymbolId, Symbol>,
@@ -469,7 +533,7 @@ pub struct IdentifierRef {
     pub ident: Identifier,
 }
 
-impl From<HirIdentifierRef>  for IdentifierRef {
+impl From<HirIdentifierRef> for IdentifierRef {
     fn from(identifier_ref: HirIdentifierRef) -> Self {
         IdentifierRef {
             id: identifier_ref.id,
@@ -545,6 +609,27 @@ pub enum Type {
     /// This value is used when the statement/expression does not return any value. This is the
     /// case for `ret`.
     None,
+}
+
+#[derive(Debug)]
+pub struct Symbol {
+    pub id: SymbolId,
+    pub kind: SymbolKind,
+    pub type_id: TypeId,
+    pub ident_id: IdentId,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum SymbolKind {
+    Let(StmtId),
+    LetFn(StmtId, Vec<TypeId>, TypeId),
+    // todo could StmtId be replaced with SymbolId (the symbol that defines the function)
+    Parameter(StmtId, usize),
+    Struct(StmtId),
+    // todo could StmtId be replaced with SymbolId (the symbol that defines the struct)
+    Field(StmtId, usize),
+    NativeType(IdentId, Type),
+    Native(IdentId, Vec<TypeId>, TypeId, NativeFnKind),
 }
 
 #[cfg(test)]

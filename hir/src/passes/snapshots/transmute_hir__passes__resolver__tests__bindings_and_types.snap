@@ -163,6 +163,7 @@ Hir {
         Symbol {
             id: SymbolId(1),
             kind: Struct(
+                IdentId(0),
                 StmtId(0),
             ),
             type_id: TypeId(5),
@@ -170,6 +171,7 @@ Hir {
         Symbol {
             id: SymbolId(2),
             kind: LetFn(
+                IdentId(1),
                 StmtId(2),
                 [
                     TypeId(5),
@@ -182,6 +184,7 @@ Hir {
         Symbol {
             id: SymbolId(3),
             kind: Field(
+                IdentId(1),
                 StmtId(0),
                 0,
             ),
@@ -190,6 +193,7 @@ Hir {
         Symbol {
             id: SymbolId(4),
             kind: Parameter(
+                IdentId(2),
                 StmtId(2),
                 0,
             ),
@@ -198,6 +202,7 @@ Hir {
         Symbol {
             id: SymbolId(5),
             kind: Parameter(
+                IdentId(3),
                 StmtId(2),
                 1,
             ),

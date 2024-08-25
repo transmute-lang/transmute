@@ -129,20 +129,21 @@ impl<'a> XmlWriter<'a> {
 
                 let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
                 let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
-                    SymbolKind::Let(stmt) => {
+                    SymbolKind::Let(_, stmt) => {
                         format!("stmt:{stmt}")
                     }
-                    SymbolKind::LetFn(stmt, _, _) => {
+                    SymbolKind::LetFn(_, stmt, _, _) => {
                         format!("stmt:{stmt}")
                     }
-                    SymbolKind::Parameter(stmt_id, index) | SymbolKind::Field(stmt_id, index) => {
+                    SymbolKind::Parameter(_, stmt_id, index)
+                    | SymbolKind::Field(_, stmt_id, index) => {
                         format!("stmt:{}:{}", stmt_id, index)
                     }
                     SymbolKind::Native(..) => "native".to_string(),
                     SymbolKind::NativeType(_, _) => {
                         unreachable!("cannot assign to NativeType")
                     }
-                    SymbolKind::Struct(_) => {
+                    SymbolKind::Struct(_, _) => {
                         unreachable!("cannot assign to Struct")
                     }
                     SymbolKind::NotFound => panic!("symbol was not resolved"),
@@ -170,7 +171,7 @@ impl<'a> XmlWriter<'a> {
                 let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
 
                 let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
-                    SymbolKind::Struct(stmt_id) => {
+                    SymbolKind::Struct(_, stmt_id) => {
                         format!("stmt:{stmt_id}")
                     }
                     _ => panic!(),
@@ -186,7 +187,7 @@ impl<'a> XmlWriter<'a> {
                 for (ident_ref_id, expr_id) in fields {
                     let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
                     let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
-                        SymbolKind::Field(stmt_id, index) => {
+                        SymbolKind::Field(_, stmt_id, index) => {
                             format!("stmt:{}:{}", stmt_id, index)
                         }
                         _ => panic!(),
@@ -208,23 +209,23 @@ impl<'a> XmlWriter<'a> {
         let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
 
         let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
-            SymbolKind::Let(stmt) => {
+            SymbolKind::Let(_, stmt) => {
                 format!("stmt:{stmt}")
             }
-            SymbolKind::LetFn(stmt, _, _) => {
+            SymbolKind::LetFn(_, stmt, _, _) => {
                 format!("stmt:{stmt}")
             }
-            SymbolKind::Parameter(stmt_id, index) => {
+            SymbolKind::Parameter(_, stmt_id, index) => {
                 format!("stmt:{}:{}", stmt_id, index)
             }
             SymbolKind::Native(..) => "native".to_string(),
             SymbolKind::NativeType(_, _) => {
                 unreachable!("cannot assign to NativeType")
             }
-            SymbolKind::Field(_, _) => {
+            SymbolKind::Field(_, _, _) => {
                 unreachable!("cannot assign to Field")
             }
-            SymbolKind::Struct(_) => {
+            SymbolKind::Struct(_, _) => {
                 unreachable!("cannot assign to Struct")
             }
             SymbolKind::NotFound => panic!("symbol was not resolved"),
@@ -282,23 +283,23 @@ impl<'a> XmlWriter<'a> {
                 let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
 
                 let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
-                    SymbolKind::Let(stmt) => {
+                    SymbolKind::Let(_, stmt) => {
                         format!("stmt:{stmt}")
                     }
-                    SymbolKind::LetFn(stmt, _, _) => {
+                    SymbolKind::LetFn(_, stmt, _, _) => {
                         format!("stmt:{stmt}")
                     }
-                    SymbolKind::Parameter(stmt_id, index) => {
+                    SymbolKind::Parameter(_, stmt_id, index) => {
                         format!("stmt:{}:{}", stmt_id, index)
                     }
                     SymbolKind::Native(..) => "native".to_string(),
                     SymbolKind::NativeType(_, _) => {
                         unreachable!("NativeType is not a literal")
                     }
-                    SymbolKind::Field(_, _) => {
+                    SymbolKind::Field(_, _, _) => {
                         unreachable!("Field is not a literal")
                     }
-                    SymbolKind::Struct(_) => {
+                    SymbolKind::Struct(_, _) => {
                         unreachable!("Struct is not a literal")
                     }
                     SymbolKind::NotFound => panic!("symbol was not resolved"),
@@ -342,13 +343,13 @@ impl<'a> XmlWriter<'a> {
         let ident_ref = &self.hir.identifier_refs[*ident_ref_id];
 
         let symbol = match &self.hir.symbols[ident_ref.resolved_symbol_id()].kind {
-            SymbolKind::Let(stmt) => {
+            SymbolKind::Let(_, stmt) => {
                 format!("stmt:{stmt}")
             }
-            SymbolKind::LetFn(stmt, _, _) => {
+            SymbolKind::LetFn(_, stmt, _, _) => {
                 format!("stmt:{stmt}")
             }
-            SymbolKind::Parameter(stmt, index) => {
+            SymbolKind::Parameter(_, stmt, index) => {
                 let param = match &self.hir.statements[*stmt].kind {
                     StatementKind::LetFn(_, params, _, _) => &params[*index],
                     _ => panic!(),
@@ -370,10 +371,10 @@ impl<'a> XmlWriter<'a> {
             SymbolKind::NativeType(_, _) => {
                 unreachable!("method call cannot be applied to NativeType")
             }
-            SymbolKind::Field(_, _) => {
+            SymbolKind::Field(_, _, _) => {
                 unreachable!("method call cannot be applied to Field")
             }
-            SymbolKind::Struct(_) => {
+            SymbolKind::Struct(_, _) => {
                 unreachable!("method call cannot be applied to Struct")
             }
             SymbolKind::NotFound => {

@@ -108,17 +108,13 @@ Ok(
         ],
         symbols: [
             Symbol {
-                id: SymbolId(0),
-                kind: NotFound,
-                type_id: TypeId(0),
-            },
-            Symbol {
                 id: SymbolId(1),
                 kind: NativeType(
                     IdentId(16),
                     Void,
                 ),
                 type_id: TypeId(2),
+                ident_id: IdentId(16),
             },
             Symbol {
                 id: SymbolId(2),
@@ -127,6 +123,7 @@ Ok(
                     Number,
                 ),
                 type_id: TypeId(2),
+                ident_id: IdentId(13),
             },
             Symbol {
                 id: SymbolId(3),
@@ -135,6 +132,7 @@ Ok(
                     Boolean,
                 ),
                 type_id: TypeId(2),
+                ident_id: IdentId(3),
             },
             Symbol {
                 id: SymbolId(4),
@@ -148,6 +146,7 @@ Ok(
                     SubNumberNumber,
                 ),
                 type_id: TypeId(5),
+                ident_id: IdentId(15),
             },
             Symbol {
                 id: SymbolId(5),
@@ -160,6 +159,7 @@ Ok(
                     PrintNumber,
                 ),
                 type_id: TypeId(6),
+                ident_id: IdentId(14),
             },
             Symbol {
                 id: SymbolId(6),
@@ -173,6 +173,7 @@ Ok(
                     NeqNumberNumber,
                 ),
                 type_id: TypeId(7),
+                ident_id: IdentId(12),
             },
             Symbol {
                 id: SymbolId(7),
@@ -186,6 +187,7 @@ Ok(
                     NeqBooleanBoolean,
                 ),
                 type_id: TypeId(8),
+                ident_id: IdentId(12),
             },
             Symbol {
                 id: SymbolId(8),
@@ -198,6 +200,7 @@ Ok(
                     NegNumber,
                 ),
                 type_id: TypeId(9),
+                ident_id: IdentId(11),
             },
             Symbol {
                 id: SymbolId(9),
@@ -211,6 +214,7 @@ Ok(
                     MulNumberNumber,
                 ),
                 type_id: TypeId(5),
+                ident_id: IdentId(10),
             },
             Symbol {
                 id: SymbolId(10),
@@ -224,6 +228,7 @@ Ok(
                     LtNumberNumber,
                 ),
                 type_id: TypeId(7),
+                ident_id: IdentId(9),
             },
             Symbol {
                 id: SymbolId(11),
@@ -237,6 +242,7 @@ Ok(
                     LeNumberNumber,
                 ),
                 type_id: TypeId(7),
+                ident_id: IdentId(8),
             },
             Symbol {
                 id: SymbolId(12),
@@ -250,6 +256,7 @@ Ok(
                     GtNumberNumber,
                 ),
                 type_id: TypeId(7),
+                ident_id: IdentId(7),
             },
             Symbol {
                 id: SymbolId(13),
@@ -263,6 +270,7 @@ Ok(
                     GeNumberNumber,
                 ),
                 type_id: TypeId(7),
+                ident_id: IdentId(6),
             },
             Symbol {
                 id: SymbolId(14),
@@ -276,6 +284,7 @@ Ok(
                     EqNumberNumber,
                 ),
                 type_id: TypeId(7),
+                ident_id: IdentId(5),
             },
             Symbol {
                 id: SymbolId(15),
@@ -289,6 +298,7 @@ Ok(
                     EqBooleanBoolean,
                 ),
                 type_id: TypeId(8),
+                ident_id: IdentId(5),
             },
             Symbol {
                 id: SymbolId(16),
@@ -302,6 +312,7 @@ Ok(
                     DivNumberNumber,
                 ),
                 type_id: TypeId(5),
+                ident_id: IdentId(4),
             },
             Symbol {
                 id: SymbolId(17),
@@ -315,6 +326,7 @@ Ok(
                     AddNumberNumber,
                 ),
                 type_id: TypeId(5),
+                ident_id: IdentId(2),
             },
             Symbol {
                 id: SymbolId(18),
@@ -324,6 +336,7 @@ Ok(
                     TypeId(1),
                 ),
                 type_id: TypeId(10),
+                ident_id: IdentId(0),
             },
             Symbol {
                 id: SymbolId(19),
@@ -331,6 +344,7 @@ Ok(
                     StmtId(0),
                 ),
                 type_id: TypeId(4),
+                ident_id: IdentId(1),
             },
         ],
         types: [

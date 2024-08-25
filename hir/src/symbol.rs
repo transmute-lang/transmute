@@ -11,7 +11,7 @@ pub struct Symbol {
 impl Symbol {
     pub fn as_function(&self) -> (&Vec<TypeId>, TypeId) {
         match &self.kind {
-            SymbolKind::LetFn(_, params, ret_type_id) => (params, *ret_type_id),
+            SymbolKind::LetFn(_, _, params, ret_type_id) => (params, *ret_type_id),
             _ => panic!("{:?} is not a function", self),
         }
     }
@@ -21,13 +21,13 @@ impl Symbol {
 pub enum SymbolKind {
     // fixme can we remove it? at least in mir
     NotFound,
-    Let(StmtId),
-    LetFn(StmtId, Vec<TypeId>, TypeId),
+    Let(IdentId, StmtId),
+    LetFn(IdentId, StmtId, Vec<TypeId>, TypeId),
     // todo could StmtId be replaced with SymbolId (the symbol that defines the function)
-    Parameter(StmtId, usize),
-    Struct(StmtId),
+    Parameter(IdentId, StmtId, usize),
+    Struct(IdentId, StmtId),
     // todo could StmtId be replaced with SymbolId (the symbol that defines the struct)
-    Field(StmtId, usize),
+    Field(IdentId, StmtId, usize),
     NativeType(IdentId, Type),
     Native(IdentId, Vec<TypeId>, TypeId, NativeFnKind),
 }

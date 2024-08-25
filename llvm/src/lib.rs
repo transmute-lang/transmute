@@ -395,9 +395,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 if !self.variables.contains_key(&symbol_id) {
                     match hir.symbols[symbol_id].kind {
                         SymbolKind::NotFound => todo!(),
-                        SymbolKind::Let(_) => panic!("variable already exists"),
-                        SymbolKind::LetFn(_, _, _) => todo!(),
-                        SymbolKind::Parameter(_, index) => {
+                        SymbolKind::Let(_, _) => panic!("variable already exists"),
+                        SymbolKind::LetFn(_, _, _, _) => todo!(),
+                        SymbolKind::Parameter(_, _, index) => {
                             let param =
                                 self.current_function().get_nth_param(index as u32).unwrap();
                             self.gen_alloca(
@@ -411,8 +411,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                                 Some(param),
                             );
                         }
-                        SymbolKind::Struct(_) => todo!(),
-                        SymbolKind::Field(_, _) => todo!(),
+                        SymbolKind::Struct(_, _) => todo!(),
+                        SymbolKind::Field(_, _, _) => todo!(),
                         SymbolKind::NativeType(_, _) => todo!(),
                         SymbolKind::Native(_, _, _, _) => todo!(),
                     }
@@ -526,14 +526,16 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
         match &hir.symbols[ident_ref.resolved_symbol_id()].kind {
             SymbolKind::NotFound => todo!(),
-            SymbolKind::Let(_) => unreachable!("handled in the if variable.contains_key(..) above"),
-            SymbolKind::LetFn(_, _, _) => todo!(),
-            SymbolKind::Parameter(_, index) => self
+            SymbolKind::Let(_, _) => {
+                unreachable!("handled in the if variable.contains_key(..) above")
+            }
+            SymbolKind::LetFn(_, _, _, _) => todo!(),
+            SymbolKind::Parameter(_, _, index) => self
                 .current_function()
                 .get_nth_param(*index as u32)
                 .unwrap(),
-            SymbolKind::Struct(_) => todo!(),
-            SymbolKind::Field(_, _) => todo!(),
+            SymbolKind::Struct(_, _) => todo!(),
+            SymbolKind::Field(_, _, _) => todo!(),
             SymbolKind::NativeType(_, _) => todo!(),
             SymbolKind::Native(_, _, _, _) => todo!(),
         }
