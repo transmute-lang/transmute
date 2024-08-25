@@ -453,6 +453,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "transmute-mir"
+version = "0.1.0"
+dependencies = [
+ "insta",
+ "transmute-ast",
+ "transmute-core",
+ "transmute-hir",
+]
+
+[[package]]
 name = "transmute-rustrt"
 version = "0.1.0"
 

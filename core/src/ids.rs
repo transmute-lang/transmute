@@ -55,6 +55,8 @@ make_id!(ExprId);
 make_id!(StmtId);
 make_id!(SymbolId);
 make_id!(TypeId);
+make_id!(FunctionId);
+make_id!(StructId);
 
 #[macro_export]
 macro_rules! id {

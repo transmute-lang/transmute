@@ -4,6 +4,7 @@ members = [
     "core",
     "ast",
     "hir",
+    "mir",
     "interpreter",
     "rt/rust",
     "rt/c",
