@@ -1,9 +1,10 @@
 #![allow(unused)]
 
-use std::collections::HashMap;
+use std::any::type_name;
 use std::env::var;
 use std::thread::available_parallelism;
 use transmute_core::error::{Diagnostic, Diagnostics, Level};
+use transmute_core::hash_map::HashMap;
 use transmute_core::id;
 use transmute_core::ids::{
     ExprId, FunctionId, IdentId, IdentRefId, StmtId, StructId, SymbolId, TypeId,
@@ -24,6 +25,7 @@ use transmute_hir::{
 };
 use transmute_hir::{ResolvedHir as Hir, ResolvedReturn as HirReturn};
 
+// todo move to MIR?
 pub use transmute_hir::natives::NativeFnKind;
 
 pub fn make_mir(hir: Hir) -> Result<Mir, Diagnostics> {
@@ -82,11 +84,6 @@ impl Transformer {
             functions: self.functions,
             structs: self.structs,
             identifiers: hir.identifiers,
-            // identifier_refs: hir
-            //     .identifier_refs
-            //     .into_iter()
-            //     .map(|(ident_ref_id, ident_ref)| (ident_ref_id, IdentifierRef::from(ident_ref)))
-            //     .collect::<VecMap<IdentRefId, IdentifierRef>>(),
             expressions: self.expressions,
             statements: self.statements,
             symbols: hir
@@ -225,7 +222,15 @@ impl Transformer {
                 target,
                 expr_id,
             ),
-            HirExpressionKind::If(_, _, _) => todo!(),
+            HirExpressionKind::If(cond_expr_id, true_expr_id, false_expr_id) => self.transform_if(
+                hir,
+                expression.id,
+                expression.span,
+                type_id,
+                cond_expr_id,
+                true_expr_id,
+                false_expr_id,
+            ),
             HirExpressionKind::Literal(literal) => {
                 self.transform_literal(hir, expression.id, expression.span, type_id, literal);
                 (Default::default(), Default::default())
@@ -239,7 +244,14 @@ impl Transformer {
                 ident_ref_id,
                 params,
             ),
-            HirExpressionKind::While(_, _) => todo!(),
+            HirExpressionKind::While(cond_expr_id, body_expr_id) => self.transform_while(
+                hir,
+                expression.id,
+                expression.span,
+                type_id,
+                cond_expr_id,
+                body_expr_id,
+            ),
             HirExpressionKind::Block(stmt_ids) => {
                 self.transform_block(hir, expression.id, expression.span, type_id, stmt_ids)
             }
@@ -331,6 +343,44 @@ impl Transformer {
         }
     }
 
+    fn transform_if(
+        &mut self,
+        hir: &mut Hir,
+        expr_id: ExprId,
+        span: Span,
+        type_id: TypeId,
+        cond_expr_id: ExprId,
+        true_expr_id: ExprId,
+        false_expr_id: Option<ExprId>,
+    ) -> (Vec<SymbolId>, HashMap<SymbolId, Variable>) {
+        let expr = hir.expressions.remove(cond_expr_id).unwrap();
+        let (mut mutated_symbols_ids, mut variables) = self.transform_expression(hir, expr);
+
+        let expr = hir.expressions.remove(true_expr_id).unwrap();
+        let (mut new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, expr);
+        mutated_symbols_ids.append(&mut new_mutated_symbols_ids);
+        variables.extend(new_variables);
+
+        if let Some(false_expr_id) = false_expr_id {
+            let expr = hir.expressions.remove(false_expr_id).unwrap();
+            let (mut new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, expr);
+            mutated_symbols_ids.append(&mut new_mutated_symbols_ids);
+            variables.extend(new_variables);
+        }
+
+        self.expressions.insert(
+            expr_id,
+            Expression {
+                id: expr_id,
+                kind: ExpressionKind::If(cond_expr_id, true_expr_id, false_expr_id),
+                span,
+                type_id,
+            },
+        );
+
+        (mutated_symbols_ids, variables)
+    }
+
     fn transform_function_call(
         &mut self,
         hir: &mut Hir,
@@ -366,6 +416,36 @@ impl Transformer {
         (mutated_symbol_ids, variables)
     }
 
+    fn transform_while(
+        &mut self,
+        hir: &mut Hir,
+        expr_id: ExprId,
+        span: Span,
+        type_id: TypeId,
+        cond_expr_id: ExprId,
+        body_expr_id: ExprId,
+    ) -> (Vec<SymbolId>, HashMap<SymbolId, Variable>) {
+        let expr = hir.expressions.remove(cond_expr_id).unwrap();
+        let (mut mutated_symbols_ids, mut variables) = self.transform_expression(hir, expr);
+
+        let expr = hir.expressions.remove(body_expr_id).unwrap();
+        let (mut new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, expr);
+        mutated_symbols_ids.append(&mut new_mutated_symbols_ids);
+        variables.extend(new_variables);
+
+        self.expressions.insert(
+            expr_id,
+            Expression {
+                id: expr_id,
+                kind: ExpressionKind::While(cond_expr_id, body_expr_id),
+                span,
+                type_id,
+            },
+        );
+
+        (mutated_symbols_ids, variables)
+    }
+
     fn transform_block(
         &mut self,
         hir: &mut Hir,
@@ -381,14 +461,24 @@ impl Transformer {
         for stmt_id in stmt_ids {
             let stmt = hir.statements.remove(stmt_id).unwrap();
             match stmt.kind {
-                HirStatementKind::Expression(_) => todo!(),
+                HirStatementKind::Expression(expr_id) => {
+                    let (mut new_mutated_symbol_ids, new_variables) =
+                        self.transform_expression_statement(hir, stmt.id, stmt.span, expr_id);
+                    mutated_symbols.append(&mut new_mutated_symbol_ids);
+                    variables.extend(new_variables);
+                    kept_stmt_ids.push(stmt.id);
+                }
                 HirStatementKind::Let(ident, expr_id) => {
-                    let variable = self.transform_let(hir, ident, expr_id);
-                    variables.insert(variable.symbol_id, variable);
+                    let new_variable = self.transform_let(hir, ident, expr_id);
+                    variables.insert(new_variable.symbol_id, new_variable);
                 }
                 HirStatementKind::Ret(expr_id, _) => {
-                    mutated_symbols
-                        .append(&mut self.transform_ret(hir, stmt.id, stmt.span, expr_id));
+                    mutated_symbols.append(&mut self.transform_ret(
+                        hir,
+                        stmt.id,
+                        stmt.span.clone(),
+                        expr_id,
+                    ));
                     kept_stmt_ids.push(stmt.id)
                 }
                 HirStatementKind::LetFn(_, _, _, _) => todo!(),
@@ -407,6 +497,28 @@ impl Transformer {
         );
 
         (mutated_symbols, variables)
+    }
+
+    fn transform_expression_statement(
+        &mut self,
+        hir: &mut Hir,
+        stmt_id: StmtId,
+        span: Span,
+        expr_id: ExprId,
+    ) -> (Vec<SymbolId>, HashMap<SymbolId, Variable>) {
+        let expression = hir.expressions.remove(expr_id).unwrap();
+        let res = self.transform_expression(hir, expression);
+
+        self.statements.insert(
+            stmt_id,
+            Statement {
+                id: stmt_id,
+                kind: StatementKind::Expression(expr_id),
+                span,
+            },
+        );
+
+        res
     }
 
     fn transform_let(
@@ -442,7 +554,6 @@ impl Transformer {
         let expr = hir.expressions.remove(expr_id).unwrap();
         let (mutated_symbols, variables) = self.transform_expression(hir, expr);
 
-        // debug_assert!(mutated_symbols.is_empty());
         debug_assert!(variables.is_empty());
 
         self.statements.insert(
@@ -463,9 +574,6 @@ pub struct Mir {
     pub functions: VecMap<FunctionId, Function>,
     pub structs: VecMap<StructId, Struct>,
     pub identifiers: VecMap<IdentId, String>,
-    // todo remove once we have what we need in symbols so the LLVM pass can get the identifier
-    //  from the symbol id
-    // pub identifier_refs: VecMap<IdentRefId, IdentifierRef>,
     pub expressions: VecMap<ExprId, Expression>,
     pub statements: VecMap<StmtId, Statement>,
     pub symbols: VecMap<SymbolId, Symbol>,
@@ -578,7 +686,7 @@ pub enum LiteralKind {
 #[derive(Debug)]
 pub enum Target {
     Direct(SymbolId),
-    // The expression id is of kind ExpressionKind::Access
+    /// The expression id is of kind ExpressionKind::Access
     Indirect(ExprId),
 }
 
@@ -680,6 +788,13 @@ mod tests {
     }
 
     #[test]
+    fn test_function_local2() {
+        let ast = transmute_ast::parse("let f() { let a = 0; let b = 1 ; }").unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
     fn test_function_mut_local() {
         let ast = transmute_ast::parse("let f() { let a = 0; a = 1; }").unwrap();
         let hir = transmute_hir::resolve(ast).unwrap();
@@ -689,6 +804,27 @@ mod tests {
     #[test]
     fn test_function_mut_local_shadow_param() {
         let ast = transmute_ast::parse("let f(a: number) { let a = 0; a = 1; }").unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_if() {
+        let ast = transmute_ast::parse("let f() { if true { } else { } }").unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_while() {
+        let ast = transmute_ast::parse("let f() { while true { 1; } }").unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_expression_in_block() {
+        let ast = transmute_ast::parse("let f() { if true { 1; } }").unwrap();
         let hir = transmute_hir::resolve(ast).unwrap();
         assert_debug_snapshot!(make_mir(hir));
     }
