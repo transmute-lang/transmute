@@ -9,8 +9,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @print(i64)
 
-define void @a(i64 %"n#sym19#") {
+define void @a(i64 %"n#param#sym19#") {
 entry:
-  call void @print(i64 %"n#sym19#")
+  call void @print(i64 %"n#param#sym19#")
   ret void
 }

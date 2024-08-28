@@ -9,8 +9,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @print(i64)
 
-define i1 @f(i64 %"l#sym19#", i64 %"r#sym20#") {
+define i1 @f(i64 %"l#param#sym19#", i64 %"r#param#sym20#") {
 entry:
-  %"ge#" = icmp sge i64 %"l#sym19#", %"r#sym20#"
+  %"ge#" = icmp sge i64 %"l#param#sym19#", %"r#param#sym20#"
   ret i1 %"ge#"
 }

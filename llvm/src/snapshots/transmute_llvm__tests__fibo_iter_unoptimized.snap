@@ -1,19 +1,19 @@
 ---
 source: llvm/src/lib.rs
-expression: unoptimized
+expression: llvm_ir
 ---
 ; ModuleID = 'main'
 source_filename = "main"
 
 declare void @print(i64)
 
-define i64 @f(i64 %"n#sym19#") {
+define i64 @f(i64 %"n#param#sym19#") {
 entry:
   %"current#local#sym22#" = alloca i64, align 8
   %"prev#local#sym21#" = alloca i64, align 8
   %"prev_prev#local#sym20#" = alloca i64, align 8
   %"n#local#sym19#" = alloca i64, align 8
-  store i64 %"n#sym19#", ptr %"n#local#sym19#", align 4
+  store i64 %"n#param#sym19#", ptr %"n#local#sym19#", align 4
   %"n#local#sym19#1" = load i64, ptr %"n#local#sym19#", align 4
   %"eq#" = icmp eq i64 %"n#local#sym19#1", 0
   br i1 %"eq#", label %true_branch, label %end_if

@@ -7,6 +7,7 @@ edition = "2021"
 transmute-core = {path = "../core" }
 transmute-ast = {path = "../ast" }
 transmute-hir = {path = "../hir" }
+transmute-mir = {path = "../mir" }
 transmute-crt = {path = "../rt/c" }
 transmute-llvm = {path = "../llvm" }
 clap = { version = "4.5.8", features = ["derive"] }

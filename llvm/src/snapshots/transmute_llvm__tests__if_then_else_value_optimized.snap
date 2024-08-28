@@ -9,11 +9,11 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @print(i64)
 
-define i1 @f(i64 %"n#sym19#", i1 %"c#sym20#") {
+define i1 @f(i64 %"n#param#sym19#", i1 %"c#param#sym20#") {
 entry:
-  %"sub#" = add i64 %"n#sym19#", -1
-  %"add#" = add i64 %"n#sym19#", 1
-  %if_result = select i1 %"c#sym20#", i64 %"sub#", i64 %"add#"
+  %"sub#" = add i64 %"n#param#sym19#", -1
+  %"add#" = add i64 %"n#param#sym19#", 1
+  %if_result = select i1 %"c#param#sym20#", i64 %"sub#", i64 %"add#"
   %"eq#" = icmp eq i64 %if_result, 42
   ret i1 %"eq#"
 }

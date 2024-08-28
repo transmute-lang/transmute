@@ -9,20 +9,20 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @print(i64)
 
-define i64 @f(i64 %"n#sym19#") {
+define i64 @f(i64 %"n#param#sym19#") {
 entry:
-  %"le#" = icmp slt i64 %"n#sym19#", 2
+  %"le#" = icmp slt i64 %"n#param#sym19#", 2
   br i1 %"le#", label %common.ret, label %end_if
 
 common.ret:                                       ; preds = %entry, %end_if
-  %common.ret.op = phi i64 [ %"add#", %end_if ], [ %"n#sym19#", %entry ]
+  %common.ret.op = phi i64 [ %"add#", %end_if ], [ %"n#param#sym19#", %entry ]
   ret i64 %common.ret.op
 
 end_if:                                           ; preds = %entry
-  %"sub#" = add i64 %"n#sym19#", -1
+  %"sub#" = add nsw i64 %"n#param#sym19#", -1
   %"f#res#" = call i64 @f(i64 %"sub#")
-  %"sub#5" = add i64 %"n#sym19#", -2
-  %"f#res#6" = call i64 @f(i64 %"sub#5")
-  %"add#" = add i64 %"f#res#6", %"f#res#"
+  %"sub#1" = add nsw i64 %"n#param#sym19#", -2
+  %"f#res#2" = call i64 @f(i64 %"sub#1")
+  %"add#" = add i64 %"f#res#2", %"f#res#"
   br label %common.ret
 }

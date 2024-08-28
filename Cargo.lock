@@ -398,6 +398,7 @@ dependencies = [
  "transmute-crt",
  "transmute-hir",
  "transmute-llvm",
+ "transmute-mir",
 ]
 
 [[package]]
@@ -450,6 +451,7 @@ dependencies = [
  "transmute-ast",
  "transmute-core",
  "transmute-hir",
+ "transmute-mir",
 ]
 
 [[package]]

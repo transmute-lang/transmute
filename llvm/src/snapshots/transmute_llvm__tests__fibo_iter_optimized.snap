@@ -9,9 +9,9 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @print(i64)
 
-define i64 @f(i64 %"n#sym19#") {
+define i64 @f(i64 %"n#param#sym19#") {
 entry:
-  switch i64 %"n#sym19#", label %end_if3 [
+  switch i64 %"n#param#sym19#", label %end_if3 [
     i64 0, label %common.ret
     i64 1, label %true_branch2
   ]
@@ -30,7 +30,7 @@ cond:                                             ; preds = %body, %end_if3
   %"prev#local#sym21#8" = phi i64 [ %"add#", %body ], [ 1, %end_if3 ]
   %"prev_prev#local#sym20#7" = phi i64 [ %"prev#local#sym21#8", %body ], [ 0, %end_if3 ]
   %"current#local#sym22#12" = phi i64 [ %"add#", %body ], [ 0, %end_if3 ]
-  %"n#local#sym19#11" = phi i64 [ %"sub#", %body ], [ %"n#sym19#", %end_if3 ]
+  %"n#local#sym19#11" = phi i64 [ %"sub#", %body ], [ %"n#param#sym19#", %end_if3 ]
   %"gt#" = icmp sgt i64 %"n#local#sym19#11", 1
   br i1 %"gt#", label %body, label %common.ret
 

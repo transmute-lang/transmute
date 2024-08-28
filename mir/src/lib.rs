@@ -1,10 +1,10 @@
 #![allow(unused)]
 
 use std::any::type_name;
+use std::collections::BTreeMap;
 use std::env::var;
 use std::thread::available_parallelism;
 use transmute_core::error::{Diagnostic, Diagnostics, Level};
-use transmute_core::hash_map::HashMap;
 use transmute_core::id;
 use transmute_core::ids::{
     ExprId, FunctionId, IdentId, IdentRefId, StmtId, StructId, SymbolId, TypeId,
@@ -210,7 +210,7 @@ impl Transformer {
         &mut self,
         hir: &mut Hir,
         expression: HirExpression,
-    ) -> (Vec<SymbolId>, HashMap<SymbolId, Variable>) {
+    ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let type_id = expression.resolved_type_id();
 
         match expression.kind {
@@ -318,7 +318,7 @@ impl Transformer {
         type_id: TypeId,
         target: HirTarget,
         value_expr_id: ExprId,
-    ) -> (Vec<SymbolId>, HashMap<SymbolId, Variable>) {
+    ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let expression = hir.expressions.remove(value_expr_id).unwrap();
 
         let (mut mutated_symbol_ids, variables) = self.transform_expression(hir, expression);
@@ -352,7 +352,7 @@ impl Transformer {
         cond_expr_id: ExprId,
         true_expr_id: ExprId,
         false_expr_id: Option<ExprId>,
-    ) -> (Vec<SymbolId>, HashMap<SymbolId, Variable>) {
+    ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let expr = hir.expressions.remove(cond_expr_id).unwrap();
         let (mut mutated_symbols_ids, mut variables) = self.transform_expression(hir, expr);
 
@@ -389,9 +389,9 @@ impl Transformer {
         type_id: TypeId,
         ident_ref_id: IdentRefId,
         params: Vec<ExprId>,
-    ) -> (Vec<SymbolId>, HashMap<SymbolId, Variable>) {
+    ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let mut mutated_symbol_ids = Vec::new();
-        let mut variables = HashMap::new();
+        let mut variables = BTreeMap::new();
 
         let symbol_id = hir.identifier_refs[ident_ref_id].resolved_symbol_id();
 
@@ -424,7 +424,7 @@ impl Transformer {
         type_id: TypeId,
         cond_expr_id: ExprId,
         body_expr_id: ExprId,
-    ) -> (Vec<SymbolId>, HashMap<SymbolId, Variable>) {
+    ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let expr = hir.expressions.remove(cond_expr_id).unwrap();
         let (mut mutated_symbols_ids, mut variables) = self.transform_expression(hir, expr);
 
@@ -453,10 +453,10 @@ impl Transformer {
         span: Span,
         type_id: TypeId,
         stmt_ids: Vec<StmtId>,
-    ) -> (Vec<SymbolId>, HashMap<SymbolId, Variable>) {
+    ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let mut kept_stmt_ids = Vec::with_capacity(stmt_ids.len());
         let mut mutated_symbols = Vec::new();
-        let mut variables = HashMap::new();
+        let mut variables = BTreeMap::new();
 
         for stmt_id in stmt_ids {
             let stmt = hir.statements.remove(stmt_id).unwrap();
@@ -469,7 +469,7 @@ impl Transformer {
                     kept_stmt_ids.push(stmt.id);
                 }
                 HirStatementKind::Let(ident, expr_id) => {
-                    let new_variable = self.transform_let(hir, stmt_id, stmt.span, ident, expr_id );
+                    let new_variable = self.transform_let(hir, stmt_id, stmt.span, ident, expr_id);
                     variables.insert(new_variable.symbol_id, new_variable);
                     kept_stmt_ids.push(stmt.id);
                 }
@@ -506,7 +506,7 @@ impl Transformer {
         stmt_id: StmtId,
         span: Span,
         expr_id: ExprId,
-    ) -> (Vec<SymbolId>, HashMap<SymbolId, Variable>) {
+    ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let expression = hir.expressions.remove(expr_id).unwrap();
         let res = self.transform_expression(hir, expression);
 
@@ -528,7 +528,7 @@ impl Transformer {
         stmt_id: StmtId,
         span: Span,
         identifier: HirIdentifier,
-        expr_id:ExprId,
+        expr_id: ExprId,
     ) -> Variable {
         let expression = hir.expressions.remove(expr_id).unwrap();
         let type_id = expression.resolved_type_id();
@@ -545,11 +545,11 @@ impl Transformer {
                 id: assignment_expr_id,
                 kind: ExpressionKind::Assignment(
                     Target::Direct(identifier.resolved_symbol_id()),
-                    expr_id
+                    expr_id,
                 ),
-                span: expr_span,// not exactly that but close enough
+                span: expr_span, // not exactly that but close enough
                 type_id,
-            }
+            },
         );
         self.statements.insert(
             stmt_id,
@@ -619,7 +619,7 @@ pub struct Function {
     pub identifier: Identifier,
     pub symbol_id: SymbolId,
     pub parameters: Vec<Parameter>,
-    pub variables: HashMap<SymbolId, Variable>,
+    pub variables: BTreeMap<SymbolId, Variable>,
     pub body: ExprId,
     pub ret: TypeId,
 }

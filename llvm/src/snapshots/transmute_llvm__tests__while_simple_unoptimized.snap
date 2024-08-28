@@ -1,16 +1,14 @@
 ---
 source: llvm/src/lib.rs
-expression: unoptimized
+expression: llvm_ir
 ---
 ; ModuleID = 'main'
 source_filename = "main"
 
 declare void @print(i64)
 
-define void @f(i64 %"n#sym19#") {
+define void @f(i64 %"n#param#sym19#") {
 entry:
-  %"n#local#sym19#" = alloca i64, align 8
-  store i64 %"n#sym19#", ptr %"n#local#sym19#", align 4
   br label %cond
 
 cond:                                             ; preds = %body, %entry
