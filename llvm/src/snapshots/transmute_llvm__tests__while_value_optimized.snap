@@ -1,0 +1,27 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+declare void @print(i64)
+
+define i64 @f(i64 %"n#sym19#") {
+entry:
+  br label %cond
+
+cond:                                             ; preds = %body, %entry
+  %"n#local#sym19#2" = phi i64 [ %"n#sym19#", %entry ], [ %"add#", %body ]
+  %"lt#" = icmp slt i64 %"n#local#sym19#2", 42
+  br i1 %"lt#", label %body, label %end_while
+
+body:                                             ; preds = %cond
+  %"add#" = add i64 %"n#local#sym19#2", 1
+  br label %cond
+
+end_while:                                        ; preds = %cond
+  ret i64 %"n#local#sym19#2"
+}

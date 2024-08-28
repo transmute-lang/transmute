@@ -1,0 +1,41 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+declare void @print(i64)
+
+define i64 @f(i64 %"n#sym19#") {
+entry:
+  switch i64 %"n#sym19#", label %end_if3 [
+    i64 0, label %common.ret
+    i64 1, label %true_branch2
+  ]
+
+common.ret:                                       ; preds = %cond, %entry, %true_branch2
+  %common.ret.op = phi i64 [ 1, %true_branch2 ], [ 0, %entry ], [ %"current#local#sym22#12", %cond ]
+  ret i64 %common.ret.op
+
+true_branch2:                                     ; preds = %entry
+  br label %common.ret
+
+end_if3:                                          ; preds = %entry
+  br label %cond
+
+cond:                                             ; preds = %body, %end_if3
+  %"prev#local#sym21#8" = phi i64 [ %"add#", %body ], [ 1, %end_if3 ]
+  %"prev_prev#local#sym20#7" = phi i64 [ %"prev#local#sym21#8", %body ], [ 0, %end_if3 ]
+  %"current#local#sym22#12" = phi i64 [ %"add#", %body ], [ 0, %end_if3 ]
+  %"n#local#sym19#11" = phi i64 [ %"sub#", %body ], [ %"n#sym19#", %end_if3 ]
+  %"gt#" = icmp sgt i64 %"n#local#sym19#11", 1
+  br i1 %"gt#", label %body, label %common.ret
+
+body:                                             ; preds = %cond
+  %"add#" = add i64 %"prev#local#sym21#8", %"prev_prev#local#sym20#7"
+  %"sub#" = add i64 %"n#local#sym19#11", -1
+  br label %cond
+}

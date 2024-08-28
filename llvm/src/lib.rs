@@ -30,6 +30,7 @@ use transmute_hir::{
 pub struct LlvmIrGen {
     context: Context,
     target_triple: TargetTriple,
+    optimize: bool,
 }
 
 impl LlvmIrGen {
@@ -48,7 +49,7 @@ impl LlvmIrGen {
             .unwrap();
 
         Codegen::new(&self.context, &self.target_triple, &target_machine)
-            .gen(hir)
+            .gen(hir, self.optimize)
             .map(|module| LlvmIr {
                 module,
                 target_machine,
@@ -61,6 +62,7 @@ impl Default for LlvmIrGen {
         Self {
             context: Context::create(),
             target_triple: TargetMachine::get_default_triple(),
+            optimize: false,
         }
     }
 }
@@ -148,14 +150,15 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         }
     }
 
-    pub fn gen(mut self, hir: &ResolvedHir) -> Result<Module<'ctx>, Diagnostics> {
+    pub fn gen(mut self, hir: &ResolvedHir, optimize: bool) -> Result<Module<'ctx>, Diagnostics> {
         for stmt_id in hir.roots.iter() {
             self.gen_statement(hir, &hir.statements[*stmt_id]);
         }
 
         // println!("{}", self.module.to_string().as_str());
-        #[cfg(not(test))]
-        self.optimize();
+        if optimize {
+            self.optimize();
+        }
 
         Ok(self.module)
     }
@@ -292,7 +295,11 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
         for (i, param) in function.get_param_iter().enumerate() {
             // todo name may be made of the form {name}#param#sym{sid}
-            let name = format!("{}#sym{}#", &hir.identifiers[params[i].identifier.id], params[i].resolved_symobl_id());
+            let name = format!(
+                "{}#sym{}#",
+                &hir.identifiers[params[i].identifier.id],
+                params[i].resolved_symobl_id()
+            );
             match param {
                 BasicValueEnum::ArrayValue(_) => todo!(),
                 BasicValueEnum::IntValue(val) => val.set_name(&name),
@@ -304,9 +311,13 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             // todo remove once we know what params are muted in function
             self.gen_alloca(
                 param.get_type(),
-                &format!("{}#local#sym{}#", &hir.identifiers[params[i].identifier.id], params[i].resolved_symobl_id()),
+                &format!(
+                    "{}#local#sym{}#",
+                    &hir.identifiers[params[i].identifier.id],
+                    params[i].resolved_symobl_id()
+                ),
                 params[i].resolved_symobl_id(),
-                Some(param)
+                Some(param),
             );
         }
 
@@ -943,31 +954,58 @@ mod tests {
 
     macro_rules! gen {
         ($name:ident, $src:expr) => {
-            #[test]
-            fn $name() {
-                let ast = Parser::new(Lexer::new($src)).parse().unwrap();
-                let hir = UnresolvedHir::from(ast).resolve(Natives::new()).unwrap();
+            paste::paste! {
+                #[test]
+                fn [< $name _unoptimized >]() {
+                    let ast = Parser::new(Lexer::new($src)).parse().unwrap();
+                    let hir = UnresolvedHir::from(ast).resolve(Natives::new()).unwrap();
 
-                Target::initialize_all(&InitializationConfig::default());
+                    Target::initialize_all(&InitializationConfig::default());
 
-                let target_triple = TargetMachine::get_default_triple();
-                let target = Target::from_triple(&target_triple).unwrap();
-                let target_machine = target
-                    .create_target_machine(
-                        &target_triple,
-                        "generic",
-                        "",
-                        OptimizationLevel::None,
-                        RelocMode::PIC,
-                        CodeModel::Default,
-                    )
-                    .unwrap();
+                    let target_triple = TargetMachine::get_default_triple();
+                    let target = Target::from_triple(&target_triple).unwrap();
+                    let target_machine = target
+                        .create_target_machine(
+                            &target_triple,
+                            "generic",
+                            "",
+                            OptimizationLevel::None,
+                            RelocMode::PIC,
+                            CodeModel::Default,
+                        )
+                        .unwrap();
 
-                let context = Context::create();
-                let codegen = Codegen::new(&context, &target_triple, &target_machine);
-                let res = codegen.gen(&hir).unwrap().print_to_string().to_string();
+                    let context = Context::create();
+                    let codegen = Codegen::new(&context, &target_triple, &target_machine);
+                    let llvm_ir = codegen.gen(&hir, false).unwrap().print_to_string().to_string();
+                    assert_snapshot!(llvm_ir);
+                }
 
-                assert_snapshot!(res);
+                #[test]
+                fn [< $name _optimized >]() {
+                    let ast = Parser::new(Lexer::new($src)).parse().unwrap();
+                    let hir = UnresolvedHir::from(ast).resolve(Natives::new()).unwrap();
+
+                    Target::initialize_all(&InitializationConfig::default());
+
+                    let target_triple = TargetMachine::get_default_triple();
+                    let target = Target::from_triple(&target_triple).unwrap();
+                    let target_machine = target
+                        .create_target_machine(
+                            &target_triple,
+                            "generic",
+                            "",
+                            OptimizationLevel::None,
+                            RelocMode::PIC,
+                            CodeModel::Default,
+                        )
+                        .unwrap();
+
+                    let context = Context::create();
+                    let codegen = Codegen::new(&context, &target_triple, &target_machine);
+                    let llvm_ir = codegen.gen(&hir, true).unwrap().print_to_string().to_string();
+                    assert_snapshot!(llvm_ir);
+                }
             }
         };
     }

@@ -1,0 +1,19 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+declare void @print(i64)
+
+define i1 @f(i64 %"n#sym19#", i1 %"c#sym20#") {
+entry:
+  %"sub#" = add i64 %"n#sym19#", -1
+  %"add#" = add i64 %"n#sym19#", 1
+  %if_result = select i1 %"c#sym20#", i64 %"sub#", i64 %"add#"
+  %"eq#" = icmp eq i64 %if_result, 42
+  ret i1 %"eq#"
+}
