@@ -90,14 +90,33 @@ Ok(
                 id: ExprId(3),
                 kind: Block(
                     [
+                        StmtId(0),
                         StmtId(1),
                     ],
                 ),
                 span: 1:9; [8, 29],
                 type_id: TypeId(2),
             },
+            Expression {
+                id: ExprId(4),
+                kind: Assignment(
+                    Direct(
+                        SymbolId(19),
+                    ),
+                    ExprId(0),
+                ),
+                span: 1:19; [18, 19],
+                type_id: TypeId(4),
+            },
         ],
         statements: [
+            Statement {
+                id: StmtId(0),
+                kind: Expression(
+                    ExprId(4),
+                ),
+                span: 1:11; [10, 20],
+            },
             Statement {
                 id: StmtId(1),
                 kind: Ret(

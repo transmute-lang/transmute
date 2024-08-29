@@ -89,13 +89,53 @@ Ok(
             Expression {
                 id: ExprId(2),
                 kind: Block(
-                    [],
+                    [
+                        StmtId(0),
+                        StmtId(1),
+                    ],
                 ),
                 span: 1:9; [8, 34],
                 type_id: TypeId(1),
             },
+            Expression {
+                id: ExprId(3),
+                kind: Assignment(
+                    Direct(
+                        SymbolId(19),
+                    ),
+                    ExprId(0),
+                ),
+                span: 1:19; [18, 19],
+                type_id: TypeId(4),
+            },
+            Expression {
+                id: ExprId(4),
+                kind: Assignment(
+                    Direct(
+                        SymbolId(20),
+                    ),
+                    ExprId(1),
+                ),
+                span: 1:30; [29, 30],
+                type_id: TypeId(4),
+            },
         ],
-        statements: [],
+        statements: [
+            Statement {
+                id: StmtId(0),
+                kind: Expression(
+                    ExprId(3),
+                ),
+                span: 1:11; [10, 20],
+            },
+            Statement {
+                id: StmtId(1),
+                kind: Expression(
+                    ExprId(4),
+                ),
+                span: 1:22; [21, 32],
+            },
+        ],
         symbols: [
             Symbol {
                 id: SymbolId(1),

@@ -65,13 +65,34 @@ Ok(
             Expression {
                 id: ExprId(1),
                 kind: Block(
-                    [],
+                    [
+                        StmtId(0),
+                    ],
                 ),
                 span: 1:9; [8, 22],
                 type_id: TypeId(1),
             },
+            Expression {
+                id: ExprId(2),
+                kind: Assignment(
+                    Direct(
+                        SymbolId(19),
+                    ),
+                    ExprId(0),
+                ),
+                span: 1:19; [18, 19],
+                type_id: TypeId(4),
+            },
         ],
-        statements: [],
+        statements: [
+            Statement {
+                id: StmtId(0),
+                kind: Expression(
+                    ExprId(2),
+                ),
+                span: 1:11; [10, 20],
+            },
+        ],
         symbols: [
             Symbol {
                 id: SymbolId(1),

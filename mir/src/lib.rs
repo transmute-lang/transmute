@@ -469,8 +469,9 @@ impl Transformer {
                     kept_stmt_ids.push(stmt.id);
                 }
                 HirStatementKind::Let(ident, expr_id) => {
-                    let new_variable = self.transform_let(hir, ident, expr_id);
+                    let new_variable = self.transform_let(hir, stmt_id, stmt.span, ident, expr_id );
                     variables.insert(new_variable.symbol_id, new_variable);
+                    kept_stmt_ids.push(stmt.id);
                 }
                 HirStatementKind::Ret(expr_id, _) => {
                     mutated_symbols.append(&mut self.transform_ret(
@@ -524,15 +525,40 @@ impl Transformer {
     fn transform_let(
         &mut self,
         hir: &mut Hir,
+        stmt_id: StmtId,
+        span: Span,
         identifier: HirIdentifier,
-        expr_id: ExprId,
+        expr_id:ExprId,
     ) -> Variable {
         let expression = hir.expressions.remove(expr_id).unwrap();
         let type_id = expression.resolved_type_id();
+        let expr_span = expression.span.clone();
         let (mutated_symbol_ids, variables) = self.transform_expression(hir, expression);
 
         assert!(mutated_symbol_ids.is_empty());
         assert!(variables.is_empty());
+
+        let assignment_expr_id = ExprId::from(self.expressions.len());
+        self.expressions.insert(
+            assignment_expr_id,
+            Expression {
+                id: assignment_expr_id,
+                kind: ExpressionKind::Assignment(
+                    Target::Direct(identifier.resolved_symbol_id()),
+                    expr_id
+                ),
+                span: expr_span,// not exactly that but close enough
+                type_id,
+            }
+        );
+        self.statements.insert(
+            stmt_id,
+            Statement {
+                id: stmt_id,
+                kind: StatementKind::Expression(assignment_expr_id),
+                span,
+            },
+        );
 
         Variable {
             symbol_id: identifier.resolved_symbol_id(),
