@@ -234,7 +234,7 @@ impl<'a> Resolver<'a> {
                 if lhs_type_id != rhs_type_id {
                     state.diagnostics.report_err(
                         format!(
-                            "Expected type {}, got {}",
+                            "RSH expected to be of type {}, got {}",
                             state.find_type_by_type_id(lhs_type_id),
                             state.find_type_by_type_id(rhs_type_id)
                         ),
@@ -397,7 +397,7 @@ impl<'a> Resolver<'a> {
         if rhs_type_id != lhs_type_id {
             state.diagnostics.report_err(
                 format!(
-                    "Expected type {}, got {}",
+                    "RSH expected to be of type {}, got {}",
                     state.find_type_by_type_id(lhs_type_id),
                     state.find_type_by_type_id(rhs_type_id)
                 ),
@@ -422,7 +422,7 @@ impl<'a> Resolver<'a> {
         if cond_type != state.boolean_type_id && cond_type != state.invalid_type_id {
             state.diagnostics.report_err(
                 format!(
-                    "Expected type {}, got {}",
+                    "Condition expected to be of type {}, got {}",
                     Type::Boolean,
                     state.find_type_by_type_id(cond_type)
                 ),
@@ -529,7 +529,7 @@ impl<'a> Resolver<'a> {
         if cond_type != state.boolean_type_id && cond_type != state.invalid_type_id {
             state.diagnostics.report_err(
                 format!(
-                    "Expected type {}, got {}",
+                    "Condition expected to be of type {}, got {}",
                     Type::Boolean,
                     state.find_type_by_type_id(cond_type)
                 ),
@@ -793,8 +793,16 @@ impl<'a> Resolver<'a> {
             .function_symbols
             .get(&stmt_id)
             .expect("function was inserted");
+
         let (param_types, ret_type_id) = state.resolution.symbols[symbol_id].as_function();
         let param_types = param_types.clone();
+
+        #[cfg(test)]
+        println!(
+            "Visiting function {name} ({symbol_id:?}) with return type {ret_type}",
+            name = state.resolution.identifiers.get_by_left(&ident.id).unwrap(),
+            ret_type = state.resolution.types.get_by_right(&ret_type_id).unwrap()
+        );
 
         let mut success = ret_type_id != state.invalid_type_id;
 
@@ -837,11 +845,18 @@ impl<'a> Resolver<'a> {
                 .get(&expr)
                 .expect("exit points is computed");
 
+            #[cfg(test)]
+            println!(
+                "Exit points of {name} ({expr:?}): {exit_points:?}",
+                name = state.resolution.identifiers.get_by_left(&ident.id).unwrap(),
+            );
+
             if exit_points.is_empty() {
                 if ret_type_id != state.void_type_id {
                     state.diagnostics.report_err(
                         format!(
-                            "Expected type {ret_type}, got void",
+                            "Function {name} expected to return type {ret_type}, got void",
+                            name = state.resolution.identifiers.get_by_left(&ident.id).unwrap(),
                             ret_type = state.resolution.types.get_by_right(&ret_type_id).unwrap()
                         ),
                         span.clone(),
@@ -870,7 +885,8 @@ impl<'a> Resolver<'a> {
 
                         state.diagnostics.report_err(
                             format!(
-                                "Expected type {ret_type}, got {expr_type}",
+                                "Function {name} expected to return type {ret_type}, got {expr_type}",
+                                name = state.resolution.identifiers.get_by_left(&ident.id).unwrap(),
                                 ret_type =
                                     state.resolution.types.get_by_right(&ret_type_id).unwrap()
                             ),
@@ -880,8 +896,6 @@ impl<'a> Resolver<'a> {
                     }
                 }
             }
-
-            // state.resolution.exit_points.insert(expr, exit_points);
         }
 
         state.pop_scope();
@@ -1112,41 +1126,37 @@ impl State {
         // ... then, we proceed with the function
         let functions = stmts
             .iter()
-            .filter_map(|stmt_id| {
-                match &self.statements[*stmt_id].kind {
-                    StatementKind::LetFn(ident, params, ret_type, expr_id) => {
-                        let parameter_types = params
-                            .iter()
-                            .map(|p| {
-                                let identifier = &self.resolution.identifier_refs[p.ty].ident;
+            .filter_map(|stmt_id| match &self.statements[*stmt_id].kind {
+                StatementKind::LetFn(ident, params, ret_type, expr_id) => {
+                    let parameter_types = params
+                        .iter()
+                        .map(|p| {
+                            let identifier = &self.resolution.identifier_refs[p.ty].ident;
 
-                                self.find_type_id_by_identifier(identifier.id)
-                                    .unwrap_or(self.invalid_type_id)
-                            })
-                            .collect::<Vec<TypeId>>();
+                            self.find_type_id_by_identifier(identifier.id)
+                                .unwrap_or(self.invalid_type_id)
+                        })
+                        .collect::<Vec<TypeId>>();
 
-                        let ret_type_id = ret_type
-                            .ret
-                            .map(|ident_ref_id| {
-                                let identifier =
-                                    &self.resolution.identifier_refs[ident_ref_id].ident;
+                    let ret_type_id = ret_type
+                        .ret
+                        .map(|ident_ref_id| {
+                            let identifier = &self.resolution.identifier_refs[ident_ref_id].ident;
 
-                                self.find_type_id_by_identifier(identifier.id)
-                                    .unwrap_or(self.invalid_type_id)
-                            })
-                            .unwrap_or(self.void_type_id);
+                            self.find_type_id_by_identifier(identifier.id)
+                                .unwrap_or(self.invalid_type_id)
+                        })
+                        .unwrap_or(self.void_type_id);
 
-                        Some((
-                            ident.clone(),
-                            *stmt_id,
-                            parameter_types,
-                            ret_type_id,
-                            *expr_id,
-                            // exit_points,
-                        ))
-                    }
-                    _ => None,
+                    Some((
+                        ident.clone(),
+                        *stmt_id,
+                        parameter_types,
+                        ret_type_id,
+                        *expr_id,
+                    ))
                 }
+                _ => None,
             })
             .collect::<Vec<(Identifier<Unbound>, StmtId, Vec<TypeId>, TypeId, ExprId)>>();
 
@@ -1574,26 +1584,26 @@ mod tests {
     test_type_error!(
         if_expected_boolean_condition_got_number,
         "if 42 {}",
-        "Expected type boolean, got number",
+        "Condition expected to be of type boolean, got number",
         Span::new(1, 4, 3, 2)
     );
     test_type_ok!(if_expected_boolean_condition_got_boolean, "if true {}");
     test_type_error!(
         if_expected_boolean_condition_got_number_expr_binary,
         "if 40 + 2 {}",
-        "Expected type boolean, got number",
+        "Condition expected to be of type boolean, got number",
         Span::new(1, 4, 3, 6)
     );
     test_type_error!(
         if_expected_boolean_condition_got_number_expr_unary,
         "if - 42 {}",
-        "Expected type boolean, got number",
+        "Condition expected to be of type boolean, got number",
         Span::new(1, 4, 3, 4)
     );
     test_type_error!(
         if_expected_boolean_condition_got_no_type,
         "if if true { ret 42; } else { ret 43; } {}",
-        "Expected type boolean, got no type",
+        "Condition expected to be of type boolean, got no type",
         Span::new(1, 4, 3, 36)
     );
     test_type_ok!(
@@ -1603,7 +1613,7 @@ mod tests {
     test_type_error!(
         if_expected_boolean_condition_got_number_identifier,
         "let forty_two = 42; if forty_two {}",
-        "Expected type boolean, got number",
+        "Condition expected to be of type boolean, got number",
         Span::new(1, 24, 23, 9)
     );
     test_type_ok!(
@@ -1620,7 +1630,7 @@ mod tests {
     test_type_error!(
         if_no_false_branch_to_val,
         "let n = 0; n = if true { 42; };",
-        "Expected type number, got void",
+        "RSH expected to be of type number, got void",
         Span::new(1, 16, 15, 15)
     );
     test_type_ok!(
@@ -1656,20 +1666,20 @@ mod tests {
     test_type_error!(
         if_expected_boolean_condition_got_number_in_else_if,
         "if true {} else if 42 {}",
-        "Expected type boolean, got number",
+        "Condition expected to be of type boolean, got number",
         Span::new(1, 20, 19, 2)
     );
     test_type_ok!(if_type_of_else_if, "if true { 42; } else if false { 0; }");
     test_type_error!(
         while_expected_boolean_condition_got_number,
         "while 42 {}",
-        "Expected type boolean, got number",
+        "Condition expected to be of type boolean, got number",
         Span::new(1, 7, 6, 2)
     );
     test_type_error!(
         while_expected_boolean_condition_got_no_type,
         "while if true { ret 42; } else { ret 43; } {}",
-        "Expected type boolean, got no type",
+        "Condition expected to be of type boolean, got no type",
         Span::new(1, 7, 6, 36)
     );
     test_type_ok!(
@@ -1679,13 +1689,13 @@ mod tests {
     test_type_error!(
         while_expected_boolean_condition_got_number_expr_binary,
         "while 40 + 2 {}",
-        "Expected type boolean, got number",
+        "Condition expected to be of type boolean, got number",
         Span::new(1, 7, 6, 6)
     );
     test_type_error!(
         while_expected_boolean_condition_got_number_expr_unary,
         "while - 42 {}",
-        "Expected type boolean, got number",
+        "Condition expected to be of type boolean, got number",
         Span::new(1, 7, 6, 4)
     );
     test_type_ok!(
@@ -1695,7 +1705,7 @@ mod tests {
     test_type_error!(
         while_expected_boolean_condition_got_number_identifier,
         "let forty_two = 42; while forty_two {}",
-        "Expected type boolean, got number",
+        "Condition expected to be of type boolean, got number",
         Span::new(1, 27, 26, 9)
     );
     test_type_ok!(
@@ -1705,7 +1715,7 @@ mod tests {
     test_type_error!(
         assignment_wrong_type,
         "let forty_two = 42; forty_two = true;",
-        "Expected type number, got boolean",
+        "RSH expected to be of type number, got boolean",
         Span::new(1, 33, 32, 4)
     );
     test_type_ok!(
@@ -1719,25 +1729,25 @@ mod tests {
     test_type_error!(
         assignment_to_function_parameter_incorrect_type,
         "let f(n: number): number = { n = true; }",
-        "Expected type number, got boolean",
+        "RSH expected to be of type number, got boolean",
         Span::new(1, 34, 33, 4)
     );
     test_type_error!(
         assignment_wrong_type_from_function,
         "let forty_two = 42; let f(): boolean = true; forty_two = f();",
-        "Expected type number, got boolean",
+        "RSH expected to be of type number, got boolean",
         Span::new(1, 58, 57, 3)
     );
     test_type_error!(
         assignment_wrong_type_from_void_function,
         "let forty_two = 42; let f() = {} forty_two = f();",
-        "Expected type number, got void",
+        "RSH expected to be of type number, got void",
         Span::new(1, 46, 45, 3)
     );
     test_type_error!(
         assignment_always_returning_expr,
         "let forty_two = 42; forty_two = if true { ret 42; } else { ret 43; };",
-        "Expected type number, got no type",
+        "RSH expected to be of type number, got no type",
         Span::new(1, 33, 32, 36)
     );
     test_type_ok!(
@@ -1794,7 +1804,7 @@ mod tests {
     test_type_error!(
         access_struct_field_read_invalid_type,
         "struct S { field: number } let s = S { field: 1 }; if s.field { }",
-        "Expected type boolean, got number",
+        "Condition expected to be of type boolean, got number",
         Span::new(1, 55, 54, 7)
     );
     test_type_ok!(
@@ -1804,13 +1814,13 @@ mod tests {
     test_type_error!(
         access_struct_field_write_wrong_type,
         "struct S { field: number } let s = S { field: 1 }; s.field = false;",
-        "Expected type number, got boolean",
+        "RSH expected to be of type number, got boolean",
         Span::new(1, 62, 61, 5)
     );
     test_type_error!(
         function_returns_void_but_expect_struct,
         "struct S {} let f(): S = { }",
-        "Expected type struct, got void",
+        "Function f expected to return type struct, got void",
         Span::new(1, 13, 12, 16)
     );
     test_type_error!(
@@ -1852,7 +1862,7 @@ mod tests {
     test_type_error!(
         function_void_cannot_return_number,
         "let f() = { ret 1; }",
-        "Expected type void, got number",
+        "Function f expected to return type void, got number",
         Span::new(1, 17, 16, 1)
     );
     test_type_error!(
@@ -1864,19 +1874,19 @@ mod tests {
     test_type_error!(
         function_wrong_return_type,
         "let f(): boolean = { true; 42; }",
-        "Expected type boolean, got number",
+        "Function f expected to return type boolean, got number",
         Span::new(1, 28, 27, 2)
     );
     test_type_error!(
         function_wrong_return_type_2,
         "let f(): boolean = { }",
-        "Expected type boolean, got void",
+        "Function f expected to return type boolean, got void",
         Span::new(1, 1, 0, 22)
     );
     test_type_error!(
         function_wrong_early_return_type,
         "let f(): number = { if false { ret false; } 42; }",
-        "Expected type number, got boolean",
+        "Function f expected to return type number, got boolean",
         Span::new(1, 36, 35, 5)
     );
     test_type_ok!(
@@ -1886,7 +1896,7 @@ mod tests {
     test_type_error!(
         function_parameter_returned_wrong_type,
         "let f(n: number): boolean = { n; }",
-        "Expected type boolean, got number",
+        "Function f expected to return type boolean, got number",
         Span::new(1, 31, 30, 1)
     );
     test_type_error!(
@@ -1988,4 +1998,9 @@ mod tests {
     //     assign_from_native,
     //     "let n = add;"
     // );
+    test_type_ok!(nested_function_same_type, "let f() { let g() {} }");
+    test_type_ok!(
+        nested_function_different_types,
+        "let f(): number { let g(): boolean { true; }; 1; }"
+    );
 }

@@ -135,6 +135,10 @@ impl From<Ast> for Hir<Untyped, Unbound> {
                 let mut output =
                     ExitPointsResolver::new(&operator_free.expressions, &ast.statements)
                         .exit_points(expr_id);
+
+                #[cfg(test)]
+                println!("Computed exit points and unreachable for {expr_id:?}: {output:?}");
+
                 exit_points.insert(expr_id, output.exit_points);
                 unreachable.append(&mut output.unreachable);
             }

@@ -81,10 +81,9 @@ impl<'a> ExitPointsResolver<'a> {
     }
 
     pub fn exit_points(&self, expr: ExprId) -> Output {
-        match &self.expressions[expr].kind {
-            ExpressionKind::Block(_) => {}
-            e => panic!("expected block got {:?}", e),
-        };
+        if !matches!(&self.expressions[expr].kind, ExpressionKind::Block(_)) {
+            panic!("expected block got {:?}", &self.expressions[expr].kind)
+        }
 
         self.visit_expression(expr, 0, false).0.finalize()
     }
@@ -223,9 +222,7 @@ impl<'a> ExitPointsResolver<'a> {
 
                 (collected, true)
             }
-            StatementKind::LetFn(_, _, _, expr) => {
-                self.visit_expression(*expr, depth + 1, unreachable)
-            }
+            StatementKind::LetFn(_, _, _, _) => (Collected::default(), false),
             StatementKind::Struct(_, _) => (Collected::default(), false),
         }
     }
@@ -240,6 +237,7 @@ pub enum ExitPoint {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use insta::assert_debug_snapshot;
     use transmute_ast::lexer::Lexer;
     use transmute_ast::parser::Parser;
     use transmute_core::ids::ExprId;
@@ -737,5 +735,40 @@ mod tests {
         expected.sort();
 
         assert_eq!(actual, expected);
+    }
+
+    // todo rewrite other tests so they look like this one
+    #[test]
+    fn nested_function() {
+        let ast = Parser::new(Lexer::new(
+            r#"
+            let f() {
+                let g() {
+                    ret true;
+                };
+                ret 1;
+            }
+            "#,
+        ))
+        .parse()
+        .unwrap();
+
+        let block_exit_points = ast
+            .expressions
+            .iter()
+            .filter_map(|(expr_id, expression)| {
+                if matches!(expression.kind, ExpressionKind::Block(_)) {
+                    Some((
+                        expr_id,
+                        ExitPointsResolver::new(&ast.expressions, &ast.statements)
+                            .exit_points(expr_id),
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<(ExprId, Output)>>();
+
+        assert_debug_snapshot!((ast, block_exit_points));
     }
 }

@@ -38,6 +38,7 @@ impl ImplicitRetConverter {
     }
 
     /// returns true if all nested paths explicitly return
+    /// the depth is used to know if the expression is the function's last expression
     fn visit_expression(
         &mut self,
         statements: &VecMap<StmtId, Statement>,
@@ -153,6 +154,7 @@ impl ImplicitRetConverter {
         }
     }
 
+    /// returns true if all nested paths explicitly return
     fn visit_statement(
         &mut self,
         statements: &VecMap<StmtId, Statement>,
@@ -186,7 +188,7 @@ impl ImplicitRetConverter {
                 true
             }
             StatementKind::LetFn(_, _, _, expr) => {
-                self.visit_expression(statements, expressions, *expr, depth + 1, unreachable);
+                self.visit_expression(statements, expressions, *expr, 0, unreachable);
                 false
             }
             StatementKind::Struct(_, _) => false,
@@ -294,6 +296,18 @@ mod tests {
                     x: if true { ret 1; },
                     y: 1
                 };
+            }
+        "#
+    );
+
+    t!(
+        nested_function,
+        r#"
+            let f() {
+                let g() {
+                    true;
+                };
+                1;
             }
         "#
     );
