@@ -1,5 +1,6 @@
 use inkwell::builder::Builder;
 use inkwell::context::Context;
+use inkwell::memory_buffer::MemoryBuffer;
 use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::{
@@ -65,20 +66,26 @@ pub struct LlvmIr<'ctx> {
 
 impl<'ctx> LlvmIr<'ctx> {
     // todo error handling
-    pub fn build_bin<P: Into<PathBuf>>(&self, rt: &[u8], path: P) -> Result<(), Diagnostics> {
+    pub fn build_bin<P: Into<PathBuf>>(&self, crt: &[u8], path: P) -> Result<(), Diagnostics> {
         let path = path.into();
-
-        let crt_bitcode_path = path.with_file_name("crt.bc");
-        fs::write(&crt_bitcode_path, rt).unwrap();
 
         let tm_object_path = path.clone().with_extension("o");
         self.target_machine
             .write_to_file(&self.module, FileType::Object, &tm_object_path)
             .unwrap();
 
-        match Command::new("clang")
+        let crt_object_path = path.with_file_name("crt.o");
+        let crt_module = self
+            .module
+            .get_context()
+            .create_module_from_ir(MemoryBuffer::create_from_memory_range(crt, "crt"))
+            .unwrap();
+        self.target_machine.write_to_file(&crt_module, FileType::Object,&crt_object_path )
+            .unwrap();
+
+        match Command::new("cc")
             .arg(&tm_object_path)
-            .arg(&crt_bitcode_path)
+            .arg(&crt_object_path)
             .arg("-o")
             .arg(&path)
             .output()
@@ -91,7 +98,7 @@ impl<'ctx> LlvmIr<'ctx> {
             }
         }
 
-        fs::remove_file(crt_bitcode_path).unwrap();
+        fs::remove_file(crt_object_path).unwrap();
         fs::remove_file(tm_object_path).unwrap();
 
         Ok(())
@@ -363,9 +370,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         expr: &Expression,
     ) -> Value<'ctx> {
         let ptr = match target {
-            AssignmentTarget::Direct(symbol_id) => {
-                self.variables[&symbol_id]
-            }
+            AssignmentTarget::Direct(symbol_id) => self.variables[&symbol_id],
             AssignmentTarget::Indirect(_) => todo!(),
         };
 
