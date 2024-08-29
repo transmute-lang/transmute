@@ -69,6 +69,12 @@ where
         s
     }
 
+    // todo refactoring: make use of create() in place of XId::from(x.len())
+    pub fn create(&mut self) -> I {
+        self.vec.push(None);
+        (self.vec.len() - 1).into()
+    }
+
     /// Insert the value at index.
     ///
     /// If the value at index was not already set, [`None`] is returned.

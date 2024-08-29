@@ -1,0 +1,19 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+declare void @print(i64)
+
+define i64 @f() {
+entry:
+  %"g#res#" = call i64 @g()
+  ret i64 %"g#res#"
+}
+
+define i64 @g() {
+entry:
+  ret i64 1
+}

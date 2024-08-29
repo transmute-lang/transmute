@@ -80,7 +80,8 @@ impl<'ctx> LlvmIr<'ctx> {
             .get_context()
             .create_module_from_ir(MemoryBuffer::create_from_memory_range(crt, "crt"))
             .unwrap();
-        self.target_machine.write_to_file(&crt_module, FileType::Object,&crt_object_path )
+        self.target_machine
+            .write_to_file(&crt_module, FileType::Object, &crt_object_path)
             .unwrap();
 
         match Command::new("cc")
@@ -150,10 +151,12 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
     pub fn gen(mut self, mir: &Mir, optimize: bool) -> Result<Module<'ctx>, Diagnostics> {
         for (_, function) in mir.functions.iter() {
-            self.gen_function(mir, function);
+            self.gen_function_signature(mir, function);
+        }
+        for (_, function) in mir.functions.iter() {
+            self.gen_function_body(mir, function);
         }
 
-        // println!("{}", self.module.to_string().as_str());
         if optimize {
             self.optimize();
         }
@@ -232,7 +235,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         Value::Never
     }
 
-    fn gen_function(&mut self, mir: &Mir, function: &Function) -> Value<'ctx> {
+    fn gen_function_signature(&mut self, mir: &Mir, function: &Function) {
         let parameters_types = function
             .parameters
             .iter()
@@ -249,9 +252,19 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             Type::None => todo!(),
         };
 
-        let llvm_function =
-            self.module
-                .add_function(&mir.identifiers[function.identifier.id], fn_type, None);
+        self.module
+            .add_function(&mir.identifiers[function.identifier.id], fn_type, None);
+    }
+
+    fn gen_function_body(&mut self, mir: &Mir, function: &Function) -> Value<'ctx> {
+        // It is ok for now to get a function by name, but this might need to change when we start
+        // to mangle function names. When we do it, gen_function_signature() can return the function
+        // value that we can reuse here.
+        let llvm_function = self
+            .module
+            .get_function(&mir.identifiers[function.identifier.id])
+            .unwrap();
+
         let entry = self.context.append_basic_block(llvm_function, "entry");
         self.builder.position_at_end(entry);
 
@@ -514,10 +527,11 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .collect::<Vec<BasicMetadataValueEnum>>();
 
         let function_name = &mir.identifiers[mir.symbols[symbol_id].ident_id];
+
         let called_function = self
             .module
             .get_function(function_name)
-            .unwrap_or_else(|| panic!("called function `{}` exists", function_name));
+            .unwrap_or_else(|| panic!("called function `{}` not defined", function_name));
         self.builder
             .build_call(
                 called_function,
@@ -1147,6 +1161,18 @@ mod tests {
                 n = n + 1;
             }
             ret n;
+        }
+        "#
+    );
+
+    gen!(
+        nested_function,
+        r#"
+        let f(): number {
+            let g(): number {
+                1;
+            };
+            g();
         }
         "#
     );

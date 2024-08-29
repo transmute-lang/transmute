@@ -173,7 +173,7 @@ impl Transformer {
         ret: HirReturn,
         expr_id: ExprId,
     ) {
-        let function_id = FunctionId::from(self.functions.len());
+        let function_id = self.functions.create();
 
         let expression = hir.expressions.remove(expr_id).unwrap();
         let (mutated_symbol_ids, mut variables) = self.transform_expression(hir, expression);
@@ -482,7 +482,9 @@ impl Transformer {
                     ));
                     kept_stmt_ids.push(stmt.id)
                 }
-                HirStatementKind::LetFn(_, _, _, _) => todo!(),
+                HirStatementKind::LetFn(identifier, parameters, ret_type, expr_id) => {
+                    self.transform_function(hir, identifier, parameters, ret_type, expr_id);
+                }
                 HirStatementKind::Struct(_, _) => todo!(),
             }
         }
@@ -851,6 +853,14 @@ mod tests {
     #[test]
     fn test_expression_in_block() {
         let ast = transmute_ast::parse("let f() { if true { 1; } }").unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_inner_function() {
+        let ast =
+            transmute_ast::parse("let f(): number { let g(): boolean { true; }; 1; }").unwrap();
         let hir = transmute_hir::resolve(ast).unwrap();
         assert_debug_snapshot!(make_mir(hir));
     }
