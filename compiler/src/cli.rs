@@ -14,6 +14,14 @@ pub struct Args {
     /// Output file
     #[arg(short, long)]
     output: Option<String>,
+
+    /// Outputs LLVM IR
+    #[arg(long)]
+    optimize: bool,
+
+    /// Outputs LLVM IR
+    #[arg(long)]
+    llvm_ir: bool,
 }
 
 impl Args {
@@ -28,5 +36,13 @@ impl Args {
             let filename = &filename[0..filename.len() - 3];
             input.parent().unwrap().with_file_name(filename)
         })
+    }
+
+    pub fn optimize(&self) -> bool {
+        self.optimize
+    }
+
+    pub fn output_llvm_ir(&self) -> bool {
+        self.llvm_ir
     }
 }

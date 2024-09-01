@@ -5,21 +5,55 @@ use transmute_hir::resolve;
 use transmute_llvm::LlvmIrGen;
 use transmute_mir::make_mir;
 
-pub fn compile_file<S: AsRef<Path>, D: AsRef<Path>>(src: &S, dst: &D) -> Result<(), String> {
+#[derive(Debug, Default)]
+pub struct Options {
+    llvm_ir: bool,
+    optimize: bool,
+}
+
+impl Options {
+    pub fn set_llvm_ir(&mut self, llvm_ir: bool) {
+        self.llvm_ir = llvm_ir;
+    }
+
+    pub fn set_optimize(&mut self, optimize: bool) {
+        self.optimize = optimize;
+    }
+}
+
+pub fn compile_file<S: AsRef<Path>, D: AsRef<Path>>(
+    src: &S,
+    dst: &D,
+    options: &Options,
+) -> Result<(), String> {
     let file_content = fs::read_to_string(src)
         .map_err(|e| format!("Could not read {}: {}", src.as_ref().display(), e))?;
 
-    compile_str(&file_content, dst)
+    compile_str(&file_content, dst, options)
 }
 
-pub fn compile_str<S: AsRef<str>, D: AsRef<Path>>(src: S, dst: D) -> Result<(), String> {
-    let ir_gen = LlvmIrGen::default();
-    parse(src.as_ref())
+pub fn compile_str<S: AsRef<str>, D: AsRef<Path>>(
+    src: S,
+    dst: D,
+    options: &Options,
+) -> Result<(), String> {
+    let mut ir_gen = LlvmIrGen::default();
+    ir_gen.set_optimize(options.optimize);
+
+    let llvm_ir = parse(src.as_ref())
         .and_then(resolve)
         .and_then(make_mir)
         .and_then(|mir| ir_gen.gen(&mir))
-        .and_then(|ir| ir.build_bin(transmute_crt::get_crt(), dst.as_ref()))
         .map_err(|d| d.to_string())?;
+
+    if options.llvm_ir {
+        let dst = dst.as_ref().with_extension("ll");
+        llvm_ir.write_ir(&dst).map_err(|d| d.to_string())?;
+    } else {
+        llvm_ir
+            .build_bin(transmute_crt::get_crt(), dst.as_ref())
+            .map_err(|d| d.to_string())?;
+    }
 
     Ok(())
 }

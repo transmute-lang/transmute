@@ -15,7 +15,7 @@ use inkwell::values::{
 use inkwell::{IntPredicate, OptimizationLevel};
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, StructId, SymbolId, TypeId};
@@ -56,6 +56,10 @@ impl LlvmIrGen {
                 module,
                 target_machine,
             })
+    }
+
+    pub fn set_optimize(&mut self, optimize: bool) {
+        self.optimize = optimize;
     }
 }
 
@@ -112,6 +116,12 @@ impl<'ctx> LlvmIr<'ctx> {
         fs::remove_file(crt_object_path).unwrap();
         fs::remove_file(tm_object_path).unwrap();
 
+        Ok(())
+    }
+
+    pub fn write_ir<P: AsRef<Path>>(&self, path: P) -> Result<(), Diagnostics> {
+        let str = self.module.to_string();
+        fs::write(path, &str).unwrap();
         Ok(())
     }
 }
@@ -468,9 +478,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 };
 
                 let name = format!(
-                    "#{}#{}#sym{}#",
+                    "{}.{}#idx{}#sym{}#",
                     struct_ptr.get_name().to_str().unwrap(),
                     mir.identifiers[ident_id],
+                    index,
                     symbol_id
                 );
                 let target_ptr = self
@@ -603,10 +614,11 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         };
 
         let name = format!(
-            "{}#{}#idx{}#",
+            "{}.{}#idx{}#sym{}#",
             value.get_name().to_str().unwrap(),
             &mir.identifiers[ident_id],
-            index
+            index,
+            symbol_id
         );
 
         // todo see if we can replace with GEP+load (as for struct instantiation)
@@ -1125,7 +1137,6 @@ mod tests {
                     let llvm_ir = codegen
                     .gen(&mir, false)
                     .unwrap()
-                    .print_to_string()
                     .to_string();
                     assert_snapshot!(llvm_ir);
                 }
@@ -1156,7 +1167,6 @@ mod tests {
                     let llvm_ir = codegen
                     .gen(&mir, true)
                     .unwrap()
-                    .print_to_string()
                     .to_string();
                     assert_snapshot!(llvm_ir);
                 }

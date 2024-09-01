@@ -13,7 +13,7 @@ define i64 @f() {
 entry:
   %"s#local#sym21#" = alloca %"Struct#id0", align 8
   store %"Struct#id0" { i64 1 }, ptr %"s#local#sym21#", align 4
-  %"#s#local#sym21##field#sym20#" = getelementptr inbounds %"Struct#id0", ptr %"s#local#sym21#", i32 0, i32 0
-  store i64 2, ptr %"#s#local#sym21##field#sym20#", align 4
+  %"s#local#sym21#.field#idx0#sym20#" = getelementptr inbounds %"Struct#id0", ptr %"s#local#sym21#", i32 0, i32 0
+  store i64 2, ptr %"s#local#sym21#.field#idx0#sym20#", align 4
   ret i64 1
 }
