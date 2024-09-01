@@ -6,18 +6,28 @@ use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::{
     CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine, TargetTriple,
 };
-use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum, IntType, VoidType};
-use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue};
+use inkwell::types::{
+    BasicMetadataTypeEnum, BasicType, BasicTypeEnum, IntType, StructType, VoidType,
+};
+use inkwell::values::{
+    AggregateValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, PointerValue,
+};
 use inkwell::{IntPredicate, OptimizationLevel};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 use transmute_core::error::Diagnostics;
-use transmute_core::ids::{ExprId, SymbolId, TypeId};
-use transmute_mir::{Expression, ExpressionKind, Function, Mir, Statement, StatementKind, Type};
+use transmute_core::ids::{ExprId, StructId, SymbolId, TypeId};
+use transmute_mir::{
+    Expression, ExpressionKind, Function, Mir, Statement, StatementKind, Struct, Type,
+};
 use transmute_mir::{LiteralKind, SymbolKind, Target as AssignmentTarget};
 use transmute_mir::{NativeFnKind, Variable};
+
+// todo add support for void functions
+// todo add support for structs nested in functions (does not work because of resolver)
+// todo add support for nested structs
 
 pub struct LlvmIrGen {
     context: Context,
@@ -114,6 +124,7 @@ struct Codegen<'ctx, 't> {
     i64_type: IntType<'ctx>,
     void_type: VoidType<'ctx>,
 
+    struct_types: HashMap<StructId, StructType<'ctx>>,
     variables: HashMap<SymbolId, PointerValue<'ctx>>,
 
     target_triple: &'t TargetTriple,
@@ -143,6 +154,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             bool_type,
             i64_type,
             void_type,
+            struct_types: HashMap::default(),
             variables: HashMap::default(),
             target_triple,
             target_machine,
@@ -150,12 +162,22 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     }
 
     pub fn gen(mut self, mir: &Mir, optimize: bool) -> Result<Module<'ctx>, Diagnostics> {
+        for (struct_id, struct_def) in mir.structs.iter() {
+            self.gen_struct(mir, struct_id, struct_def);
+        }
+
         for (_, function) in mir.functions.iter() {
             self.gen_function_signature(mir, function);
         }
         for (_, function) in mir.functions.iter() {
             self.gen_function_body(mir, function);
         }
+
+        self.module.verify().unwrap_or_else(|str| {
+            #[cfg(debug_assertions)]
+            eprintln!("{}", self.module.to_string());
+            panic!("Invalid LLVM IR generated:\n{}", str.to_string());
+        });
 
         if optimize {
             self.optimize();
@@ -235,6 +257,24 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         Value::Never
     }
 
+    fn gen_struct(&mut self, mir: &Mir, struct_id: StructId, struct_def: &Struct) -> StructType {
+        let fields = struct_def
+            .fields
+            .iter()
+            .map(|field| self.llvm_type(mir, field.type_id))
+            .collect::<Vec<BasicTypeEnum>>();
+
+        let struct_type = self.context.opaque_struct_type(&format!(
+            "{}#id{}",
+            &mir.identifiers[struct_def.identifier.id], struct_id
+        ));
+        struct_type.set_body(fields.as_slice(), false);
+
+        self.struct_types.insert(struct_id, struct_type);
+
+        struct_type
+    }
+
     fn gen_function_signature(&mut self, mir: &Mir, function: &Function) {
         let parameters_types = function
             .parameters
@@ -246,7 +286,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let fn_type = match resolved_ret_type {
             Type::Boolean => self.bool_type.fn_type(&parameters_types, false),
             Type::Function(_, _) => todo!(),
-            Type::Struct(_) => todo!(),
+            Type::Struct(_, _) => todo!(),
             Type::Number => self.i64_type.fn_type(&parameters_types, false),
             Type::Void => self.void_type.fn_type(&parameters_types, false),
             Type::None => todo!(),
@@ -269,7 +309,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         self.builder.position_at_end(entry);
 
         for (i, param) in llvm_function.get_param_iter().enumerate() {
-            // todo name may be made of the form {name}#param#sym{sid}
             let name = format!(
                 "{}#param#sym{}#",
                 &mir.identifiers[function.parameters[i].identifier.id],
@@ -344,7 +383,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     Value::Some(self.i64_type.const_int(*number as u64, false).into())
                 }
             },
-            ExpressionKind::Access(_, _) => todo!(),
+            ExpressionKind::Access(expr_id, symbol_id) => {
+                self.gen_access(mir, *expr_id, *symbol_id)
+            }
             ExpressionKind::FunctionCall(symbol_id, params) => {
                 self.gen_function_call(mir, *symbol_id, params)
             }
@@ -361,7 +402,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 }
                 value
             }
-            ExpressionKind::StructInstantiation(_, _) => todo!(),
+            ExpressionKind::StructInstantiation(_, struct_id, fields) => {
+                self.gen_struct_instantiation(mir, *struct_id, fields)
+            }
         };
 
         #[cfg(debug_assertions)]
@@ -382,16 +425,63 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         target: &AssignmentTarget,
         expr: &Expression,
     ) -> Value<'ctx> {
-        let ptr = match target {
-            AssignmentTarget::Direct(symbol_id) => self.variables[&symbol_id],
-            AssignmentTarget::Indirect(_) => todo!(),
-        };
+        let value = self.gen_expression(mir, expr).unwrap();
 
-        let val = self.gen_expression(mir, expr).unwrap();
-
-        self.builder.build_store(ptr, val).unwrap();
+        match target {
+            AssignmentTarget::Direct(symbol_id) => {
+                self.builder
+                    .build_store(self.variables[symbol_id], value)
+                    .unwrap();
+            }
+            AssignmentTarget::Indirect(expr_id) => {
+                let (target, _) = self.gen_pointer_expression(mir, &mir.expressions[*expr_id]);
+                self.builder.build_store(target, value).unwrap();
+            }
+        }
 
         Value::None
+    }
+
+    fn gen_pointer_expression(
+        &mut self,
+        mir: &Mir,
+        expression: &Expression,
+    ) -> (PointerValue<'ctx>, BasicTypeEnum<'ctx>) {
+        match &expression.kind {
+            ExpressionKind::Literal(literal) => match &literal.kind {
+                LiteralKind::Identifier(symbol_id) => {
+                    let struct_pointer = *self.variables.get(symbol_id).unwrap();
+                    let struct_type = self.llvm_type(mir, mir.symbols[*symbol_id].type_id);
+                    (struct_pointer, struct_type)
+                }
+                LiteralKind::Boolean(_) => panic!("a boolean is not a pointer"),
+                LiteralKind::Number(_) => panic!("a number is not a pointer"),
+            },
+            ExpressionKind::Access(expr_id, symbol_id) => {
+                let (struct_ptr, struct_type) =
+                    self.gen_pointer_expression(mir, &mir.expressions[*expr_id]);
+
+                let symbol = &mir.symbols[*symbol_id];
+                let (ident_id, index) = match symbol.kind {
+                    SymbolKind::Field(_, ident_id, index) => (ident_id, index),
+                    _ => panic!("only fields can be accessed"),
+                };
+
+                let name = format!(
+                    "#{}#{}#sym{}#",
+                    struct_ptr.get_name().to_str().unwrap(),
+                    mir.identifiers[ident_id],
+                    symbol_id
+                );
+                let target_ptr = self
+                    .builder
+                    .build_struct_gep(struct_type, struct_ptr, index as u32, &name)
+                    .unwrap();
+
+                (target_ptr, self.llvm_type(mir, symbol.type_id))
+            }
+            _ => panic!(),
+        }
     }
 
     fn gen_if(
@@ -494,10 +584,37 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 .get_nth_param(*index as u32)
                 .unwrap(),
             SymbolKind::Struct(_) => todo!(),
-            SymbolKind::Field(_, _) => todo!(),
+            SymbolKind::Field(_, _, _) => todo!(),
             SymbolKind::NativeType(_, _) => todo!(),
             SymbolKind::Native(_, _, _, _) => todo!(),
         }
+    }
+
+    fn gen_access(&mut self, mir: &Mir, expr_id: ExprId, symbol_id: SymbolId) -> Value<'ctx> {
+        let (ident_id, index) = match &mir.symbols[symbol_id].kind {
+            SymbolKind::Field(_, ident_id, index) => (*ident_id, *index),
+            _ => panic!("invalid symbol type"),
+        };
+
+        let value = match self.gen_expression(mir, &mir.expressions[expr_id]).unwrap() {
+            BasicValueEnum::ArrayValue(_) => todo!(),
+            BasicValueEnum::StructValue(v) => v,
+            _ => panic!("invalid value type"),
+        };
+
+        let name = format!(
+            "{}#{}#idx{}#",
+            value.get_name().to_str().unwrap(),
+            &mir.identifiers[ident_id],
+            index
+        );
+
+        // todo see if we can replace with GEP+load (as for struct instantiation)
+        Value::Some(
+            self.builder
+                .build_extract_value(value, index as u32, &name)
+                .unwrap(),
+        )
     }
 
     fn gen_function_call(
@@ -577,6 +694,52 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         value
     }
 
+    fn gen_struct_instantiation(
+        &mut self,
+        mir: &Mir,
+        struct_id: StructId,
+        fields: &[(SymbolId, ExprId)],
+    ) -> Value<'ctx> {
+        let field_values = fields
+            .iter()
+            .map(
+                |(_, expr_id)| match self.gen_expression(mir, &mir.expressions[*expr_id]) {
+                    Value::Some(val) => val,
+                    _ => panic!("value expected"),
+                },
+            )
+            .collect::<Vec<BasicValueEnum>>();
+
+        let const_values = field_values
+            .iter()
+            .map(|value| {
+                if Self::is_const(value) {
+                    *value
+                } else {
+                    Self::get_undef(&value.get_type())
+                }
+            })
+            .collect::<Vec<BasicValueEnum>>();
+
+        // todo review whether it makes sense to use GEP+store instead of insertvalue
+        //  ref: https://stackoverflow.com/questions/35234940/llvm-gep-and-store-vs-load-and-insertvalue-storing-value-to-a-pointer-to-an-agg
+        let struct_type = *self.struct_types.get(&struct_id).unwrap();
+        let mut struct_value = struct_type
+            .const_named_struct(&const_values)
+            .as_aggregate_value_enum();
+
+        for (index, value) in field_values.into_iter().enumerate() {
+            if !Self::is_const(&value) {
+                struct_value = self
+                    .builder
+                    .build_insert_value(struct_value, value, index as u32, "insert")
+                    .unwrap();
+            }
+        }
+
+        Value::Some(struct_value.as_basic_value_enum())
+    }
+
     fn current_function(&self) -> FunctionValue<'ctx> {
         self.builder
             .get_insert_block()
@@ -589,7 +752,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         match &mir.types[type_id] {
             Type::Boolean => self.bool_type.as_basic_type_enum(),
             Type::Function(_, _) => todo!(),
-            Type::Struct(_) => todo!(),
+            Type::Struct(_, struct_id) => {
+                BasicTypeEnum::StructType(*self.struct_types.get(struct_id).unwrap())
+            }
             Type::Number => self.i64_type.as_basic_type_enum(),
             Type::Void => unreachable!(),
             Type::None => todo!(),
@@ -620,6 +785,28 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         self.variables.insert(symbol_id, ptr);
 
         ptr
+    }
+
+    fn is_const(value: &BasicValueEnum<'ctx>) -> bool {
+        match value {
+            BasicValueEnum::ArrayValue(val) => val.is_const(),
+            BasicValueEnum::FloatValue(val) => val.is_const(),
+            BasicValueEnum::IntValue(val) => val.is_const(),
+            BasicValueEnum::PointerValue(val) => val.is_const(),
+            BasicValueEnum::StructValue(_) => false,
+            BasicValueEnum::VectorValue(val) => val.is_const(),
+        }
+    }
+
+    fn get_undef(typ: &BasicTypeEnum<'ctx>) -> BasicValueEnum<'ctx> {
+        match typ {
+            BasicTypeEnum::ArrayType(ty) => ty.get_undef().into(),
+            BasicTypeEnum::FloatType(ty) => ty.get_undef().into(),
+            BasicTypeEnum::IntType(ty) => ty.get_undef().into(),
+            BasicTypeEnum::PointerType(ty) => ty.get_undef().into(),
+            BasicTypeEnum::StructType(ty) => ty.get_undef().into(),
+            BasicTypeEnum::VectorType(ty) => ty.get_undef().into(),
+        }
     }
 }
 
@@ -1173,6 +1360,113 @@ mod tests {
                 1;
             };
             g();
+        }
+        "#
+    );
+
+    gen!(
+        struct_instantiate_1_const_field,
+        r#"
+        struct Struct { field: number }
+        let f(): number {
+            let s = Struct { field: 1 };
+            1;
+        }
+        "#
+    );
+
+    gen!(
+        struct_instantiate_2_const_field,
+        r#"
+        struct Struct { field1: number, field2: boolean }
+        let f(): number {
+            let s = Struct { field2: true, field1: 1 };
+            1;
+        }
+        "#
+    );
+
+    gen!(
+        struct_instantiate_1_field_var,
+        r#"
+        struct Struct { field: number }
+        let f(n: number): number {
+            let s = Struct {
+                field: n + 1,
+            };
+            1;
+        }
+        "#
+    );
+
+    gen!(
+        struct_instantiate_2_fields_var,
+        r#"
+        struct Struct { field1: number, field2: number }
+        let f(n: number): number {
+            let s = Struct {
+                field2: n + 2,
+                field1: n + 1,
+            };
+            1;
+        }
+        "#
+    );
+
+    gen!(
+        struct_instantiate_2_fields_mixed1,
+        r#"
+        struct Struct { field1: number, field2: number }
+        let f(n: number): number {
+            let s = Struct {
+                field1: n + 1,
+                field2: 0,
+            };
+            1;
+        }
+        "#
+    );
+
+    gen!(
+        struct_instantiate_2_fields_mixed2,
+        r#"
+        struct Struct { field1: number, field2: number }
+        let f(n: number): number {
+            let s = Struct {
+                field1: 0,
+                field2: n + 1,
+            };
+            1;
+        }
+        "#
+    );
+
+    gen!(
+        struct_read_field,
+        r#"
+        struct Struct { field: number }
+        let f(): number {
+            let s = Struct {
+                field: 1
+            };
+
+            s.field;
+        }
+        "#
+    );
+
+    gen!(
+        struct_write_field_const,
+        r#"
+        struct Struct { field: number }
+        let f(): number {
+            let s = Struct {
+                field: 1
+            };
+
+            s.field = 2;
+
+            1;
         }
         "#
     );

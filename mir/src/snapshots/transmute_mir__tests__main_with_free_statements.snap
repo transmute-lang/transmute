@@ -11,7 +11,7 @@ Err(
                 level: Error,
                 generated_at: (
                     "mir/src/lib.rs",
-                    73,
+                    78,
                 ),
             },
         ],

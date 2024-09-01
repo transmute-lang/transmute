@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use std::any::type_name;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::env::var;
 use std::thread::available_parallelism;
 use transmute_core::error::{Diagnostic, Diagnostics, Level};
@@ -15,13 +15,13 @@ use transmute_hir::bound::{Bound, BoundState};
 use transmute_hir::expression::{ExpressionKind as HirExpressionKind, Target as HirTarget};
 use transmute_hir::literal::{Literal as HirLiteral, LiteralKind as HirLiteralKind};
 use transmute_hir::natives::Type as HirType;
-use transmute_hir::statement::{Field, RetMode, Return, StatementKind as HirStatementKind};
+use transmute_hir::statement::{RetMode, Return, StatementKind as HirStatementKind};
 use transmute_hir::symbol::{Symbol as HirSymbol, SymbolKind as HirSymbolKind};
 use transmute_hir::typed::{Typed, TypedState};
 use transmute_hir::{
-    ResolvedExpression as HirExpression, ResolvedIdentifier as HirIdentifier,
-    ResolvedIdentifierRef as HirIdentifierRef, ResolvedParameter as HirParameter,
-    ResolvedStatement as HirStatement,
+    ResolvedExpression as HirExpression, ResolvedField as HirField,
+    ResolvedIdentifier as HirIdentifier, ResolvedIdentifierRef as HirIdentifierRef,
+    ResolvedParameter as HirParameter, ResolvedStatement as HirStatement,
 };
 use transmute_hir::{ResolvedHir as Hir, ResolvedReturn as HirReturn};
 
@@ -35,6 +35,8 @@ pub fn make_mir(hir: Hir) -> Result<Mir, Diagnostics> {
 struct Transformer {
     functions: VecMap<FunctionId, Function>,
     structs: VecMap<StructId, Struct>,
+    // todo only keep one of SymbolId or StructId?
+    structs_map: VecMap<StmtId, (SymbolId, StructId)>,
     expressions: VecMap<ExprId, Expression>,
     statements: VecMap<StmtId, Statement>,
 }
@@ -44,6 +46,7 @@ impl Transformer {
         Self {
             functions: Default::default(),
             structs: Default::default(),
+            structs_map: Default::default(),
             expressions: Default::default(),
             statements: Default::default(),
         }
@@ -62,10 +65,12 @@ impl Transformer {
                 HirStatementKind::LetFn(identifier, parameters, ret_type, expr_id) => {
                     self.transform_function(&mut hir, identifier, parameters, ret_type, expr_id)
                 }
-                HirStatementKind::Struct(_, _) => todo!(),
+                HirStatementKind::Struct(identifier, fields) => {
+                    self.transform_struct(&mut hir, *stmt_id, identifier, fields)
+                }
                 _ => {
-                    // todo it seems that roots is an useless concept outside of the interpreter flow. think
-                    //   about what to do about it
+                    // todo it seems that roots is an useless concept outside of the interpreter
+                    //   flow. think about what to do about it
                     diagnostics.push(Diagnostic::new(
                         "only functions are allowed at top level",
                         stmt.span,
@@ -120,8 +125,8 @@ impl Transformer {
                                     SymbolKind::Parameter(stmt_id, index)
                                 }
                                 HirSymbolKind::Struct(_, stmt_id) => SymbolKind::Struct(stmt_id),
-                                HirSymbolKind::Field(_, stmt_id, index) => {
-                                    SymbolKind::Field(stmt_id, index)
+                                HirSymbolKind::Field(ident_id, stmt_id, index) => {
+                                    SymbolKind::Field(stmt_id, ident_id, index)
                                 }
                                 HirSymbolKind::NativeType(ident_id, t) => SymbolKind::NativeType(
                                     ident_id,
@@ -156,7 +161,10 @@ impl Transformer {
                     HirType::Function(params, ret_type) => {
                         Some((type_id, Type::Function(params, ret_type)))
                     }
-                    HirType::Struct(_) => Some((type_id, todo!())),
+                    HirType::Struct(stmt_id) => {
+                        let (symbol_id, struct_id) = self.structs_map[stmt_id];
+                        Some((type_id, Type::Struct(symbol_id, struct_id)))
+                    }
                     HirType::Number => Some((type_id, Type::Number)),
                     HirType::Void => Some((type_id, Type::Void)),
                     HirType::None => Some((type_id, Type::None)),
@@ -181,9 +189,9 @@ impl Transformer {
         let parameters = parameters
             .into_iter()
             .map(|param| Parameter {
-                symbol_id: param.resolved_symobl_id(),
+                symbol_id: param.resolved_symbol_id(),
                 type_id: param.resolved_type_id(),
-                mutable: mutated_symbol_ids.contains(&param.resolved_symobl_id()),
+                mutable: mutated_symbol_ids.contains(&param.resolved_symbol_id()),
                 identifier: param.identifier.into(),
             })
             .collect::<Vec<Parameter>>();
@@ -204,6 +212,35 @@ impl Transformer {
         };
 
         self.functions.insert(function_id, function);
+    }
+
+    fn transform_struct(
+        &mut self,
+        hir: &mut Hir,
+        stmt_id: StmtId,
+        identifier: HirIdentifier,
+        fields: Vec<HirField>,
+    ) {
+        let struct_id = self.structs.create();
+        let symbol_id = identifier.resolved_symbol_id();
+        self.structs.insert(
+            struct_id,
+            Struct {
+                identifier: identifier.into(),
+                symbol_id,
+                fields: fields
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, field)| Field {
+                        index,
+                        symbol_id: field.resolved_symbol_id(),
+                        type_id: field.resolved_type_id(),
+                        identifier: field.identifier.into(),
+                    })
+                    .collect::<Vec<Field>>(),
+            },
+        );
+        self.structs_map.insert(stmt_id, (symbol_id, struct_id));
     }
 
     fn transform_expression(
@@ -235,7 +272,14 @@ impl Transformer {
                 self.transform_literal(hir, expression.id, expression.span, type_id, literal);
                 (Default::default(), Default::default())
             }
-            HirExpressionKind::Access(_, _) => todo!(),
+            HirExpressionKind::Access(expr, ident_ref_id) => self.transform_access(
+                hir,
+                expression.id,
+                expression.span,
+                type_id,
+                expr,
+                ident_ref_id,
+            ),
             HirExpressionKind::FunctionCall(ident_ref_id, params) => self.transform_function_call(
                 hir,
                 expression.id,
@@ -255,7 +299,15 @@ impl Transformer {
             HirExpressionKind::Block(stmt_ids) => {
                 self.transform_block(hir, expression.id, expression.span, type_id, stmt_ids)
             }
-            HirExpressionKind::StructInstantiation(_, _) => todo!(),
+            HirExpressionKind::StructInstantiation(ident_ref_id, fields) => self
+                .transform_struct_instantiation(
+                    hir,
+                    expression.id,
+                    expression.span,
+                    type_id,
+                    ident_ref_id,
+                    fields,
+                ),
         }
     }
 
@@ -309,6 +361,33 @@ impl Transformer {
         };
     }
 
+    fn transform_access(
+        &mut self,
+        hir: &mut Hir,
+        expr_id: ExprId,
+        span: Span,
+        type_id: TypeId,
+        target_expr_id: ExprId,
+        ident_ref_id: IdentRefId,
+    ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
+        let expression = hir.expressions.remove(target_expr_id).unwrap();
+        self.transform_expression(hir, expression);
+
+        let symbol_id = hir.identifier_refs[ident_ref_id].resolved_symbol_id();
+
+        self.expressions.insert(
+            expr_id,
+            Expression {
+                id: expr_id,
+                kind: ExpressionKind::Access(target_expr_id, symbol_id),
+                span,
+                type_id,
+            },
+        );
+
+        (Default::default(), Default::default())
+    }
+
     /// Transform the assignment and return the mutated `SymbolId`
     fn transform_assignment(
         &mut self,
@@ -321,7 +400,7 @@ impl Transformer {
     ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let expression = hir.expressions.remove(value_expr_id).unwrap();
 
-        let (mut mutated_symbol_ids, variables) = self.transform_expression(hir, expression);
+        let (mut mutated_symbol_ids, mut variables) = self.transform_expression(hir, expression);
 
         match target {
             HirTarget::Direct(ident_ref_id) => {
@@ -337,10 +416,31 @@ impl Transformer {
                 );
 
                 mutated_symbol_ids.push(symbol_id);
-                (mutated_symbol_ids, variables)
             }
-            HirTarget::Indirect(_) => todo!(),
+            HirTarget::Indirect(target_expr_id) => {
+                let expression = hir.expressions.remove(target_expr_id).unwrap();
+                let (new_mutated_symbol_ids, new_variables) =
+                    self.transform_expression(hir, expression);
+
+                self.expressions.insert(
+                    expr_id,
+                    Expression {
+                        id: expr_id,
+                        kind: ExpressionKind::Assignment(
+                            Target::Indirect(target_expr_id),
+                            value_expr_id,
+                        ),
+                        span,
+                        type_id,
+                    },
+                );
+
+                mutated_symbol_ids.extend(new_mutated_symbol_ids);
+                variables.extend(new_variables);
+            }
         }
+
+        (mutated_symbol_ids, variables)
     }
 
     fn transform_if(
@@ -357,14 +457,14 @@ impl Transformer {
         let (mut mutated_symbols_ids, mut variables) = self.transform_expression(hir, expr);
 
         let expr = hir.expressions.remove(true_expr_id).unwrap();
-        let (mut new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, expr);
-        mutated_symbols_ids.append(&mut new_mutated_symbols_ids);
+        let (new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, expr);
+        mutated_symbols_ids.extend(new_mutated_symbols_ids);
         variables.extend(new_variables);
 
         if let Some(false_expr_id) = false_expr_id {
             let expr = hir.expressions.remove(false_expr_id).unwrap();
-            let (mut new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, expr);
-            mutated_symbols_ids.append(&mut new_mutated_symbols_ids);
+            let (new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, expr);
+            mutated_symbols_ids.extend(new_mutated_symbols_ids);
             variables.extend(new_variables);
         }
 
@@ -397,9 +497,9 @@ impl Transformer {
 
         for expr_id in params.iter() {
             let expression = hir.expressions.remove(*expr_id).unwrap();
-            let (mut new_mutated_symbol_ids, mut new_variables) =
+            let (new_mutated_symbol_ids, mut new_variables) =
                 self.transform_expression(hir, expression);
-            mutated_symbol_ids.append(&mut new_mutated_symbol_ids);
+            mutated_symbol_ids.extend(new_mutated_symbol_ids);
             variables.extend(new_variables);
         }
 
@@ -429,8 +529,8 @@ impl Transformer {
         let (mut mutated_symbols_ids, mut variables) = self.transform_expression(hir, expr);
 
         let expr = hir.expressions.remove(body_expr_id).unwrap();
-        let (mut new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, expr);
-        mutated_symbols_ids.append(&mut new_mutated_symbols_ids);
+        let (new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, expr);
+        mutated_symbols_ids.extend(new_mutated_symbols_ids);
         variables.extend(new_variables);
 
         self.expressions.insert(
@@ -462,9 +562,9 @@ impl Transformer {
             let stmt = hir.statements.remove(stmt_id).unwrap();
             match stmt.kind {
                 HirStatementKind::Expression(expr_id) => {
-                    let (mut new_mutated_symbol_ids, new_variables) =
+                    let (new_mutated_symbol_ids, new_variables) =
                         self.transform_expression_statement(hir, stmt.id, stmt.span, expr_id);
-                    mutated_symbols.append(&mut new_mutated_symbol_ids);
+                    mutated_symbols.extend(new_mutated_symbol_ids);
                     variables.extend(new_variables);
                     kept_stmt_ids.push(stmt.id);
                 }
@@ -474,7 +574,7 @@ impl Transformer {
                     kept_stmt_ids.push(stmt.id);
                 }
                 HirStatementKind::Ret(expr_id, _) => {
-                    mutated_symbols.append(&mut self.transform_ret(
+                    mutated_symbols.extend(self.transform_ret(
                         hir,
                         stmt.id,
                         stmt.span.clone(),
@@ -500,6 +600,70 @@ impl Transformer {
         );
 
         (mutated_symbols, variables)
+    }
+
+    fn transform_struct_instantiation(
+        &mut self,
+        hir: &mut Hir,
+        expr_id: ExprId,
+        span: Span,
+        type_id: TypeId,
+        ident_ref_id: IdentRefId,
+        fields: Vec<(IdentRefId, ExprId)>,
+    ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
+        let mut transformed_fields = Vec::new();
+        let mut mutated_symbol_ids = Vec::new();
+        let mut variables = BTreeMap::new();
+
+        for (field_ident_ref_id, field_expr_id) in fields.into_iter() {
+            let expression = hir.expressions.remove(field_expr_id).unwrap();
+            let (new_mutated_symbol_ids, new_variables) =
+                self.transform_expression(hir, expression);
+            mutated_symbol_ids.extend(new_mutated_symbol_ids);
+            variables.extend(new_variables);
+
+            let field_index = match &hir.symbols
+                [hir.identifier_refs[field_ident_ref_id].resolved_symbol_id()]
+            .kind
+            {
+                HirSymbolKind::Field(_, _, index) => *index,
+                _ => panic!("symbol must be a struct field"),
+            };
+
+            transformed_fields.push((
+                field_index,
+                hir.identifier_refs[field_ident_ref_id].resolved_symbol_id(),
+                field_expr_id,
+            ));
+        }
+
+        let stmt_id =
+            match &hir.symbols[hir.identifier_refs[ident_ref_id].resolved_symbol_id()].kind {
+                HirSymbolKind::Struct(_, stmt_id) => stmt_id,
+                _ => panic!("symbol must be a struct"),
+            };
+
+        // we need to guarantee that the fields are sorted by declaration order
+        transformed_fields.sort_by(|a, b| a.0.cmp(&b.0));
+
+        self.expressions.insert(
+            expr_id,
+            Expression {
+                id: expr_id,
+                kind: ExpressionKind::StructInstantiation(
+                    self.structs_map[*stmt_id].0,
+                    self.structs_map[*stmt_id].1,
+                    transformed_fields
+                        .into_iter()
+                        .map(|(_, symbol_id, expr_id)| (symbol_id, expr_id))
+                        .collect::<Vec<(SymbolId, ExprId)>>(),
+                ),
+                span,
+                type_id,
+            },
+        );
+
+        (mutated_symbol_ids, variables)
     }
 
     fn transform_expression_statement(
@@ -660,7 +824,17 @@ pub struct Variable {
 
 #[derive(Debug)]
 pub struct Struct {
-    // todo
+    pub identifier: Identifier,
+    pub symbol_id: SymbolId,
+    pub fields: Vec<Field>,
+}
+
+#[derive(Debug)]
+pub struct Field {
+    pub identifier: Identifier,
+    pub index: usize,
+    pub symbol_id: SymbolId,
+    pub type_id: TypeId,
 }
 
 #[derive(Debug)]
@@ -695,7 +869,8 @@ pub enum ExpressionKind {
     FunctionCall(SymbolId, Vec<ExprId>),
     While(ExprId, ExprId),
     Block(Vec<StmtId>),
-    StructInstantiation(SymbolId, Vec<(SymbolId, ExprId)>),
+    // todo only keep one of SymbolId or StructId? also, the field's SymbolId does not seem useful
+    StructInstantiation(SymbolId, StructId, Vec<(SymbolId, ExprId)>),
 }
 
 #[derive(Debug)]
@@ -735,7 +910,8 @@ pub enum StatementKind {
 pub enum Type {
     Boolean,
     Function(Vec<TypeId>, TypeId),
-    Struct(StructId),
+    // todo keep ony one?
+    Struct(SymbolId, StructId),
     Number,
 
     /// This value is used when the statement/expression does not have any value. This is the
@@ -757,13 +933,16 @@ pub struct Symbol {
 
 #[derive(Debug, PartialEq)]
 pub enum SymbolKind {
+    // todo StmtId does not really make sense as teh statements is not in the MIR anymore.
     Let(StmtId),
+    // todo StmtId does not really make sense as teh statements is not in the MIR anymore.
     LetFn(StmtId, Vec<TypeId>, TypeId),
-    // todo could StmtId be replaced with SymbolId (the symbol that defines the function)
+    // todo StmtId does not really make sense as teh statements is not in the MIR anymore
     Parameter(StmtId, usize),
+    // todo StmtId does not really make sense as teh statements is not in the MIR anymore
     Struct(StmtId),
-    // todo could StmtId be replaced with SymbolId (the symbol that defines the struct)
-    Field(StmtId, usize),
+    // todo StmtId does not really make sense as teh statements is not in the MIR anymore
+    Field(StmtId, IdentId, usize),
     NativeType(IdentId, Type),
     Native(IdentId, Vec<TypeId>, TypeId, NativeFnKind),
 }
@@ -861,6 +1040,80 @@ mod tests {
     fn test_inner_function() {
         let ast =
             transmute_ast::parse("let f(): number { let g(): boolean { true; }; 1; }").unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_struct() {
+        let ast = transmute_ast::parse("struct Struct { field: number }").unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_struct_instantiation() {
+        let ast = transmute_ast::parse(
+            r#"
+                struct Struct { field: number }
+                let f() {
+                    let s = Struct { field: 1 };
+                }
+                "#,
+        )
+        .unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_struct_instantiation_fields_out_of_order() {
+        let ast = transmute_ast::parse(
+            r#"
+                struct Struct { field1: number, field2: boolean }
+                let f() {
+                    let s = Struct { field2: true, field1: 1 };
+                }
+                "#,
+        )
+        .unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_struct_field_read() {
+        let ast = transmute_ast::parse(
+            r#"
+        struct Struct { field: number }
+        let f(): number {
+            let s = Struct { field: 1 };
+            s.field;
+        }
+        "#,
+        )
+        .unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_struct_field_write() {
+        let ast = transmute_ast::parse(
+            r#"
+        struct Struct { field: number }
+        let f(): number {
+            let s = Struct {
+                field: 1
+            };
+
+            s.field = 2;
+
+            1;
+        }
+        "#,
+        )
+        .unwrap();
         let hir = transmute_hir::resolve(ast).unwrap();
         assert_debug_snapshot!(make_mir(hir));
     }

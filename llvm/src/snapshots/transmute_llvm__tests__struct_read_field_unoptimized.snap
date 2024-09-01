@@ -1,0 +1,19 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+%"Struct#id0" = type { i64 }
+
+declare void @print(i64)
+
+define i64 @f() {
+entry:
+  %"s#local#sym21#" = alloca %"Struct#id0", align 8
+  store %"Struct#id0" { i64 1 }, ptr %"s#local#sym21#", align 4
+  %"s#local#sym21#1" = load %"Struct#id0", ptr %"s#local#sym21#", align 4
+  %"s#local#sym21#1#field#idx0#" = extractvalue %"Struct#id0" %"s#local#sym21#1", 0
+  ret i64 %"s#local#sym21#1#field#idx0#"
+}

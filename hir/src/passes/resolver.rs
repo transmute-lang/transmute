@@ -277,7 +277,7 @@ impl<'a> Resolver<'a> {
                                         .resolution
                                         .identifier_refs
                                         .insert(ident_ref.id, ident_ref);
-                                    field.type_id()
+                                    field.resolved_type_id()
                                 }
                                 None => {
                                     state.diagnostics.report_err(
@@ -612,7 +612,7 @@ impl<'a> Resolver<'a> {
                         field_ident_ref.resolved(field_symbol_id),
                     );
 
-                    if expr_type_id != field.type_id() {
+                    if expr_type_id != field.resolved_type_id() {
                         state.diagnostics.report_err(
                             format!(
                                 "Invalid type for field '{}': expected {}, got {}",
@@ -621,7 +621,7 @@ impl<'a> Resolver<'a> {
                                     .identifiers
                                     .get_by_left(&field.identifier.id)
                                     .unwrap(),
-                                state.find_type_by_type_id(field.type_id()),
+                                state.find_type_by_type_id(field.resolved_type_id()),
                                 state.find_type_by_type_id(expr_type_id)
                             ),
                             state.resolution.expressions[*field_expr_id].span.clone(),
@@ -962,7 +962,8 @@ impl<'a> Resolver<'a> {
                     );
                     field.bind(state.not_found_symbol_id)
                 } else {
-                    let symbol_id = state.insert_symbol(ident_id, symbol_kind, field.type_id());
+                    let symbol_id =
+                        state.insert_symbol(ident_id, symbol_kind, field.resolved_type_id());
                     field.bind(symbol_id)
                 }
             })

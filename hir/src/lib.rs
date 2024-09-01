@@ -8,7 +8,7 @@ use crate::passes::exit_points_resolver::ExitPointsResolver;
 use crate::passes::implicit_ret_converter::ImplicitRetConverter;
 use crate::passes::operators_converter::OperatorsConverter;
 use crate::passes::resolver::Resolver;
-use crate::statement::{Parameter, Return, Statement};
+use crate::statement::{Field, Parameter, Return, Statement};
 use crate::symbol::Symbol;
 use crate::typed::{Typed, TypedState, Untyped};
 use std::collections::HashMap;
@@ -40,6 +40,7 @@ pub type ResolvedIdentifier = Identifier<Bound>;
 pub type ResolvedIdentifierRef = IdentifierRef<Bound>;
 pub type ResolvedParameter = Parameter<Typed, Bound>;
 pub type ResolvedReturn = Return<Typed>;
+pub type ResolvedField = Field<Typed, Bound>;
 
 pub fn resolve(ast: Ast) -> Result<ResolvedHir, Diagnostics> {
     UnresolvedHir::from(ast).resolve(Natives::default())

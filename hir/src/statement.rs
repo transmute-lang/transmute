@@ -155,7 +155,7 @@ impl<T> Parameter<T, Bound>
 where
     T: TypedState,
 {
-    pub fn resolved_symobl_id(&self) -> SymbolId {
+    pub fn resolved_symbol_id(&self) -> SymbolId {
         self.identifier.resolved_symbol_id()
     }
 }
@@ -247,7 +247,7 @@ impl<B> Field<Typed, B>
 where
     B: BoundState,
 {
-    pub fn type_id(&self) -> TypeId {
+    pub fn resolved_type_id(&self) -> TypeId {
         self.typed.0
     }
 }
@@ -263,5 +263,14 @@ where
             span: self.span,
             typed: self.typed,
         }
+    }
+}
+
+impl<T> Field<T, Bound>
+where
+    T: TypedState,
+{
+    pub fn resolved_symbol_id(&self) -> SymbolId {
+        self.identifier.resolved_symbol_id()
     }
 }
