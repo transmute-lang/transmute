@@ -173,7 +173,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
     pub fn gen(mut self, mir: &Mir, optimize: bool) -> Result<Module<'ctx>, Diagnostics> {
         for (struct_id, struct_def) in mir.structs.iter() {
-            self.gen_struct(mir, struct_id, struct_def);
+            self.gen_struct_signature(mir, struct_id, struct_def);
+        }
+        for (struct_id, struct_def) in mir.structs.iter() {
+            self.gen_struct_body(mir, struct_id, struct_def);
         }
 
         for (_, function) in mir.functions.iter() {
@@ -267,22 +270,24 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         Value::Never
     }
 
-    fn gen_struct(&mut self, mir: &Mir, struct_id: StructId, struct_def: &Struct) -> StructType {
+    fn gen_struct_signature(&mut self, mir: &Mir, struct_id: StructId, struct_def: &Struct) {
+        let struct_type = self.context.opaque_struct_type(&format!(
+            "{}#id{}",
+            &mir.identifiers[struct_def.identifier.id], struct_id
+        ));
+        self.struct_types.insert(struct_id, struct_type);
+    }
+
+    fn gen_struct_body(&mut self, mir: &Mir, struct_id: StructId, struct_def: &Struct) {
         let fields = struct_def
             .fields
             .iter()
             .map(|field| self.llvm_type(mir, field.type_id))
             .collect::<Vec<BasicTypeEnum>>();
 
-        let struct_type = self.context.opaque_struct_type(&format!(
-            "{}#id{}",
-            &mir.identifiers[struct_def.identifier.id], struct_id
-        ));
+        let struct_type = *self.struct_types.get(&struct_id).unwrap();
+
         struct_type.set_body(fields.as_slice(), false);
-
-        self.struct_types.insert(struct_id, struct_type);
-
-        struct_type
     }
 
     fn gen_function_signature(&mut self, mir: &Mir, function: &Function) {
@@ -1476,6 +1481,20 @@ mod tests {
 
             s.field = 2;
 
+            1;
+        }
+        "#
+    );
+
+    gen!(
+        struct_declared_out_of_order,
+        r#"
+        struct StructOuter { inner: StructInner }
+        struct StructInner {  }
+        let f(): number {
+            let outer = StructOuter {
+                inner: StructInner {  }
+            };
             1;
         }
         "#
