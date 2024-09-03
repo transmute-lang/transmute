@@ -11,8 +11,8 @@ declare void @print(i64)
 
 declare ptr @malloc(i64)
 
-define i1 @f(i64 %"l#param#sym19#", i64 %"r#param#sym20#") {
+define i64 @f() {
 entry:
-  %"lt#" = icmp slt i64 %"l#param#sym19#", %"r#param#sym20#"
-  ret i1 %"lt#"
+  %"heap#struct#Struct#id0#" = call ptr @malloc(i64 0)
+  ret i64 1
 }

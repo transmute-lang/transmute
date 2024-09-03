@@ -1,7 +1,9 @@
 ---
 source: compiler/tests/inner_function.rs
-expression: "String::from_utf8(output.stdout).unwrap()"
+expression: "format!(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(),\n    String :: from_utf8(output.stdout).unwrap(), String ::\n    from_utf8(output.stderr).unwrap())"
 ---
+success:true
+stdout:
 f(0) = 0
 f(1) = 1
 f(2) = 1
@@ -12,3 +14,6 @@ f(6) = 8
 f(7) = 13
 f(8) = 21
 f(9) = 34
+
+
+stderr:

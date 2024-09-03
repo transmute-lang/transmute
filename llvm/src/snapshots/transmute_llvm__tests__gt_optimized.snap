@@ -9,6 +9,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @print(i64)
 
+declare ptr @malloc(i64)
+
 define i1 @f(i64 %"l#param#sym19#", i64 %"r#param#sym20#") {
 entry:
   %"gt#" = icmp sgt i64 %"l#param#sym19#", %"r#param#sym20#"

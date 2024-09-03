@@ -9,11 +9,15 @@ source_filename = "main"
 
 declare void @print(i64)
 
+declare ptr @malloc(i64)
+
 define i64 @f(i64 %"n#param#sym21#") {
 entry:
-  %"s#local#sym22#" = alloca %"Struct#id0", align 8
+  %"s#local#sym22#" = alloca ptr, align 8
+  %"heap#struct#Struct#id0#" = call ptr @malloc(i64 ptrtoint (ptr getelementptr (%"Struct#id0", ptr null, i32 1) to i64))
   %"add#" = add i64 %"n#param#sym21#", 1
-  %insert = insertvalue %"Struct#id0" undef, i64 %"add#", 0
-  store %"Struct#id0" %insert, ptr %"s#local#sym22#", align 4
+  %"heap#struct#Struct#id0#.field#idx0#sym20" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
+  store i64 %"add#", ptr %"heap#struct#Struct#id0#.field#idx0#sym20", align 4
+  store ptr %"heap#struct#Struct#id0#", ptr %"s#local#sym22#", align 8
   ret i64 1
 }

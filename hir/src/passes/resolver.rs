@@ -2004,4 +2004,22 @@ mod tests {
         nested_function_different_types,
         "let f(): number { let g(): boolean { true; }; 1; }"
     );
+
+    // fixme un-comment the following test
+    // test_type_ok!(
+    //     struct_same_field_name,
+    //     r#"
+    //     struct Inner { field: number };
+    //     struct Outer { field: Inner };
+    //     "#
+    // );
+    // fixme un-comment the following test
+    // test_type_ok!(
+    //     struct_instantiation_same_field_name,
+    //     r#"
+    //     struct Inner { field: number };
+    //     struct Outer { field: Inner };
+    //     let s = Outer { field: Inner { field: 1 } };
+    //     "#
+    // );
 }

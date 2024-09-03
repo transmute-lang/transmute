@@ -7,6 +7,8 @@ source_filename = "main"
 
 declare void @print(i64)
 
+declare ptr @malloc(i64)
+
 define i64 @f() {
 entry:
   %"g#res#" = call i64 @g()

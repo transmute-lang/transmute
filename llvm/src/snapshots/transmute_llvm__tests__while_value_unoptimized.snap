@@ -7,6 +7,8 @@ source_filename = "main"
 
 declare void @print(i64)
 
+declare ptr @malloc(i64)
+
 define i64 @f(i64 %"n#param#sym19#") {
 entry:
   %"n#local#sym19#" = alloca i64, align 8

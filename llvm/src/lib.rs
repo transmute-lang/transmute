@@ -7,11 +7,9 @@ use inkwell::targets::{
     CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine, TargetTriple,
 };
 use inkwell::types::{
-    BasicMetadataTypeEnum, BasicType, BasicTypeEnum, IntType, StructType, VoidType,
+    BasicMetadataTypeEnum, BasicType, BasicTypeEnum, IntType, PointerType, StructType, VoidType,
 };
-use inkwell::values::{
-    AggregateValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, PointerValue,
-};
+use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue};
 use inkwell::{IntPredicate, OptimizationLevel};
 use std::collections::HashMap;
 use std::fs;
@@ -28,6 +26,7 @@ use transmute_mir::{NativeFnKind, Variable};
 // todo add support for void functions
 // todo add support for structs nested in functions (does not work because of resolver)
 // todo add support for nested structs
+// todo implement GC
 
 pub struct LlvmIrGen {
     context: Context,
@@ -136,6 +135,9 @@ struct Codegen<'ctx, 't> {
     bool_type: IntType<'ctx>,
     i64_type: IntType<'ctx>,
     void_type: VoidType<'ctx>,
+    ptr_type: PointerType<'ctx>,
+
+    malloc: FunctionValue<'ctx>,
 
     struct_types: HashMap<StructId, StructType<'ctx>>,
     variables: HashMap<SymbolId, PointerValue<'ctx>>,
@@ -156,9 +158,13 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let bool_type = context.bool_type();
         let i64_type = context.i64_type();
         let void_type = context.void_type();
+        let ptr_type = context.ptr_type(Default::default());
 
         let print_fn_type = void_type.fn_type(&[i64_type.into()], false);
         module.add_function("print", print_fn_type, None);
+
+        let malloc_fn_type = ptr_type.fn_type(&[i64_type.into()], false);
+        let malloc = module.add_function("malloc", malloc_fn_type, None);
 
         Self {
             context,
@@ -167,6 +173,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             bool_type,
             i64_type,
             void_type,
+            ptr_type,
+            malloc,
             struct_types: HashMap::default(),
             variables: HashMap::default(),
             target_triple,
@@ -261,14 +269,17 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 // this is used for implicit ret, where we can return nothing.
                 self.builder.build_return(None).unwrap();
             }
-            Value::Some(BasicValueEnum::ArrayValue(_)) => todo!(),
-            Value::Some(BasicValueEnum::IntValue(val)) => {
+            Value::Scalar(BasicValueEnum::ArrayValue(_)) => todo!(),
+            Value::Scalar(BasicValueEnum::IntValue(val)) => {
                 self.builder.build_return(Some(&val)).unwrap();
             }
-            Value::Some(BasicValueEnum::FloatValue(_)) => todo!(),
-            Value::Some(BasicValueEnum::PointerValue(_)) => todo!(),
-            Value::Some(BasicValueEnum::StructValue(_)) => todo!(),
-            Value::Some(BasicValueEnum::VectorValue(_)) => todo!(),
+            Value::Scalar(BasicValueEnum::FloatValue(_)) => todo!(),
+            Value::Scalar(BasicValueEnum::StructValue(_)) => {
+                unimplemented!("structs are returned by ref")
+            }
+            Value::Scalar(BasicValueEnum::PointerValue(_)) => unimplemented!(),
+            Value::Scalar(BasicValueEnum::VectorValue(_)) => todo!(),
+            Value::Struct(_, _) => todo!(),
         };
         Value::Never
     }
@@ -285,7 +296,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let fields = struct_def
             .fields
             .iter()
-            .map(|field| self.llvm_type(mir, field.type_id))
+            .map(|field| self.repr(self.llvm_type(mir, field.type_id)))
             .collect::<Vec<BasicTypeEnum>>();
 
         let struct_type = *self.struct_types.get(&struct_id).unwrap();
@@ -297,14 +308,30 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let parameters_types = function
             .parameters
             .iter()
-            .map(|param| self.llvm_type(mir, param.type_id).into())
+            .map(|param| {
+                let parameter_type = self.llvm_type(mir, param.type_id);
+                match parameter_type {
+                    BasicTypeEnum::ArrayType(_) => todo!(),
+                    BasicTypeEnum::FloatType(_) => parameter_type.into(),
+                    BasicTypeEnum::IntType(_) => parameter_type.into(),
+                    BasicTypeEnum::PointerType(_) => unimplemented!("pointers are not supported"),
+                    BasicTypeEnum::StructType(_) => {
+                        // structs are passed by ref
+                        BasicTypeEnum::PointerType(self.ptr_type).into()
+                    }
+                    BasicTypeEnum::VectorType(_) => todo!(),
+                }
+            })
             .collect::<Vec<BasicMetadataTypeEnum>>();
 
         let resolved_ret_type = &mir.types[function.ret];
         let fn_type = match resolved_ret_type {
             Type::Boolean => self.bool_type.fn_type(&parameters_types, false),
             Type::Function(_, _) => todo!(),
-            Type::Struct(_, _) => todo!(),
+            Type::Struct(_, _) => {
+                // structs are returned by ref
+                todo!()
+            }
             Type::Number => self.i64_type.fn_type(&parameters_types, false),
             Type::Void => self.void_type.fn_type(&parameters_types, false),
             Type::None => todo!(),
@@ -336,13 +363,14 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 BasicValueEnum::ArrayValue(_) => todo!(),
                 BasicValueEnum::IntValue(val) => val.set_name(&name),
                 BasicValueEnum::FloatValue(_) => todo!(),
-                BasicValueEnum::PointerValue(_) => todo!(),
-                BasicValueEnum::StructValue(_) => todo!(),
+                BasicValueEnum::PointerValue(val) => val.set_name(&name),
+                BasicValueEnum::StructValue(_) => unimplemented!("structs are passed by ref"),
                 BasicValueEnum::VectorValue(_) => todo!(),
             }
 
             if function.parameters[i].mutable {
                 self.gen_alloca(
+                    // todo this may be a pointer (case of structs passed as parameters)
                     param.get_type(),
                     &format!(
                         "{}#local#sym{}#",
@@ -365,7 +393,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     }
 
     fn gen_variable(&mut self, mir: &Mir, variable: &Variable) {
-        let llvm_type = self.llvm_type(mir, variable.type_id);
+        let llvm_type = self.repr(self.llvm_type(mir, variable.type_id));
 
         self.gen_alloca(
             llvm_type,
@@ -391,14 +419,12 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             ),
             ExpressionKind::Literal(literal) => match &literal.kind {
                 LiteralKind::Boolean(bool) => {
-                    Value::Some(self.bool_type.const_int(*bool as u64, false).into())
+                    Value::Scalar(self.bool_type.const_int(*bool as u64, false).into())
                 }
-                LiteralKind::Identifier(symbol_id) => {
-                    Value::Some(self.gen_expression_ident(mir, *symbol_id))
-                }
+                LiteralKind::Identifier(symbol_id) => self.gen_expression_ident(mir, *symbol_id),
                 LiteralKind::Number(number) => {
                     // todo check what happens for negative numbers
-                    Value::Some(self.i64_type.const_int(*number as u64, false).into())
+                    Value::Scalar(self.i64_type.const_int(*number as u64, false).into())
                 }
             },
             ExpressionKind::Access(expr_id, symbol_id) => {
@@ -443,7 +469,11 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         target: &AssignmentTarget,
         expr: &Expression,
     ) -> Value<'ctx> {
-        let value = self.gen_expression(mir, expr).unwrap();
+        let value = match self.gen_expression(mir, expr) {
+            Value::Never | Value::None => panic!("value expected"),
+            Value::Scalar(value) => value,
+            Value::Struct(pointer_value, _) => pointer_value.into(),
+        };
 
         match target {
             AssignmentTarget::Direct(symbol_id) => {
@@ -468,16 +498,23 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         match &expression.kind {
             ExpressionKind::Literal(literal) => match &literal.kind {
                 LiteralKind::Identifier(symbol_id) => {
-                    let struct_pointer = *self.variables.get(symbol_id).unwrap();
-                    let struct_type = self.llvm_type(mir, mir.symbols[*symbol_id].type_id);
-                    (struct_pointer, struct_type)
+                    let value_ptr = *self.variables.get(symbol_id).unwrap();
+                    let value_type = self.llvm_type(mir, mir.symbols[*symbol_id].type_id);
+                    (value_ptr, value_type)
                 }
                 LiteralKind::Boolean(_) => panic!("a boolean is not a pointer"),
                 LiteralKind::Number(_) => panic!("a number is not a pointer"),
             },
             ExpressionKind::Access(expr_id, symbol_id) => {
-                let (struct_ptr, struct_type) =
+                let (struct_ptr_ptr, struct_type) =
                     self.gen_pointer_expression(mir, &mir.expressions[*expr_id]);
+
+                // we need to dereference the variable or the field ptr to get the struct pointer
+                let struct_ptr = self
+                    .builder
+                    .build_load(self.ptr_type, struct_ptr_ptr, "tmp")
+                    .unwrap()
+                    .into_pointer_value();
 
                 let symbol = &mir.symbols[*symbol_id];
                 let (ident_id, index) = match symbol.kind {
@@ -492,12 +529,12 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     index,
                     symbol_id
                 );
-                let target_ptr = self
+                let field_ptr = self
                     .builder
                     .build_struct_gep(struct_type, struct_ptr, index as u32, &name)
                     .unwrap();
 
-                (target_ptr, self.llvm_type(mir, symbol.type_id))
+                (field_ptr, self.llvm_type(mir, symbol.type_id))
             }
             _ => panic!(),
         }
@@ -527,7 +564,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             end_block
         };
 
-        let cond = self.gen_expression(mir, cond).unwrap().into_int_value();
+        let cond = self
+            .gen_expression(mir, cond)
+            .unwrap_value()
+            .into_int_value();
         self.builder
             .build_conditional_branch(cond, then_block, else_block)
             .unwrap();
@@ -555,19 +595,40 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
         self.builder.position_at_end(end_block);
         match (then_value, else_value) {
-            (Value::Some(then_value), Value::Some(else_value)) => {
+            (Value::Scalar(then_value), Value::Scalar(else_value)) => {
                 let if_value = self
                     .builder
                     .build_phi(then_value.get_type(), "if_result")
                     .unwrap();
                 if_value.add_incoming(&[(&then_value, then_block), (&else_value, else_block)]);
-                Value::Some(if_value.as_basic_value())
+                Value::Scalar(if_value.as_basic_value())
             }
-            (Value::Some(then_value), Value::None) | (Value::Some(then_value), Value::Never) => {
-                Value::Some(then_value)
+            (
+                Value::Struct(then_value, then_pointer_type),
+                Value::Struct(else_value, else_pointer_type),
+            ) => {
+                debug_assert_eq!(then_pointer_type, else_pointer_type);
+                let if_value = self
+                    .builder
+                    .build_phi(then_value.get_type(), "if_result")
+                    .unwrap();
+                if_value.add_incoming(&[(&then_value, then_block), (&else_value, else_block)]);
+                Value::Struct(
+                    if_value.as_basic_value().into_pointer_value(),
+                    then_pointer_type,
+                )
             }
-            (Value::None, Value::Some(else_value)) | (Value::Never, Value::Some(else_value)) => {
-                Value::Some(else_value)
+            (Value::Scalar(then_value), Value::None)
+            | (Value::Scalar(then_value), Value::Never) => Value::Scalar(then_value),
+            (Value::Struct(then_value, then_pointer), Value::None)
+            | (Value::Struct(then_value, then_pointer), Value::Never) => {
+                Value::Struct(then_value, then_pointer)
+            }
+            (Value::None, Value::Scalar(else_value))
+            | (Value::Never, Value::Scalar(else_value)) => Value::Scalar(else_value),
+            (Value::None, Value::Struct(else_value, else_type))
+            | (Value::Never, Value::Struct(else_value, else_type)) => {
+                Value::Struct(else_value, else_type)
             }
             (Value::None, _) => Value::None,
             (_, Value::None) => Value::None,
@@ -575,33 +636,59 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 self.builder.build_unreachable().unwrap();
                 Value::Never
             }
+            (Value::Struct(_, _), Value::Scalar(_)) | (Value::Scalar(_), Value::Struct(_, _)) => {
+                panic!()
+            }
         }
     }
 
-    fn gen_expression_ident(&self, mir: &Mir, symbol_id: SymbolId) -> BasicValueEnum<'ctx> {
-        if self.variables.contains_key(&symbol_id) {
-            return self
-                .builder
-                .build_load(
-                    self.llvm_type(mir, mir.symbols[symbol_id].type_id),
-                    self.variables[&symbol_id],
-                    &format!(
-                        "{}#local#sym{}#",
-                        mir.identifiers[mir.symbols[symbol_id].ident_id], symbol_id
-                    ),
-                )
-                .unwrap();
+    fn gen_expression_ident(&self, mir: &Mir, symbol_id: SymbolId) -> Value<'ctx> {
+        let symbol = &mir.symbols[symbol_id];
+        let type_id = mir.symbols[symbol_id].type_id;
+        let llvm_type = self.llvm_type(mir, type_id);
+
+        if let Some(variable) = self.variables.get(&symbol_id) {
+            let name = format!(
+                "{}#local#sym{}#",
+                mir.identifiers[mir.symbols[symbol_id].ident_id], symbol_id
+            );
+
+            if matches!(&mir.types[type_id], Type::Struct(_, _)) {
+                return Value::Struct(
+                    self.builder
+                        .build_load(
+                            self.ptr_type,
+                            *variable,
+                            &name,
+                        )
+                        .unwrap()
+                        .into_pointer_value(),
+                    llvm_type,
+                );
+            }
+
+            return Value::Scalar(
+                self.builder
+                    .build_load(
+                        llvm_type,
+                        *variable,
+                        &name,
+                    )
+                    .unwrap(),
+            );
         };
 
-        match &mir.symbols[symbol_id].kind {
+        match &symbol.kind {
             SymbolKind::Let(_) => {
                 unreachable!("handled in the if variable.contains_key(..) above")
             }
             SymbolKind::LetFn(_, _, _) => todo!(),
-            SymbolKind::Parameter(_, index) => self
-                .current_function()
-                .get_nth_param(*index as u32)
-                .unwrap(),
+            SymbolKind::Parameter(_, index) => Value::Scalar(
+                // todo add support for struct passed as parameters
+                self.current_function()
+                    .get_nth_param(*index as u32)
+                    .unwrap(),
+            ),
             SymbolKind::Struct(_) => todo!(),
             SymbolKind::Field(_, _, _) => todo!(),
             SymbolKind::NativeType(_, _) => todo!(),
@@ -610,31 +697,55 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     }
 
     fn gen_access(&mut self, mir: &Mir, expr_id: ExprId, symbol_id: SymbolId) -> Value<'ctx> {
-        let (ident_id, index) = match &mir.symbols[symbol_id].kind {
+        let symbol = &mir.symbols[symbol_id];
+        let (ident_id, index) = match &symbol.kind {
             SymbolKind::Field(_, ident_id, index) => (*ident_id, *index),
             _ => panic!("invalid symbol type"),
         };
 
-        let value = match self.gen_expression(mir, &mir.expressions[expr_id]).unwrap() {
-            BasicValueEnum::ArrayValue(_) => todo!(),
-            BasicValueEnum::StructValue(v) => v,
-            _ => panic!("invalid value type"),
-        };
+        match self.gen_expression(mir, &mir.expressions[expr_id]) {
+            Value::Scalar(BasicValueEnum::ArrayValue(_)) => todo!(),
+            Value::Scalar(BasicValueEnum::StructValue(_)) => {
+                unimplemented!("structs are passed by pointer");
+            }
+            Value::Struct(struct_pointer, struct_pointer_type) => {
+                // we compute the pointer to the field
+                let name = format!(
+                    "{}.{}#idx{}#sym{}#",
+                    struct_pointer.get_name().to_str().unwrap(),
+                    &mir.identifiers[ident_id],
+                    index,
+                    symbol_id
+                );
 
-        let name = format!(
-            "{}.{}#idx{}#sym{}#",
-            value.get_name().to_str().unwrap(),
-            &mir.identifiers[ident_id],
-            index,
-            symbol_id
-        );
+                let field_pointer = self
+                    .builder
+                    .build_struct_gep(struct_pointer_type, struct_pointer, index as u32, &name)
+                    .unwrap();
 
-        // todo see if we can replace with GEP+load (as for struct instantiation)
-        Value::Some(
-            self.builder
-                .build_extract_value(value, index as u32, &name)
-                .unwrap(),
-        )
+                let symbol_llvm_type = self.llvm_type(mir,symbol.type_id );
+
+                if matches!(mir.types[symbol.type_id], Type::Struct(_,_)) {
+                    // the field is a struct type, we deref the field pointer to its value which is
+                    // a pointer to a struct
+                    let value = self
+                        .builder
+                        .build_load(self.ptr_type, field_pointer, &name)
+                        .unwrap()
+                        .into_pointer_value();
+                    Value::Struct(value, symbol_llvm_type)
+                } else {
+                    // if the field holds the value, we dereference the field pointer to itss value
+                    let value = self
+                        .builder
+                        .build_load(symbol_llvm_type, field_pointer, &name)
+                        .unwrap();
+                    debug_assert!(!matches!(value, BasicValueEnum::PointerValue(_)));
+                    Value::Scalar(value)
+                }
+            }
+            value => panic!("invalid value: {:?}", value),
+        }
     }
 
     fn gen_function_call(
@@ -654,12 +765,17 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .iter()
             .map(|e| match self.gen_expression(mir, &mir.expressions[*e]) {
                 Value::None | Value::Never => panic!(),
-                Value::Some(BasicValueEnum::ArrayValue(_)) => todo!(),
-                Value::Some(BasicValueEnum::IntValue(val)) => BasicMetadataValueEnum::IntValue(val),
-                Value::Some(BasicValueEnum::FloatValue(_)) => todo!(),
-                Value::Some(BasicValueEnum::PointerValue(_)) => todo!(),
-                Value::Some(BasicValueEnum::StructValue(_)) => todo!(),
-                Value::Some(BasicValueEnum::VectorValue(_)) => todo!(),
+                Value::Scalar(BasicValueEnum::ArrayValue(_)) => todo!(),
+                Value::Scalar(BasicValueEnum::IntValue(val)) => {
+                    BasicMetadataValueEnum::IntValue(val)
+                }
+                Value::Scalar(BasicValueEnum::FloatValue(_)) => todo!(),
+                Value::Scalar(BasicValueEnum::StructValue(_)) => {
+                    unimplemented!("structs are passed by pointer")
+                }
+                Value::Scalar(BasicValueEnum::PointerValue(_)) => unimplemented!(),
+                Value::Scalar(BasicValueEnum::VectorValue(_)) => todo!(),
+                Value::Struct(_, _) => todo!(),
             })
             .collect::<Vec<BasicMetadataValueEnum>>();
 
@@ -669,6 +785,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .module
             .get_function(function_name)
             .unwrap_or_else(|| panic!("called function `{}` not defined", function_name));
+
         self.builder
             .build_call(
                 called_function,
@@ -678,7 +795,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .unwrap()
             .try_as_basic_value()
             .left()
-            .into()
+            .map(|value| Value::Scalar(value))
+            .unwrap_or(Value::None)
     }
 
     fn gen_while(&mut self, mir: &Mir, cond: &Expression, body: &Expression) -> Value<'ctx> {
@@ -695,7 +813,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         self.builder.build_unconditional_branch(cond_block).unwrap();
 
         self.builder.position_at_end(cond_block);
-        let cond = self.gen_expression(mir, cond).unwrap().into_int_value();
+        let cond = self
+            .gen_expression(mir, cond)
+            .unwrap_value()
+            .into_int_value();
         self.builder
             .build_conditional_branch(cond, body_block, end_block)
             .unwrap();
@@ -720,44 +841,47 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         struct_id: StructId,
         fields: &[(SymbolId, ExprId)],
     ) -> Value<'ctx> {
+        let name = format!(
+            "heap#struct#{}#id{}#",
+            &mir.identifiers[mir.structs[struct_id].identifier.id], struct_id
+        );
+        let struct_type = *self.struct_types.get(&struct_id).unwrap();
+        let struct_ptr = self
+            .builder
+            .build_call(self.malloc, &[struct_type.size_of().unwrap().into()], &name)
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
         let field_values = fields
             .iter()
             .map(
                 |(_, expr_id)| match self.gen_expression(mir, &mir.expressions[*expr_id]) {
-                    Value::Some(val) => val,
+                    Value::Scalar(val) => val,
+                    Value::Struct(pointer_value, _) => pointer_value.into(),
                     _ => panic!("value expected"),
                 },
             )
             .collect::<Vec<BasicValueEnum>>();
 
-        let const_values = field_values
-            .iter()
-            .map(|value| {
-                if Self::is_const(value) {
-                    *value
-                } else {
-                    Self::get_undef(&value.get_type())
-                }
-            })
-            .collect::<Vec<BasicValueEnum>>();
-
-        // todo review whether it makes sense to use GEP+store instead of insertvalue
-        //  ref: https://stackoverflow.com/questions/35234940/llvm-gep-and-store-vs-load-and-insertvalue-storing-value-to-a-pointer-to-an-agg
-        let struct_type = *self.struct_types.get(&struct_id).unwrap();
-        let mut struct_value = struct_type
-            .const_named_struct(&const_values)
-            .as_aggregate_value_enum();
-
         for (index, value) in field_values.into_iter().enumerate() {
-            if !Self::is_const(&value) {
-                struct_value = self
-                    .builder
-                    .build_insert_value(struct_value, value, index as u32, "insert")
-                    .unwrap();
-            }
+            let name = format!(
+                "{}.{}#idx{}#sym{}",
+                name,
+                mir.identifiers[mir.structs[struct_id].fields[index].identifier.id],
+                index,
+                mir.structs[struct_id].fields[index].symbol_id
+            );
+            let field_ptr = self
+                .builder
+                .build_struct_gep(struct_type, struct_ptr, index as u32, &name)
+                .unwrap();
+            self.builder.build_store(field_ptr, value).unwrap();
         }
 
-        Value::Some(struct_value.as_basic_value_enum())
+        Value::Struct(struct_ptr.into(), struct_type.into())
     }
 
     fn current_function(&self) -> FunctionValue<'ctx> {
@@ -807,25 +931,17 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         ptr
     }
 
-    fn is_const(value: &BasicValueEnum<'ctx>) -> bool {
-        match value {
-            BasicValueEnum::ArrayValue(val) => val.is_const(),
-            BasicValueEnum::FloatValue(val) => val.is_const(),
-            BasicValueEnum::IntValue(val) => val.is_const(),
-            BasicValueEnum::PointerValue(val) => val.is_const(),
-            BasicValueEnum::StructValue(_) => false,
-            BasicValueEnum::VectorValue(val) => val.is_const(),
-        }
-    }
-
-    fn get_undef(typ: &BasicTypeEnum<'ctx>) -> BasicValueEnum<'ctx> {
-        match typ {
-            BasicTypeEnum::ArrayType(ty) => ty.get_undef().into(),
-            BasicTypeEnum::FloatType(ty) => ty.get_undef().into(),
-            BasicTypeEnum::IntType(ty) => ty.get_undef().into(),
-            BasicTypeEnum::PointerType(ty) => ty.get_undef().into(),
-            BasicTypeEnum::StructType(ty) => ty.get_undef().into(),
-            BasicTypeEnum::VectorType(ty) => ty.get_undef().into(),
+    fn repr(&self, llvm_type: BasicTypeEnum<'ctx>) -> BasicTypeEnum<'ctx> {
+        match llvm_type {
+            BasicTypeEnum::ArrayType(_) => self.ptr_type.into(),
+            BasicTypeEnum::FloatType(_) => llvm_type,
+            BasicTypeEnum::IntType(_) => llvm_type,
+            BasicTypeEnum::PointerType(_) => unimplemented!("pointers are not supported"),
+            BasicTypeEnum::StructType(_) => {
+                // todo small structs may be inlined
+                self.ptr_type.into()
+            }
+            BasicTypeEnum::VectorType(_) => todo!(),
         }
     }
 }
@@ -834,23 +950,17 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 enum Value<'ctx> {
     Never,
     None,
-    Some(BasicValueEnum<'ctx>),
+    Scalar(BasicValueEnum<'ctx>),
+    // todo move to struct type
+    Struct(PointerValue<'ctx>, BasicTypeEnum<'ctx>),
 }
 
 impl<'ctx> Value<'ctx> {
-    fn unwrap(self) -> BasicValueEnum<'ctx> {
+    fn unwrap_value(self) -> BasicValueEnum<'ctx> {
         match self {
             Value::Never | Value::None => panic!(),
-            Value::Some(val) => val,
-        }
-    }
-}
-
-impl<'ctx> From<Option<BasicValueEnum<'ctx>>> for Value<'ctx> {
-    fn from(value: Option<BasicValueEnum<'ctx>>) -> Self {
-        match value {
-            None => Value::None,
-            Some(val) => Value::Some(val),
+            Value::Scalar(val) => val,
+            _ => panic!(),
         }
     }
 }
@@ -897,13 +1007,13 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::AddNumberNumber => {
                 let lhs = codegen
                     .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
                 let rhs = codegen
                     .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
-                Value::Some(
+                Value::Scalar(
                     codegen
                         .builder
                         .build_int_add(lhs, rhs, "add#")
@@ -914,13 +1024,13 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::SubNumberNumber => {
                 let lhs = codegen
                     .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
                 let rhs = codegen
                     .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
-                Value::Some(
+                Value::Scalar(
                     codegen
                         .builder
                         .build_int_sub(lhs, rhs, "sub#")
@@ -931,13 +1041,13 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::MulNumberNumber => {
                 let lhs = codegen
                     .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
                 let rhs = codegen
                     .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
-                Value::Some(
+                Value::Scalar(
                     codegen
                         .builder
                         .build_int_mul(lhs, rhs, "mul#")
@@ -948,13 +1058,13 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::DivNumberNumber => {
                 let lhs = codegen
                     .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
                 let rhs = codegen
                     .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
-                Value::Some(
+                Value::Scalar(
                     codegen
                         .builder
                         .build_int_signed_div(lhs, rhs, "div#")
@@ -965,13 +1075,13 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::EqNumberNumber => {
                 let lhs = codegen
                     .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
                 let rhs = codegen
                     .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
-                Value::Some(
+                Value::Scalar(
                     codegen
                         .builder
                         .build_int_compare(IntPredicate::EQ, lhs, rhs, "eq#")
@@ -982,13 +1092,13 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::NeqNumberNumber => {
                 let lhs = codegen
                     .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
                 let rhs = codegen
                     .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
-                Value::Some(
+                Value::Scalar(
                     codegen
                         .builder
                         .build_int_compare(IntPredicate::NE, lhs, rhs, "ne#")
@@ -999,13 +1109,13 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::GtNumberNumber => {
                 let lhs = codegen
                     .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
                 let rhs = codegen
                     .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
-                Value::Some(
+                Value::Scalar(
                     codegen
                         .builder
                         .build_int_compare(IntPredicate::SGT, lhs, rhs, "gt#")
@@ -1016,13 +1126,13 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::LtNumberNumber => {
                 let lhs = codegen
                     .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
                 let rhs = codegen
                     .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
-                Value::Some(
+                Value::Scalar(
                     codegen
                         .builder
                         .build_int_compare(IntPredicate::SLT, lhs, rhs, "lt#")
@@ -1033,13 +1143,13 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::GeNumberNumber => {
                 let lhs = codegen
                     .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
                 let rhs = codegen
                     .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
-                Value::Some(
+                Value::Scalar(
                     codegen
                         .builder
                         .build_int_compare(IntPredicate::SGE, lhs, rhs, "ge#")
@@ -1050,13 +1160,13 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::LeNumberNumber => {
                 let lhs = codegen
                     .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
                 let rhs = codegen
                     .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
-                Value::Some(
+                Value::Scalar(
                     codegen
                         .builder
                         .build_int_compare(IntPredicate::SLE, lhs, rhs, "le#")
@@ -1067,13 +1177,13 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::EqBooleanBoolean => {
                 let lhs = codegen
                     .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
                 let rhs = codegen
                     .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
-                Value::Some(
+                Value::Scalar(
                     codegen
                         .builder
                         .build_int_compare(IntPredicate::EQ, lhs, rhs, "eq#")
@@ -1084,13 +1194,13 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::NeqBooleanBoolean => {
                 let lhs = codegen
                     .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
                 let rhs = codegen
                     .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap()
+                    .unwrap_value()
                     .into_int_value();
-                Value::Some(
+                Value::Scalar(
                     codegen
                         .builder
                         .build_int_compare(IntPredicate::NE, lhs, rhs, "ne#")
@@ -1383,6 +1493,17 @@ mod tests {
     );
 
     gen!(
+        struct_assignment,
+        r#"
+        struct Struct { }
+        let f(): number {
+            let s = Struct { };
+            1;
+        }
+        "#
+    );
+
+    gen!(
         struct_instantiate_1_const_field,
         r#"
         struct Struct { field: number }
@@ -1473,6 +1594,56 @@ mod tests {
         "#
     );
 
+    // todo uncomment
+    // gen!(
+    //     struct_read_nested_field_var,
+    //     r#"
+    //     struct Inner { field: number }
+    //     struct Outer { inner: Inner }
+    //     let f(): number {
+    //         let inner = Inner {
+    //             field: 1
+    //         };
+    //         let outer = Outer {
+    //             inner: inner
+    //         };
+    //
+    //         outer.inner.field;
+    //     }
+    //     "#
+    // );
+    //
+    // todo uncomment
+    // gen!(
+    //     struct_read_nested_field,
+    //     r#"
+    //     struct Inner { field: number }
+    //     struct Outer { inner: Inner }
+    //     let f(): number {
+    //         let s = Outer {
+    //             inner: Inner {
+    //                 field: 1
+    //             }
+    //         };
+    //
+    //         s.inner.field;
+    //     }
+    //     "#
+    // );
+    //
+    // todo uncomment
+    // gen!(
+    //     struct_read_field_const_struct,
+    //     r#"
+    //     struct Struct { field: number }
+    //     let f(): number {
+    //         let s = Struct {
+    //             field: 1
+    //         }.field;
+    //     }
+    //     "#
+    // );
+
     gen!(
         struct_write_field_const,
         r#"
@@ -1502,4 +1673,44 @@ mod tests {
         }
         "#
     );
+
+    // todo uncomment
+    // gen!(
+    //     struct_var_as_parameter,
+    //     r#"
+    //     struct Struct { field: number }
+    //
+    //     let f(s: Struct): number {
+    //         s.field;
+    //     }
+    //
+    //     let g(): number {
+    //         let s = Struct {
+    //           field: 1
+    //         };
+    //
+    //         f(s);
+    //     }
+    //     "#
+    // );
+
+    // todo uncomment
+    // gen!(
+    //     struct_lit_as_parameter,
+    //     r#"
+    //     struct Struct { field: number }
+    //
+    //     let f(s: Struct): number {
+    //         s.field;
+    //     }
+    //
+    //     let g(): number {
+    //         f(
+    //             Struct {
+    //                 field: 1
+    //             }
+    //         );
+    //     }
+    //     "#
+    // );
 }

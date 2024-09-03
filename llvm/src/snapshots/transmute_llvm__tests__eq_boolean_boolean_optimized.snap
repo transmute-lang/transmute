@@ -9,6 +9,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @print(i64)
 
+declare ptr @malloc(i64)
+
 define i1 @f(i1 %"l#param#sym19#", i1 %"r#param#sym20#") {
 entry:
   %0 = xor i1 %"l#param#sym19#", %"r#param#sym20#"

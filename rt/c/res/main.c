@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <assert.h>
 
 // todo rename f to some order name that makes sense in transmute source
 int64_t f(int64_t n);
@@ -18,4 +19,12 @@ int main(int argc, char** argv) {
     }
 
     return 0;
+}
+
+void print(int64_t a) {
+    printf("%li\n", a);
+}
+
+void assert_ptr_eq(void*a, void*b) {
+    assert(a == b);
 }

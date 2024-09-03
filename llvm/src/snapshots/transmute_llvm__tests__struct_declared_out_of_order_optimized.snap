@@ -9,7 +9,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @print(i64)
 
+declare ptr @malloc(i64)
+
 define i64 @f() {
 entry:
+  %"heap#struct#StructOuter#id0#" = call ptr @malloc(i64 8)
+  %"heap#struct#StructInner#id1#" = call ptr @malloc(i64 0)
+  store ptr %"heap#struct#StructInner#id1#", ptr %"heap#struct#StructOuter#id0#", align 8
   ret i64 1
 }

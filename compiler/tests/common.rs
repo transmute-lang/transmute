@@ -18,13 +18,13 @@ macro_rules! exec {
                 .output()
                 .unwrap();
 
-                assert!(
-                    output.status.success(),
-                    "{}",
-                    String::from_utf8(output.stderr).unwrap()
+                insta::assert_snapshot!(
+                    format!("success:{}\nstdout:\n{}\n\nstderr:\n{}",
+                        output.status.success(),
+                        String::from_utf8(output.stdout).unwrap(),
+                        String::from_utf8(output.stderr).unwrap()
+                    )
                 );
-
-                insta::assert_snapshot!(String::from_utf8(output.stdout).unwrap());
             }
         }
     };

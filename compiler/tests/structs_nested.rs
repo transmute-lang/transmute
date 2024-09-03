@@ -2,4 +2,4 @@ use common::exec;
 
 mod common;
 
-exec!("simple_struct", "10");
+exec!("structs_nested", "10");
