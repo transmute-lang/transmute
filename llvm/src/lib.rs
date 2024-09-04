@@ -105,7 +105,10 @@ impl<'ctx> LlvmIr<'ctx> {
             .arg(&path)
             .output()
         {
-            Ok(_) => {
+            Ok(o) => {
+                if !o.status.success() {
+                    println!("{:?}", o);
+                }
                 println!("Wrote executable to {}", path.display());
             }
             Err(err) => {
