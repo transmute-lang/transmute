@@ -1,0 +1,31 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+%"Outer#id1" = type { ptr }
+%"Inner#id0" = type { i64 }
+
+declare void @print(i64)
+
+declare ptr @malloc(i64)
+
+define i64 @f() {
+entry:
+  %"outer#local#sym23#" = alloca ptr, align 8
+  %"heap#struct#Outer#id1#" = call ptr @malloc(i64 ptrtoint (ptr getelementptr (%"Outer#id1", ptr null, i32 1) to i64))
+  %"heap#struct#Inner#id0#" = call ptr @malloc(i64 ptrtoint (ptr getelementptr (%"Inner#id0", ptr null, i32 1) to i64))
+  %"heap#struct#Inner#id0#.field#idx0#sym21" = getelementptr inbounds %"Inner#id0", ptr %"heap#struct#Inner#id0#", i32 0, i32 0
+  store i64 1, ptr %"heap#struct#Inner#id0#.field#idx0#sym21", align 4
+  %"heap#struct#Outer#id1#.inner#idx0#sym22" = getelementptr inbounds %"Outer#id1", ptr %"heap#struct#Outer#id1#", i32 0, i32 0
+  store ptr %"heap#struct#Inner#id0#", ptr %"heap#struct#Outer#id1#.inner#idx0#sym22", align 8
+  store ptr %"heap#struct#Outer#id1#", ptr %"outer#local#sym23#", align 8
+  %"outer#local#sym23#1" = load ptr, ptr %"outer#local#sym23#", align 8
+  %"outer#local#sym23#1.inner#idx0#sym22#" = getelementptr inbounds %"Outer#id1", ptr %"outer#local#sym23#1", i32 0, i32 0
+  %"outer#local#sym23#1.inner#idx0#sym22#2" = load ptr, ptr %"outer#local#sym23#1.inner#idx0#sym22#", align 8
+  %"outer#local#sym23#1.inner#idx0#sym22#2.field#idx0#sym21#" = getelementptr inbounds %"Inner#id0", ptr %"outer#local#sym23#1.inner#idx0#sym22#2", i32 0, i32 0
+  %"outer#local#sym23#1.inner#idx0#sym22#2.field#idx0#sym21#3" = load i64, ptr %"outer#local#sym23#1.inner#idx0#sym22#2.field#idx0#sym21#", align 4
+  ret i64 %"outer#local#sym23#1.inner#idx0#sym22#2.field#idx0#sym21#3"
+}

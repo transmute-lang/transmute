@@ -1481,42 +1481,40 @@ mod tests {
         "#
     );
 
-    // todo uncomment
-    // gen!(
-    //     struct_read_nested_field_var,
-    //     r#"
-    //     struct Inner { field: number }
-    //     struct Outer { inner: Inner }
-    //     let f(): number {
-    //         let inner = Inner {
-    //             field: 1
-    //         };
-    //         let outer = Outer {
-    //             inner: inner
-    //         };
-    //
-    //         outer.inner.field;
-    //     }
-    //     "#
-    // );
-    //
-    // todo uncomment
-    // gen!(
-    //     struct_read_nested_field,
-    //     r#"
-    //     struct Inner { field: number }
-    //     struct Outer { inner: Inner }
-    //     let f(): number {
-    //         let s = Outer {
-    //             inner: Inner {
-    //                 field: 1
-    //             }
-    //         };
-    //
-    //         s.inner.field;
-    //     }
-    //     "#
-    // );
+    gen!(
+        struct_read_nested_field_var,
+        r#"
+        struct Inner { field: number }
+        struct Outer { inner: Inner }
+        let f(): number {
+            let inner = Inner {
+                field: 1
+            };
+            let outer = Outer {
+                inner: inner
+            };
+
+            outer.inner.field;
+        }
+        "#
+    );
+
+    gen!(
+        struct_read_nested_field,
+        r#"
+        struct Inner { field: number }
+        struct Outer { inner: Inner }
+        let f(): number {
+            let outer = Outer {
+                inner: Inner {
+                    field: 1
+                }
+            };
+
+            outer.inner.field;
+        }
+        "#
+    );
     //
     // todo uncomment
     // gen!(
