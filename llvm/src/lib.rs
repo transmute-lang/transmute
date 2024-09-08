@@ -274,7 +274,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             Value::Number(val) => {
                 self.builder.build_return(Some(&val)).unwrap();
             }
-            Value::Struct(_, _) => todo!(),
+            Value::Struct(val, _) => {
+                self.builder.build_return(Some(&val)).unwrap();
+            }
         };
         Value::Never
     }
@@ -325,7 +327,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             Type::Function(_, _) => todo!(),
             Type::Struct(_, _) => {
                 // structs are returned by ref
-                todo!()
+                self.ptr_type.fn_type(&parameters_types, false)
             }
             Type::Number => self.i64_type.fn_type(&parameters_types, false),
             Type::Void => self.void_type.fn_type(&parameters_types, false),
@@ -651,12 +653,23 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 unreachable!("handled in the if variable.contains_key(..) above")
             }
             SymbolKind::LetFn(_, _, _) => todo!(),
-            SymbolKind::Parameter(_, index) => Value::from(
-                // todo add support for struct passed as parameters
-                self.current_function()
+            SymbolKind::Parameter(_, index) => {
+                let value = self
+                    .current_function()
                     .get_nth_param(*index as u32)
-                    .unwrap(),
-            ),
+                    .unwrap();
+
+                match self.llvm_type(mir, symbol.type_id) {
+                    BasicTypeEnum::ArrayType(_) => todo!(),
+                    BasicTypeEnum::FloatType(_) => todo!(),
+                    BasicTypeEnum::IntType(_) => Value::from(value),
+                    BasicTypeEnum::PointerType(_) => unimplemented!("pointers are not supported"),
+                    BasicTypeEnum::StructType(struct_type) => {
+                        Value::Struct(value.into_pointer_value(), struct_type.into())
+                    }
+                    BasicTypeEnum::VectorType(_) => todo!(),
+                }
+            }
             SymbolKind::Struct(_) => todo!(),
             SymbolKind::Field(_, _, _) => todo!(),
             SymbolKind::NativeType(_, _) => todo!(),
@@ -719,18 +732,36 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         params: &[ExprId],
     ) -> Value<'ctx> {
         let symbol = &mir.symbols[symbol_id];
-        if let SymbolKind::Native(_, _, _, kind) = &symbol.kind {
-            if kind.is_instr() {
-                return kind.gen_instr(mir, self, params);
+
+        let return_type = match &symbol.kind {
+            SymbolKind::Let(_) => panic!("callee muse be a function"),
+            SymbolKind::LetFn(_, _, return_type) => Some(self.llvm_type(mir, *return_type)),
+            SymbolKind::Parameter(_, _) => panic!("callee muse be a function"),
+            SymbolKind::Struct(_) => panic!("callee muse be a function"),
+            SymbolKind::Field(_, _, _) => panic!("callee muse be a function"),
+            SymbolKind::NativeType(_, _) => panic!("callee muse be a function"),
+            SymbolKind::Native(_, _, return_type, kind) => {
+                if kind.is_instr() {
+                    return kind.gen_instr(mir, self, params);
+                }
+                // fixme remove that stuff when void methods are supported. we will have to
+                //   improve `llvm_type` somehow anyway
+                match mir.types[*return_type] {
+                    Type::Boolean => Some(self.llvm_type(mir, *return_type)),
+                    Type::Function(_, _) => todo!(),
+                    Type::Struct(_, _) => Some(self.llvm_type(mir, *return_type)),
+                    Type::Number => Some(self.llvm_type(mir, *return_type)),
+                    Type::Void | Type::None => None,
+                }
             }
-        }
+        };
 
         let parameters = params
             .iter()
             .map(|e| match self.gen_expression(mir, &mir.expressions[*e]) {
                 Value::None | Value::Never => panic!(),
                 Value::Number(val) => BasicMetadataValueEnum::IntValue(val),
-                Value::Struct(_, _) => todo!(),
+                Value::Struct(val, _) => BasicMetadataValueEnum::PointerValue(val),
             })
             .collect::<Vec<BasicMetadataValueEnum>>();
 
@@ -750,7 +781,17 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .unwrap()
             .try_as_basic_value()
             .left()
-            .map(Value::from)
+            .and_then(|ret| match return_type {
+                None => None,
+                Some(BasicTypeEnum::ArrayType(_)) => todo!(),
+                Some(BasicTypeEnum::FloatType(_)) => todo!(),
+                Some(BasicTypeEnum::IntType(_)) => Some(Value::from(ret)),
+                Some(BasicTypeEnum::PointerType(_)) => unimplemented!("pointers are not supported"),
+                Some(t @ BasicTypeEnum::StructType(_)) => {
+                    Some(Value::Struct(ret.into_pointer_value(), t))
+                }
+                Some(BasicTypeEnum::VectorType(_)) => todo!(),
+            })
             .unwrap_or(Value::None)
     }
 
@@ -1515,7 +1556,7 @@ mod tests {
         }
         "#
     );
-    //
+
     // todo uncomment
     // gen!(
     //     struct_read_field_const_struct,
@@ -1559,43 +1600,81 @@ mod tests {
         "#
     );
 
-    // todo uncomment
-    // gen!(
-    //     struct_var_as_parameter,
-    //     r#"
-    //     struct Struct { field: number }
-    //
-    //     let f(s: Struct): number {
-    //         s.field;
-    //     }
-    //
-    //     let g(): number {
-    //         let s = Struct {
-    //           field: 1
-    //         };
-    //
-    //         f(s);
-    //     }
-    //     "#
-    // );
+    gen!(
+        struct_as_parameter,
+        r#"
+        struct Struct { field: number }
+        let f(s: Struct): number {
+            s.field;
+        }
+        "#
+    );
 
-    // todo uncomment
-    // gen!(
-    //     struct_lit_as_parameter,
-    //     r#"
-    //     struct Struct { field: number }
-    //
-    //     let f(s: Struct): number {
-    //         s.field;
-    //     }
-    //
-    //     let g(): number {
-    //         f(
-    //             Struct {
-    //                 field: 1
-    //             }
-    //         );
-    //     }
-    //     "#
-    // );
+    gen!(
+        struct_as_return,
+        r#"
+        struct Struct { field: number }
+        let f(): Struct {
+            Struct {
+                field: 1
+            };
+        }
+        "#
+    );
+
+    gen!(
+        struct_var_as_parameter,
+        r#"
+        struct Struct { field: number }
+
+        let f(s: Struct): number {
+            s.field;
+        }
+
+        let g(): number {
+            let s = Struct {
+              field: 1
+            };
+
+            f(s);
+        }
+        "#
+    );
+
+    gen!(
+        struct_lit_as_parameter,
+        r#"
+        struct Struct { field: number }
+
+        let f(s: Struct): number {
+            s.field;
+        }
+
+        let g(): number {
+            f(
+                Struct {
+                    field: 1
+                }
+            );
+        }
+        "#
+    );
+
+    gen!(
+        struct_returned_from_function,
+        r#"
+        struct Struct { field: number }
+
+        let f(): number {
+            let s = g();
+            s.field;
+        }
+
+        let g(): Struct {
+            Struct {
+                field: 1
+            };
+        }
+        "#
+    );
 }

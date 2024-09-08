@@ -1,0 +1,19 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+%"Struct#id0" = type { i64 }
+
+declare void @print(i64)
+
+declare ptr @malloc(i64)
+
+define i64 @f(ptr %"s#param#sym21#") {
+entry:
+  %"s#param#sym21#.field#idx0#sym20#" = getelementptr inbounds %"Struct#id0", ptr %"s#param#sym21#", i32 0, i32 0
+  %"s#param#sym21#.field#idx0#sym20#1" = load i64, ptr %"s#param#sym21#.field#idx0#sym20#", align 4
+  ret i64 %"s#param#sym21#.field#idx0#sym20#1"
+}

@@ -1,0 +1,20 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+%"Struct#id0" = type { i64 }
+
+declare void @print(i64)
+
+declare ptr @malloc(i64)
+
+define ptr @f() {
+entry:
+  %"heap#struct#Struct#id0#" = call ptr @malloc(i64 ptrtoint (ptr getelementptr (%"Struct#id0", ptr null, i32 1) to i64))
+  %"heap#struct#Struct#id0#.field#idx0#sym20" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
+  store i64 1, ptr %"heap#struct#Struct#id0#.field#idx0#sym20", align 4
+  ret ptr %"heap#struct#Struct#id0#"
+}

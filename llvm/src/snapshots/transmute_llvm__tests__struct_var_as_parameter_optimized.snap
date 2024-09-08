@@ -1,0 +1,26 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+declare void @print(i64)
+
+declare ptr @malloc(i64)
+
+define i64 @f(ptr %"s#param#sym22#") {
+entry:
+  %"s#param#sym22#.field#idx0#sym21#1" = load i64, ptr %"s#param#sym22#", align 4
+  ret i64 %"s#param#sym22#.field#idx0#sym21#1"
+}
+
+define i64 @g() {
+entry:
+  %"heap#struct#Struct#id0#" = call ptr @malloc(i64 8)
+  store i64 1, ptr %"heap#struct#Struct#id0#", align 4
+  %"f#res#" = call i64 @f(ptr nonnull %"heap#struct#Struct#id0#")
+  ret i64 %"f#res#"
+}
