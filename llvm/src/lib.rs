@@ -9,7 +9,9 @@ use inkwell::targets::{
 use inkwell::types::{
     BasicMetadataTypeEnum, BasicType, BasicTypeEnum, IntType, PointerType, StructType, VoidType,
 };
-use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue};
+use inkwell::values::{
+    BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
+};
 use inkwell::{IntPredicate, OptimizationLevel};
 use std::collections::HashMap;
 use std::fs;
@@ -269,16 +271,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 // this is used for implicit ret, where we can return nothing.
                 self.builder.build_return(None).unwrap();
             }
-            Value::Scalar(BasicValueEnum::ArrayValue(_)) => todo!(),
-            Value::Scalar(BasicValueEnum::IntValue(val)) => {
+            Value::Number(val) => {
                 self.builder.build_return(Some(&val)).unwrap();
             }
-            Value::Scalar(BasicValueEnum::FloatValue(_)) => todo!(),
-            Value::Scalar(BasicValueEnum::StructValue(_)) => {
-                unimplemented!("structs are returned by ref")
-            }
-            Value::Scalar(BasicValueEnum::PointerValue(_)) => unimplemented!(),
-            Value::Scalar(BasicValueEnum::VectorValue(_)) => todo!(),
             Value::Struct(_, _) => todo!(),
         };
         Value::Never
@@ -418,13 +413,11 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 false_expr_id.map(|expr_id| &mir.expressions[expr_id]),
             ),
             ExpressionKind::Literal(literal) => match &literal.kind {
-                LiteralKind::Boolean(bool) => {
-                    Value::Scalar(self.bool_type.const_int(*bool as u64, false).into())
-                }
+                LiteralKind::Boolean(bool) => self.bool_type.const_int(*bool as u64, false).into(),
                 LiteralKind::Identifier(symbol_id) => self.gen_expression_ident(mir, *symbol_id),
                 LiteralKind::Number(number) => {
                     // todo check what happens for negative numbers
-                    Value::Scalar(self.i64_type.const_int(*number as u64, false).into())
+                    self.i64_type.const_int(*number as u64, false).into()
                 }
             },
             ExpressionKind::Access(expr_id, symbol_id) => {
@@ -456,7 +449,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             let t = &mir.types[expr.type_id];
             debug_assert!(
                 t != &Type::None && value != Value::Never
-                    || t == &Type::None && value == Value::Never
+                    || t == &Type::None && value == Value::Never,
+                "{value:?} is of type {t:?}"
             );
         }
 
@@ -469,11 +463,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         target: &AssignmentTarget,
         expr: &Expression,
     ) -> Value<'ctx> {
-        let value = match self.gen_expression(mir, expr) {
-            Value::Never | Value::None => panic!("value expected"),
-            Value::Scalar(value) => value,
-            Value::Struct(pointer_value, _) => pointer_value.into(),
-        };
+        let value = BasicValueEnum::from(self.gen_expression(mir, expr));
 
         match target {
             AssignmentTarget::Direct(symbol_id) => {
@@ -564,10 +554,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             end_block
         };
 
-        let cond = self
-            .gen_expression(mir, cond)
-            .unwrap_value()
-            .into_int_value();
+        let cond = IntValue::from(self.gen_expression(mir, cond));
         self.builder
             .build_conditional_branch(cond, then_block, else_block)
             .unwrap();
@@ -595,49 +582,38 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
         self.builder.position_at_end(end_block);
         match (then_value, else_value) {
-            (Value::Scalar(then_value), Value::Scalar(else_value)) => {
-                let if_value = self
-                    .builder
-                    .build_phi(then_value.get_type(), "if_result")
-                    .unwrap();
-                if_value.add_incoming(&[(&then_value, then_block), (&else_value, else_block)]);
-                Value::Scalar(if_value.as_basic_value())
-            }
-            (
-                Value::Struct(then_value, then_pointer_type),
-                Value::Struct(else_value, else_pointer_type),
-            ) => {
-                debug_assert_eq!(then_pointer_type, else_pointer_type);
-                let if_value = self
-                    .builder
-                    .build_phi(then_value.get_type(), "if_result")
-                    .unwrap();
-                if_value.add_incoming(&[(&then_value, then_block), (&else_value, else_block)]);
-                Value::Struct(
-                    if_value.as_basic_value().into_pointer_value(),
-                    then_pointer_type,
-                )
-            }
-            (Value::Scalar(then_value), Value::None)
-            | (Value::Scalar(then_value), Value::Never) => Value::Scalar(then_value),
-            (Value::Struct(then_value, then_pointer), Value::None)
-            | (Value::Struct(then_value, then_pointer), Value::Never) => {
-                Value::Struct(then_value, then_pointer)
-            }
-            (Value::None, Value::Scalar(else_value))
-            | (Value::Never, Value::Scalar(else_value)) => Value::Scalar(else_value),
-            (Value::None, Value::Struct(else_value, else_type))
-            | (Value::Never, Value::Struct(else_value, else_type)) => {
-                Value::Struct(else_value, else_type)
-            }
-            (Value::None, _) => Value::None,
-            (_, Value::None) => Value::None,
             (Value::Never, Value::Never) => {
                 self.builder.build_unreachable().unwrap();
                 Value::Never
             }
-            (Value::Struct(_, _), Value::Scalar(_)) | (Value::Scalar(_), Value::Struct(_, _)) => {
-                panic!()
+            (Value::None, Value::Never) | (Value::Never, Value::None) => Value::None,
+            (Value::Struct(then_value, then_type), Value::Struct(else_value, else_type)) => {
+                debug_assert_eq!(then_type, else_type);
+                let if_value = self
+                    .builder
+                    .build_phi(then_value.get_type(), "if_result")
+                    .unwrap();
+                if_value.add_incoming(&[(&then_value, then_block), (&else_value, else_block)]);
+                Value::Struct(if_value.as_basic_value().into_pointer_value(), then_type)
+            }
+            // todo check this, it seems strange: if one branch is "none" it means that it does not
+            //  exist (cannot really hold for the then branch, but for the else it can. In that case
+            //  the whole if expression cannot be of the other branch. At most, it can be an
+            //  "option of" type
+            (value, Value::None)
+            | (value, Value::Never)
+            | (Value::None, value)
+            | (Value::Never, value) => value,
+            (then_value, else_value) => {
+                let then_value = BasicValueEnum::from(then_value);
+                let else_value = BasicValueEnum::from(else_value);
+
+                let if_value = self
+                    .builder
+                    .build_phi(then_value.get_type(), "if_result")
+                    .unwrap();
+                if_value.add_incoming(&[(&then_value, then_block), (&else_value, else_block)]);
+                Value::from(if_value.as_basic_value())
             }
         }
     }
@@ -656,24 +632,16 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             if matches!(&mir.types[type_id], Type::Struct(_, _)) {
                 return Value::Struct(
                     self.builder
-                        .build_load(
-                            self.ptr_type,
-                            *variable,
-                            &name,
-                        )
+                        .build_load(self.ptr_type, *variable, &name)
                         .unwrap()
                         .into_pointer_value(),
                     llvm_type,
                 );
             }
 
-            return Value::Scalar(
+            return Value::from(
                 self.builder
-                    .build_load(
-                        llvm_type,
-                        *variable,
-                        &name,
-                    )
+                    .build_load(llvm_type, *variable, &name)
                     .unwrap(),
             );
         };
@@ -683,7 +651,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 unreachable!("handled in the if variable.contains_key(..) above")
             }
             SymbolKind::LetFn(_, _, _) => todo!(),
-            SymbolKind::Parameter(_, index) => Value::Scalar(
+            SymbolKind::Parameter(_, index) => Value::from(
                 // todo add support for struct passed as parameters
                 self.current_function()
                     .get_nth_param(*index as u32)
@@ -704,10 +672,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         };
 
         match self.gen_expression(mir, &mir.expressions[expr_id]) {
-            Value::Scalar(BasicValueEnum::ArrayValue(_)) => todo!(),
-            Value::Scalar(BasicValueEnum::StructValue(_)) => {
-                unimplemented!("structs are passed by pointer");
-            }
             Value::Struct(struct_pointer, struct_pointer_type) => {
                 // we compute the pointer to the field
                 let name = format!(
@@ -723,9 +687,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     .build_struct_gep(struct_pointer_type, struct_pointer, index as u32, &name)
                     .unwrap();
 
-                let symbol_llvm_type = self.llvm_type(mir,symbol.type_id );
+                let symbol_llvm_type = self.llvm_type(mir, symbol.type_id);
 
-                if matches!(mir.types[symbol.type_id], Type::Struct(_,_)) {
+                if matches!(mir.types[symbol.type_id], Type::Struct(_, _)) {
                     // the field is a struct type, we deref the field pointer to its value which is
                     // a pointer to a struct
                     let value = self
@@ -741,7 +705,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                         .build_load(symbol_llvm_type, field_pointer, &name)
                         .unwrap();
                     debug_assert!(!matches!(value, BasicValueEnum::PointerValue(_)));
-                    Value::Scalar(value)
+                    Value::from(value)
                 }
             }
             value => panic!("invalid value: {:?}", value),
@@ -765,16 +729,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .iter()
             .map(|e| match self.gen_expression(mir, &mir.expressions[*e]) {
                 Value::None | Value::Never => panic!(),
-                Value::Scalar(BasicValueEnum::ArrayValue(_)) => todo!(),
-                Value::Scalar(BasicValueEnum::IntValue(val)) => {
-                    BasicMetadataValueEnum::IntValue(val)
-                }
-                Value::Scalar(BasicValueEnum::FloatValue(_)) => todo!(),
-                Value::Scalar(BasicValueEnum::StructValue(_)) => {
-                    unimplemented!("structs are passed by pointer")
-                }
-                Value::Scalar(BasicValueEnum::PointerValue(_)) => unimplemented!(),
-                Value::Scalar(BasicValueEnum::VectorValue(_)) => todo!(),
+                Value::Number(val) => BasicMetadataValueEnum::IntValue(val),
                 Value::Struct(_, _) => todo!(),
             })
             .collect::<Vec<BasicMetadataValueEnum>>();
@@ -795,7 +750,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .unwrap()
             .try_as_basic_value()
             .left()
-            .map(|value| Value::Scalar(value))
+            .map(Value::from)
             .unwrap_or(Value::None)
     }
 
@@ -813,10 +768,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         self.builder.build_unconditional_branch(cond_block).unwrap();
 
         self.builder.position_at_end(cond_block);
-        let cond = self
-            .gen_expression(mir, cond)
-            .unwrap_value()
-            .into_int_value();
+        let cond = BasicValueEnum::from(self.gen_expression(mir, cond)).into_int_value();
         self.builder
             .build_conditional_branch(cond, body_block, end_block)
             .unwrap();
@@ -859,7 +811,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .iter()
             .map(
                 |(_, expr_id)| match self.gen_expression(mir, &mir.expressions[*expr_id]) {
-                    Value::Scalar(val) => val,
+                    Value::Number(val) => val.into(),
                     Value::Struct(pointer_value, _) => pointer_value.into(),
                     _ => panic!("value expected"),
                 },
@@ -881,7 +833,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             self.builder.build_store(field_ptr, value).unwrap();
         }
 
-        Value::Struct(struct_ptr.into(), struct_type.into())
+        Value::Struct(struct_ptr, struct_type.into())
     }
 
     fn current_function(&self) -> FunctionValue<'ctx> {
@@ -950,17 +902,48 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 enum Value<'ctx> {
     Never,
     None,
-    Scalar(BasicValueEnum<'ctx>),
-    // todo move to struct type
+    Number(IntValue<'ctx>),
     Struct(PointerValue<'ctx>, BasicTypeEnum<'ctx>),
 }
 
-impl<'ctx> Value<'ctx> {
-    fn unwrap_value(self) -> BasicValueEnum<'ctx> {
-        match self {
+impl<'ctx> From<BasicValueEnum<'ctx>> for Value<'ctx> {
+    fn from(value: BasicValueEnum<'ctx>) -> Self {
+        match value {
+            BasicValueEnum::ArrayValue(_) => todo!(),
+            BasicValueEnum::IntValue(val) => Self::from(val),
+            BasicValueEnum::FloatValue(_) => todo!(),
+            BasicValueEnum::PointerValue(_) => todo!(),
+            BasicValueEnum::StructValue(_) => {
+                unimplemented!("cannot construct a value from a struct, we miss the type")
+            }
+            BasicValueEnum::VectorValue(_) => todo!(),
+        }
+    }
+}
+
+impl<'ctx> From<IntValue<'ctx>> for Value<'ctx> {
+    fn from(value: IntValue<'ctx>) -> Self {
+        Self::Number(value)
+    }
+}
+
+impl<'ctx> From<Value<'ctx>> for BasicValueEnum<'ctx> {
+    fn from(value: Value<'ctx>) -> Self {
+        match value {
             Value::Never | Value::None => panic!(),
-            Value::Scalar(val) => val,
-            _ => panic!(),
+            Value::Number(val) => val.into(),
+            Value::Struct(val, _) => val.into(),
+        }
+    }
+}
+
+impl<'ctx> From<Value<'ctx>> for IntValue<'ctx> {
+    fn from(value: Value<'ctx>) -> Self {
+        match value {
+            Value::Never => panic!(),
+            Value::None => panic!(),
+            Value::Number(val) => val,
+            Value::Struct(_, _) => panic!(),
         }
     }
 }
@@ -1005,208 +988,112 @@ impl LlvmImpl for NativeFnKind {
         match self {
             NativeFnKind::NegNumber => todo!(),
             NativeFnKind::AddNumberNumber => {
-                let lhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap_value()
-                    .into_int_value();
-                let rhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap_value()
-                    .into_int_value();
-                Value::Scalar(
-                    codegen
-                        .builder
-                        .build_int_add(lhs, rhs, "add#")
-                        .unwrap()
-                        .into(),
-                )
+                let lhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]]));
+                let rhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[1]]));
+                codegen
+                    .builder
+                    .build_int_add(lhs, rhs, "add#")
+                    .unwrap()
+                    .into()
             }
             NativeFnKind::SubNumberNumber => {
-                let lhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap_value()
-                    .into_int_value();
-                let rhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap_value()
-                    .into_int_value();
-                Value::Scalar(
-                    codegen
-                        .builder
-                        .build_int_sub(lhs, rhs, "sub#")
-                        .unwrap()
-                        .into(),
-                )
+                let lhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]]));
+                let rhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[1]]));
+                codegen
+                    .builder
+                    .build_int_sub(lhs, rhs, "sub#")
+                    .unwrap()
+                    .into()
             }
             NativeFnKind::MulNumberNumber => {
-                let lhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap_value()
-                    .into_int_value();
-                let rhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap_value()
-                    .into_int_value();
-                Value::Scalar(
-                    codegen
-                        .builder
-                        .build_int_mul(lhs, rhs, "mul#")
-                        .unwrap()
-                        .into(),
-                )
+                let lhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]]));
+                let rhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[1]]));
+                codegen
+                    .builder
+                    .build_int_mul(lhs, rhs, "mul#")
+                    .unwrap()
+                    .into()
             }
             NativeFnKind::DivNumberNumber => {
-                let lhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap_value()
-                    .into_int_value();
-                let rhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap_value()
-                    .into_int_value();
-                Value::Scalar(
-                    codegen
-                        .builder
-                        .build_int_signed_div(lhs, rhs, "div#")
-                        .unwrap()
-                        .into(),
-                )
+                let lhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]]));
+                let rhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[1]]));
+                codegen
+                    .builder
+                    .build_int_signed_div(lhs, rhs, "div#")
+                    .unwrap()
+                    .into()
             }
             NativeFnKind::EqNumberNumber => {
-                let lhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap_value()
-                    .into_int_value();
-                let rhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap_value()
-                    .into_int_value();
-                Value::Scalar(
-                    codegen
-                        .builder
-                        .build_int_compare(IntPredicate::EQ, lhs, rhs, "eq#")
-                        .unwrap()
-                        .into(),
-                )
+                let lhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]]));
+                let rhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[1]]));
+                codegen
+                    .builder
+                    .build_int_compare(IntPredicate::EQ, lhs, rhs, "eq#")
+                    .unwrap()
+                    .into()
             }
             NativeFnKind::NeqNumberNumber => {
-                let lhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap_value()
-                    .into_int_value();
-                let rhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap_value()
-                    .into_int_value();
-                Value::Scalar(
-                    codegen
-                        .builder
-                        .build_int_compare(IntPredicate::NE, lhs, rhs, "ne#")
-                        .unwrap()
-                        .into(),
-                )
+                let lhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]]));
+                let rhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[1]]));
+                codegen
+                    .builder
+                    .build_int_compare(IntPredicate::NE, lhs, rhs, "ne#")
+                    .unwrap()
+                    .into()
             }
             NativeFnKind::GtNumberNumber => {
-                let lhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap_value()
-                    .into_int_value();
-                let rhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap_value()
-                    .into_int_value();
-                Value::Scalar(
-                    codegen
-                        .builder
-                        .build_int_compare(IntPredicate::SGT, lhs, rhs, "gt#")
-                        .unwrap()
-                        .into(),
-                )
+                let lhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]]));
+                let rhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[1]]));
+                codegen
+                    .builder
+                    .build_int_compare(IntPredicate::SGT, lhs, rhs, "gt#")
+                    .unwrap()
+                    .into()
             }
             NativeFnKind::LtNumberNumber => {
-                let lhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap_value()
-                    .into_int_value();
-                let rhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap_value()
-                    .into_int_value();
-                Value::Scalar(
-                    codegen
-                        .builder
-                        .build_int_compare(IntPredicate::SLT, lhs, rhs, "lt#")
-                        .unwrap()
-                        .into(),
-                )
+                let lhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]]));
+                let rhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[1]]));
+                codegen
+                    .builder
+                    .build_int_compare(IntPredicate::SLT, lhs, rhs, "lt#")
+                    .unwrap()
+                    .into()
             }
             NativeFnKind::GeNumberNumber => {
-                let lhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap_value()
-                    .into_int_value();
-                let rhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap_value()
-                    .into_int_value();
-                Value::Scalar(
-                    codegen
-                        .builder
-                        .build_int_compare(IntPredicate::SGE, lhs, rhs, "ge#")
-                        .unwrap()
-                        .into(),
-                )
+                let lhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]]));
+                let rhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[1]]));
+                codegen
+                    .builder
+                    .build_int_compare(IntPredicate::SGE, lhs, rhs, "ge#")
+                    .unwrap()
+                    .into()
             }
             NativeFnKind::LeNumberNumber => {
-                let lhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap_value()
-                    .into_int_value();
-                let rhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap_value()
-                    .into_int_value();
-                Value::Scalar(
-                    codegen
-                        .builder
-                        .build_int_compare(IntPredicate::SLE, lhs, rhs, "le#")
-                        .unwrap()
-                        .into(),
-                )
+                let lhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]]));
+                let rhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[1]]));
+                codegen
+                    .builder
+                    .build_int_compare(IntPredicate::SLE, lhs, rhs, "le#")
+                    .unwrap()
+                    .into()
             }
             NativeFnKind::EqBooleanBoolean => {
-                let lhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap_value()
-                    .into_int_value();
-                let rhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap_value()
-                    .into_int_value();
-                Value::Scalar(
-                    codegen
-                        .builder
-                        .build_int_compare(IntPredicate::EQ, lhs, rhs, "eq#")
-                        .unwrap()
-                        .into(),
-                )
+                let lhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]]));
+                let rhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[1]]));
+                codegen
+                    .builder
+                    .build_int_compare(IntPredicate::EQ, lhs, rhs, "eq#")
+                    .unwrap()
+                    .into()
             }
             NativeFnKind::NeqBooleanBoolean => {
-                let lhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[0]])
-                    .unwrap_value()
-                    .into_int_value();
-                let rhs = codegen
-                    .gen_expression(mir, &mir.expressions[params[1]])
-                    .unwrap_value()
-                    .into_int_value();
-                Value::Scalar(
-                    codegen
-                        .builder
-                        .build_int_compare(IntPredicate::NE, lhs, rhs, "ne#")
-                        .unwrap()
-                        .into(),
-                )
+                let lhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]]));
+                let rhs = IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[1]]));
+                codegen
+                    .builder
+                    .build_int_compare(IntPredicate::NE, lhs, rhs, "ne#")
+                    .unwrap()
+                    .into()
             }
             NativeFnKind::PrintNumber => Value::None,
         }
