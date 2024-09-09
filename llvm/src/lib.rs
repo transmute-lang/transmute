@@ -1,7 +1,8 @@
+use inkwell::attributes::{Attribute, AttributeLoc};
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::memory_buffer::MemoryBuffer;
-use inkwell::module::Module;
+use inkwell::module::{Linkage, Module};
 use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::{
     CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine, TargetTriple,
@@ -10,7 +11,7 @@ use inkwell::types::{
     BasicMetadataTypeEnum, BasicType, BasicTypeEnum, IntType, PointerType, StructType, VoidType,
 };
 use inkwell::values::{
-    BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
+    BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue, PointerValue,
 };
 use inkwell::{IntPredicate, OptimizationLevel};
 use std::collections::HashMap;
@@ -143,12 +144,16 @@ struct Codegen<'ctx, 't> {
     builder: Builder<'ctx>,
     bool_type: IntType<'ctx>,
     i64_type: IntType<'ctx>,
+    size_type: IntType<'ctx>,
     void_type: VoidType<'ctx>,
     ptr_type: PointerType<'ctx>,
 
+    llvm_gcroot: FunctionValue<'ctx>,
     malloc: FunctionValue<'ctx>,
+    gc: FunctionValue<'ctx>,
 
     struct_types: HashMap<StructId, StructType<'ctx>>,
+    type_layouts: HashMap<TypeId, PointerValue<'ctx>>,
     variables: HashMap<SymbolId, PointerValue<'ctx>>,
 
     target_triple: &'t TargetTriple,
@@ -166,14 +171,21 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
         let bool_type = context.bool_type();
         let i64_type = context.i64_type();
+        let size_type = context.i64_type();
         let void_type = context.void_type();
         let ptr_type = context.ptr_type(Default::default());
 
         let print_fn_type = void_type.fn_type(&[i64_type.into()], false);
         module.add_function("print", print_fn_type, None);
 
-        let malloc_fn_type = ptr_type.fn_type(&[i64_type.into()], false);
-        let malloc = module.add_function("malloc", malloc_fn_type, None);
+        let malloc_fn_type = ptr_type.fn_type(&[size_type.into()], false);
+        let malloc = module.add_function("gc_malloc", malloc_fn_type, None);
+
+        let gc_fn_type = void_type.fn_type(&[], false);
+        let gc = module.add_function("gc", gc_fn_type, None);
+
+        let llvm_gcroot_fn_type = void_type.fn_type(&[ptr_type.into(), ptr_type.into()], false);
+        let llvm_gcroot = module.add_function("llvm.gcroot", llvm_gcroot_fn_type, None);
 
         Self {
             context,
@@ -181,10 +193,14 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             builder,
             bool_type,
             i64_type,
+            size_type,
             void_type,
             ptr_type,
+            llvm_gcroot,
             malloc,
+            gc,
             struct_types: HashMap::default(),
+            type_layouts: HashMap::default(),
             variables: HashMap::default(),
             target_triple,
             target_machine,
@@ -198,6 +214,18 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         for (struct_id, struct_def) in mir.structs.iter() {
             self.gen_struct_body(mir, struct_id, struct_def);
         }
+
+        let f = self.module.add_function(
+            "_glob",
+            self.void_type.fn_type(&[], false),
+            Some(Linkage::Private),
+        );
+        let block = self.context.append_basic_block(f, "entry");
+        self.builder.position_at_end(block);
+        for (struct_id, _) in mir.structs.iter() {
+            self.gen_struct_layout(mir, struct_id);
+        }
+        self.builder.build_unreachable().unwrap();
 
         for (_, function) in mir.functions.iter() {
             self.gen_function_signature(mir, function);
@@ -221,7 +249,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
     fn optimize(&self) {
         let passes: &[&str] = &[
-            "instcombine",
+            // "instcombine",
             "reassociate",
             "gvn",
             "simplifycfg",
@@ -262,32 +290,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         //     .unwrap()
     }
 
-    fn gen_statement(&mut self, mir: &Mir, stmt: &Statement) -> Value<'ctx> {
-        match &stmt.kind {
-            StatementKind::Expression(expr_id) => {
-                self.gen_expression(mir, &mir.expressions[*expr_id])
-            }
-            StatementKind::Ret(expr_id) => self.gen_ret(mir, &mir.expressions[*expr_id]),
-        }
-    }
-
-    fn gen_ret(&mut self, mir: &Mir, expr: &Expression) -> Value<'ctx> {
-        match self.gen_expression(mir, expr) {
-            Value::Never => panic!(),
-            Value::None => {
-                // this is used for implicit ret, where we can return nothing.
-                self.builder.build_return(None).unwrap();
-            }
-            Value::Number(val) => {
-                self.builder.build_return(Some(&val)).unwrap();
-            }
-            Value::Struct(val, _) => {
-                self.builder.build_return(Some(&val)).unwrap();
-            }
-        };
-        Value::Never
-    }
-
     fn gen_struct_signature(&mut self, mir: &Mir, struct_id: StructId, struct_def: &Struct) {
         let struct_type = self.context.opaque_struct_type(&format!(
             "{}#id{}",
@@ -306,6 +308,88 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let struct_type = *self.struct_types.get(&struct_id).unwrap();
 
         struct_type.set_body(fields.as_slice(), false);
+
+        let offsets_count = struct_type
+            .get_field_types_iter()
+            .enumerate()
+            .filter(|(_, f)| matches!(f, BasicTypeEnum::PointerType(_)))
+            .count();
+
+        let i64_array_type = self.i64_type.array_type(offsets_count as u32 * 2 + 1);
+        let global = self.module.add_global(
+            i64_array_type,
+            None,
+            &format!(
+                "layout_struct_{}",
+                mir.identifiers[mir.structs[struct_id].identifier.id]
+            ),
+        );
+        // global.set_constant(true);
+        // global.set_externally_initialized(false);
+        // global.set_linkage(Linkage::LinkerPrivate);
+
+        self.type_layouts.insert(
+            mir.symbols[mir.structs[struct_id].symbol_id].type_id,
+            global.as_pointer_value(),
+        );
+    }
+
+    /// the struct layout is an array of i64.
+    /// the first one gives the count of pointer fields, n
+    /// then, n pairs of i64 follows:
+    ///  - the first element is the field's offset
+    ///  - the second element is the field's layout pointer
+    fn gen_struct_layout(&mut self, mir: &Mir, struct_id: StructId) {
+        let global = self
+            .module
+            .get_global(&format!(
+                "layout_struct_{}",
+                mir.identifiers[mir.structs[struct_id].identifier.id]
+            ))
+            .unwrap();
+
+        debug_assert!(global.get_value_type().into_array_type().len() % 2 == 1);
+
+        let mut offsets =
+            Vec::with_capacity(global.get_value_type().into_array_type().len() as usize);
+        let entries_count = (global.get_value_type().into_array_type().len() - 1) / 2;
+        offsets.push(self.i64_type.const_int(entries_count as u64, false));
+
+        let struct_type = self.struct_types[&struct_id];
+        for field in mir.structs[struct_id].fields.iter() {
+            if let Some(field_layout_ptr) = self.type_layouts.get(&field.type_id) {
+                let field_pointer = self
+                    .builder
+                    .build_struct_gep(
+                        struct_type,
+                        self.ptr_type.const_null(),
+                        field.index as u32,
+                        &format!("offset_struct{struct_id}_field{index}", index = field.index),
+                    )
+                    .unwrap();
+                let field_offset = self
+                    .builder
+                    .build_ptr_to_int(
+                        field_pointer,
+                        self.i64_type,
+                        &format!("offset_struct{struct_id}_field{index}", index = field.index),
+                    )
+                    .unwrap();
+                offsets.push(field_offset);
+
+                let field_layout_ptr = self
+                    .builder
+                    .build_ptr_to_int(
+                        *field_layout_ptr,
+                        self.i64_type,
+                        &format!("offset_struct{struct_id}_field{index}", index = field.index),
+                    )
+                    .unwrap();
+                offsets.push(field_layout_ptr);
+            }
+        }
+
+        global.set_initializer(&self.i64_type.const_array(&offsets));
     }
 
     fn gen_function_signature(&mut self, mir: &Mir, function: &Function) {
@@ -341,9 +425,37 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             Type::None => todo!(),
         };
 
-        self
+        let f = self
             .module
             .add_function(&mir.identifiers[function.identifier.id], fn_type, None);
+        f.set_gc("shadow-stack");
+        // f.set_gc("statepoint-example");
+    }
+
+    fn gen_statement(&mut self, mir: &Mir, stmt: &Statement) -> Value<'ctx> {
+        match &stmt.kind {
+            StatementKind::Expression(expr_id) => {
+                self.gen_expression(mir, &mir.expressions[*expr_id])
+            }
+            StatementKind::Ret(expr_id) => self.gen_ret(mir, &mir.expressions[*expr_id]),
+        }
+    }
+
+    fn gen_ret(&mut self, mir: &Mir, expr: &Expression) -> Value<'ctx> {
+        match self.gen_expression(mir, expr) {
+            Value::Never => panic!(),
+            Value::None => {
+                // this is used for implicit ret, where we can return nothing.
+                self.builder.build_return(None).unwrap();
+            }
+            Value::Number(val) => {
+                self.builder.build_return(Some(&val)).unwrap();
+            }
+            Value::Struct(val, _) => {
+                self.builder.build_return(Some(&val)).unwrap();
+            }
+        };
+        Value::Never
     }
 
     fn gen_function_body(&mut self, mir: &Mir, function: &Function) -> Value<'ctx> {
@@ -400,7 +512,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     fn gen_variable(&mut self, mir: &Mir, variable: &Variable) {
         let llvm_type = self.repr(self.llvm_type(mir, variable.type_id));
 
-        self.gen_alloca(
+        let ptr = self.gen_alloca(
             llvm_type,
             &format!(
                 "{}#local#sym{}#",
@@ -409,6 +521,85 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             variable.symbol_id,
             None,
         );
+
+        if matches!(
+            mir.types[mir.symbols[variable.symbol_id].type_id],
+            Type::Struct(_, _)
+        ) {
+            self.builder
+                .build_store(ptr, self.ptr_type.const_zero())
+                .unwrap();
+
+            // if matches!(
+            //     mir.types[mir.symbols[variable.symbol_id].type_id],
+            //     Type::Struct(_, _)
+            // ) {
+            // let struct_type = self.llvm_type(mir, variable.type_id).into_struct_type();
+            // let mut indices = struct_type
+            //     .get_field_types_iter()
+            //     .enumerate()
+            //     .filter(|(_, f)| matches!(f, BasicTypeEnum::PointerType(_)))
+            //     .map(|(index, _)| {
+            //         (
+            //             index,
+            //             self.builder
+            //                 .build_struct_gep(
+            //                     struct_type,
+            //                     self.ptr_type.const_null(),
+            //                     index as u32,
+            //                     &format!("gep_{}", variable.symbol_id),
+            //                 )
+            //                 .unwrap(),
+            //         )
+            //     })
+            //     .map(|(index, ptr)| {
+            //         self.builder
+            //             .build_ptr_to_int(
+            //                 ptr,
+            //                 self.i64_type,
+            //                 &format!("struct_layout_{}_{}", variable.symbol_id, index),
+            //             )
+            //             .unwrap()
+            //             .into()
+            //     })
+            //     .collect::<Vec<IntValue<'ctx>>>();
+            //
+            // let i64_array_type = self.i64_type.array_type(indices.len() as u32 + 1);
+            // let global = self.module.add_global(
+            //     i64_array_type,
+            //     None,
+            //     &format!(
+            //         "struct_layout_{}",
+            //         mir.identifiers[mir.symbols[variable.symbol_id].ident_id]
+            //     ),
+            // );
+            // global.set_constant(true);
+            // global.set_externally_initialized(false);
+            // global.set_linkage(Linkage::LinkerPrivate);
+            //
+            // indices.insert(0, self.i64_type.const_int(indices.len() as u64, false));
+            // let indices = self.i64_type.const_array(&indices);
+            //
+            // global.set_initializer(&indices);
+
+            // self.builder
+            //     .build_store(ptr, self.ptr_type.const_zero())
+            //     .unwrap();
+
+            let layout = self.type_layouts[&mir.symbols[variable.symbol_id].type_id];
+            self.builder
+                .build_call(self.llvm_gcroot, &[ptr.into(), layout.into()], "gcroot")
+                .unwrap();
+
+            // self.builder
+            //     .build_call(
+            //         self.llvm_gcroot,
+            //         &[ptr.into(), self.ptr_type.const_zero().into()],
+            //         "gcroot",
+            //     )
+            //     .unwrap();
+            // }
+        }
     }
 
     fn gen_expression(&mut self, mir: &Mir, expr: &Expression) -> Value<'ctx> {
@@ -849,13 +1040,16 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let struct_type = *self.struct_types.get(&struct_id).unwrap();
         let struct_ptr = self
             .builder
-            .build_call(self.malloc, &[struct_type.size_of().unwrap().into()], &name)
+            .build_call(
+                self.malloc,
+                &[struct_type.size_of().unwrap().as_basic_value_enum().into()],
+                &name,
+            )
             .unwrap()
             .try_as_basic_value()
             .left()
             .unwrap()
             .into_pointer_value();
-
         let field_values = fields
             .iter()
             .map(

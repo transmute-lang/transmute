@@ -4,12 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-transmute-core = {path = "../core" }
-transmute-ast = {path = "../ast" }
-transmute-hir = {path = "../hir" }
-transmute-mir = {path = "../mir" }
-transmute-crt = {path = "../rt/c" }
-transmute-llvm = {path = "../llvm" }
+transmute-core = { path = "../core" }
+transmute-ast = { path = "../ast" }
+transmute-hir = { path = "../hir" }
+transmute-mir = { path = "../mir" }
+transmute-crt = { path = "../rt/c", features = ["gc-test"] }
+transmute-llvm = { path = "../llvm" }
 clap = { version = "4.5.8", features = ["derive"] }
 
 

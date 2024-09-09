@@ -32,7 +32,7 @@ fn main() {
 
     let output = llvm_link_command
         .output()
-        .expect("can generate LLVM IR for other.c");
+        .expect("can generate LLVM IR");
     if !output.status.success() {
         panic!("{}", String::from_utf8(output.stderr).unwrap());
     }
@@ -53,9 +53,16 @@ fn main() {
     .unwrap();
 }
 
+#[cfg(feature = "gc-test")]
+const GC_TEST: &str = "-D GC_TEST";
+
+#[cfg(not(feature = "gc-test"))]
+const GC_TEST: &str = "";
+
 fn compile_to_llvm_ir(src: &Path, dst: &Path) {
     let output = Command::new("clang")
         .arg("-S")
+        .arg(GC_TEST)
         .arg("-emit-llvm")
         .arg("-o")
         .arg(dst.as_os_str())
