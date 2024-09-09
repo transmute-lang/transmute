@@ -128,6 +128,13 @@ impl<'ctx> LlvmIr<'ctx> {
         fs::write(path, &str).unwrap();
         Ok(())
     }
+
+    pub fn write_assembly<P: AsRef<Path>>(&self, path: P) -> Result<(), Diagnostics> {
+        self.target_machine
+            .write_to_file(&self.module, FileType::Assembly, path.as_ref())
+            .unwrap();
+        Ok(())
+    }
 }
 
 struct Codegen<'ctx, 't> {
@@ -334,7 +341,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             Type::None => todo!(),
         };
 
-        self.module
+        self
+            .module
             .add_function(&mir.identifiers[function.identifier.id], fn_type, None);
     }
 

@@ -97,9 +97,7 @@ impl Display for Diagnostic {
             write!(
                 f,
                 "{} at {}:{}",
-                self.message,
-                self.span.line,
-                self.span.column
+                self.message, self.span.line, self.span.column
             )
         }
     }

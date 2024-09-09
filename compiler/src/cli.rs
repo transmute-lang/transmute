@@ -20,8 +20,12 @@ pub struct Args {
     optimize: bool,
 
     /// Outputs LLVM IR
-    #[arg(long)]
+    #[arg(long, conflicts_with = "assembly")]
     llvm_ir: bool,
+
+    /// Outputs Assembly
+    #[arg(long, conflicts_with = "llvm_ir")]
+    assembly: bool,
 }
 
 impl Args {
@@ -44,5 +48,9 @@ impl Args {
 
     pub fn output_llvm_ir(&self) -> bool {
         self.llvm_ir
+    }
+
+    pub fn output_assembly(&self) -> bool {
+        self.assembly
     }
 }

@@ -1,6 +1,6 @@
 use crate::cli::parse_args;
 use std::process;
-use tmc::{compile_file, Options};
+use tmc::{compile_file, Options, OutputFormat};
 
 mod cli;
 
@@ -14,7 +14,11 @@ fn main() {
     );
 
     let mut options = Options::default();
-    options.set_llvm_ir(args.output_llvm_ir());
+    if args.output_llvm_ir() {
+        options.set_output_format(OutputFormat::LlvmIr);
+    } else if args.output_assembly() {
+        options.set_output_format(OutputFormat::Assembly);
+    }
     options.set_optimize(args.optimize());
 
     match compile_file(&args.input(), &args.output(), &options) {
