@@ -57,7 +57,7 @@ macro_rules! expected_token {
 
 #[cfg(not(debug_assertions))]
 macro_rules! expected_token {
-    ($token:ident) => {
+    ($token:expr) => {
         ExpectedToken($token)
     };
 }

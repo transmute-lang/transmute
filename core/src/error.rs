@@ -98,8 +98,8 @@ impl Display for Diagnostic {
                 f,
                 "{} at {}:{}",
                 self.message,
-                self.span.line(),
-                self.span.column()
+                self.span.line,
+                self.span.column
             )
         }
     }
