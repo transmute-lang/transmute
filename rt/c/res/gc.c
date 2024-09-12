@@ -53,15 +53,23 @@ typedef struct GcBlock {
 typedef struct Gc {
     int enable;
     GcBlock *blocks_chain;
+
     int execution_count;
+
     int alloc_count;
-    int free_count;
     size_t total_alloc_sz;
     size_t object_alloc_sz;
+
+    int free_count;
     size_t total_free_sz;
     size_t object_free_sz;
+
     size_t current_alloc_sz;
     size_t current_object_alloc_sz;
+
+    size_t max_alloc_sz;
+    size_t max_object_alloc_sz;
+
     #ifdef GC_TEST
     GcBlock *freed_blocks_chain;
     uint8_t *pool;
@@ -77,15 +85,23 @@ typedef int64_t Meta;
 Gc gc = {
     .enable = 1,
     .blocks_chain = NULL,
+
     .execution_count = 0,
+
     .alloc_count = 0,
-    .free_count = 0,
     .total_alloc_sz = 0,
     .object_alloc_sz = 0,
+
+    .free_count = 0,
     .total_free_sz = 0,
     .object_free_sz = 0,
+
     .current_alloc_sz = 0,
     .current_object_alloc_sz = 0,
+
+    .max_alloc_sz = 0,
+    .max_object_alloc_sz = 0,
+
     #ifdef GC_TEST
     .freed_blocks_chain = NULL,
     .pool = NULL,
@@ -191,6 +207,8 @@ void gc_print_statistics() {
     printf("  Object alloc          %4li bytes\n", gc.object_alloc_sz);
     printf("  Total free            %4li bytes\n", gc.total_free_sz);
     printf("  Object free           %4li bytes\n", gc.object_free_sz);
+    printf("  Max alloc             %4li bytes\n", gc.max_alloc_sz);
+    printf("  Max object alloc      %4li bytes\n", gc.max_object_alloc_sz);
     printf("  Current alloc         %4li bytes\n", gc.current_alloc_sz);
     printf("  Current object alloc  %4li bytes\n", gc.current_object_alloc_sz);
     printf("\n");
@@ -343,6 +361,12 @@ void* gc_malloc(int64_t data_size) {
     gc.current_alloc_sz += alloc_size;
     gc.object_alloc_sz += data_size;
     gc.current_object_alloc_sz += data_size;
+    if (gc.current_alloc_sz > gc.max_alloc_sz) {
+        gc.max_alloc_sz = gc.current_alloc_sz;
+    }
+    if (gc.current_object_alloc_sz > gc.max_object_alloc_sz) {
+        gc.max_object_alloc_sz = gc.current_object_alloc_sz;
+    }
 
 #ifdef GC_TEST
     GcBlock *block = (void *)gc.pool_free;
