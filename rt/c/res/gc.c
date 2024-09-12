@@ -53,6 +53,15 @@ typedef struct GcBlock {
 typedef struct Gc {
     int enable;
     GcBlock *blocks_chain;
+    int execution_count;
+    int alloc_count;
+    int free_count;
+    size_t total_alloc_sz;
+    size_t object_alloc_sz;
+    size_t total_free_sz;
+    size_t object_free_sz;
+    size_t current_alloc_sz;
+    size_t current_object_alloc_sz;
     #ifdef GC_TEST
     GcBlock *freed_blocks_chain;
     uint8_t *pool;
@@ -68,6 +77,15 @@ typedef int64_t Meta;
 Gc gc = {
     .enable = 1,
     .blocks_chain = NULL,
+    .execution_count = 0,
+    .alloc_count = 0,
+    .free_count = 0,
+    .total_alloc_sz = 0,
+    .object_alloc_sz = 0,
+    .total_free_sz = 0,
+    .object_free_sz = 0,
+    .current_alloc_sz = 0,
+    .current_object_alloc_sz = 0,
     #ifdef GC_TEST
     .freed_blocks_chain = NULL,
     .pool = NULL,
@@ -126,7 +144,7 @@ void gc_pool_dump() {
         return;
     }
 
-    printf("Memory dump:\n\n");
+    printf("\nMemory dump:\n\n");
     for (size_t i = 0; i < POOL_SIZE; i++) {
         if (i == 0) {
             printf("    %p    ", &gc.pool[i]);
@@ -162,6 +180,20 @@ void gc_pool_dump() {
         }
     }
     printf("\n\n");
+}
+
+void gc_print_statistics() {
+    printf("\nStatistics:\n\n");
+    printf("  Executions            %4i\n", gc.execution_count);
+    printf("  Alloc                 %4li blocks\n", gc.alloc_count);
+    printf("  Free                  %4li blocks\n", gc.free_count);
+    printf("  Total alloc           %4li bytes\n", gc.total_alloc_sz);
+    printf("  Object alloc          %4li bytes\n", gc.object_alloc_sz);
+    printf("  Total free            %4li bytes\n", gc.total_free_sz);
+    printf("  Object free           %4li bytes\n", gc.object_free_sz);
+    printf("  Current alloc         %4li bytes\n", gc.current_alloc_sz);
+    printf("  Current object alloc  %4li bytes\n", gc.current_object_alloc_sz);
+    printf("\n");
 }
 #endif // #ifdef GC_TEST
 
@@ -209,6 +241,8 @@ void gc_run() {
     if (!gc.enable) {
         return;
     }
+
+    gc.execution_count++;
 
     gc_log(2, "Start GC\n");
 
@@ -304,6 +338,12 @@ void* gc_malloc(int64_t data_size) {
 
     size_t alloc_size = sizeof(GcBlock) + data_size;
 
+    gc.alloc_count++;
+    gc.total_alloc_sz += alloc_size;
+    gc.current_alloc_sz += alloc_size;
+    gc.object_alloc_sz += data_size;
+    gc.current_object_alloc_sz += data_size;
+
 #ifdef GC_TEST
     GcBlock *block = (void *)gc.pool_free;
     gc.pool_free += alloc_size;
@@ -332,6 +372,12 @@ void* gc_malloc(int64_t data_size) {
 void gc_free(GcBlock *block) {
 #ifdef GC_TEST
     gc_log(3, "memset %#02x at %p for %li bytes\n", FREED, block, sizeof(GcBlock) + block->data_size);
+
+    gc.free_count++;
+    gc.total_free_sz += sizeof(GcBlock) + block->data_size;
+    gc.current_alloc_sz -= sizeof(GcBlock) + block->data_size;
+    gc.object_free_sz += block->data_size;
+    gc.current_object_alloc_sz -= block->data_size;
 
     if (gc.test_dump_color) {
         // todo mutually exclusive: memset and coloring

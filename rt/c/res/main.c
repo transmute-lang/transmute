@@ -25,6 +25,7 @@ int main(int argc, char **argv) {
 
 #ifdef GC_TEST
     gc_pool_dump();
+    gc_print_statistics();
 #endif
 
     return 0;
