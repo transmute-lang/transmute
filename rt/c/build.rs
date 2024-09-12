@@ -19,6 +19,10 @@ fn main() {
             .to_string();
 
         let src = res_dir.join(&c_file_name);
+        if !src.extension().unwrap().eq("c".into()) {
+            continue;
+        }
+
         let dst = PathBuf::from(format!(
             "{}/{}.ll",
             env::var("OUT_DIR").unwrap(),
@@ -34,7 +38,7 @@ fn main() {
         .output()
         .expect("can generate LLVM IR");
     if !output.status.success() {
-        panic!("{}", String::from_utf8(output.stderr).unwrap());
+        panic!("{}", String::from_utf8_lossy(&output.stderr));
     }
 
     let objects = format!(

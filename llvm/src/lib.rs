@@ -150,7 +150,7 @@ struct Codegen<'ctx, 't> {
 
     llvm_gcroot: FunctionValue<'ctx>,
     malloc: FunctionValue<'ctx>,
-    gc: FunctionValue<'ctx>,
+    gc_run: FunctionValue<'ctx>,
 
     struct_types: HashMap<StructId, StructType<'ctx>>,
     type_layouts: HashMap<TypeId, PointerValue<'ctx>>,
@@ -182,7 +182,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let malloc = module.add_function("gc_malloc", malloc_fn_type, None);
 
         let gc_fn_type = void_type.fn_type(&[], false);
-        let gc = module.add_function("gc", gc_fn_type, None);
+        let gc_run = module.add_function("gc_run", gc_fn_type, None);
 
         let llvm_gcroot_fn_type = void_type.fn_type(&[ptr_type.into(), ptr_type.into()], false);
         let llvm_gcroot = module.add_function("llvm.gcroot", llvm_gcroot_fn_type, None);
@@ -198,7 +198,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             ptr_type,
             llvm_gcroot,
             malloc,
-            gc,
+            gc_run,
             struct_types: HashMap::default(),
             type_layouts: HashMap::default(),
             variables: HashMap::default(),
