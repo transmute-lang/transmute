@@ -19,14 +19,18 @@
 #include "gc.h"
 
 #ifdef GC_TEST
-#define BOUNDARY   0xBB
-#define FREE       0xFF
-#define ALLOCATED  0xAA
-#define FREED      0xDD
-#define POOL_START 65536
+#define BOUNDARY      0xBB
+#define FREE          0xFF
+#define ALLOCATED     0xAA
+#define FREED         0xDD
+#define POOL_START    65536
+
+#ifndef BOUNDARY_SIZE
+#define BOUNDARY_SIZE 16
+#endif // #ifndef BOUNDARY_SIZE
 
 #ifndef POOL_SIZE
-#define POOL_SIZE  512
+#define POOL_SIZE     512
 #endif // #ifndef POOL_SIZE
 #endif // #ifdef GC_TEST
 
@@ -161,7 +165,7 @@ void gc_pool_dump() {
     }
 
     printf("\nMemory dump:\n\n");
-    for (size_t i = 0; i < POOL_SIZE; i++) {
+    for (size_t i = 0; i < POOL_SIZE + 2*BOUNDARY_SIZE; i++) {
         if (i == 0) {
             printf("    %p    ", &gc.pool[i]);
         } else if (i % 16 == 0) {
@@ -171,7 +175,7 @@ void gc_pool_dump() {
         }
 
         if (gc.test_dump_color) {
-            if (i < 2 * sizeof(int64_t) || i >= POOL_SIZE - 2 * sizeof(int64_t)) {
+            if (i < BOUNDARY_SIZE || i >= POOL_SIZE + BOUNDARY_SIZE) {
                 printf("\033[31m%02x\033[0m ", gc.pool[i]);
             } else if (i >= gc.pool_free - gc.pool) {
                 printf("\033[34m%02x\033[0m ", gc.pool[i]);
@@ -201,8 +205,8 @@ void gc_pool_dump() {
 void gc_print_statistics() {
     printf("\nStatistics:\n\n");
     printf("  Executions            %4i\n", gc.execution_count);
-    printf("  Alloc                 %4li blocks\n", gc.alloc_count);
-    printf("  Free                  %4li blocks\n", gc.free_count);
+    printf("  Alloc                 %4i blocks\n", gc.alloc_count);
+    printf("  Free                  %4i blocks\n", gc.free_count);
     printf("  Total alloc           %4li bytes\n", gc.total_alloc_sz);
     printf("  Object alloc          %4li bytes\n", gc.object_alloc_sz);
     printf("  Total free            %4li bytes\n", gc.total_free_sz);
@@ -242,16 +246,25 @@ void gc_init() {
 #include <sys/mman.h>
 #include <errno.h>
 
-    gc.pool = mmap((void *)POOL_START, POOL_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0);
+    gc.pool = mmap(
+        (void *)POOL_START,
+        POOL_SIZE + 2 * BOUNDARY_SIZE,
+        PROT_READ | PROT_WRITE,
+        MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS,
+        -1,
+        0
+    );
     gc_log(2, "Allocate test GC memory pool: mmap returned %p (%s)\n", gc.pool, strerror(errno));
     assert(errno == 0);
 
     gc_log(3, "memset %#02x at %p for %i bytes\n", FREE, gc.pool, POOL_SIZE);
-    memset(gc.pool, FREE, POOL_SIZE);
-    memset(gc.pool, BOUNDARY, 2 * sizeof(int64_t));
-    memset(gc.pool + POOL_SIZE - 2 * sizeof(int64_t), BOUNDARY, 2 * sizeof(int64_t));
+    memset(gc.pool, BOUNDARY, BOUNDARY_SIZE);
+    memset(gc.pool + BOUNDARY_SIZE, FREE, POOL_SIZE);
+    memset(gc.pool + POOL_SIZE + BOUNDARY_SIZE, BOUNDARY, BOUNDARY_SIZE);
 
-    gc.pool_free = gc.pool + 2 * sizeof(int64_t);
+    gc.pool_free = gc.pool + BOUNDARY_SIZE;
+
+    gc_pool_dump();
 #endif // #ifdef GC_TEST
 }
 
@@ -356,6 +369,25 @@ void* gc_malloc(int64_t data_size) {
 
     size_t alloc_size = sizeof(GcBlock) + data_size;
 
+#ifdef GC_TEST
+    if (gc.pool_free + alloc_size >= gc.pool + POOL_SIZE + BOUNDARY_SIZE) {
+        fprintf(stderr, "\nERROR: Cannot allocate %li bytes: missing %li bytes\n",
+            alloc_size,
+            gc.pool_free + alloc_size - (gc.pool + POOL_SIZE + BOUNDARY_SIZE)
+        );
+        gc_pool_dump();
+        gc_print_statistics();
+        exit(1);
+    }
+
+    GcBlock *block = (void *)gc.pool_free;
+    gc.pool_free += alloc_size;
+    gc_log(3, "memset %#02x at %p for %li bytes\n", ALLOCATED, block, alloc_size);
+    memset(block, ALLOCATED, alloc_size);
+#else
+    GcBlock *block = malloc(alloc_size);
+#endif // #ifdef GC_TEST
+
     gc.alloc_count++;
     gc.total_alloc_sz += alloc_size;
     gc.current_alloc_sz += alloc_size;
@@ -367,15 +399,6 @@ void* gc_malloc(int64_t data_size) {
     if (gc.current_object_alloc_sz > gc.max_object_alloc_sz) {
         gc.max_object_alloc_sz = gc.current_object_alloc_sz;
     }
-
-#ifdef GC_TEST
-    GcBlock *block = (void *)gc.pool_free;
-    gc.pool_free += alloc_size;
-    gc_log(3, "memset %#02x at %p for %li bytes\n", ALLOCATED, block, alloc_size);
-    memset(block, ALLOCATED, alloc_size);
-#else
-    GcBlock *block = malloc(alloc_size);
-#endif // #ifdef GC_TEST
 
     block->state = Unreachable;
     block->data_size = data_size;
@@ -415,4 +438,3 @@ void gc_free(GcBlock *block) {
     free(block);
 #endif // #ifdef GC_TEST
 }
-
