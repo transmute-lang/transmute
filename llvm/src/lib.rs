@@ -1,4 +1,3 @@
-use inkwell::attributes::{Attribute, AttributeLoc};
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::memory_buffer::MemoryBuffer;
@@ -144,7 +143,6 @@ struct Codegen<'ctx, 't> {
     builder: Builder<'ctx>,
     bool_type: IntType<'ctx>,
     i64_type: IntType<'ctx>,
-    size_type: IntType<'ctx>,
     void_type: VoidType<'ctx>,
     ptr_type: PointerType<'ctx>,
 
@@ -193,7 +191,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             builder,
             bool_type,
             i64_type,
-            size_type,
             void_type,
             ptr_type,
             llvm_gcroot,
@@ -677,6 +674,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 self.builder.build_store(target, value).unwrap();
             }
         }
+
+        #[cfg(feature = "gc-aggressive")]
+        self.builder.build_call(self.gc_run, &[], "gc_run").unwrap();
 
         Value::None
     }
