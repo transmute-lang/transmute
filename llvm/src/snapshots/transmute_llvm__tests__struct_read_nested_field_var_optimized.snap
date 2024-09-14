@@ -7,16 +7,47 @@ source_filename = "main"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+%"Inner#id0" = type { i64 }
+%"Outer#id1" = type { ptr }
+
+@layout_struct_Inner = global [1 x i64] zeroinitializer
+@layout_struct_Outer = global [3 x i64] [i64 1, i64 0, i64 ptrtoint (ptr @layout_struct_Inner to i64)]
+
 declare void @print(i64)
 
-declare ptr @malloc(i64)
+; Function Attrs: nounwind
+declare void @llvm.gcroot(ptr, ptr) #0
 
-define i64 @f() {
+declare ptr @gc_malloc(i64)
+
+declare void @gc_run()
+
+define private void @_glob() {
 entry:
-  %"heap#struct#Inner#id0#" = call ptr @malloc(i64 8)
+  unreachable
+}
+
+define i64 @f() gc "shadow-stack" {
+entry:
+  %"outer#local#sym24#" = alloca ptr, align 8
+  %"inner#local#sym23#" = alloca ptr, align 8
+  store ptr null, ptr %"inner#local#sym23#", align 8
+  call void @llvm.gcroot(ptr %"inner#local#sym23#", ptr @layout_struct_Inner)
+  store ptr null, ptr %"outer#local#sym24#", align 8
+  call void @llvm.gcroot(ptr %"outer#local#sym24#", ptr @layout_struct_Outer)
+  %"heap#struct#Inner#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"Inner#id0", ptr null, i32 1) to i64))
   store i64 1, ptr %"heap#struct#Inner#id0#", align 4
-  %"heap#struct#Outer#id1#" = call ptr @malloc(i64 8)
-  store ptr %"heap#struct#Inner#id0#", ptr %"heap#struct#Outer#id1#", align 8
-  %"outer#local#sym24#2.inner#idx0#sym22#3.field#idx0#sym21#4" = load i64, ptr %"heap#struct#Inner#id0#", align 4
+  store ptr %"heap#struct#Inner#id0#", ptr %"inner#local#sym23#", align 8
+  call void @gc_run()
+  %"inner#local#sym23#1" = load ptr, ptr %"inner#local#sym23#", align 8
+  %"heap#struct#Outer#id1#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"Outer#id1", ptr null, i32 1) to i64))
+  store ptr %"inner#local#sym23#1", ptr %"heap#struct#Outer#id1#", align 8
+  store ptr %"heap#struct#Outer#id1#", ptr %"outer#local#sym24#", align 8
+  call void @gc_run()
+  %"outer#local#sym24#2" = load ptr, ptr %"outer#local#sym24#", align 8
+  %"outer#local#sym24#2.inner#idx0#sym22#3" = load ptr, ptr %"outer#local#sym24#2", align 8
+  %"outer#local#sym24#2.inner#idx0#sym22#3.field#idx0#sym21#4" = load i64, ptr %"outer#local#sym24#2.inner#idx0#sym22#3", align 4
   ret i64 %"outer#local#sym24#2.inner#idx0#sym22#3.field#idx0#sym21#4"
 }
+
+attributes #0 = { nounwind }

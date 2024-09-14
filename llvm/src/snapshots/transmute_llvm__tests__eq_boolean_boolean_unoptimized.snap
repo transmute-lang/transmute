@@ -7,10 +7,22 @@ source_filename = "main"
 
 declare void @print(i64)
 
-declare ptr @malloc(i64)
+; Function Attrs: nounwind
+declare void @llvm.gcroot(ptr, ptr) #0
 
-define i1 @f(i1 %"l#param#sym19#", i1 %"r#param#sym20#") {
+declare ptr @gc_malloc(i64)
+
+declare void @gc_run()
+
+define private void @_glob() {
+entry:
+  unreachable
+}
+
+define i1 @f(i1 %"l#param#sym19#", i1 %"r#param#sym20#") gc "shadow-stack" {
 entry:
   %"eq#" = icmp eq i1 %"l#param#sym19#", %"r#param#sym20#"
   ret i1 %"eq#"
 }
+
+attributes #0 = { nounwind }

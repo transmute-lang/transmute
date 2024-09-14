@@ -4,16 +4,201 @@ expression: "format!(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.sta
 ---
 success:true
 stdout:
+Initialize GC with log level: 2
+Allocate test GC memory pool (4130 bytes): mmap returned 0x10000 (Success)
 f(0) = 0
 f(1) = 1
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
 f(2) = 1
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
 f(3) = 2
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
 f(4) = 3
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
 f(5) = 5
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
 f(6) = 8
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
 f(7) = 13
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
 f(8) = 21
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
+Start GC
 f(9) = 34
+
+Statistics:
+
+  Executions             168
+  Alloc                    0 blocks
+  Free                     0 blocks
+  Total alloc              0 bytes
+  Object alloc             0 bytes
+  Total free               0 bytes
+  Object free              0 bytes
+  Max alloc                0 bytes
+  Max object alloc         0 bytes
+  Current alloc            0 bytes
+  Current object alloc     0 bytes
+
 
 
 stderr:

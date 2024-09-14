@@ -34,9 +34,7 @@ fn main() {
         llvm_link_command.arg(dst.as_os_str());
     }
 
-    let output = llvm_link_command
-        .output()
-        .expect("can generate LLVM IR");
+    let output = llvm_link_command.output().expect("can generate LLVM IR");
     if !output.status.success() {
         panic!("{}", String::from_utf8_lossy(&output.stderr));
     }

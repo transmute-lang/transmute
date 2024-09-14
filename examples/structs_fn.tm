@@ -6,10 +6,12 @@ struct Point {
 let f(n: number): number {
     let origin = origin();
 
-    area(origin, Point {
+    let a = area(origin, Point {
         x: n,
         y: n,
     });
+
+    a;
 }
 
 let origin(): Point {

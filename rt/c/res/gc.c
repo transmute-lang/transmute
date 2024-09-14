@@ -19,6 +19,9 @@
 #include "llvm.h"
 #include "gc.h"
 
+// todo trigger actual GC only if some conditions hold
+// todo keep track of freed blocks to return them instead of a full cycle of free/malloc syscalls
+
 #ifdef GC_TEST
 #define BOUNDARY             0xBB
 #define FREE                 0xFF
@@ -300,20 +303,20 @@ void gc_run() {
     }
 
     LlvmStackFrame *frame = llvm_gc_root_chain;
-    for (int i = 0; frame; i++) {
+    for (int frame_idx = 0; frame; frame_idx++) {
         // all roots have a meta associated
         assert(frame->map->num_roots == frame->map->num_meta);
 
-        gc_log(2, "  frame %i", i);
+        gc_log(2, "  frame %i (%i roots)", frame_idx, frame->map->num_roots);
         gc_log(3, " at %p", frame);
-        gc_log(2, ":\n", i);
+        gc_log(2, ":\n");
 
-        for (int32_t i = 0; i < frame->map->num_roots; i++) {
-            if (frame->roots[i]) {
-                gc_log(2, "    root %i:\n", i);
-                gc_mark_visitor(0, frame->roots[i], frame->map->meta[i]);
+        for (int32_t root_idx = 0; root_idx < frame->map->num_roots; root_idx++) {
+            if (frame->roots[root_idx]) {
+                gc_log(2, "    root %i:\n", root_idx);
+                gc_mark_visitor(0, frame->roots[root_idx], frame->map->meta[root_idx]);
             } else {
-                gc_log(2, "    root %i: skipped (nil)\n", i);
+                gc_log(2, "    root %i: skipped (nil)\n", root_idx);
             }
         }
 
@@ -442,7 +445,6 @@ void gc_free(GcBlock *block) {
     gc.current_object_alloc_sz -= block->data_size;
 
     if (gc.test_dump_color) {
-        // todo mutually exclusive: memset and coloring
         block->next = gc.freed_blocks_chain;
         gc.freed_blocks_chain = block;
     } else {

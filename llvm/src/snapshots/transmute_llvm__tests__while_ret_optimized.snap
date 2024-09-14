@@ -9,17 +9,27 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @print(i64)
 
-declare ptr @malloc(i64)
+; Function Attrs: nounwind
+declare void @llvm.gcroot(ptr, ptr) #0
 
-define i64 @f(i64 %"n#param#sym19#") {
+declare ptr @gc_malloc(i64)
+
+declare void @gc_run()
+
+define private void @_glob() {
 entry:
-  %"ne#.not" = icmp eq i64 %"n#param#sym19#", 42
-  %0 = xor i1 %"ne#.not", true
-  call void @llvm.assume(i1 %0)
+  unreachable
+}
+
+define i64 @f(i64 %"n#param#sym19#") gc "shadow-stack" {
+entry:
+  %"ne#" = icmp ne i64 %"n#param#sym19#", 42
+  call void @llvm.assume(i1 %"ne#")
   ret i64 %"n#param#sym19#"
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write)
-declare void @llvm.assume(i1 noundef) #0
+declare void @llvm.assume(i1 noundef) #1
 
-attributes #0 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
+attributes #0 = { nounwind }
+attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }

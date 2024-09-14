@@ -7,9 +7,19 @@ source_filename = "main"
 
 declare void @print(i64)
 
-declare ptr @malloc(i64)
+; Function Attrs: nounwind
+declare void @llvm.gcroot(ptr, ptr) #0
 
-define i64 @f(i64 %"n#param#sym19#") {
+declare ptr @gc_malloc(i64)
+
+declare void @gc_run()
+
+define private void @_glob() {
+entry:
+  unreachable
+}
+
+define i64 @f(i64 %"n#param#sym19#") gc "shadow-stack" {
 entry:
   %"current#local#sym22#" = alloca i64, align 8
   %"prev#local#sym21#" = alloca i64, align 8
@@ -33,8 +43,11 @@ true_branch2:                                     ; preds = %end_if
 
 end_if3:                                          ; preds = %end_if
   store i64 0, ptr %"prev_prev#local#sym20#", align 4
+  call void @gc_run()
   store i64 1, ptr %"prev#local#sym21#", align 4
+  call void @gc_run()
   store i64 0, ptr %"current#local#sym22#", align 4
+  call void @gc_run()
   br label %cond
 
 cond:                                             ; preds = %body, %end_if3
@@ -47,16 +60,22 @@ body:                                             ; preds = %cond
   %"prev#local#sym21#8" = load i64, ptr %"prev#local#sym21#", align 4
   %"add#" = add i64 %"prev_prev#local#sym20#7", %"prev#local#sym21#8"
   store i64 %"add#", ptr %"current#local#sym22#", align 4
+  call void @gc_run()
   %"prev#local#sym21#9" = load i64, ptr %"prev#local#sym21#", align 4
   store i64 %"prev#local#sym21#9", ptr %"prev_prev#local#sym20#", align 4
+  call void @gc_run()
   %"current#local#sym22#10" = load i64, ptr %"current#local#sym22#", align 4
   store i64 %"current#local#sym22#10", ptr %"prev#local#sym21#", align 4
+  call void @gc_run()
   %"n#local#sym19#11" = load i64, ptr %"n#local#sym19#", align 4
   %"sub#" = sub i64 %"n#local#sym19#11", 1
   store i64 %"sub#", ptr %"n#local#sym19#", align 4
+  call void @gc_run()
   br label %cond
 
 end_while:                                        ; preds = %cond
   %"current#local#sym22#12" = load i64, ptr %"current#local#sym22#", align 4
   ret i64 %"current#local#sym22#12"
 }
+
+attributes #0 = { nounwind }

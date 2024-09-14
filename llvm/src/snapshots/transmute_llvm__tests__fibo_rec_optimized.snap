@@ -9,11 +9,21 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @print(i64)
 
-declare ptr @malloc(i64)
+; Function Attrs: nounwind
+declare void @llvm.gcroot(ptr, ptr) #0
 
-define i64 @f(i64 %"n#param#sym19#") {
+declare ptr @gc_malloc(i64)
+
+declare void @gc_run()
+
+define private void @_glob() {
 entry:
-  %"le#" = icmp slt i64 %"n#param#sym19#", 2
+  unreachable
+}
+
+define i64 @f(i64 %"n#param#sym19#") gc "shadow-stack" {
+entry:
+  %"le#" = icmp sle i64 %"n#param#sym19#", 1
   br i1 %"le#", label %common.ret, label %end_if
 
 common.ret:                                       ; preds = %entry, %end_if
@@ -21,10 +31,12 @@ common.ret:                                       ; preds = %entry, %end_if
   ret i64 %common.ret.op
 
 end_if:                                           ; preds = %entry
-  %"sub#" = add nsw i64 %"n#param#sym19#", -1
+  %"sub#" = sub i64 %"n#param#sym19#", 1
   %"f#res#" = call i64 @f(i64 %"sub#")
-  %"sub#1" = add nsw i64 %"n#param#sym19#", -2
+  %"sub#1" = sub i64 %"n#param#sym19#", 2
   %"f#res#2" = call i64 @f(i64 %"sub#1")
   %"add#" = add i64 %"f#res#2", %"f#res#"
   br label %common.ret
 }
+
+attributes #0 = { nounwind }

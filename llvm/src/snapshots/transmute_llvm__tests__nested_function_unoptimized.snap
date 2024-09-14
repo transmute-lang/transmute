@@ -7,15 +7,27 @@ source_filename = "main"
 
 declare void @print(i64)
 
-declare ptr @malloc(i64)
+; Function Attrs: nounwind
+declare void @llvm.gcroot(ptr, ptr) #0
 
-define i64 @f() {
+declare ptr @gc_malloc(i64)
+
+declare void @gc_run()
+
+define private void @_glob() {
+entry:
+  unreachable
+}
+
+define i64 @f() gc "shadow-stack" {
 entry:
   %"g#res#" = call i64 @g()
   ret i64 %"g#res#"
 }
 
-define i64 @g() {
+define i64 @g() gc "shadow-stack" {
 entry:
   ret i64 1
 }
+
+attributes #0 = { nounwind }

@@ -7,9 +7,19 @@ source_filename = "main"
 
 declare void @print(i64)
 
-declare ptr @malloc(i64)
+; Function Attrs: nounwind
+declare void @llvm.gcroot(ptr, ptr) #0
 
-define i64 @f(i64 %"n#param#sym19#") {
+declare ptr @gc_malloc(i64)
+
+declare void @gc_run()
+
+define private void @_glob() {
+entry:
+  unreachable
+}
+
+define i64 @f(i64 %"n#param#sym19#") gc "shadow-stack" {
 entry:
   %"m#local#sym21#" = alloca i64, align 8
   %"m#local#sym20#" = alloca i64, align 8
@@ -18,12 +28,14 @@ entry:
 
 true_branch:                                      ; preds = %entry
   store i64 0, ptr %"m#local#sym20#", align 4
+  call void @gc_run()
   %"m#local#sym20#1" = load i64, ptr %"m#local#sym20#", align 4
   %"add#" = add i64 %"m#local#sym20#1", 1
   ret i64 %"add#"
 
 false_branch:                                     ; preds = %entry
   store i64 0, ptr %"m#local#sym21#", align 4
+  call void @gc_run()
   %"m#local#sym21#2" = load i64, ptr %"m#local#sym21#", align 4
   %"sub#" = sub i64 %"m#local#sym21#2", 1
   ret i64 %"sub#"
@@ -31,3 +43,5 @@ false_branch:                                     ; preds = %entry
 end_if:                                           ; No predecessors!
   unreachable
 }
+
+attributes #0 = { nounwind }
