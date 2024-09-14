@@ -40,7 +40,12 @@ pub fn compile(src: &str, test_dir: &TestDir) -> Command {
     let options = Options::default();
 
     match compile_str(src, &bin_path, &options) {
-        Ok(_) => Command::new(bin_path),
+        Ok(_) => {
+            let mut command = Command::new(bin_path);
+            command.env("GC_TEST_VERBOSE", "2");
+            command.env("GC_TEST_POOL_SIZE", "2048");
+            command
+        }
         Err(d) => {
             assert!(false, "{}", d);
             unreachable!()
