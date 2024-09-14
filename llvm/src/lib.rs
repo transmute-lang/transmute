@@ -185,7 +185,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             void_type,
             ptr_type,
             llvm_gcroot: {
-                let llvm_gcroot_fn_type = void_type.fn_type(&[ptr_type.into(), ptr_type.into()], false);
+                let llvm_gcroot_fn_type =
+                    void_type.fn_type(&[ptr_type.into(), ptr_type.into()], false);
                 module.add_function("llvm.gcroot", llvm_gcroot_fn_type, None)
             },
             malloc: {
@@ -310,10 +311,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
         let offsets_count = struct_type
             .get_field_types_iter()
-            .enumerate()
-            .filter(|(_, f)| matches!(f, BasicTypeEnum::PointerType(_)))
+            .filter(|f| matches!(f, BasicTypeEnum::PointerType(_)))
             .count();
 
+        // todo find a way to make it using structs instead of a flat array of i64
         let i64_array_type = self.i64_type.array_type(offsets_count as u32 * 2 + 1);
         let global = self.module.add_global(
             i64_array_type,

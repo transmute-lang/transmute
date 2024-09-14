@@ -38,6 +38,16 @@
 #endif // #ifndef DEFAULT_POOL_SIZE
 #endif // #ifdef GC_TEST
 
+typedef struct GcStructField {
+    size_t                 offset;
+    struct GcStructLayout *layout;
+} GcStructField;
+
+typedef struct GcStructLayout {
+    size_t                 count;
+    GcStructField          fields[0];
+} GcStructLayout;
+
 typedef enum GcBlockState {
     Unreachable = 0,
     Reachable   = 1
@@ -92,8 +102,6 @@ typedef struct Gc {
     #endif // #ifdef GC_TEST
 } Gc;
 
-typedef int64_t Meta;
-
 Gc gc = {
     .enable = 1,
     .blocks_chain = NULL,
@@ -133,7 +141,7 @@ void gc_free(GcBlock *block);
 static inline void gc_ident(int level, int depth);
 static inline void gc_log(int level, const char *fmt, ...);
 void gc_block_print(GcBlock *block);
-void gc_mark_visitor(int depth, void *object, const Meta *meta);
+void gc_mark_visitor(int depth, void *object, const GcStructLayout *layout);
 
 
 static inline void gc_ident(int level, int depth) {
@@ -345,16 +353,28 @@ void gc_run() {
     }
 }
 
-void gc_mark_visitor(int depth, void *object, const Meta *meta) {
+void gc_mark_visitor(int depth, void *object, const GcStructLayout *layout) {
     GcBlock *block = object - sizeof(GcBlock);
 
+#ifdef GC_TEST
     gc_ident(2, depth);
-    gc_log(2, "      object at %p (block at %p): %li pointers, %s\n",
-        object,
-        block,
-        meta[0],
-        state_to_char(block->state)
-    );
+    if (gc.log_level >= 3) {
+        gc_log(3, "      object at %p (block at %p): %li pointers (layout %p), %s\n",
+            object,
+            block,
+            layout->count,
+            layout,
+            state_to_char(block->state)
+        );
+    } else {
+        gc_log(2, "      object at %p (block at %p): %li pointers, %s\n",
+            object,
+            block,
+            layout->count,
+            state_to_char(block->state)
+        );
+    }
+#endif // #ifdef GC_TEST
 
     if (block->state == Reachable) {
         return;
@@ -362,23 +382,23 @@ void gc_mark_visitor(int depth, void *object, const Meta *meta) {
     block->state = Reachable;
 
     gc_ident(3, depth);
-    gc_log(3, "      (cnt) meta[0]=%li\n", meta[0]);
-    for (int64_t i = 0; i < meta[0]; i++) {
+    gc_log(3, "         layout->count=%li\n", layout->count);
+    for (int64_t i = 0; i < layout->count; i++) {
         gc_ident(3, depth);
-        gc_log(3, "      (off) meta[%li]=%li\n", 1 + i*2, meta[1 + i*2]);
+        gc_log(3, "         layout->fields[%li].offset=%li\n", i, layout->fields[i].offset);
         gc_ident(3, depth);
-        gc_log(3, "      (met) meta[%li]=%p\n", 1 + i*2 + 1, (void *)meta[1 + i*2 + 1]);
+        gc_log(3, "         layout->fields[%li].layout=%p\n", i, (void *)layout->fields[i].layout);
 
-        int64_t offset = meta[1 + i*2];
+        int64_t offset = layout->fields[i].offset;
         void *child_offset = object + offset;
         void *child = (void *)*(int64_t *)child_offset;
 
         gc_ident(2, depth);
         gc_log(2, "        %li. %p(+%li) -> %p\n", i, child_offset, offset, child);
 
-        const Meta *child_meta = (Meta *)(void *)meta[1 + i*2 + 1];
+        const GcStructLayout *child_layout = layout->fields[i].layout;
 
-        gc_mark_visitor(depth + 1, child, child_meta);
+        gc_mark_visitor(depth + 1, child, child_layout);
     }
 }
 

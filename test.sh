@@ -11,3 +11,5 @@ for f in examples/*; do
 done
 
 ./gen-html.sh
+
+cargo build --bin tmc --release
