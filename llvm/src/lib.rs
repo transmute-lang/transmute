@@ -1057,7 +1057,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .build_alloca(self.ptr_type, &format!("gcroot#{for_name}"))
             .unwrap();
 
-        self.builder
+        builder
             .build_store(gcroot, self.ptr_type.const_zero())
             .unwrap();
 

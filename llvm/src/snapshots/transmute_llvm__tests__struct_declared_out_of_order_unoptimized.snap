@@ -30,9 +30,9 @@ entry:
   %"outer#local#sym22#" = alloca ptr, align 8
   store ptr null, ptr %"outer#local#sym22#", align 8
   %"gcroot#heap#struct#StructInner#id1#" = alloca ptr, align 8
+  store ptr null, ptr %"gcroot#heap#struct#StructInner#id1#", align 8
   call void @llvm.gcroot(ptr %"gcroot#heap#struct#StructInner#id1#", ptr @layout_struct_StructInner)
   call void @llvm.gcroot(ptr %"outer#local#sym22#", ptr @layout_struct_StructOuter)
-  store ptr null, ptr %"gcroot#heap#struct#StructInner#id1#", align 8
   %"heap#struct#StructInner#id1#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"StructInner#id1", ptr null, i32 1) to i64))
   store ptr %"heap#struct#StructInner#id1#", ptr %"gcroot#heap#struct#StructInner#id1#", align 8
   %"heap#struct#StructOuter#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"StructOuter#id0", ptr null, i32 1) to i64))
