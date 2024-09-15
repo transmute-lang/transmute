@@ -5,11 +5,11 @@ expression: "Parser::new(Lexer::new(\"let forty_two = 42;\")).parse()"
 Ok(
     Ast {
         identifiers: [
-            "forty_two",
+            IdentId(0) => "forty_two",
         ],
         identifier_refs: [],
         expressions: [
-            Expression {
+            ExprId(0) => Expression {
                 id: ExprId(0),
                 kind: Literal(
                     Literal {
@@ -21,7 +21,7 @@ Ok(
             },
         ],
         statements: [
-            Statement {
+            StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: Let(
                     Identifier {

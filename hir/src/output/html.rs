@@ -96,10 +96,12 @@ impl<'a> HtmlWriter<'a> {
         }
     }
 
-    fn visit_ret(&mut self, expr: ExprId, mode: RetMode) {
+    fn visit_ret(&mut self, expr: Option<ExprId>, mode: RetMode) {
         self.emit(XmlEvent::start_element("li"));
         self.emit_ret(mode);
-        self.visit_expression(expr);
+        if let Some(expr) = expr {
+            self.visit_expression(expr);
+        }
         self.emit_semicolon();
         self.emit(XmlEvent::end_element());
     }

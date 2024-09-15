@@ -4,16 +4,16 @@ expression: "&hir"
 ---
 Hir {
     identifiers: [
-        "S",
-        "f",
-        "a",
-        "b",
-        "boolean",
-        "number",
-        "void",
+        IdentId(0) => "S",
+        IdentId(1) => "f",
+        IdentId(2) => "a",
+        IdentId(3) => "b",
+        IdentId(4) => "boolean",
+        IdentId(5) => "number",
+        IdentId(6) => "void",
     ],
     identifier_refs: [
-        IdentifierRef {
+        IdentRefId(0) => IdentifierRef {
             id: IdentRefId(0),
             ident: Identifier {
                 id: IdentId(0),
@@ -21,7 +21,7 @@ Hir {
                 bound: Bound(1),
             },
         },
-        IdentifierRef {
+        IdentRefId(1) => IdentifierRef {
             id: IdentRefId(1),
             ident: Identifier {
                 id: IdentId(0),
@@ -29,7 +29,7 @@ Hir {
                 bound: Bound(1),
             },
         },
-        IdentifierRef {
+        IdentRefId(2) => IdentifierRef {
             id: IdentRefId(2),
             ident: Identifier {
                 id: IdentId(0),
@@ -37,7 +37,7 @@ Hir {
                 bound: Bound(1),
             },
         },
-        IdentifierRef {
+        IdentRefId(3) => IdentifierRef {
             id: IdentRefId(3),
             ident: Identifier {
                 id: IdentId(0),
@@ -45,7 +45,7 @@ Hir {
                 bound: Bound(1),
             },
         },
-        IdentifierRef {
+        IdentRefId(4) => IdentifierRef {
             id: IdentRefId(4),
             ident: Identifier {
                 id: IdentId(2),
@@ -55,7 +55,7 @@ Hir {
         },
     ],
     expressions: [
-        Expression {
+        ExprId(0) => Expression {
             id: ExprId(0),
             kind: Literal(
                 Literal {
@@ -66,7 +66,7 @@ Hir {
             span: 1:42; [41, 42],
             typed: Typed(5),
         },
-        Expression {
+        ExprId(1) => Expression {
             id: ExprId(1),
             kind: Block(
                 [
@@ -78,7 +78,7 @@ Hir {
         },
     ],
     statements: [
-        Statement {
+        StmtId(0) => Statement {
             id: StmtId(0),
             kind: Struct(
                 Identifier {
@@ -101,15 +101,17 @@ Hir {
             ),
             span: 1:1; [0, 17],
         },
-        Statement {
+        StmtId(1) => Statement {
             id: StmtId(1),
             kind: Ret(
-                ExprId(0),
+                Some(
+                    ExprId(0),
+                ),
                 Implicit,
             ),
             span: 1:42; [41, 43],
         },
-        Statement {
+        StmtId(2) => Statement {
             id: StmtId(2),
             kind: LetFn(
                 Identifier {
@@ -155,12 +157,12 @@ Hir {
         StmtId(2),
     ],
     symbols: [
-        Symbol {
+        SymbolId(0) => Symbol {
             id: SymbolId(0),
             kind: NotFound,
             type_id: TypeId(0),
         },
-        Symbol {
+        SymbolId(1) => Symbol {
             id: SymbolId(1),
             kind: Struct(
                 IdentId(0),
@@ -168,7 +170,7 @@ Hir {
             ),
             type_id: TypeId(5),
         },
-        Symbol {
+        SymbolId(2) => Symbol {
             id: SymbolId(2),
             kind: LetFn(
                 IdentId(1),
@@ -181,7 +183,7 @@ Hir {
             ),
             type_id: TypeId(6),
         },
-        Symbol {
+        SymbolId(3) => Symbol {
             id: SymbolId(3),
             kind: Field(
                 IdentId(1),
@@ -190,7 +192,7 @@ Hir {
             ),
             type_id: TypeId(5),
         },
-        Symbol {
+        SymbolId(4) => Symbol {
             id: SymbolId(4),
             kind: Parameter(
                 IdentId(2),
@@ -199,7 +201,7 @@ Hir {
             ),
             type_id: TypeId(5),
         },
-        Symbol {
+        SymbolId(5) => Symbol {
             id: SymbolId(5),
             kind: Parameter(
                 IdentId(3),
@@ -210,15 +212,15 @@ Hir {
         },
     ],
     types: [
-        Invalid,
-        Void,
-        None,
-        Boolean,
-        Number,
-        Struct(
+        TypeId(0) => Invalid,
+        TypeId(1) => Void,
+        TypeId(2) => None,
+        TypeId(3) => Boolean,
+        TypeId(4) => Number,
+        TypeId(5) => Struct(
             StmtId(0),
         ),
-        Function(
+        TypeId(6) => Function(
             [
                 TypeId(5),
                 TypeId(5),
@@ -230,7 +232,9 @@ Hir {
         exit_points: {
             ExprId(1): [
                 Implicit(
-                    ExprId(0),
+                    Some(
+                        ExprId(0),
+                    ),
                 ),
             ],
         },

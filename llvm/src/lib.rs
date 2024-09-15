@@ -25,7 +25,6 @@ use transmute_mir::{
 use transmute_mir::{LiteralKind, SymbolKind, Target as AssignmentTarget};
 use transmute_mir::{NativeFnKind, Variable};
 
-// todo add support for void functions
 // todo add support for structs nested in functions (does not work because of resolver)
 // todo refactor struct layout so we dont need a `_glob` function. we can do it on teh fly, the
 //   first time a struct is instantiated
@@ -148,7 +147,7 @@ struct Codegen<'ctx, 't> {
 
     llvm_gcroot: FunctionValue<'ctx>,
     malloc: FunctionValue<'ctx>,
-    #[cfg(feature = "gc-aggressive")]
+    #[cfg(any(test, feature = "gc-aggressive"))]
     gc_run: FunctionValue<'ctx>,
 
     struct_types: HashMap<StructId, StructType<'ctx>>,
@@ -193,7 +192,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 let malloc_fn_type = ptr_type.fn_type(&[size_type.into()], false);
                 module.add_function("gc_malloc", malloc_fn_type, None)
             },
-            #[cfg(feature = "gc-aggressive")]
+            #[cfg(any(test, feature = "gc-aggressive"))]
             gc_run: {
                 let gc_fn_type = void_type.fn_type(&[], false);
                 module.add_function("gc_run", gc_fn_type, None)
@@ -429,7 +428,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .module
             .add_function(&mir.identifiers[function.identifier.id], fn_type, None);
         f.set_gc("shadow-stack");
-        // f.set_gc("statepoint-example");
     }
 
     fn gen_statement(&mut self, mir: &Mir, stmt: &Statement) -> Value<'ctx> {
@@ -437,24 +435,31 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             StatementKind::Expression(expr_id) => {
                 self.gen_expression(mir, &mir.expressions[*expr_id], true)
             }
-            StatementKind::Ret(expr_id) => self.gen_ret(mir, &mir.expressions[*expr_id]),
+            StatementKind::Ret(expr_id) => self.gen_ret(
+                mir,
+                expr_id.as_ref().map(|expr_id| &mir.expressions[*expr_id]),
+            ),
         }
     }
 
-    fn gen_ret(&mut self, mir: &Mir, expr: &Expression) -> Value<'ctx> {
-        match self.gen_expression(mir, expr, true) {
-            Value::Never => panic!(),
-            Value::None => {
-                // this is used for implicit ret, where we can return nothing.
-                self.builder.build_return(None).unwrap();
-            }
-            Value::Number(val) => {
-                self.builder.build_return(Some(&val)).unwrap();
-            }
-            Value::Struct(val, _) => {
-                self.builder.build_return(Some(&val)).unwrap();
-            }
-        };
+    fn gen_ret(&mut self, mir: &Mir, expr: Option<&Expression>) -> Value<'ctx> {
+        if let Some(expr) = expr {
+            match self.gen_expression(mir, expr, true) {
+                Value::Never => panic!(),
+                Value::None => {
+                    // this is used for implicit ret, where we can return nothing.
+                    self.builder.build_return(None).unwrap();
+                }
+                Value::Number(val) => {
+                    self.builder.build_return(Some(&val)).unwrap();
+                }
+                Value::Struct(val, _) => {
+                    self.builder.build_return(Some(&val)).unwrap();
+                }
+            };
+        } else {
+            self.builder.build_return(None).unwrap();
+        }
         Value::Never
     }
 
@@ -619,7 +624,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             }
         }
 
-        #[cfg(feature = "gc-aggressive")]
+        #[cfg(any(test, feature = "gc-aggressive"))]
         self.builder.build_call(self.gc_run, &[], "gc_run").unwrap();
 
         Value::None
@@ -877,26 +882,19 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let symbol = &mir.symbols[symbol_id];
 
         let return_type = match &symbol.kind {
-            SymbolKind::Let(_) => panic!("callee muse be a function"),
-            SymbolKind::LetFn(_, _, return_type) => Some(self.llvm_type(mir, *return_type)),
-            SymbolKind::Parameter(_, _) => panic!("callee muse be a function"),
-            SymbolKind::Struct(_) => panic!("callee muse be a function"),
-            SymbolKind::Field(_, _, _) => panic!("callee muse be a function"),
-            SymbolKind::NativeType(_, _) => panic!("callee muse be a function"),
-            SymbolKind::Native(_, _, return_type, kind) => {
-                if kind.is_instr() {
-                    return kind.gen_instr(mir, self, params);
-                }
-                // fixme remove that stuff when void methods are supported. we will have to
-                //   improve `llvm_type` somehow anyway
+            SymbolKind::Native(_, _, _, kind) if kind.is_instr() => {
+                return kind.gen_instr(mir, self, params);
+            }
+            SymbolKind::Native(_, _, return_type, _) | SymbolKind::LetFn(_, _, return_type) => {
                 match mir.types[*return_type] {
-                    Type::Boolean => Some(self.llvm_type(mir, *return_type)),
+                    Type::Boolean | Type::Struct(_, _) | Type::Number => {
+                        Some(self.llvm_type(mir, *return_type))
+                    }
                     Type::Function(_, _) => todo!(),
-                    Type::Struct(_, _) => Some(self.llvm_type(mir, *return_type)),
-                    Type::Number => Some(self.llvm_type(mir, *return_type)),
                     Type::Void | Type::None => None,
                 }
             }
+            _ => panic!("callee muse be a function"),
         };
 
         let parameters = params
@@ -1085,8 +1083,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 BasicTypeEnum::StructType(*self.struct_types.get(struct_id).unwrap())
             }
             Type::Number => self.i64_type.as_basic_type_enum(),
-            Type::Void => unreachable!(),
-            Type::None => todo!(),
+            Type::Void => unreachable!("void is not a basic type"),
+            Type::None => unreachable!("none is not a basic type"),
         }
     }
 
@@ -1890,6 +1888,20 @@ mod tests {
             Struct {
                 field: 1
             };
+        }
+        "#
+    );
+
+    gen!(function_return_explicit_void, "let f() { ret; }");
+
+    gen!(function_return_implicit_void, "let f() { }");
+
+    gen!(
+        function_call_void,
+        r#"
+        let g() {}
+        let f() {
+            g();
         }
         "#
     );

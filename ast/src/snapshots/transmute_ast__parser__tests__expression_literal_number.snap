@@ -7,7 +7,7 @@ Ok(
         identifiers: [],
         identifier_refs: [],
         expressions: [
-            Expression {
+            ExprId(0) => Expression {
                 id: ExprId(0),
                 kind: Literal(
                     Literal {
@@ -19,7 +19,7 @@ Ok(
             },
         ],
         statements: [
-            Statement {
+            StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: Expression(
                     ExprId(0),

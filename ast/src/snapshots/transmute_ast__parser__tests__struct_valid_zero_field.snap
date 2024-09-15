@@ -5,12 +5,12 @@ expression: "Parser::new(Lexer::new(\"struct S { }\")).parse()"
 Ok(
     Ast {
         identifiers: [
-            "S",
+            IdentId(0) => "S",
         ],
         identifier_refs: [],
         expressions: [],
         statements: [
-            Statement {
+            StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: Struct(
                     Identifier {

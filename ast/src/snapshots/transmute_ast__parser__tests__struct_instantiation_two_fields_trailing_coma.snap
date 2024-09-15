@@ -5,26 +5,26 @@ expression: "Parser::new(Lexer::new(\"S { x: 1, y: 2, };\")).parse()"
 Ok(
     Ast {
         identifiers: [
-            "S",
-            "x",
-            "y",
+            IdentId(0) => "S",
+            IdentId(1) => "x",
+            IdentId(2) => "y",
         ],
         identifier_refs: [
-            IdentifierRef {
+            IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
                     id: IdentId(1),
                     span: 1:5; [4, 5],
                 },
             },
-            IdentifierRef {
+            IdentRefId(1) => IdentifierRef {
                 id: IdentRefId(1),
                 ident: Identifier {
                     id: IdentId(2),
                     span: 1:11; [10, 11],
                 },
             },
-            IdentifierRef {
+            IdentRefId(2) => IdentifierRef {
                 id: IdentRefId(2),
                 ident: Identifier {
                     id: IdentId(0),
@@ -33,7 +33,7 @@ Ok(
             },
         ],
         expressions: [
-            Expression {
+            ExprId(0) => Expression {
                 id: ExprId(0),
                 kind: Literal(
                     Literal {
@@ -43,7 +43,7 @@ Ok(
                 ),
                 span: 1:8; [7, 8],
             },
-            Expression {
+            ExprId(1) => Expression {
                 id: ExprId(1),
                 kind: Literal(
                     Literal {
@@ -53,7 +53,7 @@ Ok(
                 ),
                 span: 1:14; [13, 14],
             },
-            Expression {
+            ExprId(2) => Expression {
                 id: ExprId(2),
                 kind: StructInstantiation(
                     IdentRefId(2),
@@ -72,7 +72,7 @@ Ok(
             },
         ],
         statements: [
-            Statement {
+            StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: Expression(
                     ExprId(2),

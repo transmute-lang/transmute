@@ -7,7 +7,7 @@ Ok(
         identifiers: [],
         identifier_refs: [],
         expressions: [
-            Expression {
+            ExprId(0) => Expression {
                 id: ExprId(0),
                 kind: Literal(
                     Literal {
@@ -17,7 +17,7 @@ Ok(
                 ),
                 span: 1:4; [3, 7],
             },
-            Expression {
+            ExprId(1) => Expression {
                 id: ExprId(1),
                 kind: Literal(
                     Literal {
@@ -27,7 +27,7 @@ Ok(
                 ),
                 span: 1:11; [10, 12],
             },
-            Expression {
+            ExprId(2) => Expression {
                 id: ExprId(2),
                 kind: Block(
                     [
@@ -36,7 +36,7 @@ Ok(
                 ),
                 span: 1:9; [8, 15],
             },
-            Expression {
+            ExprId(3) => Expression {
                 id: ExprId(3),
                 kind: Literal(
                     Literal {
@@ -46,7 +46,7 @@ Ok(
                 ),
                 span: 1:25; [24, 29],
             },
-            Expression {
+            ExprId(4) => Expression {
                 id: ExprId(4),
                 kind: Literal(
                     Literal {
@@ -56,7 +56,7 @@ Ok(
                 ),
                 span: 1:33; [32, 34],
             },
-            Expression {
+            ExprId(5) => Expression {
                 id: ExprId(5),
                 kind: Block(
                     [
@@ -65,7 +65,7 @@ Ok(
                 ),
                 span: 1:31; [30, 37],
             },
-            Expression {
+            ExprId(6) => Expression {
                 id: ExprId(6),
                 kind: Literal(
                     Literal {
@@ -75,7 +75,7 @@ Ok(
                 ),
                 span: 1:46; [45, 47],
             },
-            Expression {
+            ExprId(7) => Expression {
                 id: ExprId(7),
                 kind: Block(
                     [
@@ -84,7 +84,7 @@ Ok(
                 ),
                 span: 1:44; [43, 50],
             },
-            Expression {
+            ExprId(8) => Expression {
                 id: ExprId(8),
                 kind: If(
                     ExprId(3),
@@ -95,7 +95,7 @@ Ok(
                 ),
                 span: 1:22; [21, 50],
             },
-            Expression {
+            ExprId(9) => Expression {
                 id: ExprId(9),
                 kind: Block(
                     [
@@ -104,7 +104,7 @@ Ok(
                 ),
                 span: 1:22; [21, 50],
             },
-            Expression {
+            ExprId(10) => Expression {
                 id: ExprId(10),
                 kind: If(
                     ExprId(0),
@@ -117,35 +117,35 @@ Ok(
             },
         ],
         statements: [
-            Statement {
+            StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: Expression(
                     ExprId(1),
                 ),
                 span: 1:11; [10, 13],
             },
-            Statement {
+            StmtId(1) => Statement {
                 id: StmtId(1),
                 kind: Expression(
                     ExprId(4),
                 ),
                 span: 1:33; [32, 35],
             },
-            Statement {
+            StmtId(2) => Statement {
                 id: StmtId(2),
                 kind: Expression(
                     ExprId(6),
                 ),
                 span: 1:46; [45, 48],
             },
-            Statement {
+            StmtId(3) => Statement {
                 id: StmtId(3),
                 kind: Expression(
                     ExprId(8),
                 ),
                 span: 1:22; [21, 50],
             },
-            Statement {
+            StmtId(4) => Statement {
                 id: StmtId(4),
                 kind: Expression(
                     ExprId(10),

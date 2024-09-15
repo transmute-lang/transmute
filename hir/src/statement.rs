@@ -75,7 +75,7 @@ where
 {
     Expression(ExprId),
     Let(Identifier<B>, ExprId),
-    Ret(ExprId, RetMode),
+    Ret(Option<ExprId>, RetMode),
     LetFn(Identifier<B>, Vec<Parameter<T, B>>, Return<T>, ExprId),
     Struct(Identifier<B>, Vec<Field<T, B>>),
 }

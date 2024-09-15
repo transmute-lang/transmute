@@ -82,7 +82,7 @@ impl<'a> XmlWriter<'a> {
                 self.visit_let(ident, expr);
             }
             StatementKind::Ret(expr, mode) => {
-                self.visit_ret(stmt, expr, mode);
+                self.visit_ret(stmt, expr.as_ref(), mode);
             }
             StatementKind::LetFn(ident, params, ty, expr) => {
                 self.visit_function(stmt.id, ident, params, ty, expr);
@@ -468,7 +468,7 @@ impl<'a> XmlWriter<'a> {
         self.emit(XmlEvent::end_element());
     }
 
-    fn visit_ret(&mut self, stmt: &Statement<Typed, Bound>, expr: &ExprId, mode: &RetMode) {
+    fn visit_ret(&mut self, stmt: &Statement<Typed, Bound>, expr: Option<&ExprId>, mode: &RetMode) {
         self.emit(
             XmlEvent::start_element("ret")
                 .attr("mode", mode.as_str())
@@ -477,7 +477,9 @@ impl<'a> XmlWriter<'a> {
                 .attr("start", &stmt.span.start.to_string())
                 .attr("len", &stmt.span.len.to_string()),
         );
-        self.visit_expression(*expr);
+        if let Some(expr) = expr {
+            self.visit_expression(*expr);
+        }
         self.emit(XmlEvent::end_element());
     }
 

@@ -6,21 +6,21 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `,`, expected one of (1) `)` 461",
+                message: "Unexpected `,`, expected one of (1) `)` 472",
                 span: 1:7; [6, 7],
                 level: Error,
                 generated_at: (
                     "ast/src/parser.rs",
-                    458,
+                    469,
                 ),
             },
             Diagnostic {
-                message: "Unexpected `,`, expected one of (2) identifier 406, `)` 461",
+                message: "Unexpected `,`, expected one of (2) identifier 417, `)` 472",
                 span: 1:12; [11, 12],
                 level: Error,
                 generated_at: (
                     "ast/src/parser.rs",
-                    458,
+                    469,
                 ),
             },
         ],

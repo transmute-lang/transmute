@@ -5,18 +5,18 @@ expression: "Parser::new(Lexer::new(\"-a.b;\")).parse()"
 Ok(
     Ast {
         identifiers: [
-            "a",
-            "b",
+            IdentId(0) => "a",
+            IdentId(1) => "b",
         ],
         identifier_refs: [
-            IdentifierRef {
+            IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
                     id: IdentId(0),
                     span: 1:2; [1, 2],
                 },
             },
-            IdentifierRef {
+            IdentRefId(1) => IdentifierRef {
                 id: IdentRefId(1),
                 ident: Identifier {
                     id: IdentId(1),
@@ -25,7 +25,7 @@ Ok(
             },
         ],
         expressions: [
-            Expression {
+            ExprId(0) => Expression {
                 id: ExprId(0),
                 kind: Literal(
                     Literal {
@@ -35,7 +35,7 @@ Ok(
                 ),
                 span: 1:2; [1, 2],
             },
-            Expression {
+            ExprId(1) => Expression {
                 id: ExprId(1),
                 kind: Access(
                     ExprId(0),
@@ -43,7 +43,7 @@ Ok(
                 ),
                 span: 1:2; [1, 4],
             },
-            Expression {
+            ExprId(2) => Expression {
                 id: ExprId(2),
                 kind: Unary(
                     UnaryOperator {
@@ -56,7 +56,7 @@ Ok(
             },
         ],
         statements: [
-            Statement {
+            StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: Expression(
                     ExprId(2),

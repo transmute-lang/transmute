@@ -5,7 +5,7 @@ expression: make_mir(hir)
 Ok(
     Mir {
         functions: [
-            Function {
+            FunctionId(0) => Function {
                 identifier: Identifier {
                     id: IdentId(0),
                     span: 1:5; [4, 5],
@@ -29,37 +29,47 @@ Ok(
         ],
         structs: [],
         identifiers: [
-            "f",
-            "a",
-            "number",
-            "add",
-            "boolean",
-            "div",
-            "eq",
-            "ge",
-            "gt",
-            "le",
-            "lt",
-            "mul",
-            "neg",
-            "neq",
-            "print",
-            "sub",
-            "void",
+            IdentId(0) => "f",
+            IdentId(1) => "a",
+            IdentId(2) => "number",
+            IdentId(3) => "add",
+            IdentId(4) => "boolean",
+            IdentId(5) => "div",
+            IdentId(6) => "eq",
+            IdentId(7) => "ge",
+            IdentId(8) => "gt",
+            IdentId(9) => "le",
+            IdentId(10) => "lt",
+            IdentId(11) => "mul",
+            IdentId(12) => "neg",
+            IdentId(13) => "neq",
+            IdentId(14) => "print",
+            IdentId(15) => "sub",
+            IdentId(16) => "void",
         ],
         expressions: [
-            Expression {
+            ExprId(0) => Expression {
                 id: ExprId(0),
                 kind: Block(
-                    [],
+                    [
+                        StmtId(1),
+                    ],
                 ),
                 span: 1:18; [17, 19],
-                type_id: TypeId(1),
+                type_id: TypeId(2),
             },
         ],
-        statements: [],
+        statements: [
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: Ret(
+                    None,
+                ),
+                span: 1:18; [17, 19],
+            },
+        ],
         symbols: [
-            Symbol {
+            SymbolId(1) => Symbol {
                 id: SymbolId(1),
                 kind: NativeType(
                     IdentId(16),
@@ -68,7 +78,7 @@ Ok(
                 type_id: TypeId(2),
                 ident_id: IdentId(16),
             },
-            Symbol {
+            SymbolId(2) => Symbol {
                 id: SymbolId(2),
                 kind: NativeType(
                     IdentId(2),
@@ -77,7 +87,7 @@ Ok(
                 type_id: TypeId(2),
                 ident_id: IdentId(2),
             },
-            Symbol {
+            SymbolId(3) => Symbol {
                 id: SymbolId(3),
                 kind: NativeType(
                     IdentId(4),
@@ -86,7 +96,7 @@ Ok(
                 type_id: TypeId(2),
                 ident_id: IdentId(4),
             },
-            Symbol {
+            SymbolId(4) => Symbol {
                 id: SymbolId(4),
                 kind: Native(
                     IdentId(15),
@@ -100,7 +110,7 @@ Ok(
                 type_id: TypeId(5),
                 ident_id: IdentId(15),
             },
-            Symbol {
+            SymbolId(5) => Symbol {
                 id: SymbolId(5),
                 kind: Native(
                     IdentId(14),
@@ -113,7 +123,7 @@ Ok(
                 type_id: TypeId(6),
                 ident_id: IdentId(14),
             },
-            Symbol {
+            SymbolId(6) => Symbol {
                 id: SymbolId(6),
                 kind: Native(
                     IdentId(13),
@@ -127,7 +137,7 @@ Ok(
                 type_id: TypeId(7),
                 ident_id: IdentId(13),
             },
-            Symbol {
+            SymbolId(7) => Symbol {
                 id: SymbolId(7),
                 kind: Native(
                     IdentId(13),
@@ -141,7 +151,7 @@ Ok(
                 type_id: TypeId(8),
                 ident_id: IdentId(13),
             },
-            Symbol {
+            SymbolId(8) => Symbol {
                 id: SymbolId(8),
                 kind: Native(
                     IdentId(12),
@@ -154,7 +164,7 @@ Ok(
                 type_id: TypeId(9),
                 ident_id: IdentId(12),
             },
-            Symbol {
+            SymbolId(9) => Symbol {
                 id: SymbolId(9),
                 kind: Native(
                     IdentId(11),
@@ -168,7 +178,7 @@ Ok(
                 type_id: TypeId(5),
                 ident_id: IdentId(11),
             },
-            Symbol {
+            SymbolId(10) => Symbol {
                 id: SymbolId(10),
                 kind: Native(
                     IdentId(10),
@@ -182,7 +192,7 @@ Ok(
                 type_id: TypeId(7),
                 ident_id: IdentId(10),
             },
-            Symbol {
+            SymbolId(11) => Symbol {
                 id: SymbolId(11),
                 kind: Native(
                     IdentId(9),
@@ -196,7 +206,7 @@ Ok(
                 type_id: TypeId(7),
                 ident_id: IdentId(9),
             },
-            Symbol {
+            SymbolId(12) => Symbol {
                 id: SymbolId(12),
                 kind: Native(
                     IdentId(8),
@@ -210,7 +220,7 @@ Ok(
                 type_id: TypeId(7),
                 ident_id: IdentId(8),
             },
-            Symbol {
+            SymbolId(13) => Symbol {
                 id: SymbolId(13),
                 kind: Native(
                     IdentId(7),
@@ -224,7 +234,7 @@ Ok(
                 type_id: TypeId(7),
                 ident_id: IdentId(7),
             },
-            Symbol {
+            SymbolId(14) => Symbol {
                 id: SymbolId(14),
                 kind: Native(
                     IdentId(6),
@@ -238,7 +248,7 @@ Ok(
                 type_id: TypeId(7),
                 ident_id: IdentId(6),
             },
-            Symbol {
+            SymbolId(15) => Symbol {
                 id: SymbolId(15),
                 kind: Native(
                     IdentId(6),
@@ -252,7 +262,7 @@ Ok(
                 type_id: TypeId(8),
                 ident_id: IdentId(6),
             },
-            Symbol {
+            SymbolId(16) => Symbol {
                 id: SymbolId(16),
                 kind: Native(
                     IdentId(5),
@@ -266,7 +276,7 @@ Ok(
                 type_id: TypeId(5),
                 ident_id: IdentId(5),
             },
-            Symbol {
+            SymbolId(17) => Symbol {
                 id: SymbolId(17),
                 kind: Native(
                     IdentId(3),
@@ -280,7 +290,7 @@ Ok(
                 type_id: TypeId(5),
                 ident_id: IdentId(3),
             },
-            Symbol {
+            SymbolId(18) => Symbol {
                 id: SymbolId(18),
                 kind: LetFn(
                     StmtId(0),
@@ -292,7 +302,7 @@ Ok(
                 type_id: TypeId(6),
                 ident_id: IdentId(0),
             },
-            Symbol {
+            SymbolId(19) => Symbol {
                 id: SymbolId(19),
                 kind: Parameter(
                     StmtId(0),
@@ -303,38 +313,38 @@ Ok(
             },
         ],
         types: [
-            Void,
-            None,
-            Boolean,
-            Number,
-            Function(
+            TypeId(1) => Void,
+            TypeId(2) => None,
+            TypeId(3) => Boolean,
+            TypeId(4) => Number,
+            TypeId(5) => Function(
                 [
                     TypeId(4),
                     TypeId(4),
                 ],
                 TypeId(4),
             ),
-            Function(
+            TypeId(6) => Function(
                 [
                     TypeId(4),
                 ],
                 TypeId(1),
             ),
-            Function(
+            TypeId(7) => Function(
                 [
                     TypeId(4),
                     TypeId(4),
                 ],
                 TypeId(3),
             ),
-            Function(
+            TypeId(8) => Function(
                 [
                     TypeId(3),
                     TypeId(3),
                 ],
                 TypeId(3),
             ),
-            Function(
+            TypeId(9) => Function(
                 [
                     TypeId(4),
                 ],

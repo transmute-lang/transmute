@@ -1,0 +1,7 @@
+---
+source: hir/src/passes/implicit_ret_converter.rs
+expression: w
+---
+let f() = {
+  ret ;
+}

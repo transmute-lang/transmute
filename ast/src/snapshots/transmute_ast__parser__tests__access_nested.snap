@@ -5,26 +5,26 @@ expression: "Parser::new(Lexer::new(\"forty . two . something;\")).parse()"
 Ok(
     Ast {
         identifiers: [
-            "forty",
-            "two",
-            "something",
+            IdentId(0) => "forty",
+            IdentId(1) => "two",
+            IdentId(2) => "something",
         ],
         identifier_refs: [
-            IdentifierRef {
+            IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
                     id: IdentId(0),
                     span: 1:1; [0, 5],
                 },
             },
-            IdentifierRef {
+            IdentRefId(1) => IdentifierRef {
                 id: IdentRefId(1),
                 ident: Identifier {
                     id: IdentId(1),
                     span: 1:9; [8, 11],
                 },
             },
-            IdentifierRef {
+            IdentRefId(2) => IdentifierRef {
                 id: IdentRefId(2),
                 ident: Identifier {
                     id: IdentId(2),
@@ -33,7 +33,7 @@ Ok(
             },
         ],
         expressions: [
-            Expression {
+            ExprId(0) => Expression {
                 id: ExprId(0),
                 kind: Literal(
                     Literal {
@@ -43,7 +43,7 @@ Ok(
                 ),
                 span: 1:1; [0, 5],
             },
-            Expression {
+            ExprId(1) => Expression {
                 id: ExprId(1),
                 kind: Access(
                     ExprId(0),
@@ -51,7 +51,7 @@ Ok(
                 ),
                 span: 1:1; [0, 11],
             },
-            Expression {
+            ExprId(2) => Expression {
                 id: ExprId(2),
                 kind: Access(
                     ExprId(1),
@@ -61,7 +61,7 @@ Ok(
             },
         ],
         statements: [
-            Statement {
+            StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: Expression(
                     ExprId(2),

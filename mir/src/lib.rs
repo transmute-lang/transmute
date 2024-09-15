@@ -58,15 +58,15 @@ impl Transformer {
         self.expressions.resize(hir.expressions.len());
         self.statements.resize(hir.statements.len());
 
-        for stmt_id in hir.roots.clone().iter() {
-            let stmt = hir.statements.remove(*stmt_id).unwrap();
+        for stmt_id in hir.roots.clone().into_iter() {
+            let stmt = hir.statements.remove(stmt_id).unwrap();
 
             match stmt.kind {
                 HirStatementKind::LetFn(identifier, parameters, ret_type, expr_id) => {
                     self.transform_function(&mut hir, identifier, parameters, ret_type, expr_id)
                 }
                 HirStatementKind::Struct(identifier, fields) => {
-                    self.transform_struct(&mut hir, *stmt_id, identifier, fields)
+                    self.transform_struct(&mut hir, stmt_id, identifier, fields)
                 }
                 _ => {
                     // todo it seems that roots is an useless concept outside of the interpreter
@@ -84,6 +84,9 @@ impl Transformer {
         if !diagnostics.is_empty() {
             return Err(diagnostics);
         }
+
+        debug_assert!(hir.expressions.is_empty());
+        debug_assert!(hir.statements.is_empty());
 
         Ok(Mir {
             functions: self.functions,
@@ -741,12 +744,17 @@ impl Transformer {
         hir: &mut Hir,
         stmt_id: StmtId,
         span: Span,
-        expr_id: ExprId,
+        expr_id: Option<ExprId>,
     ) -> Vec<SymbolId> {
-        let expr = hir.expressions.remove(expr_id).unwrap();
-        let (mutated_symbols, variables) = self.transform_expression(hir, expr);
+        let mutated_symbols = expr_id
+            .map(|expr_id| {
+                let expr = hir.expressions.remove(expr_id).unwrap();
+                let (mutated_symbols, variables) = self.transform_expression(hir, expr);
 
-        debug_assert!(variables.is_empty());
+                debug_assert!(variables.is_empty());
+                mutated_symbols
+            })
+            .unwrap_or_default();
 
         self.statements.insert(
             stmt_id,
@@ -903,7 +911,7 @@ pub struct Statement {
 #[derive(Debug, Clone, PartialEq)]
 pub enum StatementKind {
     Expression(ExprId),
-    Ret(ExprId),
+    Ret(Option<ExprId>),
 }
 
 #[derive(Debug, Eq, PartialEq)]

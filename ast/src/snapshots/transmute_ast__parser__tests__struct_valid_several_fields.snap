@@ -5,20 +5,20 @@ expression: "Parser::new(Lexer::new(\"struct S { a: number, b: number }\")).pars
 Ok(
     Ast {
         identifiers: [
-            "S",
-            "a",
-            "number",
-            "b",
+            IdentId(0) => "S",
+            IdentId(1) => "a",
+            IdentId(2) => "number",
+            IdentId(3) => "b",
         ],
         identifier_refs: [
-            IdentifierRef {
+            IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
                     id: IdentId(2),
                     span: 1:15; [14, 20],
                 },
             },
-            IdentifierRef {
+            IdentRefId(1) => IdentifierRef {
                 id: IdentRefId(1),
                 ident: Identifier {
                     id: IdentId(2),
@@ -28,7 +28,7 @@ Ok(
         ],
         expressions: [],
         statements: [
-            Statement {
+            StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: Struct(
                     Identifier {

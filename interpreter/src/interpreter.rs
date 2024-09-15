@@ -77,7 +77,10 @@ impl<'a> Interpreter<'a> {
                 Val::none()
             }
             StatementKind::LetFn(_, _, _, _) => Val::none(),
-            StatementKind::Ret(e, _) => Val::of_option_ret(self.visit_expression(*e).value_ref),
+            StatementKind::Ret(None, _) => Val::of_option_ret(None),
+            StatementKind::Ret(Some(e), _) => {
+                Val::of_option_ret(self.visit_expression(*e).value_ref)
+            }
             StatementKind::Struct(_, _) => Val::none(),
         }
     }

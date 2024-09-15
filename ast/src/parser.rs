@@ -14,6 +14,8 @@ use transmute_core::error::Diagnostics;
 use transmute_core::ids::{id, ExprId, IdentId, IdentRefId, StmtId};
 use transmute_core::span::Span;
 
+// todo rewrite tests to use more snapshots
+
 type Expression = crate::expression::Expression;
 type Statement = crate::statement::Statement;
 
@@ -311,7 +313,16 @@ impl<'s> Parser<'s> {
             TokenKind::Ret => {
                 let ret_token = self.lexer.next();
                 self.potential_tokens.clear();
-                let expression = self.parse_expression(true, false).0.id;
+
+                let expression = match self.lexer.peek().kind {
+                    TokenKind::Semicolon => None,
+                    _ => {
+                        self.potential_tokens
+                            .insert(expected_token!(TokenKind::Semicolon));
+                        Some(self.parse_expression(true, false).0.id)
+                    }
+                };
+
                 let semicolon_span = self.parse_semicolon();
                 let span = ret_token.span.extend_to(&semicolon_span);
 
@@ -1724,6 +1735,8 @@ mod tests {
     test_syntax!(function_statements_without_equal => "let times_two(a: number) { a * 2; }");
     test_syntax!(function_call => "times_two(21);");
     test_syntax!(ret => "ret 42;");
+    test_syntax!(ret_void => "ret;");
+    test_syntax!(ret_missing_next_token => "ret");
     test_syntax!(empty_statement => ";");
     test_syntax!(empty_statement_followed_by_non_empty => "; ret 42;");
     test_syntax!(function_empty_block => "let a() {}");

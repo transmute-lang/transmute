@@ -5,6 +5,8 @@ use std::fmt::{Debug, Display, Formatter};
 use std::str::Chars;
 use transmute_core::span::Span;
 
+// todo rewrite tests to use more snapshots
+
 #[derive(Debug)]
 pub struct Lexer<'s> {
     source: &'s str,

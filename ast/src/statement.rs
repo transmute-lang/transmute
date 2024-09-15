@@ -19,7 +19,7 @@ impl Statement {
 pub enum StatementKind {
     Expression(ExprId),
     Let(Identifier, ExprId),
-    Ret(ExprId, RetMode),
+    Ret(Option<ExprId>, RetMode),
     LetFn(Identifier, Vec<Parameter>, Return, ExprId),
     Struct(Identifier, Vec<Field>),
 }

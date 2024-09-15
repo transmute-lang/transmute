@@ -5,26 +5,26 @@ expression: "Parser::new(Lexer::new(\"let times_two(a: number): number = a * 2;\
 Ok(
     Ast {
         identifiers: [
-            "times_two",
-            "a",
-            "number",
+            IdentId(0) => "times_two",
+            IdentId(1) => "a",
+            IdentId(2) => "number",
         ],
         identifier_refs: [
-            IdentifierRef {
+            IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
                     id: IdentId(2),
                     span: 1:18; [17, 23],
                 },
             },
-            IdentifierRef {
+            IdentRefId(1) => IdentifierRef {
                 id: IdentRefId(1),
                 ident: Identifier {
                     id: IdentId(2),
                     span: 1:27; [26, 32],
                 },
             },
-            IdentifierRef {
+            IdentRefId(2) => IdentifierRef {
                 id: IdentRefId(2),
                 ident: Identifier {
                     id: IdentId(1),
@@ -33,7 +33,7 @@ Ok(
             },
         ],
         expressions: [
-            Expression {
+            ExprId(0) => Expression {
                 id: ExprId(0),
                 kind: Literal(
                     Literal {
@@ -43,7 +43,7 @@ Ok(
                 ),
                 span: 1:36; [35, 36],
             },
-            Expression {
+            ExprId(1) => Expression {
                 id: ExprId(1),
                 kind: Literal(
                     Literal {
@@ -53,7 +53,7 @@ Ok(
                 ),
                 span: 1:40; [39, 40],
             },
-            Expression {
+            ExprId(2) => Expression {
                 id: ExprId(2),
                 kind: Binary(
                     ExprId(0),
@@ -65,7 +65,7 @@ Ok(
                 ),
                 span: 1:36; [35, 40],
             },
-            Expression {
+            ExprId(3) => Expression {
                 id: ExprId(3),
                 kind: Block(
                     [
@@ -76,14 +76,14 @@ Ok(
             },
         ],
         statements: [
-            Statement {
+            StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: Expression(
                     ExprId(2),
                 ),
                 span: 1:36; [35, 41],
             },
-            Statement {
+            StmtId(1) => Statement {
                 id: StmtId(1),
                 kind: LetFn(
                     Identifier {

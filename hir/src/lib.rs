@@ -70,8 +70,8 @@ where
     pub exit_points: ExitPoints,
 }
 
-impl Hir<Untyped, Unbound> {
-    pub fn resolve(self, natives: Natives) -> Result<Hir<Typed, Bound>, Diagnostics> {
+impl UnresolvedHir {
+    pub fn resolve(self, natives: Natives) -> Result<ResolvedHir, Diagnostics> {
         let expressions_count = self.expressions.len();
         let statements_count = self.statements.len();
 
@@ -112,30 +112,30 @@ impl Hir<Untyped, Unbound> {
     }
 }
 
-impl From<Ast> for Hir<Untyped, Unbound> {
-    fn from(mut ast: Ast) -> Self {
+impl From<Ast> for UnresolvedHir {
+    fn from(ast: Ast) -> Self {
         // convert operators to function calls
         let operator_free =
             OperatorsConverter::new(ast.identifiers, ast.identifier_refs).convert(ast.expressions);
 
+        let expressions = operator_free.expressions;
+        let identifiers = operator_free.identifiers;
+        let identifier_refs = operator_free.identifier_refs;
+
         // convert implicit ret to explicit ret
-        for new_statement in ImplicitRetConverter::new().convert(
-            &ast.roots,
-            &ast.statements,
-            &operator_free.expressions,
-        ) {
-            ast.statements.insert(new_statement.id, new_statement);
-        }
+        let explicit_rets =
+            ImplicitRetConverter::new().convert(&ast.roots, ast.statements, expressions);
+        let statements = explicit_rets.statements;
+        let expressions = explicit_rets.expressions;
 
         // compute exit points
         let mut exit_points = HashMap::new();
         let mut unreachable = vec![];
 
-        for (_, stmt) in ast.statements.iter() {
+        for (_, stmt) in statements.iter() {
             if let &AstStatementKind::LetFn(_, _, _, expr_id) = &stmt.kind {
                 let mut output =
-                    ExitPointsResolver::new(&operator_free.expressions, &ast.statements)
-                        .exit_points(expr_id);
+                    ExitPointsResolver::new(&expressions, &statements).exit_points(expr_id);
 
                 #[cfg(test)]
                 println!("Computed exit points and unreachable for {expr_id:?}: {output:?}");
@@ -149,19 +149,16 @@ impl From<Ast> for Hir<Untyped, Unbound> {
         unreachable.dedup();
 
         Self {
-            identifiers: operator_free.identifiers,
-            identifier_refs: operator_free
-                .identifier_refs
+            identifiers,
+            identifier_refs: identifier_refs
                 .into_iter()
                 .map(|i| (i.0, IdentifierRef::from(i.1)))
                 .collect::<VecMap<IdentRefId, IdentifierRef<Unbound>>>(),
-            expressions: operator_free
-                .expressions
+            expressions: expressions
                 .into_iter()
                 .map(|e| (e.0, Expression::from(e.1)))
                 .collect::<VecMap<ExprId, Expression<Untyped>>>(),
-            statements: ast
-                .statements
+            statements: statements
                 .into_iter()
                 .map(|s| (s.0, Statement::from(s.1)))
                 .collect::<VecMap<StmtId, Statement<Untyped, Unbound>>>(),
@@ -176,7 +173,7 @@ impl From<Ast> for Hir<Untyped, Unbound> {
     }
 }
 
-impl Hir<Typed, Bound> {
+impl ResolvedHir {
     pub fn symbol_by_ident_ref_id(&self, id: IdentRefId) -> &Symbol {
         &self.symbols[self.identifier_refs[id].resolved_symbol_id()]
     }

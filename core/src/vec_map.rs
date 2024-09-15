@@ -11,17 +11,33 @@ pub struct VecMap<I, T> {
 
 impl<I, T> Debug for VecMap<I, T>
 where
-    I: Into<usize> + From<usize>,
+    I: Into<usize> + From<usize> + Debug,
     T: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let vec = self.iter().map(|(_, e)| e).collect::<Vec<&T>>();
-
-        if f.alternate() {
-            write!(f, "{:#?}", vec)
-        } else {
-            write!(f, "{:?}", vec)
+        if self.vec.is_empty() {
+            return write!(f, "[]");
         }
+
+        writeln!(f, "[")?;
+
+        for (i, v) in self.iter() {
+            let element = if f.alternate() {
+                format!("{i:?} => {:#?},", v)
+            } else {
+                format!("{i:?} => {:?},", v)
+            };
+            let element = element
+                .lines()
+                .map(|l| format!("    {l}"))
+                .collect::<Vec<String>>()
+                .join("\n");
+            writeln!(f, "{}", element)?
+        }
+
+        write!(f, "]")?;
+
+        Ok(())
     }
 }
 
@@ -124,6 +140,14 @@ where
             vec: self,
             index: 0,
         }
+    }
+
+    pub fn keys(&self) -> Vec<I> {
+        self.vec
+            .iter()
+            .enumerate()
+            .filter_map(|(index, v)| v.as_ref().map(|_| I::from(index)))
+            .collect::<Vec<I>>()
     }
 
     pub fn into_reversed<B>(self) -> B

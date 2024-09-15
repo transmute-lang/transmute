@@ -1,0 +1,24 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"ret;\")).parse()"
+---
+Ok(
+    Ast {
+        identifiers: [],
+        identifier_refs: [],
+        expressions: [],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Ret(
+                    None,
+                    Explicit,
+                ),
+                span: 1:1; [0, 4],
+            },
+        ],
+        roots: [
+            StmtId(0),
+        ],
+    },
+)

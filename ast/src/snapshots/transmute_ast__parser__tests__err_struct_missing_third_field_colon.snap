@@ -6,12 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected identifier(number), expected one of (1) `:` 619",
+                message: "Unexpected identifier(number), expected one of (1) `:` 630",
                 span: 1:36; [35, 41],
                 level: Error,
                 generated_at: (
                     "ast/src/parser.rs",
-                    616,
+                    627,
                 ),
             },
         ],

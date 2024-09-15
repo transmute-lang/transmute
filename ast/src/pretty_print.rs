@@ -188,7 +188,7 @@ impl PrettyPrint for Statement {
                 ctx.pretty_print_expression(*expr_id, opts, f)?;
                 writeln!(f, ";")
             }
-            StatementKind::Ret(expr_id, mode) => {
+            StatementKind::Ret(Some(expr_id), mode) => {
                 match mode {
                     RetMode::Implicit if !opts.display_implicit_ret => {
                         write!(f, "{indent}", indent = ctx.indent())?;
@@ -197,6 +197,17 @@ impl PrettyPrint for Statement {
                     _ => {
                         write!(f, "{indent}ret ", indent = ctx.indent())?;
                         ctx.pretty_print_expression(*expr_id, opts, f)?;
+                    }
+                }
+                writeln!(f, ";")
+            }
+            StatementKind::Ret(None, mode) => {
+                match mode {
+                    RetMode::Implicit if !opts.display_implicit_ret => {
+                        write!(f, "{indent}", indent = ctx.indent())?;
+                    }
+                    _ => {
+                        write!(f, "{indent}ret ", indent = ctx.indent())?;
                     }
                 }
                 writeln!(f, ";")

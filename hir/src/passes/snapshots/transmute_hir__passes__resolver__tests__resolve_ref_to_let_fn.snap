@@ -29,7 +29,11 @@ expression: "XmlWriter::new(&hir).serialize()"
         <parameters />
         <body line="1" column="11" start="10" len="3">
           <expr id="expr:0" line="1" column="11" start="10" len="3">
-            <block />
+            <block>
+              <stmt id="stmt:2" line="1" column="11" start="10" len="3">
+                <ret mode="implicit" line="1" column="11" start="10" len="3" />
+              </stmt>
+            </block>
           </expr>
         </body>
       </fn>

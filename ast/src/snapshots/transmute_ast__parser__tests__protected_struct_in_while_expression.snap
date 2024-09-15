@@ -5,10 +5,10 @@ expression: "Parser::new(Lexer::new(\"while (Struct {}) {}\")).parse()"
 Ok(
     Ast {
         identifiers: [
-            "Struct",
+            IdentId(0) => "Struct",
         ],
         identifier_refs: [
-            IdentifierRef {
+            IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
                     id: IdentId(0),
@@ -17,7 +17,7 @@ Ok(
             },
         ],
         expressions: [
-            Expression {
+            ExprId(0) => Expression {
                 id: ExprId(0),
                 kind: StructInstantiation(
                     IdentRefId(0),
@@ -25,14 +25,14 @@ Ok(
                 ),
                 span: 1:7; [6, 17],
             },
-            Expression {
+            ExprId(1) => Expression {
                 id: ExprId(1),
                 kind: Block(
                     [],
                 ),
                 span: 1:19; [18, 20],
             },
-            Expression {
+            ExprId(2) => Expression {
                 id: ExprId(2),
                 kind: While(
                     ExprId(0),
@@ -42,7 +42,7 @@ Ok(
             },
         ],
         statements: [
-            Statement {
+            StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: Expression(
                     ExprId(2),

@@ -1,0 +1,11 @@
+---
+source: hir/src/passes/implicit_ret_converter.rs
+expression: w
+---
+while if true {
+  ret 42;
+}
+else {
+  ret 43;
+} {
+}

@@ -5,11 +5,11 @@ expression: "Parser::new(Lexer::new(\"let a() {;}\")).parse()"
 Ok(
     Ast {
         identifiers: [
-            "a",
+            IdentId(0) => "a",
         ],
         identifier_refs: [],
         expressions: [
-            Expression {
+            ExprId(0) => Expression {
                 id: ExprId(0),
                 kind: Block(
                     [],
@@ -18,7 +18,7 @@ Ok(
             },
         ],
         statements: [
-            Statement {
+            StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: LetFn(
                     Identifier {

@@ -7,7 +7,7 @@ Ok(
         identifiers: [],
         identifier_refs: [],
         expressions: [
-            Expression {
+            ExprId(0) => Expression {
                 id: ExprId(0),
                 kind: Literal(
                     Literal {
@@ -17,7 +17,7 @@ Ok(
                 ),
                 span: 1:4; [3, 7],
             },
-            Expression {
+            ExprId(1) => Expression {
                 id: ExprId(1),
                 kind: Literal(
                     Literal {
@@ -27,7 +27,7 @@ Ok(
                 ),
                 span: 1:11; [10, 12],
             },
-            Expression {
+            ExprId(2) => Expression {
                 id: ExprId(2),
                 kind: Block(
                     [
@@ -36,7 +36,7 @@ Ok(
                 ),
                 span: 1:9; [8, 15],
             },
-            Expression {
+            ExprId(3) => Expression {
                 id: ExprId(3),
                 kind: Literal(
                     Literal {
@@ -46,7 +46,7 @@ Ok(
                 ),
                 span: 1:24; [23, 25],
             },
-            Expression {
+            ExprId(4) => Expression {
                 id: ExprId(4),
                 kind: Block(
                     [
@@ -55,7 +55,7 @@ Ok(
                 ),
                 span: 1:22; [21, 28],
             },
-            Expression {
+            ExprId(5) => Expression {
                 id: ExprId(5),
                 kind: If(
                     ExprId(0),
@@ -68,21 +68,21 @@ Ok(
             },
         ],
         statements: [
-            Statement {
+            StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: Expression(
                     ExprId(1),
                 ),
                 span: 1:11; [10, 13],
             },
-            Statement {
+            StmtId(1) => Statement {
                 id: StmtId(1),
                 kind: Expression(
                     ExprId(3),
                 ),
                 span: 1:24; [23, 26],
             },
-            Statement {
+            StmtId(2) => Statement {
                 id: StmtId(2),
                 kind: Expression(
                     ExprId(5),

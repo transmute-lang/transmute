@@ -713,7 +713,10 @@ impl<'a> Resolver<'a> {
                 (state.void_type_id, state)
             }
             StatementKind::Ret(expr, ret_mode) => {
-                state = self.visit_expression(state, expr).1;
+                let mut state = match expr {
+                    None => state,
+                    Some(expr) => self.visit_expression(state, expr).1,
+                };
 
                 state.resolution.statements.insert(
                     stmt_id,
@@ -769,6 +772,14 @@ impl<'a> Resolver<'a> {
                 (file!(), line!()),
             );
         }
+        if expr_type_id == state.void_type_id {
+            let expr = &state.resolution.expressions[expr];
+            state.diagnostics.report_err(
+                format!("Expected some type, got {}", Type::Void),
+                expr.span.clone(),
+                (file!(), line!()),
+            );
+        }
 
         let symbol_id =
             state.insert_symbol(ident.id, SymbolKind::Let(ident.id, stmt), expr_type_id);
@@ -781,8 +792,8 @@ impl<'a> Resolver<'a> {
         mut state: State,
         stmt_id: StmtId,
         (ident, params, ret_type): Function<Untyped, Unbound>,
-        expr: ExprId,
-        span: &Span,
+        body_expr_id: ExprId,
+        _span: &Span,
     ) -> (Result<Function<Typed, Bound>, ()>, State) {
         state.push_scope();
 
@@ -836,64 +847,62 @@ impl<'a> Resolver<'a> {
         success = success && parameters.len() == params_len;
 
         // we want to visit the expression, hence no short-circuit
-        let (expr_type_id, mut state) = self.visit_expression(state, expr);
+        let (expr_type_id, mut state) = self.visit_expression(state, body_expr_id);
         success = expr_type_id != state.invalid_type_id && success;
 
         if ret_type_id != state.invalid_type_id {
             let exit_points = self
                 .exit_points
-                .get(&expr)
+                .get(&body_expr_id)
                 .expect("exit points is computed");
+
+            if exit_points.is_empty() {
+                panic!("we must always have at least one exit point, even if implicit and void");
+            }
 
             #[cfg(test)]
             println!(
-                "Exit points of {name} ({expr:?}): {exit_points:?}",
+                "Exit points of {name} ({body_expr_id:?}): {exit_points:?}",
                 name = state.resolution.identifiers.get_by_left(&ident.id).unwrap(),
             );
 
-            if exit_points.is_empty() {
-                if ret_type_id != state.void_type_id {
+            for exit_point in exit_points.iter() {
+                let (exit_expr_id, explicit) = match exit_point {
+                    ExitPoint::Explicit(e) => (*e, true),
+                    ExitPoint::Implicit(e) => (*e, false),
+                };
+
+                let (expr_type_id, new_state) = match exit_expr_id {
+                    None => (state.void_type_id, state),
+                    Some(exit_expr_id) => self.visit_expression(state, exit_expr_id),
+                };
+
+                state = new_state;
+
+                if expr_type_id == state.invalid_type_id {
+                    // nothing to report, that was reported already
+                } else if expr_type_id == state.none_type_id {
+                    panic!("functions must not return {}", Type::None)
+                } else if expr_type_id != ret_type_id
+                    && (ret_type_id != state.void_type_id || explicit)
+                {
+                    let expr_type = state.find_type_by_type_id(expr_type_id);
+                    // fixme the span is not accurate (in both cases))
+                    let span = if let Some(exit_expr_id) = exit_expr_id {
+                        state.resolution.expressions[exit_expr_id].span.clone()
+                    } else {
+                        state.resolution.expressions[body_expr_id].span.clone()
+                    };
+
                     state.diagnostics.report_err(
                         format!(
-                            "Function {name} expected to return type {ret_type}, got void",
+                            "Function {name} expected to return type {ret_type}, got {expr_type}",
                             name = state.resolution.identifiers.get_by_left(&ident.id).unwrap(),
                             ret_type = state.resolution.types.get_by_right(&ret_type_id).unwrap()
                         ),
-                        span.clone(),
+                        span,
                         (file!(), line!()),
                     );
-                }
-            } else {
-                for exit_point in exit_points.iter() {
-                    let (exit_expr_id, explicit) = match exit_point {
-                        ExitPoint::Explicit(e) => (*e, true),
-                        ExitPoint::Implicit(e) => (*e, false),
-                    };
-
-                    let (expr_type_id, new_state) = self.visit_expression(state, exit_expr_id);
-                    state = new_state;
-
-                    if expr_type_id == state.invalid_type_id {
-                        // nothing to report, that was reported already
-                    } else if expr_type_id == state.none_type_id {
-                        panic!("functions must not return {}", Type::None)
-                    } else if expr_type_id != ret_type_id
-                        && (ret_type_id != state.void_type_id || explicit)
-                    {
-                        let expr = &state.resolution.expressions[exit_expr_id];
-                        let expr_type = state.find_type_by_type_id(expr_type_id);
-
-                        state.diagnostics.report_err(
-                            format!(
-                                "Function {name} expected to return type {ret_type}, got {expr_type}",
-                                name = state.resolution.identifiers.get_by_left(&ident.id).unwrap(),
-                                ret_type =
-                                    state.resolution.types.get_by_right(&ret_type_id).unwrap()
-                            ),
-                            expr.span.clone(),
-                            (file!(), line!()),
-                        );
-                    }
                 }
             }
         }
@@ -1822,7 +1831,7 @@ mod tests {
         function_returns_void_but_expect_struct,
         "struct S {} let f(): S = { }",
         "Function f expected to return type struct, got void",
-        Span::new(1, 13, 12, 16)
+        Span::new(1, 26, 25, 3)
     );
     test_type_error!(
         struct_unknown,
@@ -1882,7 +1891,7 @@ mod tests {
         function_wrong_return_type_2,
         "let f(): boolean = { }",
         "Function f expected to return type boolean, got void",
-        Span::new(1, 1, 0, 22)
+        Span::new(1, 20, 19, 3)
     );
     test_type_error!(
         function_wrong_early_return_type,
@@ -2022,4 +2031,34 @@ mod tests {
     //     let s = Outer { field: Inner { field: 1 } };
     //     "#
     // );
+
+    test_type_ok!(void_function_explicit_void_ret, "let f() { ret; }");
+    test_type_ok!(void_function_implicit_void_ret, "let f() { }");
+    test_type_ok!(void_function_implicit_number_ret, "let f() { 1; }");
+    test_type_error!(
+        non_void_function_explicit_void_ret,
+        r#"let f(): number { ret; }"#,
+        "Function f expected to return type number, got void",
+        Span::new(1, 17, 16, 8)
+    );
+    test_type_error!(
+        non_void_function_implicit_void_ret,
+        "let f(): number { }",
+        "Function f expected to return type number, got void",
+        Span::new(1, 17, 16, 3)
+    );
+
+    test_type_error!(
+        let_from_void,
+        "let g() {} let f() { let a = g(); }",
+        "Expected some type, got void",
+        Span::new(1, 30, 29, 3)
+    );
+
+    test_type_error!(
+        return_from_void,
+        "let g() {} let f(): number { g(); }",
+        "Function f expected to return type number, got void",
+        Span::new(1, 30, 29, 3)
+    );
 }

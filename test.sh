@@ -2,7 +2,7 @@
 
 export LLVM_SYS_180_PREFIX=/usr/local/llvm-18.1
 
-cargo test --workspace || exit 1
+cargo test --workspace --no-fail-fast || exit 1
 cargo build || exit 1
 
 for f in examples/*; do
