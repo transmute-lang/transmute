@@ -87,7 +87,7 @@ Start GC
   block at 0x10060 (object of size 16 at 0x10078): reachable
   block at 0x10038 (object of size 16 at 0x10050): reachable
   block at 0x10010 (object of size 16 at 0x10028): reachable
-f(0) = 0
+main(0) = 0
 Start GC
   block at 0x10060 (object of size 16 at 0x10078): unreachable
   block at 0x10038 (object of size 16 at 0x10050): unreachable
@@ -181,7 +181,7 @@ Start GC
   block at 0x100d8 (object of size 16 at 0x100f0): reachable
   block at 0x100b0 (object of size 16 at 0x100c8): reachable
   block at 0x10088 (object of size 16 at 0x100a0): reachable
-f(1) = 4
+main(1) = 4
 Start GC
   block at 0x100d8 (object of size 16 at 0x100f0): unreachable
   block at 0x100b0 (object of size 16 at 0x100c8): unreachable
@@ -275,7 +275,7 @@ Start GC
   block at 0x10150 (object of size 16 at 0x10168): reachable
   block at 0x10128 (object of size 16 at 0x10140): reachable
   block at 0x10100 (object of size 16 at 0x10118): reachable
-f(2) = 8
+main(2) = 8
 Start GC
   block at 0x10150 (object of size 16 at 0x10168): unreachable
   block at 0x10128 (object of size 16 at 0x10140): unreachable
@@ -369,7 +369,7 @@ Start GC
   block at 0x101c8 (object of size 16 at 0x101e0): reachable
   block at 0x101a0 (object of size 16 at 0x101b8): reachable
   block at 0x10178 (object of size 16 at 0x10190): reachable
-f(3) = 12
+main(3) = 12
 Start GC
   block at 0x101c8 (object of size 16 at 0x101e0): unreachable
   block at 0x101a0 (object of size 16 at 0x101b8): unreachable
@@ -463,7 +463,7 @@ Start GC
   block at 0x10240 (object of size 16 at 0x10258): reachable
   block at 0x10218 (object of size 16 at 0x10230): reachable
   block at 0x101f0 (object of size 16 at 0x10208): reachable
-f(4) = 16
+main(4) = 16
 Start GC
   block at 0x10240 (object of size 16 at 0x10258): unreachable
   block at 0x10218 (object of size 16 at 0x10230): unreachable
@@ -557,7 +557,7 @@ Start GC
   block at 0x102b8 (object of size 16 at 0x102d0): reachable
   block at 0x10290 (object of size 16 at 0x102a8): reachable
   block at 0x10268 (object of size 16 at 0x10280): reachable
-f(5) = 20
+main(5) = 20
 Start GC
   block at 0x102b8 (object of size 16 at 0x102d0): unreachable
   block at 0x10290 (object of size 16 at 0x102a8): unreachable
@@ -651,7 +651,7 @@ Start GC
   block at 0x10330 (object of size 16 at 0x10348): reachable
   block at 0x10308 (object of size 16 at 0x10320): reachable
   block at 0x102e0 (object of size 16 at 0x102f8): reachable
-f(6) = 24
+main(6) = 24
 Start GC
   block at 0x10330 (object of size 16 at 0x10348): unreachable
   block at 0x10308 (object of size 16 at 0x10320): unreachable
@@ -745,7 +745,7 @@ Start GC
   block at 0x103a8 (object of size 16 at 0x103c0): reachable
   block at 0x10380 (object of size 16 at 0x10398): reachable
   block at 0x10358 (object of size 16 at 0x10370): reachable
-f(7) = 28
+main(7) = 28
 Start GC
   block at 0x103a8 (object of size 16 at 0x103c0): unreachable
   block at 0x10380 (object of size 16 at 0x10398): unreachable
@@ -839,7 +839,7 @@ Start GC
   block at 0x10420 (object of size 16 at 0x10438): reachable
   block at 0x103f8 (object of size 16 at 0x10410): reachable
   block at 0x103d0 (object of size 16 at 0x103e8): reachable
-f(8) = 32
+main(8) = 32
 Start GC
   block at 0x10420 (object of size 16 at 0x10438): unreachable
   block at 0x103f8 (object of size 16 at 0x10410): unreachable
@@ -933,7 +933,7 @@ Start GC
   block at 0x10498 (object of size 16 at 0x104b0): reachable
   block at 0x10470 (object of size 16 at 0x10488): reachable
   block at 0x10448 (object of size 16 at 0x10460): reachable
-f(9) = 36
+main(9) = 36
 
 Statistics:
 

@@ -7,8 +7,6 @@ source_filename = "main"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare void @print(i64)
-
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
 
@@ -16,17 +14,21 @@ declare ptr @gc_malloc(i64)
 
 declare void @gc_run()
 
+declare void @_TM0_5print1Pn(i64)
+
+declare void @_TM0_5print1Pb(i1)
+
 define private void @_glob() {
 entry:
   unreachable
 }
 
-define i1 @f(i64 %"n#param#sym19#") gc "shadow-stack" {
+define i1 @_TM0_1f1Pn(i64 %"n#param#sym20#") gc "shadow-stack" {
 entry:
   br label %cond
 
 cond:                                             ; preds = %cond, %entry
-  %"lt#" = icmp slt i64 %"n#param#sym19#", 42
+  %"lt#" = icmp slt i64 %"n#param#sym20#", 42
   br i1 %"lt#", label %cond, label %end_while
 
 end_while:                                        ; preds = %cond

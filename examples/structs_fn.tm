@@ -3,7 +3,7 @@ struct Point {
     y: number
 }
 
-let f(n: number): number {
+let main(n: number): number {
     let origin = origin();
 
     let a = area(origin, Point {

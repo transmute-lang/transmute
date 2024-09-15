@@ -1,3 +1,5 @@
+mod mangling;
+
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::memory_buffer::MemoryBuffer;
@@ -24,6 +26,7 @@ use transmute_mir::{
 };
 use transmute_mir::{LiteralKind, SymbolKind, Target as AssignmentTarget};
 use transmute_mir::{NativeFnKind, Variable};
+use crate::mangling::mangle;
 
 // todo add support for structs nested in functions (does not work because of resolver)
 // todo refactor struct layout so we dont need a `_glob` function. we can do it on teh fly, the
@@ -153,6 +156,7 @@ struct Codegen<'ctx, 't> {
     struct_types: HashMap<StructId, StructType<'ctx>>,
     type_layouts: HashMap<TypeId, PointerValue<'ctx>>,
     variables: HashMap<SymbolId, PointerValue<'ctx>>,
+    functions: HashMap<SymbolId, FunctionValue<'ctx>>,
 
     target_triple: &'t TargetTriple,
     target_machine: &'t TargetMachine,
@@ -172,9 +176,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let size_type = context.i64_type();
         let void_type = context.void_type();
         let ptr_type = context.ptr_type(Default::default());
-
-        let print_fn_type = void_type.fn_type(&[i64_type.into()], false);
-        module.add_function("print", print_fn_type, None);
 
         Self {
             context,
@@ -197,9 +198,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 let gc_fn_type = void_type.fn_type(&[], false);
                 module.add_function("gc_run", gc_fn_type, None)
             },
-            struct_types: HashMap::default(),
-            type_layouts: HashMap::default(),
-            variables: HashMap::default(),
+            struct_types: Default::default(),
+            type_layouts: Default::default(),
+            variables: Default::default(),
+            functions: Default::default(),
             target_triple,
             target_machine,
             module,
@@ -207,6 +209,27 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     }
 
     pub fn gen(mut self, mir: &Mir, optimize: bool) -> Result<Module<'ctx>, Diagnostics> {
+        for (symbol_id, symbol) in mir.symbols.iter() {
+            if let SymbolKind::Native(ident_id, parameters, _, native_kind) = &symbol.kind {
+                let fn_name = mangle(mir, *ident_id, parameters);
+                match native_kind {
+                    NativeFnKind::PrintNumber => {
+                        let print_fn_type = self.void_type.fn_type(&[self.i64_type.into()], false);
+                        let print_fn = self.module.add_function(&fn_name, print_fn_type, None);
+                        self.functions.insert(symbol_id, print_fn);
+                    }
+                    NativeFnKind::PrintBoolean => {
+                        let print_fn_type = self.void_type.fn_type(&[self.bool_type.into()], false);
+                        let print_fn = self.module.add_function(&fn_name, print_fn_type, None);
+                        self.functions.insert(symbol_id, print_fn);
+                    }
+                    _ => {
+                        // nothing to do
+                    }
+                }
+            }
+        }
+
         for (struct_id, struct_def) in mir.structs.iter() {
             self.gen_struct_signature(mir, struct_id, struct_def);
         }
@@ -424,10 +447,12 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             Type::None => todo!(),
         };
 
+        let fn_name = mangle(mir,function.identifier.id, function.parameters.iter().map(|p|p.type_id).collect::<Vec<TypeId>>().as_slice() );
         let f = self
             .module
-            .add_function(&mir.identifiers[function.identifier.id], fn_type, None);
+            .add_function(&fn_name, fn_type, None);
         f.set_gc("shadow-stack");
+        self.functions.insert(function.symbol_id, f);
     }
 
     fn gen_statement(&mut self, mir: &Mir, stmt: &Statement) -> Value<'ctx> {
@@ -467,10 +492,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         // It is ok for now to get a function by name, but this might need to change when we start
         // to mangle function names. When we do it, gen_function_signature() can return the function
         // value that we can reuse here.
-        let llvm_function = self
-            .module
-            .get_function(&mir.identifiers[function.identifier.id])
-            .unwrap();
+        let llvm_function = self.functions[&function.symbol_id];
 
         let entry = self.context.append_basic_block(llvm_function, "entry");
         self.builder.position_at_end(entry);
@@ -910,10 +932,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
         let function_name = &mir.identifiers[mir.symbols[symbol_id].ident_id];
 
-        let called_function = self
-            .module
-            .get_function(function_name)
-            .unwrap_or_else(|| panic!("called function `{}` not defined", function_name));
+        let called_function = self.functions[&symbol_id];
 
         self.builder
             .build_call(
@@ -1207,6 +1226,7 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::EqBooleanBoolean => true,
             NativeFnKind::NeqBooleanBoolean => true,
             NativeFnKind::PrintNumber => false,
+            NativeFnKind::PrintBoolean => false,
         }
     }
 
@@ -1351,6 +1371,7 @@ impl LlvmImpl for NativeFnKind {
                     .into()
             }
             NativeFnKind::PrintNumber => Value::None,
+            NativeFnKind::PrintBoolean => Value::None,
         }
     }
 }

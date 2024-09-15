@@ -1,6 +1,6 @@
-let f(n: number): number {
+let main(n: number): number {
     if n < 2 {
         ret n;
     }
-    f(n - 1) + f(n - 2);
+    main(n - 1) + main(n - 2);
 }

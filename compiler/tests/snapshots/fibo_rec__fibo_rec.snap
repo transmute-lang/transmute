@@ -6,16 +6,16 @@ success:true
 stdout:
 Initialize GC with log level: 2
 Allocate test GC memory pool (4130 bytes): mmap returned 0x10000 (Success)
-f(0) = 0
-f(1) = 1
-f(2) = 1
-f(3) = 2
-f(4) = 3
-f(5) = 5
-f(6) = 8
-f(7) = 13
-f(8) = 21
-f(9) = 34
+main(0) = 0
+main(1) = 1
+main(2) = 1
+main(3) = 2
+main(4) = 3
+main(5) = 5
+main(6) = 8
+main(7) = 13
+main(8) = 21
+main(9) = 34
 
 Statistics:
 

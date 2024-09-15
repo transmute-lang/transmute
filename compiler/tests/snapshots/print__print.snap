@@ -1,21 +1,41 @@
 ---
-source: compiler/tests/sibling_function.rs
+source: compiler/tests/print.rs
 expression: "format!(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(),\n    String :: from_utf8(output.stdout).unwrap(), String ::\n    from_utf8(output.stderr).unwrap())"
 ---
 success:true
 stdout:
 Initialize GC with log level: 2
 Allocate test GC memory pool (4130 bytes): mmap returned 0x10000 (Success)
+0
+true
 main(0) = 0
+1
+false
 main(1) = 1
-main(2) = 1
-main(3) = 2
-main(4) = 3
+2
+false
+main(2) = 2
+3
+false
+main(3) = 3
+4
+false
+main(4) = 4
+5
+false
 main(5) = 5
-main(6) = 8
-main(7) = 13
-main(8) = 21
-main(9) = 34
+6
+false
+main(6) = 6
+7
+false
+main(7) = 7
+8
+false
+main(8) = 8
+9
+false
+main(9) = 9
 
 Statistics:
 

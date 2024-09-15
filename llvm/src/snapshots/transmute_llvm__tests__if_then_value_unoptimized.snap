@@ -5,8 +5,6 @@ expression: llvm_ir
 ; ModuleID = 'main'
 source_filename = "main"
 
-declare void @print(i64)
-
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
 
@@ -14,29 +12,33 @@ declare ptr @gc_malloc(i64)
 
 declare void @gc_run()
 
+declare void @_TM0_5print1Pn(i64)
+
+declare void @_TM0_5print1Pb(i1)
+
 define private void @_glob() {
 entry:
   unreachable
 }
 
-define i1 @f(i64 %"n#param#sym19#") gc "shadow-stack" {
+define i1 @_TM0_1f1Pn(i64 %"n#param#sym20#") gc "shadow-stack" {
 entry:
-  %"m#local#sym20#" = alloca i64, align 8
-  %"ne#" = icmp ne i64 %"n#param#sym19#", 42
+  %"m#local#sym21#" = alloca i64, align 8
+  %"ne#" = icmp ne i64 %"n#param#sym20#", 42
   br i1 %"ne#", label %true_branch, label %false_branch
 
 true_branch:                                      ; preds = %entry
-  %"sub#" = sub i64 %"n#param#sym19#", 1
+  %"sub#" = sub i64 %"n#param#sym20#", 1
   br label %end_if
 
 false_branch:                                     ; preds = %entry
   ret i1 true
 
 end_if:                                           ; preds = %true_branch
-  store i64 %"sub#", ptr %"m#local#sym20#", align 4
+  store i64 %"sub#", ptr %"m#local#sym21#", align 4
   call void @gc_run()
-  %"m#local#sym20#1" = load i64, ptr %"m#local#sym20#", align 4
-  %"eq#" = icmp eq i64 %"m#local#sym20#1", 42
+  %"m#local#sym21#1" = load i64, ptr %"m#local#sym21#", align 4
+  %"eq#" = icmp eq i64 %"m#local#sym21#1", 42
   ret i1 %"eq#"
 }
 

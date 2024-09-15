@@ -2061,4 +2061,12 @@ mod tests {
         "Function f expected to return type number, got void",
         Span::new(1, 30, 29, 3)
     );
+
+    // fixme uncomment
+    // test_type_error!(
+    //     return_value_from_void,
+    //     "let f(n: number): number { n; }",
+    //     "Function f expected to return type number, got void",
+    //     Span::new(1, 30, 29, 3)
+    // );
 }

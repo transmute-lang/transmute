@@ -80,6 +80,10 @@ impl Natives {
             name: "print",
             kind: NativeFnKind::PrintNumber,
         });
+        natives.insert_fn(NativeFn {
+            name: "print",
+            kind: NativeFnKind::PrintBoolean,
+        });
 
         natives.insert_type(NativeType {
             name: Type::Boolean.identifier(),
@@ -242,6 +246,7 @@ pub enum NativeFnKind {
     EqBooleanBoolean,
     NeqBooleanBoolean,
     PrintNumber, // fixme not actually a native, but part of some prelude
+    PrintBoolean, // fixme not actually a native, but part of some prelude
 }
 
 impl NativeFnKind {
@@ -262,6 +267,7 @@ impl NativeFnKind {
                 (&[Type::Boolean, Type::Boolean], Type::Boolean)
             }
             NativeFnKind::PrintNumber => (&[Type::Number], Type::Void),
+            NativeFnKind::PrintBoolean => (&[Type::Boolean], Type::Void),
         }
     }
 }

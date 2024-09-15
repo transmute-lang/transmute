@@ -8,7 +8,7 @@ struct Square {
     b: Point,
 }
 
-let f(n: number): number = {
+let main(n: number): number = {
     let square = Square {
         a: Point {
             x: 0,

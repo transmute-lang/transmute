@@ -11,8 +11,6 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @layout_struct_Struct = global [1 x i64] zeroinitializer
 
-declare void @print(i64)
-
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
 
@@ -20,21 +18,25 @@ declare ptr @gc_malloc(i64)
 
 declare void @gc_run()
 
+declare void @_TM0_5print1Pn(i64)
+
+declare void @_TM0_5print1Pb(i1)
+
 define private void @_glob() {
 entry:
   unreachable
 }
 
-define i64 @f() gc "shadow-stack" {
+define i64 @_TM0_1f0P() gc "shadow-stack" {
 entry:
-  %"s#local#sym21#" = alloca ptr, align 8
-  store ptr null, ptr %"s#local#sym21#", align 8
-  call void @llvm.gcroot(ptr %"s#local#sym21#", ptr @layout_struct_Struct)
+  %"s#local#sym22#" = alloca ptr, align 8
+  store ptr null, ptr %"s#local#sym22#", align 8
+  call void @llvm.gcroot(ptr %"s#local#sym22#", ptr @layout_struct_Struct)
   %"heap#struct#Struct#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"Struct#id0", ptr null, i32 1) to i64))
   store i64 1, ptr %"heap#struct#Struct#id0#", align 4
-  store ptr %"heap#struct#Struct#id0#", ptr %"s#local#sym21#", align 8
+  store ptr %"heap#struct#Struct#id0#", ptr %"s#local#sym22#", align 8
   call void @gc_run()
-  %tmp = load ptr, ptr %"s#local#sym21#", align 8
+  %tmp = load ptr, ptr %"s#local#sym22#", align 8
   store i64 2, ptr %tmp, align 4
   call void @gc_run()
   ret i64 1

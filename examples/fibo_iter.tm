@@ -1,4 +1,4 @@
-let f(n: number): number = {
+let main(n: number): number = {
     if n == 0 { ret 0; }
     if n == 1 { ret 1; }
 

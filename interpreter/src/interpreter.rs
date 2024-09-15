@@ -442,6 +442,11 @@ impl RuntimeImpl for NativeFnKind {
                 println!("{number}");
                 Value::Void
             }
+            NativeFnKind::PrintBoolean => {
+                let bool = parameters.pop().unwrap().as_bool();
+                println!("{bool}");
+                Value::Void
+            }
         }
     }
 }

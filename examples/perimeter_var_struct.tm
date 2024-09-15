@@ -15,7 +15,7 @@ let perimeter(square: Square): number {
     ret width * 2 + height * 2;
 }
 
-let f(n: number): number = {
+let main(n: number): number = {
     let square = Square {
         a: Point {
             x: 0,

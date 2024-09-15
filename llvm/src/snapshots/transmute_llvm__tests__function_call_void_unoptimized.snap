@@ -5,8 +5,6 @@ expression: llvm_ir
 ; ModuleID = 'main'
 source_filename = "main"
 
-declare void @print(i64)
-
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
 
@@ -14,19 +12,23 @@ declare ptr @gc_malloc(i64)
 
 declare void @gc_run()
 
+declare void @_TM0_5print1Pn(i64)
+
+declare void @_TM0_5print1Pb(i1)
+
 define private void @_glob() {
 entry:
   unreachable
 }
 
-define void @g() gc "shadow-stack" {
+define void @_TM0_1g0P() gc "shadow-stack" {
 entry:
   ret void
 }
 
-define void @f() gc "shadow-stack" {
+define void @_TM0_1f0P() gc "shadow-stack" {
 entry:
-  call void @g()
+  call void @_TM0_1g0P()
   ret void
 }
 

@@ -6,7 +6,7 @@ struct Outer {
     inner: Inner,
 }
 
-let f(i: number): number {
+let main(i: number): number {
     f2(i) + f3(i) + f4(i) + f5(i);
 }
 

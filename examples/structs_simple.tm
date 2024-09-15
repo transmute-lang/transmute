@@ -2,7 +2,7 @@ struct Struct {
     field: number,
 }
 
-let f(n: number): number = {
+let main(n: number): number = {
     let s = Struct {
         field: n * 2,
     };

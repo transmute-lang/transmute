@@ -173,7 +173,7 @@ Start GC
         object at 0x100e8 (block at 0x100d0): 0 pointers, reachable
   block at 0x100f0 (object of size 8 at 0x10108): reachable
   block at 0x100d0 (object of size 8 at 0x100e8): reachable
-f(0) = 0
+main(0) = 0
 Start GC
   block at 0x100f0 (object of size 8 at 0x10108): unreachable
   block at 0x100d0 (object of size 8 at 0x100e8): unreachable
@@ -347,7 +347,7 @@ Start GC
         object at 0x101e8 (block at 0x101d0): 0 pointers, reachable
   block at 0x101f0 (object of size 8 at 0x10208): reachable
   block at 0x101d0 (object of size 8 at 0x101e8): reachable
-f(1) = 4
+main(1) = 4
 Start GC
   block at 0x101f0 (object of size 8 at 0x10208): unreachable
   block at 0x101d0 (object of size 8 at 0x101e8): unreachable
@@ -521,7 +521,7 @@ Start GC
         object at 0x102e8 (block at 0x102d0): 0 pointers, reachable
   block at 0x102f0 (object of size 8 at 0x10308): reachable
   block at 0x102d0 (object of size 8 at 0x102e8): reachable
-f(2) = 8
+main(2) = 8
 Start GC
   block at 0x102f0 (object of size 8 at 0x10308): unreachable
   block at 0x102d0 (object of size 8 at 0x102e8): unreachable
@@ -695,7 +695,7 @@ Start GC
         object at 0x103e8 (block at 0x103d0): 0 pointers, reachable
   block at 0x103f0 (object of size 8 at 0x10408): reachable
   block at 0x103d0 (object of size 8 at 0x103e8): reachable
-f(3) = 12
+main(3) = 12
 Start GC
   block at 0x103f0 (object of size 8 at 0x10408): unreachable
   block at 0x103d0 (object of size 8 at 0x103e8): unreachable
@@ -869,7 +869,7 @@ Start GC
         object at 0x104e8 (block at 0x104d0): 0 pointers, reachable
   block at 0x104f0 (object of size 8 at 0x10508): reachable
   block at 0x104d0 (object of size 8 at 0x104e8): reachable
-f(4) = 16
+main(4) = 16
 Start GC
   block at 0x104f0 (object of size 8 at 0x10508): unreachable
   block at 0x104d0 (object of size 8 at 0x104e8): unreachable
@@ -1043,7 +1043,7 @@ Start GC
         object at 0x105e8 (block at 0x105d0): 0 pointers, reachable
   block at 0x105f0 (object of size 8 at 0x10608): reachable
   block at 0x105d0 (object of size 8 at 0x105e8): reachable
-f(5) = 20
+main(5) = 20
 Start GC
   block at 0x105f0 (object of size 8 at 0x10608): unreachable
   block at 0x105d0 (object of size 8 at 0x105e8): unreachable
@@ -1217,7 +1217,7 @@ Start GC
         object at 0x106e8 (block at 0x106d0): 0 pointers, reachable
   block at 0x106f0 (object of size 8 at 0x10708): reachable
   block at 0x106d0 (object of size 8 at 0x106e8): reachable
-f(6) = 24
+main(6) = 24
 Start GC
   block at 0x106f0 (object of size 8 at 0x10708): unreachable
   block at 0x106d0 (object of size 8 at 0x106e8): unreachable
@@ -1391,7 +1391,7 @@ Start GC
         object at 0x107e8 (block at 0x107d0): 0 pointers, reachable
   block at 0x107f0 (object of size 8 at 0x10808): reachable
   block at 0x107d0 (object of size 8 at 0x107e8): reachable
-f(7) = 28
+main(7) = 28
 Start GC
   block at 0x107f0 (object of size 8 at 0x10808): unreachable
   block at 0x107d0 (object of size 8 at 0x107e8): unreachable
@@ -1565,7 +1565,7 @@ Start GC
         object at 0x108e8 (block at 0x108d0): 0 pointers, reachable
   block at 0x108f0 (object of size 8 at 0x10908): reachable
   block at 0x108d0 (object of size 8 at 0x108e8): reachable
-f(8) = 32
+main(8) = 32
 Start GC
   block at 0x108f0 (object of size 8 at 0x10908): unreachable
   block at 0x108d0 (object of size 8 at 0x108e8): unreachable
@@ -1739,7 +1739,7 @@ Start GC
         object at 0x109e8 (block at 0x109d0): 0 pointers, reachable
   block at 0x109f0 (object of size 8 at 0x10a08): reachable
   block at 0x109d0 (object of size 8 at 0x109e8): reachable
-f(9) = 36
+main(9) = 36
 
 Statistics:
 

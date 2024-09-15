@@ -13,3 +13,5 @@ done
 ./gen-html.sh
 
 cargo build --bin tmc --release
+
+./test-gc.sh

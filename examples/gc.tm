@@ -8,7 +8,7 @@ struct Rect {
     b: Point,
 }
 
-let f(n: number): number {
+let main(n: number): number {
     let origin = origin();
 
     let p1 = Point {
