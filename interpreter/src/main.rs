@@ -1,4 +1,4 @@
-#![allow(dead_code)] // fixme eventually remove
+#![allow(dead_code)] // todo:refactoring eventually remove
 extern crate core;
 
 use crate::cli::parse_args;
@@ -17,9 +17,9 @@ mod cli;
 mod interpreter;
 pub mod value;
 
-// todo things to check:
-//  let f() = 0:
-//  f = 1;
+// todo:check to check:
+//  - let f() = 0:
+//  - f = 1;
 
 fn main() {
     let cli = parse_args();

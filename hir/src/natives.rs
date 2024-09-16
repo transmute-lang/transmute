@@ -128,7 +128,7 @@ impl Natives {
             .chain(self.types.iter().map(|native| native.name.to_string()))
             .collect::<Vec<String>>();
 
-        // todo maybe do it somewhere else?
+        // todo:refactoring maybe do it somewhere else?
         names.push(Type::Void.to_string());
         names.push(Type::Boolean.to_string());
         names.push(Type::Number.to_string());
@@ -245,8 +245,8 @@ pub enum NativeFnKind {
     LeNumberNumber,
     EqBooleanBoolean,
     NeqBooleanBoolean,
-    PrintNumber, // fixme not actually a native, but part of some prelude
-    PrintBoolean, // fixme not actually a native, but part of some prelude
+    PrintNumber,  // todo:refactoring not actually a native, but part of some prelude
+    PrintBoolean, // todo:refactoring not actually a native, but part of some prelude
 }
 
 impl NativeFnKind {
@@ -281,7 +281,7 @@ pub struct NativeType {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub enum Type {
     /// The type is invalid
-    Invalid, // todo can we remove that from HIR? Or lower HIR to MIR to get rid of it...
+    Invalid,
 
     Boolean,
     Function(Vec<TypeId>, TypeId),

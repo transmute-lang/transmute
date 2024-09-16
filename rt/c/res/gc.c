@@ -19,8 +19,8 @@
 #include "llvm.h"
 #include "gc.h"
 
-// todo trigger actual GC only if some conditions hold
-// todo keep track of freed blocks to return them instead of a full cycle of free/malloc syscalls
+// todo:feature trigger actual GC only if some conditions hold
+// todo:feature keep track of freed blocks to return them instead of a full cycle of free/malloc syscalls
 
 #ifdef GC_TEST
 #define BOUNDARY             0xBB

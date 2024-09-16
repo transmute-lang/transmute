@@ -1,5 +1,6 @@
 mod mangling;
 
+use crate::mangling::mangle;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::memory_buffer::MemoryBuffer;
@@ -26,11 +27,10 @@ use transmute_mir::{
 };
 use transmute_mir::{LiteralKind, SymbolKind, Target as AssignmentTarget};
 use transmute_mir::{NativeFnKind, Variable};
-use crate::mangling::mangle;
 
-// todo add support for structs nested in functions (does not work because of resolver)
-// todo refactor struct layout so we dont need a `_glob` function. we can do it on teh fly, the
-//   first time a struct is instantiated
+// fixme add support for structs nested in functions (does not work because of resolver)
+// todo:refactoring refactor struct layout so we dont need a `_glob` function. we can do it on the
+//   fly, the first time a struct is instantiated
 
 pub struct LlvmIrGen {
     context: Context,
@@ -82,7 +82,7 @@ pub struct LlvmIr<'ctx> {
 }
 
 impl<'ctx> LlvmIr<'ctx> {
-    // todo error handling
+    // todo:ux error handling
     pub fn build_bin<P: Into<PathBuf>>(&self, crt: &[u8], path: P) -> Result<(), Diagnostics> {
         let path = path.into();
 
@@ -336,7 +336,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .filter(|f| matches!(f, BasicTypeEnum::PointerType(_)))
             .count();
 
-        // todo find a way to make it using structs instead of a flat array of i64
+        // todo:refactoring find a way to make it using structs instead of a flat array of i64
         let i64_array_type = self.i64_type.array_type(offsets_count as u32 * 2 + 1);
         let global = self.module.add_global(
             i64_array_type,
@@ -447,10 +447,17 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             Type::None => todo!(),
         };
 
-        let fn_name = mangle(mir,function.identifier.id, function.parameters.iter().map(|p|p.type_id).collect::<Vec<TypeId>>().as_slice() );
-        let f = self
-            .module
-            .add_function(&fn_name, fn_type, None);
+        let fn_name = mangle(
+            mir,
+            function.identifier.id,
+            function
+                .parameters
+                .iter()
+                .map(|p| p.type_id)
+                .collect::<Vec<TypeId>>()
+                .as_slice(),
+        );
+        let f = self.module.add_function(&fn_name, fn_type, None);
         f.set_gc("shadow-stack");
         self.functions.insert(function.symbol_id, f);
     }
@@ -514,7 +521,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
             if function.parameters[i].mutable {
                 self.gen_alloca(
-                    // todo this may be a pointer (case of structs passed as parameters)
                     param.get_type(),
                     &format!(
                         "{}#local#sym{}#",
@@ -585,7 +591,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 LiteralKind::Boolean(bool) => self.bool_type.const_int(*bool as u64, false).into(),
                 LiteralKind::Identifier(symbol_id) => self.gen_expression_ident(mir, *symbol_id),
                 LiteralKind::Number(number) => {
-                    // todo check what happens for negative numbers
+                    // todo:check check what happens for negative numbers
                     self.i64_type.const_int(*number as u64, false).into()
                 }
             },
@@ -768,7 +774,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 if_value.add_incoming(&[(&then_value, then_block), (&else_value, else_block)]);
                 Value::Struct(if_value.as_basic_value().into_pointer_value(), then_type)
             }
-            // todo check this, it seems strange: if one branch is "none" it means that it does not
+            // todo:check it seems strange: if one branch is "none" it means that it does not
             //  exist (cannot really hold for the then branch, but for the else it can. In that case
             //  the whole if expression cannot be of the other branch. At most, it can be an
             //  "option of" type
@@ -1015,8 +1021,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .collect::<Vec<BasicValueEnum>>();
 
         let gcroot = if must_create_gcroot {
-            // todo these gc root dont live for the whole of the frame, we can set them to null
-            //  when the value is assigned to something else
+            // todo:feature these gc root don't live for the whole of the frame, we can set them
+            //   to null when the value is assigned to something else
             Some(self.create_gcroot(&name, mir.symbols[mir.structs[struct_id].symbol_id].type_id))
         } else {
             None
@@ -1140,7 +1146,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             BasicTypeEnum::IntType(_) => llvm_type,
             BasicTypeEnum::PointerType(_) => unimplemented!("pointers are not supported"),
             BasicTypeEnum::StructType(_) => {
-                // todo small structs may be inlined
+                // todo:feature small structs may be inlined
                 self.ptr_type.into()
             }
             BasicTypeEnum::VectorType(_) => todo!(),
@@ -1792,18 +1798,17 @@ mod tests {
         "#
     );
 
-    // todo uncomment
-    // gen!(
-    //     struct_read_field_const_struct,
-    //     r#"
-    //     struct Struct { field: number }
-    //     let f(): number {
-    //         let s = Struct {
-    //             field: 1
-    //         }.field;
-    //     }
-    //     "#
-    // );
+    gen!(
+        struct_read_field_const_struct,
+        r#"
+        struct Struct { field: number }
+        let f() {
+            let s = Struct {
+                field: 1
+            }.field;
+        }
+        "#
+    );
 
     gen!(
         struct_write_field_const,

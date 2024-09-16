@@ -25,7 +25,7 @@ use transmute_hir::{
 };
 use transmute_hir::{ResolvedHir as Hir, ResolvedReturn as HirReturn};
 
-// todo move to MIR?
+// todo:refactoring move to MIR?
 pub use transmute_hir::natives::NativeFnKind;
 
 pub fn make_mir(hir: Hir) -> Result<Mir, Diagnostics> {
@@ -35,7 +35,7 @@ pub fn make_mir(hir: Hir) -> Result<Mir, Diagnostics> {
 struct Transformer {
     functions: VecMap<FunctionId, Function>,
     structs: VecMap<StructId, Struct>,
-    // todo only keep one of SymbolId or StructId?
+    // todo:refactoring only keep one of SymbolId or StructId?
     structs_map: VecMap<StmtId, (SymbolId, StructId)>,
     expressions: VecMap<ExprId, Expression>,
     statements: VecMap<StmtId, Statement>,
@@ -68,16 +68,12 @@ impl Transformer {
                 HirStatementKind::Struct(identifier, fields) => {
                     self.transform_struct(&mut hir, stmt_id, identifier, fields)
                 }
-                _ => {
-                    // todo it seems that roots is an useless concept outside of the interpreter
-                    //   flow. think about what to do about it
-                    diagnostics.push(Diagnostic::new(
-                        "only functions are allowed at top level",
-                        stmt.span,
-                        Level::Error,
-                        (file!(), line!()),
-                    ))
-                }
+                _ => diagnostics.push(Diagnostic::new(
+                    "only functions are allowed at top level",
+                    stmt.span,
+                    Level::Error,
+                    (file!(), line!()),
+                )),
             }
         }
 
@@ -134,8 +130,8 @@ impl Transformer {
                                 HirSymbolKind::NativeType(ident_id, t) => SymbolKind::NativeType(
                                     ident_id,
                                     match t {
-                                        // todo there is something to do about types (same code as
-                                        //   for the types field)
+                                        // todo:refactoring there is something to do about types
+                                        //   (same code as for the types field)
                                         HirType::Invalid => unreachable!(),
                                         HirType::Boolean => Type::Boolean,
                                         HirType::Function(params, ret_type) => {
@@ -734,7 +730,7 @@ impl Transformer {
             identifier: identifier.into(),
             type_id,
             expression: expr_id,
-            mutable: false, // todo add `mut` keyword?
+            mutable: false, // todo:feature add `mut` keyword?
         }
     }
 
@@ -877,7 +873,8 @@ pub enum ExpressionKind {
     FunctionCall(SymbolId, Vec<ExprId>),
     While(ExprId, ExprId),
     Block(Vec<StmtId>),
-    // todo only keep one of SymbolId or StructId? also, the field's SymbolId does not seem useful
+    // todo(refacotring) only keep one of SymbolId or StructId? also, the field's SymbolId does not
+    //   seem useful
     StructInstantiation(SymbolId, StructId, Vec<(SymbolId, ExprId)>),
 }
 
@@ -918,7 +915,7 @@ pub enum StatementKind {
 pub enum Type {
     Boolean,
     Function(Vec<TypeId>, TypeId),
-    // todo keep ony one?
+    // todo:refactoring keep ony one?
     Struct(SymbolId, StructId),
     Number,
 
@@ -941,15 +938,20 @@ pub struct Symbol {
 
 #[derive(Debug, PartialEq)]
 pub enum SymbolKind {
-    // todo StmtId does not really make sense as teh statements is not in the MIR anymore.
+    // todo:refactoring StmtId does not really make sense as the statements is not in the MIR
+    //   anymore.
     Let(StmtId),
-    // todo StmtId does not really make sense as teh statements is not in the MIR anymore.
+    // todo:refactoring StmtId does not really make sense as the statements is not in the MIR
+    //   anymore.
     LetFn(StmtId, Vec<TypeId>, TypeId),
-    // todo StmtId does not really make sense as teh statements is not in the MIR anymore
+    // todo:refactoring StmtId does not really make sense as the statements is not in the MIR
+    //   anymore
     Parameter(StmtId, usize),
-    // todo StmtId does not really make sense as teh statements is not in the MIR anymore
+    // todo:refactoring StmtId does not really make sense as the statements is not in the MIR
+    //   anymore
     Struct(StmtId),
-    // todo StmtId does not really make sense as teh statements is not in the MIR anymore
+    // todo:refactoring StmtId does not really make sense as the statements is not in the MIR
+    //   anymore
     Field(StmtId, IdentId, usize),
     NativeType(IdentId, Type),
     Native(IdentId, Vec<TypeId>, TypeId, NativeFnKind),

@@ -5,8 +5,6 @@ use std::fmt::{Debug, Display, Formatter};
 use std::str::Chars;
 use transmute_core::span::Span;
 
-// todo rewrite tests to use more snapshots
-
 #[derive(Debug)]
 pub struct Lexer<'s> {
     source: &'s str,
@@ -72,7 +70,7 @@ impl<'s> Lexer<'s> {
                 (TokenKind::Plus, span)
             }
             '-' => match chars.next().unwrap_or_default() {
-                '0'..='9' => self.number(), // todo is that really useful?
+                '0'..='9' => self.number(), // todo(qauestion) is that really useful?
                 _ => {
                     self.advance_column();
                     self.advance_consumed(span.len);
@@ -713,47 +711,60 @@ impl Display for Location {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use insta::assert_debug_snapshot;
 
     macro_rules! lexer_test_next {
-        ($name:ident, $src:expr => $expected:expr; loc: $line:expr,$column:expr; span: $start:expr,$len:expr) => {
+        ($name:ident, $src:expr) => {
             #[test]
             fn $name() {
                 let mut lexer = Lexer::new($src);
-                let expected = Token {
-                    kind: TokenKind::from($expected),
-                    span: Span::new($line, $column, $start, $len),
-                };
+                // let expected = Token {
+                //     kind: TokenKind::from($expected),
+                //     span: Span::new($line, $column, $start, $len),
+                // };
                 let actual = lexer.next();
-                assert_eq!(actual, expected)
+                assert_debug_snapshot!(actual);
+                // assert_eq!(actual, expected)
             }
         };
     }
 
-    lexer_test_next!(next_number, "42" => 42; loc: 1,1; span: 0,2);
-    lexer_test_next!(next_neg_number, "-42" => -42; loc: 1,1; span: 0,3);
-    lexer_test_next!(next_number_suffix, "42a" => 42; loc: 1,1; span: 0,2);
-    lexer_test_next!(next_plus, "+" => TokenKind::Plus; loc: 1,1; span: 0,1);
-    lexer_test_next!(next_minus, "-" => TokenKind::Minus; loc: 1,1; span: 0,1);
-    lexer_test_next!(next_star, "*" => TokenKind::Star; loc: 1,1; span: 0,1);
-    lexer_test_next!(next_slash, "/" => TokenKind::Slash; loc: 1,1; span: 0,1);
-    lexer_test_next!(next_equal, "=" => TokenKind::Equal; loc: 1,1; span: 0,1);
-    lexer_test_next!(next_equal_equal, "==" => TokenKind::EqualEqual; loc: 1,1; span: 0,2);
-    lexer_test_next!(next_exclam_equal, "!=" => TokenKind::ExclaimEqual; loc: 1,1; span: 0,2);
-    lexer_test_next!(next_greater, ">" => TokenKind::Greater; loc: 1,1; span: 0,1);
-    lexer_test_next!(next_smller, "<" => TokenKind::Smaller; loc: 1,1; span: 0,1);
-    lexer_test_next!(next_greater_equal, ">=" => TokenKind::GreaterEqual; loc: 1,1; span: 0,2);
-    lexer_test_next!(next_smaller_equal, "<=" => TokenKind::SmallerEqual; loc: 1,1; span: 0,2);
-    lexer_test_next!(next_open_parenthesis, "(" => TokenKind::OpenParenthesis; loc: 1,1; span: 0,1);
-    lexer_test_next!(next_close_parenthesis, ")" => TokenKind::CloseParenthesis; loc: 1,1; span: 0,1);
-    lexer_test_next!(next_comma, "," => TokenKind::Comma; loc: 1,1; span: 0,1);
-    lexer_test_next!(next_dot, "." => TokenKind::Dot; loc: 1,1; span: 0,1);
-    lexer_test_next!(next_open_curly_bracket, "{" => TokenKind::OpenCurlyBracket; loc: 1,1; span: 0,1);
-    lexer_test_next!(next_close_curly_bracket, "}" => TokenKind::CloseCurlyBracket; loc: 1,1; span: 0,1);
-    lexer_test_next!(semicolon, ";" => TokenKind::Semicolon; loc: 1,1; span: 0,1);
-    lexer_test_next!(colon, ":" => TokenKind::Colon; loc: 1,1; span: 0,1);
-    lexer_test_next!(bad, "\\" => TokenKind::Bad("\\".to_string()); loc: 1,1; span: 0,1);
-    lexer_test_next!(comment, "#!transmute\n+" => TokenKind::Plus; loc: 1,13; span: 12,1);
-    lexer_test_next!(eof, "" => TokenKind::Eof; loc: 1,1; span: 0,0);
+    lexer_test_next!(next_number, "42");
+    lexer_test_next!(next_neg_number, "-42");
+    lexer_test_next!(next_number_suffix, "42a");
+    lexer_test_next!(next_plus, "+");
+    lexer_test_next!(next_minus, "-");
+    lexer_test_next!(next_star, "*");
+    lexer_test_next!(next_slash, "/");
+    lexer_test_next!(next_equal, "=");
+    lexer_test_next!(next_equal_equal, "==");
+    lexer_test_next!(next_exclam_equal, "!=");
+    lexer_test_next!(next_greater, ">");
+    lexer_test_next!(next_smller, "<");
+    lexer_test_next!(next_greater_equal, ">=");
+    lexer_test_next!(next_smaller_equal, "<=");
+    lexer_test_next!(next_open_parenthesis, "(");
+    lexer_test_next!(next_close_parenthesis, ")");
+    lexer_test_next!(next_comma, ",");
+    lexer_test_next!(next_dot, ".");
+    lexer_test_next!(next_open_curly_bracket, "{");
+    lexer_test_next!(next_close_curly_bracket, "}");
+    lexer_test_next!(semicolon, ";");
+    lexer_test_next!(colon, ":");
+    lexer_test_next!(bad, "\\");
+    lexer_test_next!(comment, "#!transmute\n+");
+    lexer_test_next!(eof, "");
+    lexer_test_next!(identifier, "ident");
+    lexer_test_next!(identifier_space, " ident ");
+    lexer_test_next!(identifier_with_keyword_prefix, "let123");
+    lexer_test_next!(keyword_let, "let");
+    lexer_test_next!(keyword_ret, "ret");
+    lexer_test_next!(keyword_if, "if");
+    lexer_test_next!(keyword_else, "else");
+    lexer_test_next!(keyword_while, "while");
+    lexer_test_next!(keyword_true, "true");
+    lexer_test_next!(keyword_false, "false");
+    lexer_test_next!(keyword_struct, "struct");
 
     #[test]
     fn eof_after_tokens() {
@@ -774,60 +785,6 @@ mod tests {
             );
         }
     }
-
-    #[test]
-    fn next_identifier() {
-        let mut lexer = Lexer::new("ident");
-        let expected = Token {
-            kind: TokenKind::Identifier,
-            span: Span::new(1, 1, 0, 5),
-        };
-        let actual = lexer.next();
-        assert_eq!(actual, expected);
-
-        let mut lexer = Lexer::new(" ident ");
-        let expected = Token {
-            kind: TokenKind::Identifier,
-            span: Span::new(1, 2, 1, 5),
-        };
-        let actual = lexer.next();
-        assert_eq!(actual, expected);
-    }
-
-    #[test]
-    fn next_identifier_with_keyword_prefix() {
-        let mut lexer = Lexer::new("let123");
-        let expected = Token {
-            kind: TokenKind::Identifier,
-            span: Span::new(1, 1, 0, 6),
-        };
-        let actual = lexer.next();
-        assert_eq!(actual, expected);
-    }
-
-    macro_rules! lexer_test_keyword {
-        ($name:ident, $src:expr => $keyword:ident) => {
-            #[test]
-            fn $name() {
-                let mut lexer = Lexer::new($src);
-                let expected = Token {
-                    kind: TokenKind::$keyword,
-                    span: Span::new(1, 1, 0, $src.len()),
-                };
-                let actual = lexer.next();
-                assert_eq!(actual, expected);
-            }
-        };
-    }
-
-    lexer_test_keyword!(keyword_let, "let" => Let);
-    lexer_test_keyword!(keyword_ret, "ret" => Ret);
-    lexer_test_keyword!(keyword_if, "if" => If);
-    lexer_test_keyword!(keyword_else, "else" => Else);
-    lexer_test_keyword!(keyword_while, "while" => While);
-    lexer_test_keyword!(keyword_true, "true" => True);
-    lexer_test_keyword!(keyword_false, "false" => False);
-    lexer_test_keyword!(keyword_struct, "struct" => Struct);
 
     macro_rules! lexer_test_fn {
         ($name:ident, $f:ident, $src:expr => $expected:expr) => {

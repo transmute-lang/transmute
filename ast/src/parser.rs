@@ -14,8 +14,6 @@ use transmute_core::error::Diagnostics;
 use transmute_core::ids::{id, ExprId, IdentId, IdentRefId, StmtId};
 use transmute_core::span::Span;
 
-// todo rewrite tests to use more snapshots
-
 type Expression = crate::expression::Expression;
 type Statement = crate::statement::Statement;
 
@@ -214,6 +212,7 @@ impl<'s> Parser<'s> {
     pub fn parse(mut self) -> Result<Ast, Diagnostics> {
         let mut statements = Vec::new();
 
+        // fixme only allow functions and structs at top level
         while let Some(statement) = self.parse_statement() {
             statements.push(statement.id);
         }
@@ -404,7 +403,7 @@ impl<'s> Parser<'s> {
         let mut next = TokenKind::Identifier;
 
         loop {
-            // todo review parameters parsing (see struct)
+            // todo:refactoring review parameters parsing (see struct)
             let token = self.lexer.next();
             match &token.kind {
                 TokenKind::CloseParenthesis => {
@@ -1000,7 +999,7 @@ impl<'s> Parser<'s> {
         loop {
             match &self.lexer.peek().kind {
                 TokenKind::Dot => {
-                    // fixme should be part of operator with precedence parsing
+                    // todo:refactoring should be part of operator with precedence parsing
                     // expr . 'identifier
                     let _dot = self.lexer.next();
                     self.potential_tokens.clear();
@@ -1677,8 +1676,6 @@ impl<'s> Parser<'s> {
     /// Consumes tokens until one of supplied one is found. It does NOT consume it.
     /// Returns the amount of skipped tokens
     fn take_until_one_of(&mut self, mut token_kinds: Vec<TokenKind>) -> usize {
-        // todo handle case where we are in a ( or in a { block
-        //  i.e. if in a `(a + ...` we want to take all until parenthesis?
         token_kinds.push(TokenKind::Eof);
         self.take_while(|k| !token_kinds.contains(k))
     }

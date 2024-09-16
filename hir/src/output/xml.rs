@@ -30,7 +30,7 @@ impl<'a> XmlWriter<'a> {
     }
 
     pub fn serialize(mut self) -> String {
-        // todo review ref, ident-ref, type-ref, target-id in ast
+        // todo:ux review ref, ident-ref, type-ref, target-id in ast
 
         self.emit(XmlEvent::start_element("unit"));
 
@@ -671,9 +671,9 @@ mod tests {
     test_xml_write!(write_while, "while true { 42; }");
     test_xml_write!(write_struct, "struct S { a: number, b: number }");
     test_xml_write!(
-        // todo type should be resolved and we should have a type_ref_id to point to to the ref
+        // todo:ux type should be resolved and we should have a type_ref_id to point to to the ref
         //   type
-        // todo also have struct as return type
+        // todo:ux also have struct as return type
         write_struct_as_type,
         "struct S { a: number, b: number } let f(s: S) = { s; }"
     );

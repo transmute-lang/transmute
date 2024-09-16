@@ -6,12 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `,`, expected one of (9) identifier 1405, number 1406, `true` 1408, `false` 1409, `if` 1411, `while` 1412, `)` 1404, `(` 1410, `-` 1407",
+                message: "Unexpected `,`, expected one of (9) identifier 1404, number 1405, `true` 1407, `false` 1408, `if` 1410, `while` 1411, `)` 1403, `(` 1409, `-` 1406",
                 span: 1:6; [5, 6],
                 level: Error,
                 generated_at: (
                     "ast/src/parser.rs",
-                    1400,
+                    1399,
                 ),
             },
         ],

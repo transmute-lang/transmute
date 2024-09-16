@@ -63,7 +63,7 @@ impl PrettyPrint for Expression {
             }
             ExpressionKind::If(cond_id, true_id, false_id) => {
                 let indent = ctx.indent();
-                // todo improve else/if chains
+                // todo:ux improve else/if chains
                 write!(f, "if ")?;
                 ctx.pretty_print_expression(*cond_id, opts, f)?;
                 writeln!(f, " {{")?;

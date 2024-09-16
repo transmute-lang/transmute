@@ -14,8 +14,8 @@ use xml::{EmitterConfig, EventWriter};
 
 const HTML: &str = include_str!("html/template.html");
 
-// todo color unreachable expressions
-// todo should not use index but symbol IDs
+// todo:ux color unreachable expressions
+// todo:refactoring should not use index but symbol IDs
 
 pub struct HtmlWriter<'a> {
     hir: &'a ResolvedHir,
@@ -455,7 +455,7 @@ impl<'a> HtmlWriter<'a> {
     }
 
     fn emit_identifier(&mut self, stmt_id: StmtId, ident: IdentId, index: Option<usize>) {
-        // todo tooltip with type
+        // todo:ux tooltip with type
         self.emit(
             XmlEvent::start_element("span")
                 .attr("id", &Self::ident_id(stmt_id, index))

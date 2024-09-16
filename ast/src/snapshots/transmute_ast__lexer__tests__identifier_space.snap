@@ -1,0 +1,8 @@
+---
+source: ast/src/lexer.rs
+expression: actual
+---
+Token {
+    kind: Identifier,
+    span: 1:2; [1, 6],
+}

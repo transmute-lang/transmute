@@ -6,12 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected number(12), expected one of (13) `;` 1601, `.` 1040, `=` 1098, `*` 1209, `/` 1207, `-` 1203, `+` 1205, `==` 1191, `!=` 1193, `>` 1195, `>=` 1197, `<` 1199, `<=` 1201",
+                message: "Unexpected number(12), expected one of (13) `;` 1600, `.` 1039, `=` 1097, `*` 1208, `/` 1206, `-` 1202, `+` 1204, `==` 1190, `!=` 1192, `>` 1194, `>=` 1196, `<` 1198, `<=` 1200",
                 span: 1:31; [30, 32],
                 level: Error,
                 generated_at: (
                     "ast/src/parser.rs",
-                    1601,
+                    1600,
                 ),
             },
         ],

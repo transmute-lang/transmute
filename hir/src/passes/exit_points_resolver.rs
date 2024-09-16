@@ -743,7 +743,7 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
-    // todo rewrite other tests so they look like this one
+    // todo:refactoring rewrite other tests so they look like this one
     #[test]
     fn nested_function() {
         let ast = Parser::new(Lexer::new(

@@ -6,12 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `^`, expected one of (10) identifier 368, number 369, `true` 371, `false` 372, `let` 374, `ret` 375, `if` 376, `while` 377, `(` 373, `-` 370",
+                message: "Unexpected `^`, expected one of (10) identifier 367, number 368, `true` 370, `false` 371, `let` 373, `ret` 374, `if` 375, `while` 376, `(` 372, `-` 369",
                 span: 1:1; [0, 1],
                 level: Error,
                 generated_at: (
                     "ast/src/parser.rs",
-                    364,
+                    363,
                 ),
             },
         ],

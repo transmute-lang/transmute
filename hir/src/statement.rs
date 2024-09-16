@@ -80,7 +80,7 @@ where
     Struct(Identifier<B>, Vec<Field<T, B>>),
 }
 
-// todo remove: does not really make sense in HIR
+// todo:refactoring: does not really make sense in HIR
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RetMode {
     Explicit,

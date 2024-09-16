@@ -20,7 +20,7 @@ pub struct Resolver<'a> {
     unreachable: &'a Vec<ExprId>,
 }
 
-// todo add support for struct nested in function (examples/.inner_struct.tm)
+// fixme add support for struct nested in function (examples/.inner_struct.tm)
 
 type Function<T, B> = (Identifier<B>, Vec<Parameter<T, B>>, Return<T>);
 
@@ -372,13 +372,12 @@ impl<'a> Resolver<'a> {
         //
         // chooses the 2nd function as this is the one for which the type matches.
 
-        // todo some things to check:
-        //  - assign to a let fn
+        // todo:check assign to a let fn
 
         let (rhs_type_id, mut state) = self.visit_expression(state, expr);
 
         let lhs_type_id = state
-            // todo: to search for method, we need to extract the parameter types from the
+            // todo:feature to search for method, we need to extract the parameter types from the
             //  expr_type, if it corresponds to a function type. We don't have this
             //  information yet and thus we cannot assign to a variable holding a function
             //  (yet).
@@ -443,10 +442,10 @@ impl<'a> Resolver<'a> {
         let if_type_id = match (true_branch_type, false_branch_type) {
             (Type::Invalid, _) | (_, Type::Invalid) => state.invalid_type_id,
             (Type::None, Type::None) => true_branch_type_id,
-            // fixme the following case is not well tested + implement proper error handing
+            // todo:test the following case is not well tested + implement proper error handing
             (Type::None, t) | (t, Type::None) => state.find_type_id_by_type(t),
             (_, Type::Void) | (Type::Void, _) => {
-                // todo: option<t>
+                // todo:feature ifs with only one branch should return option<t>
                 state.void_type_id
             }
             (tt, ft) if tt == ft => true_branch_type_id,
@@ -470,10 +469,10 @@ impl<'a> Resolver<'a> {
             LiteralKind::Boolean(_) => state.boolean_type_id,
             LiteralKind::Number(_) => state.number_type_id,
             LiteralKind::Identifier(ident_ref) => {
-                // todo things to check:
-                //  - behaviour when target is let fn
-                //  - behaviour when target is a native
-                // todo resolve function ref, see comment in resolve_assignment
+                // todo:check to check:
+                //   - behaviour when target is let fn
+                //   - behaviour when target is a native
+                // todo:feature resolve function ref, see comment in visit_assignment
                 state
                     .resolve_ident_ref(ident_ref, None)
                     .map(|s| state.resolution.symbols[s].type_id)
@@ -514,7 +513,7 @@ impl<'a> Resolver<'a> {
                 SymbolKind::Native(_, _, ret_type, _) => *ret_type,
                 SymbolKind::NotFound => state.invalid_type_id,
                 _ => {
-                    // todo better error (diagnostic)
+                    // todo:ux better error (i.e. produce a diagnostic)
                     panic!("the resolved symbol was not a function")
                 }
             })
@@ -648,7 +647,7 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    // todo think about passing the Statement directly
+    // todo:refactoring think about passing the Statement directly
     fn visit_statements(&self, mut state: State, stmts: &[StmtId]) -> (TypeId, State) {
         let mut ret_type = state.void_type_id;
 
@@ -887,7 +886,7 @@ impl<'a> Resolver<'a> {
                     && (ret_type_id != state.void_type_id || explicit)
                 {
                     let expr_type = state.find_type_by_type_id(expr_type_id);
-                    // fixme the span is not accurate (in both cases))
+                    // fixme the span is not accurate (in both cases)
                     let span = if let Some(exit_expr_id) = exit_expr_id {
                         state.resolution.expressions[exit_expr_id].span.clone()
                     } else {
@@ -982,7 +981,7 @@ impl<'a> Resolver<'a> {
             .struct_symbols
             .get(&stmt_id)
             .cloned()
-            // todo same handling as for visit_function: if not found, return Err()
+            // todo:refactoring same handling as for visit_function: if not found, return Err()
             //   or, return not_found_symbol_id in visit_function. This requires that the find_*()
             //   and resolve_*() function are reworked...
             // it may happen that the struct is not found in case of duplicate def.
@@ -1045,9 +1044,9 @@ impl State {
                 Some(s)
             }
             None => {
-                // todo nice to have: propose known alternatives
+                // todo:feature propose known alternatives
                 if let Some(param_types) = param_types {
-                    // todo move that to caller side
+                    // todo:refactoring move that to caller side
                     self.diagnostics.report_err(
                         format!(
                             "No function '{}' found for parameters of types ({})",
@@ -1063,7 +1062,7 @@ impl State {
                         (file!(), line!()),
                     );
                 } else {
-                    // todo move that to caller side
+                    // todo:refactoring move that to caller side
                     self.diagnostics.report_err(
                         format!(
                             "Identifier '{}' not found",
@@ -1636,7 +1635,6 @@ mod tests {
         "Expected type boolean, got number",
         Span::new(1, 24, 23, 7)
     );
-    // todo this should rather be of type option<number>
     test_type_error!(
         if_no_false_branch_to_val,
         "let n = 0; n = if true { 42; };",
@@ -1961,7 +1959,7 @@ mod tests {
         "No function 'n' found for parameters of types ()",
         Span::new(1, 13, 12, 1)
     );
-    // fixme un-comment the following tests
+    // fixme un-comment the following test
     // test_type_ok!(
     //     unreachable_statement1,
     //     r#"
@@ -1977,6 +1975,7 @@ mod tests {
     //     }
     //     "#
     // );
+    // fixme un-comment the following test
     // test_type_ok!(
     //     unreachable_statement1,
     //     r#"
@@ -2003,7 +2002,7 @@ mod tests {
         }
         "#
     );
-    // fixme un-comment the following test
+    // todo:feature resolve function ref
     // test_type_ok!(
     //     assign_from_native,
     //     "let n = add;"
@@ -2062,7 +2061,7 @@ mod tests {
         Span::new(1, 30, 29, 3)
     );
 
-    // fixme uncomment
+    // fixme un-comment the following test
     // test_type_error!(
     //     return_value_from_void,
     //     "let f(n: number): number { n; }",

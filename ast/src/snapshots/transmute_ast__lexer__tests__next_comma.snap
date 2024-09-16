@@ -1,0 +1,8 @@
+---
+source: ast/src/lexer.rs
+expression: actual
+---
+Token {
+    kind: Comma,
+    span: 1:1; [0, 1],
+}

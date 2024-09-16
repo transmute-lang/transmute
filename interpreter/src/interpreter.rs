@@ -11,7 +11,7 @@ use transmute_hir::ResolvedHir;
 pub struct Interpreter<'a> {
     hir: &'a ResolvedHir,
     /// Maps an identifier in the current frame to the value's index in the heap
-    // todo IdentId should be SymbolId
+    // todo:refactoring IdentId should be SymbolId
     stack: Vec<HashMap<IdentId, Ref>>,
     heap: Vec<Value>,
 }
@@ -248,7 +248,7 @@ impl<'a> Interpreter<'a> {
 
                 let env = env
                     .into_iter()
-                    // fixme should be a ref?
+                    // todo:refactoring should be a ref?
                     .map(|val| self.heap[val.value_ref.expect("param has value").0].clone())
                     .collect::<Vec<Value>>();
 

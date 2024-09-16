@@ -19,14 +19,13 @@ impl Symbol {
 
 #[derive(Debug, PartialEq)]
 pub enum SymbolKind {
-    // fixme can we remove it? at least in mir
     NotFound,
     Let(IdentId, StmtId),
     LetFn(IdentId, StmtId, Vec<TypeId>, TypeId),
-    // todo could StmtId be replaced with SymbolId (the symbol that defines the function)
+    // todo:refactoring could StmtId be replaced with SymbolId (the symbol that defines the function)
     Parameter(IdentId, StmtId, usize),
     Struct(IdentId, StmtId),
-    // todo could StmtId be replaced with SymbolId (the symbol that defines the struct)
+    // todo:refactoring could StmtId be replaced with SymbolId (the symbol that defines the struct)
     Field(IdentId, StmtId, usize),
     NativeType(IdentId, Type),
     Native(IdentId, Vec<TypeId>, TypeId, NativeFnKind),
