@@ -101,6 +101,8 @@ impl<'ctx> LlvmIr<'ctx> {
             .write_to_file(&crt_module, FileType::Object, &crt_object_path)
             .unwrap();
 
+        // todo:ux parameterize cc
+        // todo:ux check linked libraries
         match Command::new("cc")
             .arg(&tm_object_path)
             .arg(&crt_object_path)
