@@ -42,7 +42,7 @@ pub fn compile(src: &str, test_dir: &TestDir) -> Command {
     match compile_str(src, &bin_path, &options) {
         Ok(_) => {
             let mut command = Command::new(bin_path);
-            command.env("GC_TEST_VERBOSE", "2");
+            command.env("GC_LOG_LEVEL", "2");
             command.env("GC_TEST_POOL_SIZE", "4098");
             command
         }

@@ -10,3 +10,4 @@ cc = "1.1.13"
 
 [features]
 gc-test = []
+gc-logs = []

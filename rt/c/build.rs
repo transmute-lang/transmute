@@ -55,6 +55,12 @@ fn main() {
     .unwrap();
 }
 
+#[cfg(feature = "gc-logs")]
+const GC_LOGS: &str = "-D GC_LOGS";
+
+#[cfg(not(feature = "gc-logs"))]
+const GC_LOGS: &str = "";
+
 #[cfg(feature = "gc-test")]
 const GC_TEST: &str = "-D GC_TEST";
 
@@ -65,6 +71,7 @@ fn compile_to_llvm_ir(src: &Path, dst: &Path) {
     let output = Command::new("clang")
         .arg("-S")
         .arg(GC_TEST)
+        .arg(GC_LOGS)
         .arg("-emit-llvm")
         .arg("-o")
         .arg(dst.as_os_str())
