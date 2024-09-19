@@ -1003,11 +1003,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         fields: &[(SymbolId, ExprId)],
         must_create_gcroot: bool,
     ) -> Value<'ctx> {
-        let name = format!(
-            "heap#struct#{}#id{}#",
-            &mir.identifiers[mir.structs[struct_id].identifier.id], struct_id
-        );
-
         let struct_type = *self.struct_types.get(&struct_id).unwrap();
         let field_values = fields
             .iter()
@@ -1019,6 +1014,11 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 },
             )
             .collect::<Vec<BasicValueEnum>>();
+
+        let name = format!(
+            "heap#struct#{}#id{}#",
+            &mir.identifiers[mir.structs[struct_id].identifier.id], struct_id
+        );
 
         let gcroot = if must_create_gcroot {
             // todo:feature these gc root don't live for the whole of the frame, we can set them
@@ -1067,7 +1067,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let builder = self.context.create_builder();
         let first_basic_bloc = self.current_function().get_first_basic_block().unwrap();
 
-        match first_basic_bloc.get_last_instruction() {
+        match first_basic_bloc.get_first_instruction() {
             None => {
                 builder.position_at_end(first_basic_bloc);
             }
@@ -1386,7 +1386,9 @@ impl LlvmImpl for NativeFnKind {
 mod tests {
     use crate::Codegen;
     use inkwell::context::Context;
-    use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetMachine};
+    use inkwell::targets::{
+        CodeModel, InitializationConfig, RelocMode, Target, TargetTriple,
+    };
     use inkwell::OptimizationLevel;
     use insta::assert_snapshot;
     use transmute_ast::lexer::Lexer;
@@ -1406,7 +1408,7 @@ mod tests {
 
                     Target::initialize_all(&InitializationConfig::default());
 
-                    let target_triple = TargetMachine::get_default_triple();
+                    let target_triple = TargetTriple::create("x86_64-unknown-linux-gnu");
                     let target = Target::from_triple(&target_triple).unwrap();
                     let target_machine = target
                         .create_target_machine(
@@ -1436,7 +1438,7 @@ mod tests {
 
                     Target::initialize_all(&InitializationConfig::default());
 
-                    let target_triple = TargetMachine::get_default_triple();
+                    let target_triple = TargetTriple::create("x86_64-unknown-linux-gnu");
                     let target = Target::from_triple(&target_triple).unwrap();
                     let target_machine = target
                         .create_target_machine(

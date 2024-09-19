@@ -109,9 +109,9 @@ allocated block of size 32 at 0x10090, returning object of size 8 at 0x100a8(+24
 Start GC
   block at 0x10090 (object of size 8 at 0x100a8): unreachable
   frame 0 (3 roots):
-    root 0: skipped (nil)
-    root 1:
+    root 0:
       object at 0x100a8 (block at 0x10090): 0 pointers, unreachable
+    root 1: skipped (nil)
     root 2: skipped (nil)
   block at 0x10090 (object of size 8 at 0x100a8): reachable
 allocated block of size 32 at 0x100b0, returning object of size 8 at 0x100c8(+24)
@@ -120,11 +120,11 @@ Start GC
   block at 0x10090 (object of size 8 at 0x100a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x100a8 (block at 0x10090): 0 pointers, unreachable
+    root 1:
       object at 0x100c8 (block at 0x100b0): 1 pointers, unreachable
         0. 0x100c8(+0) -> 0x100a8
-        object at 0x100a8 (block at 0x10090): 0 pointers, unreachable
-    root 1:
-      object at 0x100a8 (block at 0x10090): 0 pointers, reachable
+        object at 0x100a8 (block at 0x10090): 0 pointers, reachable
     root 2: skipped (nil)
   block at 0x100b0 (object of size 8 at 0x100c8): reachable
   block at 0x10090 (object of size 8 at 0x100a8): reachable
@@ -133,11 +133,11 @@ Start GC
   block at 0x10090 (object of size 8 at 0x100a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x100a8 (block at 0x10090): 0 pointers, unreachable
+    root 1:
       object at 0x100c8 (block at 0x100b0): 1 pointers, unreachable
         0. 0x100c8(+0) -> 0x100a8
-        object at 0x100a8 (block at 0x10090): 0 pointers, unreachable
-    root 1:
-      object at 0x100a8 (block at 0x10090): 0 pointers, reachable
+        object at 0x100a8 (block at 0x10090): 0 pointers, reachable
     root 2:
       object at 0x100a8 (block at 0x10090): 0 pointers, reachable
   block at 0x100b0 (object of size 8 at 0x100c8): reachable
@@ -283,9 +283,9 @@ allocated block of size 32 at 0x10190, returning object of size 8 at 0x101a8(+24
 Start GC
   block at 0x10190 (object of size 8 at 0x101a8): unreachable
   frame 0 (3 roots):
-    root 0: skipped (nil)
-    root 1:
+    root 0:
       object at 0x101a8 (block at 0x10190): 0 pointers, unreachable
+    root 1: skipped (nil)
     root 2: skipped (nil)
   block at 0x10190 (object of size 8 at 0x101a8): reachable
 allocated block of size 32 at 0x101b0, returning object of size 8 at 0x101c8(+24)
@@ -294,11 +294,11 @@ Start GC
   block at 0x10190 (object of size 8 at 0x101a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x101a8 (block at 0x10190): 0 pointers, unreachable
+    root 1:
       object at 0x101c8 (block at 0x101b0): 1 pointers, unreachable
         0. 0x101c8(+0) -> 0x101a8
-        object at 0x101a8 (block at 0x10190): 0 pointers, unreachable
-    root 1:
-      object at 0x101a8 (block at 0x10190): 0 pointers, reachable
+        object at 0x101a8 (block at 0x10190): 0 pointers, reachable
     root 2: skipped (nil)
   block at 0x101b0 (object of size 8 at 0x101c8): reachable
   block at 0x10190 (object of size 8 at 0x101a8): reachable
@@ -307,11 +307,11 @@ Start GC
   block at 0x10190 (object of size 8 at 0x101a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x101a8 (block at 0x10190): 0 pointers, unreachable
+    root 1:
       object at 0x101c8 (block at 0x101b0): 1 pointers, unreachable
         0. 0x101c8(+0) -> 0x101a8
-        object at 0x101a8 (block at 0x10190): 0 pointers, unreachable
-    root 1:
-      object at 0x101a8 (block at 0x10190): 0 pointers, reachable
+        object at 0x101a8 (block at 0x10190): 0 pointers, reachable
     root 2:
       object at 0x101a8 (block at 0x10190): 0 pointers, reachable
   block at 0x101b0 (object of size 8 at 0x101c8): reachable
@@ -457,9 +457,9 @@ allocated block of size 32 at 0x10290, returning object of size 8 at 0x102a8(+24
 Start GC
   block at 0x10290 (object of size 8 at 0x102a8): unreachable
   frame 0 (3 roots):
-    root 0: skipped (nil)
-    root 1:
+    root 0:
       object at 0x102a8 (block at 0x10290): 0 pointers, unreachable
+    root 1: skipped (nil)
     root 2: skipped (nil)
   block at 0x10290 (object of size 8 at 0x102a8): reachable
 allocated block of size 32 at 0x102b0, returning object of size 8 at 0x102c8(+24)
@@ -468,11 +468,11 @@ Start GC
   block at 0x10290 (object of size 8 at 0x102a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x102a8 (block at 0x10290): 0 pointers, unreachable
+    root 1:
       object at 0x102c8 (block at 0x102b0): 1 pointers, unreachable
         0. 0x102c8(+0) -> 0x102a8
-        object at 0x102a8 (block at 0x10290): 0 pointers, unreachable
-    root 1:
-      object at 0x102a8 (block at 0x10290): 0 pointers, reachable
+        object at 0x102a8 (block at 0x10290): 0 pointers, reachable
     root 2: skipped (nil)
   block at 0x102b0 (object of size 8 at 0x102c8): reachable
   block at 0x10290 (object of size 8 at 0x102a8): reachable
@@ -481,11 +481,11 @@ Start GC
   block at 0x10290 (object of size 8 at 0x102a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x102a8 (block at 0x10290): 0 pointers, unreachable
+    root 1:
       object at 0x102c8 (block at 0x102b0): 1 pointers, unreachable
         0. 0x102c8(+0) -> 0x102a8
-        object at 0x102a8 (block at 0x10290): 0 pointers, unreachable
-    root 1:
-      object at 0x102a8 (block at 0x10290): 0 pointers, reachable
+        object at 0x102a8 (block at 0x10290): 0 pointers, reachable
     root 2:
       object at 0x102a8 (block at 0x10290): 0 pointers, reachable
   block at 0x102b0 (object of size 8 at 0x102c8): reachable
@@ -631,9 +631,9 @@ allocated block of size 32 at 0x10390, returning object of size 8 at 0x103a8(+24
 Start GC
   block at 0x10390 (object of size 8 at 0x103a8): unreachable
   frame 0 (3 roots):
-    root 0: skipped (nil)
-    root 1:
+    root 0:
       object at 0x103a8 (block at 0x10390): 0 pointers, unreachable
+    root 1: skipped (nil)
     root 2: skipped (nil)
   block at 0x10390 (object of size 8 at 0x103a8): reachable
 allocated block of size 32 at 0x103b0, returning object of size 8 at 0x103c8(+24)
@@ -642,11 +642,11 @@ Start GC
   block at 0x10390 (object of size 8 at 0x103a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x103a8 (block at 0x10390): 0 pointers, unreachable
+    root 1:
       object at 0x103c8 (block at 0x103b0): 1 pointers, unreachable
         0. 0x103c8(+0) -> 0x103a8
-        object at 0x103a8 (block at 0x10390): 0 pointers, unreachable
-    root 1:
-      object at 0x103a8 (block at 0x10390): 0 pointers, reachable
+        object at 0x103a8 (block at 0x10390): 0 pointers, reachable
     root 2: skipped (nil)
   block at 0x103b0 (object of size 8 at 0x103c8): reachable
   block at 0x10390 (object of size 8 at 0x103a8): reachable
@@ -655,11 +655,11 @@ Start GC
   block at 0x10390 (object of size 8 at 0x103a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x103a8 (block at 0x10390): 0 pointers, unreachable
+    root 1:
       object at 0x103c8 (block at 0x103b0): 1 pointers, unreachable
         0. 0x103c8(+0) -> 0x103a8
-        object at 0x103a8 (block at 0x10390): 0 pointers, unreachable
-    root 1:
-      object at 0x103a8 (block at 0x10390): 0 pointers, reachable
+        object at 0x103a8 (block at 0x10390): 0 pointers, reachable
     root 2:
       object at 0x103a8 (block at 0x10390): 0 pointers, reachable
   block at 0x103b0 (object of size 8 at 0x103c8): reachable
@@ -805,9 +805,9 @@ allocated block of size 32 at 0x10490, returning object of size 8 at 0x104a8(+24
 Start GC
   block at 0x10490 (object of size 8 at 0x104a8): unreachable
   frame 0 (3 roots):
-    root 0: skipped (nil)
-    root 1:
+    root 0:
       object at 0x104a8 (block at 0x10490): 0 pointers, unreachable
+    root 1: skipped (nil)
     root 2: skipped (nil)
   block at 0x10490 (object of size 8 at 0x104a8): reachable
 allocated block of size 32 at 0x104b0, returning object of size 8 at 0x104c8(+24)
@@ -816,11 +816,11 @@ Start GC
   block at 0x10490 (object of size 8 at 0x104a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x104a8 (block at 0x10490): 0 pointers, unreachable
+    root 1:
       object at 0x104c8 (block at 0x104b0): 1 pointers, unreachable
         0. 0x104c8(+0) -> 0x104a8
-        object at 0x104a8 (block at 0x10490): 0 pointers, unreachable
-    root 1:
-      object at 0x104a8 (block at 0x10490): 0 pointers, reachable
+        object at 0x104a8 (block at 0x10490): 0 pointers, reachable
     root 2: skipped (nil)
   block at 0x104b0 (object of size 8 at 0x104c8): reachable
   block at 0x10490 (object of size 8 at 0x104a8): reachable
@@ -829,11 +829,11 @@ Start GC
   block at 0x10490 (object of size 8 at 0x104a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x104a8 (block at 0x10490): 0 pointers, unreachable
+    root 1:
       object at 0x104c8 (block at 0x104b0): 1 pointers, unreachable
         0. 0x104c8(+0) -> 0x104a8
-        object at 0x104a8 (block at 0x10490): 0 pointers, unreachable
-    root 1:
-      object at 0x104a8 (block at 0x10490): 0 pointers, reachable
+        object at 0x104a8 (block at 0x10490): 0 pointers, reachable
     root 2:
       object at 0x104a8 (block at 0x10490): 0 pointers, reachable
   block at 0x104b0 (object of size 8 at 0x104c8): reachable
@@ -979,9 +979,9 @@ allocated block of size 32 at 0x10590, returning object of size 8 at 0x105a8(+24
 Start GC
   block at 0x10590 (object of size 8 at 0x105a8): unreachable
   frame 0 (3 roots):
-    root 0: skipped (nil)
-    root 1:
+    root 0:
       object at 0x105a8 (block at 0x10590): 0 pointers, unreachable
+    root 1: skipped (nil)
     root 2: skipped (nil)
   block at 0x10590 (object of size 8 at 0x105a8): reachable
 allocated block of size 32 at 0x105b0, returning object of size 8 at 0x105c8(+24)
@@ -990,11 +990,11 @@ Start GC
   block at 0x10590 (object of size 8 at 0x105a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x105a8 (block at 0x10590): 0 pointers, unreachable
+    root 1:
       object at 0x105c8 (block at 0x105b0): 1 pointers, unreachable
         0. 0x105c8(+0) -> 0x105a8
-        object at 0x105a8 (block at 0x10590): 0 pointers, unreachable
-    root 1:
-      object at 0x105a8 (block at 0x10590): 0 pointers, reachable
+        object at 0x105a8 (block at 0x10590): 0 pointers, reachable
     root 2: skipped (nil)
   block at 0x105b0 (object of size 8 at 0x105c8): reachable
   block at 0x10590 (object of size 8 at 0x105a8): reachable
@@ -1003,11 +1003,11 @@ Start GC
   block at 0x10590 (object of size 8 at 0x105a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x105a8 (block at 0x10590): 0 pointers, unreachable
+    root 1:
       object at 0x105c8 (block at 0x105b0): 1 pointers, unreachable
         0. 0x105c8(+0) -> 0x105a8
-        object at 0x105a8 (block at 0x10590): 0 pointers, unreachable
-    root 1:
-      object at 0x105a8 (block at 0x10590): 0 pointers, reachable
+        object at 0x105a8 (block at 0x10590): 0 pointers, reachable
     root 2:
       object at 0x105a8 (block at 0x10590): 0 pointers, reachable
   block at 0x105b0 (object of size 8 at 0x105c8): reachable
@@ -1153,9 +1153,9 @@ allocated block of size 32 at 0x10690, returning object of size 8 at 0x106a8(+24
 Start GC
   block at 0x10690 (object of size 8 at 0x106a8): unreachable
   frame 0 (3 roots):
-    root 0: skipped (nil)
-    root 1:
+    root 0:
       object at 0x106a8 (block at 0x10690): 0 pointers, unreachable
+    root 1: skipped (nil)
     root 2: skipped (nil)
   block at 0x10690 (object of size 8 at 0x106a8): reachable
 allocated block of size 32 at 0x106b0, returning object of size 8 at 0x106c8(+24)
@@ -1164,11 +1164,11 @@ Start GC
   block at 0x10690 (object of size 8 at 0x106a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x106a8 (block at 0x10690): 0 pointers, unreachable
+    root 1:
       object at 0x106c8 (block at 0x106b0): 1 pointers, unreachable
         0. 0x106c8(+0) -> 0x106a8
-        object at 0x106a8 (block at 0x10690): 0 pointers, unreachable
-    root 1:
-      object at 0x106a8 (block at 0x10690): 0 pointers, reachable
+        object at 0x106a8 (block at 0x10690): 0 pointers, reachable
     root 2: skipped (nil)
   block at 0x106b0 (object of size 8 at 0x106c8): reachable
   block at 0x10690 (object of size 8 at 0x106a8): reachable
@@ -1177,11 +1177,11 @@ Start GC
   block at 0x10690 (object of size 8 at 0x106a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x106a8 (block at 0x10690): 0 pointers, unreachable
+    root 1:
       object at 0x106c8 (block at 0x106b0): 1 pointers, unreachable
         0. 0x106c8(+0) -> 0x106a8
-        object at 0x106a8 (block at 0x10690): 0 pointers, unreachable
-    root 1:
-      object at 0x106a8 (block at 0x10690): 0 pointers, reachable
+        object at 0x106a8 (block at 0x10690): 0 pointers, reachable
     root 2:
       object at 0x106a8 (block at 0x10690): 0 pointers, reachable
   block at 0x106b0 (object of size 8 at 0x106c8): reachable
@@ -1327,9 +1327,9 @@ allocated block of size 32 at 0x10790, returning object of size 8 at 0x107a8(+24
 Start GC
   block at 0x10790 (object of size 8 at 0x107a8): unreachable
   frame 0 (3 roots):
-    root 0: skipped (nil)
-    root 1:
+    root 0:
       object at 0x107a8 (block at 0x10790): 0 pointers, unreachable
+    root 1: skipped (nil)
     root 2: skipped (nil)
   block at 0x10790 (object of size 8 at 0x107a8): reachable
 allocated block of size 32 at 0x107b0, returning object of size 8 at 0x107c8(+24)
@@ -1338,11 +1338,11 @@ Start GC
   block at 0x10790 (object of size 8 at 0x107a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x107a8 (block at 0x10790): 0 pointers, unreachable
+    root 1:
       object at 0x107c8 (block at 0x107b0): 1 pointers, unreachable
         0. 0x107c8(+0) -> 0x107a8
-        object at 0x107a8 (block at 0x10790): 0 pointers, unreachable
-    root 1:
-      object at 0x107a8 (block at 0x10790): 0 pointers, reachable
+        object at 0x107a8 (block at 0x10790): 0 pointers, reachable
     root 2: skipped (nil)
   block at 0x107b0 (object of size 8 at 0x107c8): reachable
   block at 0x10790 (object of size 8 at 0x107a8): reachable
@@ -1351,11 +1351,11 @@ Start GC
   block at 0x10790 (object of size 8 at 0x107a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x107a8 (block at 0x10790): 0 pointers, unreachable
+    root 1:
       object at 0x107c8 (block at 0x107b0): 1 pointers, unreachable
         0. 0x107c8(+0) -> 0x107a8
-        object at 0x107a8 (block at 0x10790): 0 pointers, unreachable
-    root 1:
-      object at 0x107a8 (block at 0x10790): 0 pointers, reachable
+        object at 0x107a8 (block at 0x10790): 0 pointers, reachable
     root 2:
       object at 0x107a8 (block at 0x10790): 0 pointers, reachable
   block at 0x107b0 (object of size 8 at 0x107c8): reachable
@@ -1501,9 +1501,9 @@ allocated block of size 32 at 0x10890, returning object of size 8 at 0x108a8(+24
 Start GC
   block at 0x10890 (object of size 8 at 0x108a8): unreachable
   frame 0 (3 roots):
-    root 0: skipped (nil)
-    root 1:
+    root 0:
       object at 0x108a8 (block at 0x10890): 0 pointers, unreachable
+    root 1: skipped (nil)
     root 2: skipped (nil)
   block at 0x10890 (object of size 8 at 0x108a8): reachable
 allocated block of size 32 at 0x108b0, returning object of size 8 at 0x108c8(+24)
@@ -1512,11 +1512,11 @@ Start GC
   block at 0x10890 (object of size 8 at 0x108a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x108a8 (block at 0x10890): 0 pointers, unreachable
+    root 1:
       object at 0x108c8 (block at 0x108b0): 1 pointers, unreachable
         0. 0x108c8(+0) -> 0x108a8
-        object at 0x108a8 (block at 0x10890): 0 pointers, unreachable
-    root 1:
-      object at 0x108a8 (block at 0x10890): 0 pointers, reachable
+        object at 0x108a8 (block at 0x10890): 0 pointers, reachable
     root 2: skipped (nil)
   block at 0x108b0 (object of size 8 at 0x108c8): reachable
   block at 0x10890 (object of size 8 at 0x108a8): reachable
@@ -1525,11 +1525,11 @@ Start GC
   block at 0x10890 (object of size 8 at 0x108a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x108a8 (block at 0x10890): 0 pointers, unreachable
+    root 1:
       object at 0x108c8 (block at 0x108b0): 1 pointers, unreachable
         0. 0x108c8(+0) -> 0x108a8
-        object at 0x108a8 (block at 0x10890): 0 pointers, unreachable
-    root 1:
-      object at 0x108a8 (block at 0x10890): 0 pointers, reachable
+        object at 0x108a8 (block at 0x10890): 0 pointers, reachable
     root 2:
       object at 0x108a8 (block at 0x10890): 0 pointers, reachable
   block at 0x108b0 (object of size 8 at 0x108c8): reachable
@@ -1675,9 +1675,9 @@ allocated block of size 32 at 0x10990, returning object of size 8 at 0x109a8(+24
 Start GC
   block at 0x10990 (object of size 8 at 0x109a8): unreachable
   frame 0 (3 roots):
-    root 0: skipped (nil)
-    root 1:
+    root 0:
       object at 0x109a8 (block at 0x10990): 0 pointers, unreachable
+    root 1: skipped (nil)
     root 2: skipped (nil)
   block at 0x10990 (object of size 8 at 0x109a8): reachable
 allocated block of size 32 at 0x109b0, returning object of size 8 at 0x109c8(+24)
@@ -1686,11 +1686,11 @@ Start GC
   block at 0x10990 (object of size 8 at 0x109a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x109a8 (block at 0x10990): 0 pointers, unreachable
+    root 1:
       object at 0x109c8 (block at 0x109b0): 1 pointers, unreachable
         0. 0x109c8(+0) -> 0x109a8
-        object at 0x109a8 (block at 0x10990): 0 pointers, unreachable
-    root 1:
-      object at 0x109a8 (block at 0x10990): 0 pointers, reachable
+        object at 0x109a8 (block at 0x10990): 0 pointers, reachable
     root 2: skipped (nil)
   block at 0x109b0 (object of size 8 at 0x109c8): reachable
   block at 0x10990 (object of size 8 at 0x109a8): reachable
@@ -1699,11 +1699,11 @@ Start GC
   block at 0x10990 (object of size 8 at 0x109a8): unreachable
   frame 0 (3 roots):
     root 0:
+      object at 0x109a8 (block at 0x10990): 0 pointers, unreachable
+    root 1:
       object at 0x109c8 (block at 0x109b0): 1 pointers, unreachable
         0. 0x109c8(+0) -> 0x109a8
-        object at 0x109a8 (block at 0x10990): 0 pointers, unreachable
-    root 1:
-      object at 0x109a8 (block at 0x10990): 0 pointers, reachable
+        object at 0x109a8 (block at 0x10990): 0 pointers, reachable
     root 2:
       object at 0x109a8 (block at 0x10990): 0 pointers, reachable
   block at 0x109b0 (object of size 8 at 0x109c8): reachable
