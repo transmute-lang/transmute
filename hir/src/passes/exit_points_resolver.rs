@@ -235,7 +235,7 @@ pub enum ExitPoint {
 impl ExitPoint {
     fn expr_id(&self) -> Option<ExprId> {
         match self {
-            ExitPoint::Explicit(e) | ExitPoint::Implicit(e) => e.clone(),
+            ExitPoint::Explicit(e) | ExitPoint::Implicit(e) => *e,
         }
     }
 }

@@ -437,6 +437,7 @@ impl Transformer {
         (mutated_symbol_ids, variables)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn transform_if(
         &mut self,
         hir: &mut Hir,

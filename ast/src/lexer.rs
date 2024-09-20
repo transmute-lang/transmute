@@ -43,6 +43,7 @@ impl<'s> Lexer<'s> {
         }
     }
 
+    #[allow(clippy::should_implement_trait)] // todo:refactor maybe rename to next_token()?
     pub fn next(&mut self) -> Token {
         self.skip_whitespaces_and_comments();
 
@@ -70,7 +71,7 @@ impl<'s> Lexer<'s> {
                 (TokenKind::Plus, span)
             }
             '-' => match chars.next().unwrap_or_default() {
-                '0'..='9' => self.number(), // todo(qauestion) is that really useful?
+                '0'..='9' => self.number(), // todo:question is that really useful?
                 _ => {
                     self.advance_column();
                     self.advance_consumed(span.len);
@@ -405,6 +406,7 @@ impl<'s> PeekableLexer<'s> {
         }
     }
 
+    #[allow(clippy::should_implement_trait)] // todo:refactor maybe rename to next_token()?
     pub fn next(&mut self) -> Token {
         self.peeked.pop_front().unwrap_or_else(|| self.lexer.next())
     }

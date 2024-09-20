@@ -462,7 +462,7 @@ impl Resolver {
         let true_branch_type = self.find_type_by_type_id(true_branch_type_id);
         let false_branch_type = self.find_type_by_type_id(false_branch_type_id);
 
-        let if_type_id = match (true_branch_type, false_branch_type) {
+        match (true_branch_type, false_branch_type) {
             (Type::Invalid, _) | (_, Type::Invalid) => self.invalid_type_id,
             (Type::None, Type::None) => true_branch_type_id,
             // todo:test the following case is not well tested + implement proper error handing
@@ -481,9 +481,7 @@ impl Resolver {
                 );
                 self.invalid_type_id
             }
-        };
-
-        if_type_id
+        }
     }
 
     fn resolve_function_call(
@@ -507,7 +505,7 @@ impl Resolver {
             return self.invalid_type_id;
         }
 
-        let ret_type_id = self
+        self
             .resolve_ident_ref(hir, ident_ref, Some(&param_types))
             .map(|s| match &self.symbols[s].kind {
                 SymbolKind::LetFn(_, _, _, ret_type) => *ret_type,
@@ -518,9 +516,7 @@ impl Resolver {
                     panic!("the resolved symbol was not a function")
                 }
             })
-            .unwrap_or(self.invalid_type_id);
-
-        ret_type_id
+            .unwrap_or(self.invalid_type_id)
     }
 
     fn resolve_while(&mut self, hir: &mut UnresolvedHir, cond: ExprId, expr: ExprId) -> TypeId {

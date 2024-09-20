@@ -20,7 +20,7 @@ fn main() {
             .to_string();
 
         let src = res_dir.join(&c_file_name);
-        if !src.extension().unwrap().eq("c".into()) {
+        if !src.extension().unwrap().eq("c") {
             continue;
         }
 
