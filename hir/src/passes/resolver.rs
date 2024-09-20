@@ -1,170 +1,197 @@
+#![allow(unused)] // todo:refactor remove
+
 use crate::bound::{Bound, Unbound};
+use crate::exit_points::ExitPoints;
 use crate::expression::{Expression, ExpressionKind, Target};
 use crate::identifier::Identifier;
 use crate::identifier_ref::IdentifierRef;
-use crate::literal::LiteralKind;
 use crate::natives::{Native, Natives, Type};
 use crate::passes::exit_points_resolver::ExitPoint;
 use crate::statement::{Field, Parameter, Return, Statement, StatementKind};
 use crate::symbol::{Symbol, SymbolKind};
 use crate::typed::{Typed, Untyped};
+use crate::{Hir, literal, ResolvedExpression, ResolvedHir, ResolvedIdentifierRef, ResolvedStatement, UnresolvedHir};
 use bimap::BiHashMap;
 use std::collections::HashMap;
+use std::ops::Deref;
+use transmute_ast::literal::Literal;
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use transmute_core::span::Span;
 use transmute_core::vec_map::VecMap;
+use crate::literal::LiteralKind;
 
-pub struct Resolver<'a> {
-    exit_points: &'a HashMap<ExprId, Vec<ExitPoint>>,
-    unreachable: &'a Vec<ExprId>,
+type Function<T, B> = (Identifier<B>, Vec<Parameter<T, B>>, Return<T>);
+
+// todo:refactoring this would deserve a reordering of functions, and that each `resolve_` method
+//   does the actual resolution instead of giving to its caller the information required to resolve
+
+pub struct Resolver {
+    // out
+    identifiers: BiHashMap<IdentId, String>,
+    identifier_refs: VecMap<IdentRefId, ResolvedIdentifierRef>,
+    expressions: VecMap<ExprId, ResolvedExpression>,
+    statements: VecMap<StmtId, ResolvedStatement>,
+    types: BiHashMap<TypeId, Type>,
+    symbols: VecMap<SymbolId, Symbol>,
+    diagnostics: Diagnostics,
+
+    // work
+    scope_stack: Vec<Scope>,
+    /// maps functions (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
+    function_symbols: HashMap<StmtId, SymbolId>,
+    /// maps structs (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
+    struct_symbols: HashMap<StmtId, SymbolId>,
+    stmt_symbols: HashMap<(StmtId, usize), SymbolId>,
+
+    // cache
+    // todo:refactor instead of having default values, we might want to create a cache and pass it
+    //   along... or just drop the cache thing and use HashMaps..
+    invalid_type_id: TypeId,
+    void_type_id: TypeId,
+    none_type_id: TypeId,
+    boolean_type_id: TypeId,
+    number_type_id: TypeId,
+    not_found_symbol_id: SymbolId,
 }
 
 // fixme add support for struct nested in function (examples/.inner_struct.tm)
 
-type Function<T, B> = (Identifier<B>, Vec<Parameter<T, B>>, Return<T>);
-
-impl<'a> Resolver<'a> {
-    pub fn new(
-        exit_points: &'a HashMap<ExprId, Vec<ExitPoint>>,
-        unreachable: &'a Vec<ExprId>,
-    ) -> Self {
+impl Resolver {
+    pub fn new() -> Self {
         Self {
-            exit_points,
-            unreachable,
+            identifiers: Default::default(),
+            identifier_refs: Default::default(),
+            expressions: Default::default(),
+            statements: Default::default(),
+            types: Default::default(),
+            symbols: Default::default(),
+
+            diagnostics: Default::default(),
+
+            scope_stack: Default::default(),
+            function_symbols: Default::default(),
+            struct_symbols: Default::default(),
+            stmt_symbols: Default::default(),
+
+            invalid_type_id: Default::default(),
+            void_type_id: Default::default(),
+            none_type_id: Default::default(),
+            boolean_type_id: Default::default(),
+            number_type_id: Default::default(),
+            not_found_symbol_id: Default::default(),
         }
     }
 
     pub fn resolve(
-        &self,
-        identifiers: VecMap<IdentId, String>,
-        identifier_refs: VecMap<IdentRefId, IdentifierRef<Unbound>>,
-        expressions: VecMap<ExprId, Expression<Untyped>>,
-        statements: VecMap<StmtId, Statement<Untyped, Unbound>>,
-        root: Vec<StmtId>,
+        mut self,
         natives: Natives,
-    ) -> Result<Output, Diagnostics> {
-        let mut types = BiHashMap::default();
-
-        let invalid_type_id = TypeId::from(types.len());
-        types.insert(Type::Invalid, invalid_type_id);
-
-        let void_type_id = TypeId::from(types.len());
-        types.insert(Type::Void, void_type_id);
-
-        let none_type_id = TypeId::from(types.len());
-        types.insert(Type::None, none_type_id);
-
-        let boolean_type_id = TypeId::from(types.len());
-        types.insert(Type::Boolean, boolean_type_id);
-
-        let number_type_id = TypeId::from(types.len());
-        types.insert(Type::Number, number_type_id);
-
-        let mut symbols = VecMap::<SymbolId, Symbol>::default();
-        let not_found_symbol_id = SymbolId::from(symbols.len());
-        symbols.push(Symbol {
-            id: not_found_symbol_id,
-            kind: SymbolKind::NotFound,
-            type_id: invalid_type_id,
-        });
-
-        // just append all native names, if they are missing
-        let mut identifiers = identifiers.into_reversed::<HashMap<_, _>>();
+        mut hir: UnresolvedHir,
+    ) -> Result<ResolvedHir, Diagnostics> {
+        // init. identifiers
+        // todo:refactoring find a way to skip cloning
+        self.identifiers =
+            BiHashMap::from_iter(hir.identifiers.iter().map(|(i, s)| (i, s.clone())));
         for native_name in natives.names().into_iter() {
-            if !identifiers.contains_key(&native_name) {
-                identifiers.insert(native_name, IdentId::from(identifiers.len()));
+            // just append all native names, if they are missing
+            if !self.identifiers.contains_right(&native_name) {
+                self.identifiers
+                    .insert(IdentId::from(self.identifiers.len()), native_name);
             }
         }
 
-        let ident_ref_count = identifier_refs.len();
-        let expr_count = expressions.len();
-        let stmt_count = statements.len();
+        // init. identifier_refs
+        self.identifier_refs.resize(hir.identifier_refs.len());
 
-        let state = State {
-            identifier_refs,
-            expressions,
-            statements,
-            scope_stack: vec![Scope::new()],
-            function_symbols: Default::default(),
-            struct_symbols: Default::default(),
-            diagnostics: Default::default(),
-            resolution: Resolution {
-                identifiers: BiHashMap::from_iter(
-                    identifiers.into_iter().map(|(str, ident)| (ident, str)),
-                ),
-                identifier_refs: VecMap::with_reserved_capacity(ident_ref_count),
-                symbols,
-                stmt_symbols: Default::default(),
-                types,
-                expressions: VecMap::with_reserved_capacity(expr_count),
-                statements: VecMap::with_reserved_capacity(stmt_count),
-                root,
-            },
-            invalid_type_id,
-            void_type_id,
-            none_type_id,
-            boolean_type_id,
-            number_type_id,
-            not_found_symbol_id,
-        };
+        // init. expressions
+        self.expressions.resize(hir.expressions.len());
 
-        let mut state = state;
+        // init. statements
+        self.statements.resize(hir.statements.len());
+
+        // init. types
+        debug_assert!(hir.types.is_empty());
+        self.invalid_type_id = TypeId::from(self.types.len());
+        self.types.insert(self.invalid_type_id, Type::Invalid);
+
+        self.void_type_id = TypeId::from(self.types.len());
+        self.types.insert(self.void_type_id, Type::Void);
+
+        self.none_type_id = TypeId::from(self.types.len());
+        self.types.insert(self.none_type_id, Type::None);
+
+        self.boolean_type_id = TypeId::from(self.types.len());
+        self.types.insert(self.boolean_type_id, Type::Boolean);
+
+        self.number_type_id = TypeId::from(self.types.len());
+        self.types.insert(self.number_type_id, Type::Number);
+
+        // init. symbols
+        debug_assert!(hir.symbols.is_empty());
+        let not_found_symbol_id = self.symbols.next_index();
+        self.symbols.push(Symbol {
+            id: not_found_symbol_id,
+            kind: SymbolKind::NotFound,
+            type_id: self.invalid_type_id,
+        });
+
+        // init. scope_stack
+        self.push_scope();
+
+        let ident_ref_count = hir.identifier_refs.len();
+        let expr_count = hir.expressions.len();
+        let stmt_count = hir.statements.len();
+
         for native in natives.into_iter() {
             match native {
                 Native::Fn(native) => {
-                    let ident = state.find_ident_id_by_str(native.name);
+                    let ident = self.find_ident_id_by_str(native.name);
                     let parameters = native
                         .kind
                         .signature()
                         .0
                         .iter()
-                        .map(|t| state.find_type_id_by_type(t))
+                        .map(|t| self.find_type_id_by_type(t))
                         .collect::<Vec<TypeId>>();
-                    let ret_type = state.find_type_id_by_type(&native.kind.signature().1);
-                    let fn_type_id =
-                        state.insert_type(Type::Function(parameters.clone(), ret_type));
+                    let ret_type = self.find_type_id_by_type(&native.kind.signature().1);
+                    let fn_type_id = self.insert_type(Type::Function(parameters.clone(), ret_type));
 
-                    state.insert_symbol(
+                    self.insert_symbol(
                         ident,
                         SymbolKind::Native(ident, parameters, ret_type, native.kind),
                         fn_type_id,
                     );
                 }
                 Native::Type(native) => {
-                    let id = state.find_ident_id_by_str(native.name);
-                    state.insert_symbol(
+                    let id = self.find_ident_id_by_str(native.name);
+                    self.insert_symbol(
                         id,
                         SymbolKind::NativeType(id, native.ty.clone()),
-                        state.none_type_id,
+                        self.none_type_id,
                     );
                 }
             }
         }
 
-        let root = state.resolution.root.clone();
-        state.insert_structs(&root);
-        state.insert_functions(&root);
-        // state.resolution.unreachable.dedup();
-        let (_, state) = self.visit_statements(state, &root);
+        let root = hir.roots.clone();
+        self.insert_structs(&mut hir, &root);
+        self.insert_functions(&mut hir, &root);
 
-        if !state.diagnostics.is_empty() {
-            return Err(state.diagnostics);
+        self.resolve_statements(&mut hir, &root);
+
+        if !self.diagnostics.is_empty() {
+            return Err(self.diagnostics);
         }
 
-        let result = Output {
-            identifiers: VecMap::from_iter(state.resolution.identifiers),
-            identifier_refs: state.resolution.identifier_refs,
-            symbols: state.resolution.symbols,
-            types: state
-                .resolution
-                .types
-                .into_iter()
-                .map(|(a, b)| (b, a))
-                .collect::<VecMap<_, _>>(),
-            expressions: state.resolution.expressions,
-            statements: state.resolution.statements,
-            root,
+        let result = ResolvedHir {
+            identifiers: VecMap::from_iter(self.identifiers),
+            identifier_refs: self.identifier_refs,
+            expressions: self.expressions,
+            statements: self.statements,
+            roots: hir.roots,
+            symbols: self.symbols,
+            types: VecMap::from_iter(self.types),
+            exit_points: hir.exit_points,
         };
 
         debug_assert!(
@@ -176,11 +203,11 @@ impl<'a> Resolver<'a> {
         debug_assert!(!result.symbols.has_holes(), "symbols has holes");
         debug_assert!(!result.types.has_holes(), "types has holes");
         debug_assert!(
-            state.identifier_refs.is_empty(),
+            hir.identifier_refs.is_empty(),
             "identifier_refs is not empty"
         );
-        debug_assert!(state.expressions.is_empty(), "expressions is not empty");
-        debug_assert!(state.statements.is_empty(), "statements is not empty");
+        debug_assert!(hir.expressions.is_empty(), "expressions is not empty");
+        debug_assert!(hir.statements.is_empty(), "statements is not empty");
         debug_assert!(
             ident_ref_count <= result.identifier_refs.len(),
             "ident_ref count does not match"
@@ -197,71 +224,82 @@ impl<'a> Resolver<'a> {
         Ok(result)
     }
 
-    fn visit_expression(&self, mut state: State, expr_id: ExprId) -> (TypeId, State) {
-        if let Some(expr) = state.resolution.expressions.get(expr_id) {
-            return (expr.resolved_type_id(), state);
+    fn resolve_expression(&mut self, hir: &mut UnresolvedHir, expr_id: ExprId) -> TypeId {
+        if let Some(expr) = self.expressions.get(expr_id) {
+            return expr.resolved_type_id();
         }
 
-        let expr = state
+        let expr = hir
             .expressions
             .remove(expr_id)
             .expect("expr is not resolved");
 
-        if self.unreachable.contains(&expr_id) {
-            state
-                .resolution
-                .expressions
-                .insert(expr.id, expr.typed(state.void_type_id));
-            return (state.void_type_id, state);
+        if hir.exit_points.unreachable.contains(&expr_id) {
+            self.expressions
+                .insert(expr.id, expr.typed(self.void_type_id));
+            return self.void_type_id;
         }
 
-        let (type_id, mut state) = match &expr.kind {
+        let type_id = match &expr.kind {
             ExpressionKind::Assignment(Target::Direct(ident_ref), expr) => {
-                self.visit_assignment(state, *ident_ref, *expr)
+                self.resolve_assignment(hir, *ident_ref, *expr)
             }
             ExpressionKind::Assignment(Target::Indirect(lhs_expr_id), rhs_expr_id) => {
-                let (lhs_type_id, new_state) = self.visit_expression(state, *lhs_expr_id);
-                let (rhs_type_id, new_state) = self.visit_expression(new_state, *rhs_expr_id);
-                state = new_state;
+                let lhs_type_id = self.resolve_expression(hir, *lhs_expr_id);
+                let rhs_type_id = self.resolve_expression(hir, *rhs_expr_id);
 
-                if lhs_type_id == state.invalid_type_id {
-                    return (lhs_type_id, state);
+                if lhs_type_id == self.invalid_type_id {
+                    return lhs_type_id;
                 }
-                if rhs_type_id == state.invalid_type_id {
-                    return (rhs_type_id, state);
+                if rhs_type_id == self.invalid_type_id {
+                    return rhs_type_id;
                 }
 
                 if lhs_type_id != rhs_type_id {
-                    state.diagnostics.report_err(
+                    self.diagnostics.report_err(
                         format!(
                             "RSH expected to be of type {}, got {}",
-                            state.find_type_by_type_id(lhs_type_id),
-                            state.find_type_by_type_id(rhs_type_id)
+                            self.find_type_by_type_id(lhs_type_id),
+                            self.find_type_by_type_id(rhs_type_id)
                         ),
-                        state.resolution.expressions[*rhs_expr_id].span.clone(),
+                        self.expressions[*rhs_expr_id].span.clone(),
                         (file!(), line!()),
                     );
-                    return (state.invalid_type_id, state);
+                    return self.invalid_type_id;
                 }
 
-                (rhs_type_id, state)
+                rhs_type_id
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
-                self.visit_if(state, *cond, *true_branch, *false_branch)
+                self.resolve_if(hir, *cond, *true_branch, *false_branch)
             }
-            ExpressionKind::Literal(literal) => self.visit_literal(state, literal.kind.clone()),
+            ExpressionKind::Literal(literal) => {
+                match literal.kind {
+                    LiteralKind::Boolean(_) => self.boolean_type_id,
+                    LiteralKind::Number(_) => self.number_type_id,
+                    LiteralKind::Identifier(ident_ref) => {
+                        // todo:check to check:
+                        //   - behaviour when target is let fn
+                        //   - behaviour when target is a native
+                        // todo:feature resolve function ref, see comment in visit_assignment
+                        self.resolve_ident_ref(hir, ident_ref, None)
+                            .map(|s| self.symbols[s].type_id)
+                            // fixme must issue a diagnostic when the identifier is not found
+                            .unwrap_or(self.invalid_type_id)
+                    }
+                }
+            }
             ExpressionKind::Access(expr_id, ident_ref_id) => {
-                let ident_ref = state
+                let ident_ref = hir
                     .identifier_refs
                     .remove(*ident_ref_id)
                     .expect("ident_ref exists");
 
-                let (expr_type_id, new_state) = self.visit_expression(state, *expr_id);
-                state = new_state;
+                let expr_type_id = self.resolve_expression(hir, *expr_id);
 
-                let ty = state.find_type_by_type_id(expr_type_id);
+                let ty = self.find_type_by_type_id(expr_type_id);
                 let field_type_id = match ty {
-                    Type::Struct(stmt_id) => match &state.resolution.statements[*stmt_id].kind {
+                    Type::Struct(stmt_id) => match &self.statements[*stmt_id].kind {
                         StatementKind::Struct(ident, fields) => {
                             match fields
                                 .iter()
@@ -269,90 +307,72 @@ impl<'a> Resolver<'a> {
                                 .find(|(_, field)| field.identifier.id == ident_ref.ident.id)
                             {
                                 Some((index, field)) => {
-                                    let field_symbol_id = state
+                                    let field_symbol_id = self
                                         .find_symbol_id_for_struct_field(*stmt_id, index)
                                         .expect("field exists");
                                     let ident_ref = ident_ref.resolved(field_symbol_id);
-                                    state
-                                        .resolution
-                                        .identifier_refs
-                                        .insert(ident_ref.id, ident_ref);
+                                    self.identifier_refs.insert(ident_ref.id, ident_ref);
                                     field.resolved_type_id()
                                 }
                                 None => {
-                                    state.diagnostics.report_err(
+                                    self.diagnostics.report_err(
                                         format!(
                                             "No field '{}' found in struct {}",
-                                            state
-                                                .resolution
-                                                .identifiers
+                                            self.identifiers
                                                 .get_by_left(&ident_ref.ident.id)
                                                 .unwrap(),
-                                            state
-                                                .resolution
-                                                .identifiers
-                                                .get_by_left(&ident.id)
-                                                .unwrap()
+                                            self.identifiers.get_by_left(&ident.id).unwrap()
                                         ),
                                         ident_ref.ident.span.clone(),
                                         (file!(), line!()),
                                     );
-                                    let ident_ref = ident_ref.resolved(state.not_found_symbol_id);
-                                    state
-                                        .resolution
-                                        .identifier_refs
-                                        .insert(ident_ref.id, ident_ref);
-                                    state.invalid_type_id
+                                    let ident_ref = ident_ref.resolved(self.not_found_symbol_id);
+                                    self.identifier_refs.insert(ident_ref.id, ident_ref);
+                                    self.invalid_type_id
                                 }
                             }
                         }
                         _ => panic!("struct expected"),
                     },
                     _ => {
-                        state.diagnostics.report_err(
+                        self.diagnostics.report_err(
                             format!("Expected struct type, got {}", ty),
-                            state.resolution.expressions[*expr_id].span.clone(),
+                            self.expressions[*expr_id].span.clone(),
                             (file!(), line!()),
                         );
 
                         // this it not always true (the left hand side can be a symbol), but it not
                         // being a struct field anyway, considering we did not find any symbol is
                         // (probably) fine...
-                        let ident_ref = ident_ref.resolved(state.not_found_symbol_id);
-                        state
-                            .resolution
-                            .identifier_refs
-                            .insert(ident_ref.id, ident_ref);
-                        state.invalid_type_id
+                        let ident_ref = ident_ref.resolved(self.not_found_symbol_id);
+                        self.identifier_refs.insert(ident_ref.id, ident_ref);
+                        self.invalid_type_id
                     }
                 };
 
-                (field_type_id, state)
+                field_type_id
             }
             ExpressionKind::FunctionCall(ident_ref, params) => {
-                self.visit_function_call(state, *ident_ref, params.clone().as_slice())
+                self.resolve_function_call(hir, *ident_ref, params.clone().as_slice())
             }
-            ExpressionKind::While(cond, expr) => self.visit_while(state, *cond, *expr),
-            ExpressionKind::Block(stmts) => self.visit_block(state, &stmts.clone()),
+            ExpressionKind::While(cond, expr) => self.resolve_while(hir, *cond, *expr),
+            ExpressionKind::Block(stmts) => self.resolve_block(hir, &stmts.clone()),
             ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
-                self.visit_struct_instantiation(state, *ident_ref_id, fields, &expr.span)
+                self.resolve_struct_instantiation(hir, *ident_ref_id, fields, &expr.span)
             }
         };
 
-        state
-            .resolution
-            .expressions
-            .insert(expr_id, expr.typed(type_id));
+        self.expressions.insert(expr_id, expr.typed(type_id));
 
-        (type_id, state)
+        type_id
     }
 
-    fn visit_assignment(
-        &self,
-        state: State,
+    fn resolve_assignment(
+        &mut self,
+        hir: &mut UnresolvedHir,
         ident_ref: IdentRefId,
         expr: ExprId,
-    ) -> (TypeId, State) {
+    ) -> TypeId {
         // If we have the following:
         //   let add(a: number, b: number): number = {}
         //   let add(a: boolean, b: boolean): boolean = {}
@@ -371,206 +391,183 @@ impl<'a> Resolver<'a> {
         //   let add_bool: |boolean, boolean|: boolean = add;
         //
         // chooses the 2nd function as this is the one for which the type matches.
-
+        //
         // todo:check assign to a let fn
 
-        let (rhs_type_id, mut state) = self.visit_expression(state, expr);
+        let rhs_type_id = self.resolve_expression(hir, expr);
 
-        let lhs_type_id = state
+        let lhs_type_id = self
             // todo:feature to search for method, we need to extract the parameter types from the
             //  expr_type, if it corresponds to a function type. We don't have this
             //  information yet and thus we cannot assign to a variable holding a function
             //  (yet).
-            .resolve_ident_ref(ident_ref, None)
-            .map(|s| state.resolution.symbols[s].type_id)
-            .unwrap_or(state.invalid_type_id);
+            .resolve_ident_ref(hir, ident_ref, None)
+            .map(|s| self.symbols[s].type_id)
+            .unwrap_or(self.invalid_type_id);
 
-        if lhs_type_id == state.invalid_type_id {
-            return (lhs_type_id, state);
+        if lhs_type_id == self.invalid_type_id {
+            return lhs_type_id;
         }
 
-        if rhs_type_id == state.invalid_type_id {
-            return (rhs_type_id, state);
+        if rhs_type_id == self.invalid_type_id {
+            return rhs_type_id;
         }
 
         if rhs_type_id != lhs_type_id {
-            state.diagnostics.report_err(
+            self.diagnostics.report_err(
                 format!(
                     "RSH expected to be of type {}, got {}",
-                    state.find_type_by_type_id(lhs_type_id),
-                    state.find_type_by_type_id(rhs_type_id)
+                    self.find_type_by_type_id(lhs_type_id),
+                    self.find_type_by_type_id(rhs_type_id)
                 ),
-                state.resolution.expressions[expr].span.clone(),
+                self.expressions[expr].span.clone(),
                 (file!(), line!()),
             );
-            return (state.invalid_type_id, state);
+            return self.invalid_type_id;
         }
 
-        (rhs_type_id, state)
+        rhs_type_id
     }
 
-    fn visit_if(
-        &self,
-        state: State,
+    fn resolve_if(
+        &mut self,
+        hir: &mut UnresolvedHir,
         cond: ExprId,
         true_branch: ExprId,
         false_branch: Option<ExprId>,
-    ) -> (TypeId, State) {
-        let (cond_type, mut state) = self.visit_expression(state, cond);
+    ) -> TypeId {
+        let cond_type = self.resolve_expression(hir, cond);
 
-        if cond_type != state.boolean_type_id && cond_type != state.invalid_type_id {
-            state.diagnostics.report_err(
+        if cond_type != self.boolean_type_id && cond_type != self.invalid_type_id {
+            self.diagnostics.report_err(
                 format!(
                     "Condition expected to be of type {}, got {}",
                     Type::Boolean,
-                    state.find_type_by_type_id(cond_type)
+                    self.find_type_by_type_id(cond_type)
                 ),
-                state.resolution.expressions[cond].span.clone(),
+                self.expressions[cond].span.clone(),
                 (file!(), line!()),
             );
         }
 
-        let (true_branch_type_id, state) = self.visit_expression(state, true_branch);
-        let (false_branch_type_id, mut state) = match false_branch {
-            None => (state.void_type_id, state),
-            Some(e) => self.visit_expression(state, e),
+        let true_branch_type_id = self.resolve_expression(hir, true_branch);
+        let false_branch_type_id = match false_branch {
+            None => self.void_type_id,
+            Some(e) => self.resolve_expression(hir, e),
         };
 
-        let true_branch_type = state.find_type_by_type_id(true_branch_type_id);
-        let false_branch_type = state.find_type_by_type_id(false_branch_type_id);
+        let true_branch_type = self.find_type_by_type_id(true_branch_type_id);
+        let false_branch_type = self.find_type_by_type_id(false_branch_type_id);
 
         let if_type_id = match (true_branch_type, false_branch_type) {
-            (Type::Invalid, _) | (_, Type::Invalid) => state.invalid_type_id,
+            (Type::Invalid, _) | (_, Type::Invalid) => self.invalid_type_id,
             (Type::None, Type::None) => true_branch_type_id,
             // todo:test the following case is not well tested + implement proper error handing
-            (Type::None, t) | (t, Type::None) => state.find_type_id_by_type(t),
+            (Type::None, t) | (t, Type::None) => self.find_type_id_by_type(t),
             (_, Type::Void) | (Type::Void, _) => {
                 // todo:feature ifs with only one branch should return option<t>
-                state.void_type_id
+                self.void_type_id
             }
             (tt, ft) if tt == ft => true_branch_type_id,
             (tt, ft) => {
-                let false_branch =
-                    &state.resolution.expressions[false_branch.expect("false branch exists")];
-                state.diagnostics.report_err(
+                let false_branch = &self.expressions[false_branch.expect("false branch exists")];
+                self.diagnostics.report_err(
                     format!("Expected type {tt}, got {ft}"),
                     false_branch.span.clone(),
                     (file!(), line!()),
                 );
-                state.invalid_type_id
+                self.invalid_type_id
             }
         };
 
-        (if_type_id, state)
+        if_type_id
     }
 
-    fn visit_literal(&self, mut state: State, literal: LiteralKind) -> (TypeId, State) {
-        let literal_type_id = match literal {
-            LiteralKind::Boolean(_) => state.boolean_type_id,
-            LiteralKind::Number(_) => state.number_type_id,
-            LiteralKind::Identifier(ident_ref) => {
-                // todo:check to check:
-                //   - behaviour when target is let fn
-                //   - behaviour when target is a native
-                // todo:feature resolve function ref, see comment in visit_assignment
-                state
-                    .resolve_ident_ref(ident_ref, None)
-                    .map(|s| state.resolution.symbols[s].type_id)
-                    // fixme must issue a diagnostic when the identifier is not found
-                    .unwrap_or(state.invalid_type_id)
-            }
-        };
-
-        (literal_type_id, state)
-    }
-
-    fn visit_function_call(
-        &self,
-        state: State,
+    fn resolve_function_call(
+        &mut self,
+        hir: &mut UnresolvedHir,
         ident_ref: IdentRefId,
         params: &[ExprId],
-    ) -> (TypeId, State) {
-        let invalid_type_id = state.invalid_type_id;
+    ) -> TypeId {
+        let invalid_type_id = self.invalid_type_id;
 
-        let mut state = state;
         let mut param_types = Vec::with_capacity(params.len());
         for param in params {
-            let (param_type, new_state) = self.visit_expression(state, *param);
-            state = new_state;
+            let param_type = self.resolve_expression(hir, *param);
+
             if param_type != invalid_type_id {
                 param_types.push(param_type)
             }
         }
 
         if param_types.len() != params.len() {
-            return (state.invalid_type_id, state);
+            return self.invalid_type_id;
         }
 
-        let ret_type_id = state
-            .resolve_ident_ref(ident_ref, Some(&param_types))
-            .map(|s| match &state.resolution.symbols[s].kind {
+        let ret_type_id = self
+            .resolve_ident_ref(hir, ident_ref, Some(&param_types))
+            .map(|s| match &self.symbols[s].kind {
                 SymbolKind::LetFn(_, _, _, ret_type) => *ret_type,
                 SymbolKind::Native(_, _, ret_type, _) => *ret_type,
-                SymbolKind::NotFound => state.invalid_type_id,
+                SymbolKind::NotFound => self.invalid_type_id,
                 _ => {
                     // todo:ux better error (i.e. produce a diagnostic)
                     panic!("the resolved symbol was not a function")
                 }
             })
-            .unwrap_or(state.invalid_type_id);
+            .unwrap_or(self.invalid_type_id);
 
-        (ret_type_id, state)
+        ret_type_id
     }
 
-    fn visit_while(&self, state: State, cond: ExprId, expr: ExprId) -> (TypeId, State) {
-        let (cond_type, mut state) = self.visit_expression(state, cond);
+    fn resolve_while(&mut self, hir: &mut UnresolvedHir, cond: ExprId, expr: ExprId) -> TypeId {
+        let cond_type = self.resolve_expression(hir, cond);
 
-        if cond_type != state.boolean_type_id && cond_type != state.invalid_type_id {
-            state.diagnostics.report_err(
+        if cond_type != self.boolean_type_id && cond_type != self.invalid_type_id {
+            self.diagnostics.report_err(
                 format!(
                     "Condition expected to be of type {}, got {}",
                     Type::Boolean,
-                    state.find_type_by_type_id(cond_type)
+                    self.find_type_by_type_id(cond_type)
                 ),
-                state.resolution.expressions[cond].span.clone(),
+                self.expressions[cond].span.clone(),
                 (file!(), line!()),
             );
         }
 
-        self.visit_expression(state, expr)
+        self.resolve_expression(hir, expr)
     }
 
-    fn visit_block(&self, mut state: State, stmts: &[StmtId]) -> (TypeId, State) {
-        state.push_scope();
+    fn resolve_block(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId]) -> TypeId {
+        self.push_scope();
 
-        state.insert_functions(stmts);
-        let (stmts_type_id, mut state) = self.visit_statements(state, stmts);
+        self.insert_functions(hir, stmts);
+        let stmts_type_id = self.resolve_statements(hir, stmts);
 
-        state.pop_scope();
+        self.pop_scope();
 
-        (stmts_type_id, state)
+        stmts_type_id
     }
 
-    fn visit_struct_instantiation(
-        &self,
-        mut state: State,
+    fn resolve_struct_instantiation(
+        &mut self,
+        hir: &mut UnresolvedHir,
         ident_ref_id: IdentRefId,
         field_exprs: &[(IdentRefId, ExprId)],
         span: &Span,
-    ) -> (TypeId, State) {
+    ) -> TypeId {
         let mut expr_type_ids = Vec::with_capacity(field_exprs.len());
         for (_, field_expr_id) in field_exprs {
-            let (expr_type_id, new_state) = self.visit_expression(state, *field_expr_id);
-            state = new_state;
+            let expr_type_id = self.resolve_expression(hir, *field_expr_id);
             expr_type_ids.push(expr_type_id);
         }
         debug_assert!(expr_type_ids.len() == field_exprs.len());
 
-        let struct_def = state
-            .resolve_ident_ref(ident_ref_id, None)
-            .map(|sid| &state.resolution.symbols[sid])
+        let struct_def = self
+            .resolve_ident_ref(hir, ident_ref_id, None)
+            .map(|sid| &self.symbols[sid])
             .and_then(|s| match s.kind {
-                SymbolKind::Struct(_, stmt_id) => Some(&state.resolution.statements[stmt_id]),
+                SymbolKind::Struct(_, stmt_id) => Some(&self.statements[stmt_id]),
                 _ => None,
             })
             .map(|s| match &s.kind {
@@ -582,7 +579,7 @@ impl<'a> Resolver<'a> {
 
         if let Some((struct_stmt_id, struct_identifier, field_types)) = struct_def {
             if field_exprs.len() != field_types.len() {
-                state.diagnostics.report_err(
+                self.diagnostics.report_err(
                     "Struct fields differ in length",
                     span.clone(),
                     (file!(), line!()),
@@ -592,7 +589,7 @@ impl<'a> Resolver<'a> {
             for ((field_ident_ref_id, field_expr_id), expr_type_id) in
                 field_exprs.iter().zip(expr_type_ids.into_iter())
             {
-                let field_ident_ref = state
+                let field_ident_ref = hir
                     .identifier_refs
                     .remove(*field_ident_ref_id)
                     .expect("field ident_ref exists");
@@ -602,134 +599,120 @@ impl<'a> Resolver<'a> {
                     .enumerate()
                     .find(|(_, field)| field.identifier.id == field_ident_ref.ident.id)
                 {
-                    let field_symbol_id = state
+                    let field_symbol_id = self
                         .find_symbol_id_for_struct_field(struct_stmt_id, index)
                         .expect("symbol exists");
 
-                    state.resolution.identifier_refs.insert(
+                    self.identifier_refs.insert(
                         *field_ident_ref_id,
                         field_ident_ref.resolved(field_symbol_id),
                     );
 
                     if expr_type_id != field.resolved_type_id() {
-                        state.diagnostics.report_err(
+                        self.diagnostics.report_err(
                             format!(
                                 "Invalid type for field '{}': expected {}, got {}",
-                                state
-                                    .resolution
-                                    .identifiers
-                                    .get_by_left(&field.identifier.id)
-                                    .unwrap(),
-                                state.find_type_by_type_id(field.resolved_type_id()),
-                                state.find_type_by_type_id(expr_type_id)
+                                self.identifiers.get_by_left(&field.identifier.id).unwrap(),
+                                self.find_type_by_type_id(field.resolved_type_id()),
+                                self.find_type_by_type_id(expr_type_id)
                             ),
-                            state.resolution.expressions[*field_expr_id].span.clone(),
+                            self.expressions[*field_expr_id].span.clone(),
                             (file!(), line!()),
                         )
                     }
                 } else {
                     // the field was not found by its name...
-                    state.resolution.identifier_refs.insert(
+                    self.identifier_refs.insert(
                         *field_ident_ref_id,
-                        field_ident_ref.resolved(state.not_found_symbol_id),
+                        field_ident_ref.resolved(self.not_found_symbol_id),
                     );
                 }
             }
 
-            (
-                state
-                    .find_type_id_by_identifier(struct_identifier.id)
-                    .expect("type exists"),
-                state,
-            )
+            self.find_type_id_by_identifier(struct_identifier.id)
+                .expect("type exists")
         } else {
-            (state.invalid_type_id, state)
+            self.invalid_type_id
         }
     }
 
     // todo:refactoring think about passing the Statement directly
-    fn visit_statements(&self, mut state: State, stmts: &[StmtId]) -> (TypeId, State) {
-        let mut ret_type = state.void_type_id;
+    fn resolve_statements(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId]) -> TypeId {
+        let mut ret_type = self.void_type_id;
 
         for &stmt_id in stmts {
-            let stmt_type = if let Some(stmt) = state.statements.remove(stmt_id) {
-                let (ty, new_state) = self.visit_statement(state, stmt);
-                state = new_state;
-                ty
+            let stmt_type = if let Some(stmt) = hir.statements.remove(stmt_id) {
+                self.resolve_statement(hir, stmt)
             } else {
-                let stmt = state
-                    .resolution
+                let stmt = self
                     .statements
                     .get(stmt_id)
                     .expect("no unbound statement found");
                 match &stmt.kind {
-                    StatementKind::Expression(e) => state
-                        .resolution
+                    StatementKind::Expression(e) => self
                         .expressions
                         .get(*e)
                         .expect("expression was visited")
                         .resolved_type_id(),
-                    StatementKind::Let(..) => state.void_type_id,
-                    StatementKind::Ret(..) => state.none_type_id,
-                    StatementKind::LetFn(..) => state.void_type_id,
-                    StatementKind::Struct(..) => state.void_type_id,
+                    StatementKind::Let(..) => self.void_type_id,
+                    StatementKind::Ret(..) => self.none_type_id,
+                    StatementKind::LetFn(..) => self.void_type_id,
+                    StatementKind::Struct(..) => self.void_type_id,
                 }
             };
 
-            if ret_type != state.none_type_id {
+            if ret_type != self.none_type_id {
                 ret_type = stmt_type
             }
         }
 
-        (ret_type, state)
+        ret_type
     }
 
-    fn visit_statement(
-        &self,
-        mut state: State,
+    fn resolve_statement(
+        &mut self,
+        hir: &mut UnresolvedHir,
         stmt: Statement<Untyped, Unbound>,
-    ) -> (TypeId, State) {
+    ) -> TypeId {
         let stmt_id = stmt.id;
         let span = stmt.span.clone();
 
         match stmt.kind {
             StatementKind::Expression(expr) => {
-                state.resolution.statements.insert(
+                self.statements.insert(
                     stmt_id,
                     Statement::new(stmt_id, StatementKind::Expression(expr), span),
                 );
 
-                self.visit_expression(state, expr)
+                self.resolve_expression(hir, expr)
             }
             StatementKind::Let(ident, expr) => {
-                let (ident, mut state) = self.visit_let(state, stmt_id, ident, expr);
+                let symbol_id = self.resolve_let(hir, stmt_id, &ident, expr);
 
-                state.resolution.statements.insert(
+                self.statements.insert(
                     stmt_id,
-                    Statement::new(stmt_id, StatementKind::Let(ident, expr), span),
+                    Statement::new(stmt_id, StatementKind::Let(ident.bind(symbol_id), expr), span),
                 );
 
-                (state.void_type_id, state)
+                self.void_type_id
             }
             StatementKind::Ret(expr, ret_mode) => {
-                let mut state = match expr {
-                    None => state,
-                    Some(expr) => self.visit_expression(state, expr).1,
-                };
+                if let Some(expr) = expr {
+                    self.resolve_expression(hir, expr);
+                }
 
-                state.resolution.statements.insert(
+                self.statements.insert(
                     stmt_id,
                     Statement::new(stmt_id, StatementKind::Ret(expr, ret_mode), span),
                 );
 
-                (state.none_type_id, state)
+                self.none_type_id
             }
             StatementKind::LetFn(ident, params, ret_type, expr) => {
-                let (res, mut state) =
-                    self.visit_function(state, stmt_id, (ident, params, ret_type), expr, &span);
+                let res = self.resolve_function(hir, stmt_id, (ident, params, ret_type), expr, &span);
 
                 if let Ok((identifier, parameters, ret_type)) = res {
-                    state.resolution.statements.insert(
+                    self.statements.insert(
                         stmt_id,
                         Statement::new(
                             stmt_id,
@@ -739,82 +722,79 @@ impl<'a> Resolver<'a> {
                     );
                 }
 
-                (state.void_type_id, state)
+                self.void_type_id
             }
             StatementKind::Struct(ident, fields) => {
-                let (ident, fields, mut state) = self.visit_struct(state, stmt_id, ident, fields);
+                let (ident, fields) = self.resolve_struct(hir, stmt_id, ident, fields);
 
-                state.resolution.statements.insert(
+                self.statements.insert(
                     stmt_id,
                     Statement::new(stmt_id, StatementKind::Struct(ident, fields), span),
                 );
 
-                (state.void_type_id, state)
+                self.void_type_id
             }
         }
     }
 
-    fn visit_let(
-        &self,
-        state: State,
+    fn resolve_let(
+        &mut self,
+        hir: &mut UnresolvedHir,
         stmt: StmtId,
-        ident: Identifier<Unbound>,
+        ident: &Identifier<Unbound>,
         expr: ExprId,
-    ) -> (Identifier<Bound>, State) {
-        let (expr_type_id, mut state) = self.visit_expression(state, expr);
+    ) -> SymbolId {
+        let expr_type_id = self.resolve_expression(hir, expr);
 
-        if expr_type_id == state.none_type_id {
-            let expr = &state.resolution.expressions[expr];
-            state.diagnostics.report_err(
+        if expr_type_id == self.none_type_id {
+            let expr = &self.expressions[expr];
+            self.diagnostics.report_err(
                 format!("Expected some type, got {}", Type::None),
                 expr.span.clone(),
                 (file!(), line!()),
             );
         }
-        if expr_type_id == state.void_type_id {
-            let expr = &state.resolution.expressions[expr];
-            state.diagnostics.report_err(
+        if expr_type_id == self.void_type_id {
+            let expr = &self.expressions[expr];
+            self.diagnostics.report_err(
                 format!("Expected some type, got {}", Type::Void),
                 expr.span.clone(),
                 (file!(), line!()),
             );
         }
 
-        let symbol_id =
-            state.insert_symbol(ident.id, SymbolKind::Let(ident.id, stmt), expr_type_id);
-
-        (ident.bind(symbol_id), state)
+        self.insert_symbol(ident.id, SymbolKind::Let(ident.id, stmt), expr_type_id)
     }
 
-    fn visit_function(
-        &self,
-        mut state: State,
+    fn resolve_function(
+        &mut self,
+        hir: &mut UnresolvedHir,
         stmt_id: StmtId,
         (ident, params, ret_type): Function<Untyped, Unbound>,
         body_expr_id: ExprId,
         _span: &Span,
-    ) -> (Result<Function<Typed, Bound>, ()>, State) {
-        state.push_scope();
+    ) -> Result<Function<Typed, Bound>, ()> {
+        self.push_scope();
 
         // fixme manage duplicate functions (for whatever it means ... - at least same name same
         //   first parameter type)
 
-        let symbol_id = *state
+        let symbol_id = *self
             .function_symbols
             .get(&stmt_id)
             .expect("function was inserted");
 
-        let (param_types, ret_type_id) = state.resolution.symbols[symbol_id].as_function();
+        let (param_types, ret_type_id) = self.symbols[symbol_id].as_function();
         let param_types = param_types.clone();
 
         #[cfg(test)]
         println!(
             "Visiting function {name} ({symbol_id:?}) with return type {ret_type}",
-            name = state.resolution.identifiers.get_by_left(&ident.id).unwrap(),
-            ret_type = state.resolution.types.get_by_right(&ret_type_id).unwrap()
+            name = self.identifiers.get_by_left(&ident.id).unwrap(),
+            ret_type = self.types.get_by_left(&ret_type_id).unwrap()
         );
 
-        let mut success = ret_type_id != state.invalid_type_id;
+        let mut success = ret_type_id != self.invalid_type_id;
 
         let params_len = params.len();
         let parameters = params
@@ -825,18 +805,18 @@ impl<'a> Resolver<'a> {
                 let ident_id = parameter.identifier.id;
                 let symbol_kind = SymbolKind::Parameter(ident_id, stmt_id, index);
 
-                if state.symbol_exists(ident_id, &symbol_kind) {
-                    state.diagnostics.report_err(
+                if self.symbol_exists(ident_id, &symbol_kind) {
+                    self.diagnostics.report_err(
                         format!(
                             "Parameter '{ident}' is already defined",
-                            ident = state.resolution.identifiers.get_by_left(&ident_id).unwrap(),
+                            ident = self.identifiers.get_by_left(&ident_id).unwrap(),
                         ),
                         parameter.identifier.span.clone(),
                         (file!(), line!()),
                     );
                     None
                 } else {
-                    let symbol_id = state.insert_symbol(ident_id, symbol_kind, type_id);
+                    let symbol_id = self.insert_symbol(ident_id, symbol_kind, type_id);
 
                     Some(parameter.bind(type_id, symbol_id))
                 }
@@ -846,11 +826,12 @@ impl<'a> Resolver<'a> {
         success = success && parameters.len() == params_len;
 
         // we want to visit the expression, hence no short-circuit
-        let (expr_type_id, mut state) = self.visit_expression(state, body_expr_id);
-        success = expr_type_id != state.invalid_type_id && success;
+        let expr_type_id = self.resolve_expression(hir, body_expr_id);
+        success = expr_type_id != self.invalid_type_id && success;
 
-        if ret_type_id != state.invalid_type_id {
-            let exit_points = self
+        if ret_type_id != self.invalid_type_id {
+            let exit_points = hir
+                .exit_points
                 .exit_points
                 .get(&body_expr_id)
                 .expect("exit points is computed");
@@ -862,42 +843,41 @@ impl<'a> Resolver<'a> {
             #[cfg(test)]
             println!(
                 "Exit points of {name} ({body_expr_id:?}): {exit_points:?}",
-                name = state.resolution.identifiers.get_by_left(&ident.id).unwrap(),
+                name = self.identifiers.get_by_left(&ident.id).unwrap(),
             );
 
-            for exit_point in exit_points.iter() {
+            // todo:refactor can we avoid that clone?
+            for exit_point in exit_points.clone().iter() {
                 let (exit_expr_id, explicit) = match exit_point {
                     ExitPoint::Explicit(e) => (*e, true),
                     ExitPoint::Implicit(e) => (*e, false),
                 };
 
-                let (expr_type_id, new_state) = match exit_expr_id {
-                    None => (state.void_type_id, state),
-                    Some(exit_expr_id) => self.visit_expression(state, exit_expr_id),
+                let expr_type_id = match exit_expr_id {
+                    None => self.void_type_id,
+                    Some(exit_expr_id) => self.resolve_expression(hir, exit_expr_id),
                 };
 
-                state = new_state;
-
-                if expr_type_id == state.invalid_type_id {
+                if expr_type_id == self.invalid_type_id {
                     // nothing to report, that was reported already
-                } else if expr_type_id == state.none_type_id {
+                } else if expr_type_id == self.none_type_id {
                     panic!("functions must not return {}", Type::None)
                 } else if expr_type_id != ret_type_id
-                    && (ret_type_id != state.void_type_id || explicit)
+                    && (ret_type_id != self.void_type_id || explicit)
                 {
-                    let expr_type = state.find_type_by_type_id(expr_type_id);
+                    let expr_type = self.find_type_by_type_id(expr_type_id);
                     // fixme the span is not accurate (in both cases)
                     let span = if let Some(exit_expr_id) = exit_expr_id {
-                        state.resolution.expressions[exit_expr_id].span.clone()
+                        self.expressions[exit_expr_id].span.clone()
                     } else {
-                        state.resolution.expressions[body_expr_id].span.clone()
+                        self.expressions[body_expr_id].span.clone()
                     };
 
-                    state.diagnostics.report_err(
+                    self.diagnostics.report_err(
                         format!(
                             "Function {name} expected to return type {ret_type}, got {expr_type}",
-                            name = state.resolution.identifiers.get_by_left(&ident.id).unwrap(),
-                            ret_type = state.resolution.types.get_by_right(&ret_type_id).unwrap()
+                            name = self.identifiers.get_by_left(&ident.id).unwrap(),
+                            ret_type = self.types.get_by_left(&ret_type_id).unwrap()
                         ),
                         span,
                         (file!(), line!()),
@@ -906,10 +886,10 @@ impl<'a> Resolver<'a> {
             }
         }
 
-        state.pop_scope();
+        self.pop_scope();
 
         if success {
-            if let Some(symbol_id) = state.find_symbol_id_by_ident_and_param_types(
+            if let Some(symbol_id) = self.find_symbol_id_by_ident_and_param_types(
                 ident.id,
                 Some(
                     &parameters
@@ -918,35 +898,32 @@ impl<'a> Resolver<'a> {
                         .collect::<Vec<TypeId>>(),
                 ),
             ) {
-                return (
-                    Ok((
-                        ident.bind(symbol_id),
-                        parameters,
-                        ret_type.typed(ret_type_id),
-                    )),
-                    state,
-                );
+                return (Ok((
+                    ident.bind(symbol_id),
+                    parameters,
+                    ret_type.typed(ret_type_id),
+                )));
             }
         }
 
-        (Err(()), state)
+        Err(())
     }
 
-    fn visit_struct(
-        &self,
-        mut state: State,
+    fn resolve_struct(
+        &mut self,
+        hir: &mut UnresolvedHir,
         stmt_id: StmtId,
         identifier: Identifier<Unbound>,
         fields: Vec<Field<Untyped, Unbound>>,
-    ) -> (Identifier<Bound>, Vec<Field<Typed, Bound>>, State) {
+    ) -> (Identifier<Bound>, Vec<Field<Typed, Bound>>) {
         let fields = fields
             .into_iter()
             .map(|field| {
-                let type_identifier = &state.resolution.identifier_refs[field.ty].ident;
+                let type_identifier = &self.identifier_refs[field.ty].ident;
 
-                let ty = state
+                let ty = self
                     .find_type_id_by_identifier(type_identifier.id)
-                    .unwrap_or(state.invalid_type_id);
+                    .unwrap_or(self.invalid_type_id);
 
                 field.typed(ty)
             })
@@ -959,25 +936,25 @@ impl<'a> Resolver<'a> {
                 let ident_id = field.identifier.id;
                 let symbol_kind = SymbolKind::Field(ident_id, stmt_id, index);
 
-                if state.symbol_exists(ident_id, &symbol_kind) {
-                    state.diagnostics.report_err(
+                if self.symbol_exists(ident_id, &symbol_kind) {
+                    self.diagnostics.report_err(
                         format!(
                             "Field '{ident}' is already defined",
-                            ident = state.resolution.identifiers.get_by_left(&ident_id).unwrap(),
+                            ident = self.identifiers.get_by_left(&ident_id).unwrap(),
                         ),
                         field.identifier.span.clone(),
                         (file!(), line!()),
                     );
-                    field.bind(state.not_found_symbol_id)
+                    field.bind(self.not_found_symbol_id)
                 } else {
                     let symbol_id =
-                        state.insert_symbol(ident_id, symbol_kind, field.resolved_type_id());
+                        self.insert_symbol(ident_id, symbol_kind, field.resolved_type_id());
                     field.bind(symbol_id)
                 }
             })
             .collect::<Vec<Field<Typed, Bound>>>();
 
-        let symbol_id = state
+        let symbol_id = self
             .struct_symbols
             .get(&stmt_id)
             .cloned()
@@ -985,52 +962,25 @@ impl<'a> Resolver<'a> {
             //   or, return not_found_symbol_id in visit_function. This requires that the find_*()
             //   and resolve_*() function are reworked...
             // it may happen that the struct is not found in case of duplicate def.
-            .unwrap_or(state.not_found_symbol_id);
+            .unwrap_or(self.not_found_symbol_id);
 
-        (identifier.bind(symbol_id), fields, state)
+        (identifier.bind(symbol_id), fields)
     }
-}
 
-struct State {
-    // in
-    identifier_refs: VecMap<IdentRefId, IdentifierRef<Unbound>>,
-    expressions: VecMap<ExprId, Expression<Untyped>>,
-    statements: VecMap<StmtId, Statement<Untyped, Unbound>>,
-
-    // work
-    scope_stack: Vec<Scope>,
-    /// maps functions (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
-    function_symbols: HashMap<StmtId, SymbolId>,
-    /// maps structs (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
-    struct_symbols: HashMap<StmtId, SymbolId>,
-
-    // out
-    diagnostics: Diagnostics,
-    resolution: Resolution,
-
-    // cache
-    invalid_type_id: TypeId,
-    void_type_id: TypeId,
-    none_type_id: TypeId,
-    boolean_type_id: TypeId,
-    number_type_id: TypeId,
-    not_found_symbol_id: SymbolId,
-}
-
-impl State {
     /// Resolves an identifier ref by its `IdentRefId` and returns the corresponding `SymbolId`.
     /// The resolution starts in the current scope and crawls the scopes stack up until the
     /// identifier is found.
     fn resolve_ident_ref(
         &mut self,
+        hir: &mut UnresolvedHir,
         ident_ref_id: IdentRefId,
         param_types: Option<&[TypeId]>,
     ) -> Option<SymbolId> {
-        if let Some(ident_ref) = &self.resolution.identifier_refs.get(ident_ref_id) {
+        if let Some(ident_ref) = &self.identifier_refs.get(ident_ref_id) {
             return Some(ident_ref.resolved_symbol_id());
         }
 
-        let ident_ref = self
+        let ident_ref = hir
             .identifier_refs
             .remove(ident_ref_id)
             .expect("ident_ref is not resolved");
@@ -1038,8 +988,7 @@ impl State {
         let ident_id = ident_ref.ident.id;
         match self.find_symbol_id_by_ident_and_param_types(ident_id, param_types) {
             Some(s) => {
-                self.resolution
-                    .identifier_refs
+                self.identifier_refs
                     .insert(ident_ref.id, ident_ref.resolved(s));
                 Some(s)
             }
@@ -1050,7 +999,7 @@ impl State {
                     self.diagnostics.report_err(
                         format!(
                             "No function '{}' found for parameters of types ({})",
-                            self.resolution.identifiers.get_by_left(&ident_id).unwrap(),
+                            self.identifiers.get_by_left(&ident_id).unwrap(),
                             param_types
                                 .iter()
                                 .map(|t| self.find_type_by_type_id(*t))
@@ -1066,7 +1015,7 @@ impl State {
                     self.diagnostics.report_err(
                         format!(
                             "Identifier '{}' not found",
-                            self.resolution.identifiers.get_by_left(&ident_id).unwrap()
+                            self.identifiers.get_by_left(&ident_id).unwrap()
                         ),
                         ident_ref.ident.span.clone(),
                         (file!(), line!()),
@@ -1074,8 +1023,7 @@ impl State {
                 }
 
                 // still, resolve it to an unknown symbol
-                self.resolution
-                    .identifier_refs
+                self.identifier_refs
                     .insert(ident_ref.id, ident_ref.resolved(self.not_found_symbol_id));
 
                 None
@@ -1094,25 +1042,24 @@ impl State {
         self.scope_stack
             .iter()
             .rev()
-            .find_map(|scope| scope.find(&self.resolution.symbols, &ident, param_types))
+            .find_map(|scope| scope.find(&self.symbols, &ident, param_types))
     }
 
     fn find_symbol_id_for_struct_field(&self, stmt_id: StmtId, index: usize) -> Option<SymbolId> {
-        self.resolution
-            .stmt_symbols
+        self.stmt_symbols
             .get(&(stmt_id, index))
-            .and_then(|sid| self.resolution.symbols.get(*sid))
+            .and_then(|sid| self.symbols.get(*sid))
             .and_then(|s| match s.kind {
                 SymbolKind::Field(_, _, _) => Some(s.id),
                 _ => None,
             })
     }
 
-    fn insert_functions(&mut self, stmts: &[StmtId]) {
+    fn insert_functions(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId]) {
         // first, we resolve all the identifier refs for parameter types and return type ...
         let ident_ref_ids = stmts
             .iter()
-            .filter_map(|stmt_id| match &self.statements[*stmt_id].kind {
+            .filter_map(|stmt_id| match &hir.statements[*stmt_id].kind {
                 StatementKind::LetFn(_, params, ret, ..) => {
                     let mut ident_ref_ids =
                         params.iter().map(|p| p.ty).collect::<Vec<IdentRefId>>();
@@ -1129,18 +1076,18 @@ impl State {
             .collect::<Vec<IdentRefId>>();
 
         for ident_ref_id in ident_ref_ids.into_iter() {
-            self.resolve_ident_ref(ident_ref_id, None);
+            self.resolve_ident_ref(hir, ident_ref_id, None);
         }
 
         // ... then, we proceed with the function
         let functions = stmts
             .iter()
-            .filter_map(|stmt_id| match &self.statements[*stmt_id].kind {
+            .filter_map(|stmt_id| match &hir.statements[*stmt_id].kind {
                 StatementKind::LetFn(ident, params, ret_type, expr_id) => {
                     let parameter_types = params
                         .iter()
                         .map(|p| {
-                            let identifier = &self.resolution.identifier_refs[p.ty].ident;
+                            let identifier = &self.identifier_refs[p.ty].ident;
 
                             self.find_type_id_by_identifier(identifier.id)
                                 .unwrap_or(self.invalid_type_id)
@@ -1150,7 +1097,7 @@ impl State {
                     let ret_type_id = ret_type
                         .ret
                         .map(|ident_ref_id| {
-                            let identifier = &self.resolution.identifier_refs[ident_ref_id].ident;
+                            let identifier = &self.identifier_refs[ident_ref_id].ident;
 
                             self.find_type_id_by_identifier(identifier.id)
                                 .unwrap_or(self.invalid_type_id)
@@ -1182,14 +1129,14 @@ impl State {
         }
     }
 
-    fn insert_structs(&mut self, stmts: &[StmtId]) {
+    fn insert_structs(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId]) {
         // we start by inserting all the structs we find, so that the types are available from
         // everywhere in the current scope.
 
         // first, we insert all structs
         let structs = stmts
             .iter()
-            .filter_map(|stmt| match &self.statements[*stmt].kind {
+            .filter_map(|stmt| match &hir.statements[*stmt].kind {
                 StatementKind::Struct(ident, _) => Some((*stmt, ident.clone())),
                 _ => None,
             })
@@ -1203,7 +1150,7 @@ impl State {
                 self.diagnostics.report_err(
                     format!(
                         "Struct '{ident}' is already defined in scope",
-                        ident = self.resolution.identifiers.get_by_left(&ident_id).unwrap(),
+                        ident = self.identifiers.get_by_left(&ident_id).unwrap(),
                     ),
                     identifier.span.clone(),
                     (file!(), line!()),
@@ -1218,7 +1165,7 @@ impl State {
         // then we resolve their fields types
         let ident_ref_ids = stmts
             .iter()
-            .filter_map(|stmt_id| match &self.statements[*stmt_id].kind {
+            .filter_map(|stmt_id| match &hir.statements[*stmt_id].kind {
                 StatementKind::Struct(_, fields) => {
                     Some(fields.iter().map(|p| p.ty).collect::<Vec<IdentRefId>>())
                 }
@@ -1228,7 +1175,7 @@ impl State {
             .collect::<Vec<IdentRefId>>();
 
         for ident_ref_id in ident_ref_ids.into_iter() {
-            self.resolve_ident_ref(ident_ref_id, None);
+            self.resolve_ident_ref(hir, ident_ref_id, None);
         }
     }
 
@@ -1242,35 +1189,30 @@ impl State {
             .get(&ident_id)
         {
             None => false,
-            Some(symbols) => symbols
-                .iter()
-                .map(|s| &self.resolution.symbols[*s])
-                .any(|s| {
-                    matches!(
-                        (&s.kind, kind),
-                        (
-                            SymbolKind::Parameter(_, _, _),
-                            SymbolKind::Parameter(_, _, _)
-                        ) | (SymbolKind::Field(_, _, _), SymbolKind::Field(_, _, _))
-                            | (SymbolKind::Struct(_, _), SymbolKind::Struct(_, _))
-                    )
-                }),
+            Some(symbols) => symbols.iter().map(|s| &self.symbols[*s]).any(|s| {
+                matches!(
+                    (&s.kind, kind),
+                    (
+                        SymbolKind::Parameter(_, _, _),
+                        SymbolKind::Parameter(_, _, _)
+                    ) | (SymbolKind::Field(_, _, _), SymbolKind::Field(_, _, _))
+                        | (SymbolKind::Struct(_, _), SymbolKind::Struct(_, _))
+                )
+            }),
         }
     }
 
     fn insert_symbol(&mut self, ident_id: IdentId, kind: SymbolKind, ty: TypeId) -> SymbolId {
-        let symbol_id = SymbolId::from(self.resolution.symbols.len());
+        let symbol_id = SymbolId::from(self.symbols.len());
 
         match &kind {
             SymbolKind::Parameter(_, stmt_id, index) | SymbolKind::Field(_, stmt_id, index) => {
-                self.resolution
-                    .stmt_symbols
-                    .insert((*stmt_id, *index), symbol_id);
+                self.stmt_symbols.insert((*stmt_id, *index), symbol_id);
             }
             _ => (),
         };
 
-        self.resolution.symbols.push(Symbol {
+        self.symbols.push(Symbol {
             id: symbol_id,
             kind,
             type_id: ty,
@@ -1287,21 +1229,17 @@ impl State {
     }
 
     pub fn find_ident_id_by_str(&self, name: &str) -> IdentId {
-        *self
-            .resolution
-            .identifiers
-            .get_by_right(name)
-            .unwrap_or_else(|| panic!("Identifier {} not found", name))
+        *self.identifiers.get_by_right(name).unwrap()
     }
 
     /// Inserts a `Type` if it does not already exist and returns its `TypeId`. If the type already
     /// exists, returns it's `TypeId`
     fn insert_type(&mut self, ty: Type) -> TypeId {
-        if let Some(id) = self.resolution.types.get_by_left(&ty) {
+        if let Some(id) = self.types.get_by_right(&ty) {
             *id
         } else {
-            let id = TypeId::from(self.resolution.types.len());
-            let did_overwrite = self.resolution.types.insert(ty, id).did_overwrite();
+            let id = TypeId::from(self.types.len());
+            let did_overwrite = self.types.insert(id, ty).did_overwrite();
             debug_assert!(!did_overwrite);
             id
         }
@@ -1309,7 +1247,7 @@ impl State {
 
     fn find_type_id_by_identifier(&self, ident_id: IdentId) -> Option<TypeId> {
         self.find_symbol_id_by_ident_and_param_types(ident_id, None)
-            .and_then(|symbol_id| match &self.resolution.symbols[symbol_id].kind {
+            .and_then(|symbol_id| match &self.symbols[symbol_id].kind {
                 SymbolKind::NativeType(_, ty) => Some(self.find_type_id_by_type(ty)),
                 SymbolKind::Struct(_, stmt) => {
                     Some(self.find_type_id_by_type(&Type::Struct(*stmt)))
@@ -1319,17 +1257,12 @@ impl State {
     }
 
     fn find_type_id_by_type(&self, ty: &Type) -> TypeId {
-        *self
-            .resolution
-            .types
-            .get_by_left(ty)
-            .unwrap_or_else(|| panic!("type {ty:?} exists"))
+        *self.types.get_by_right(ty).unwrap()
     }
 
     fn find_type_by_type_id(&self, ty: TypeId) -> &Type {
-        self.resolution
-            .types
-            .get_by_right(&ty)
+        self.types
+            .get_by_left(&ty)
             .unwrap_or_else(|| panic!("type {ty} exists"))
     }
 
@@ -1340,27 +1273,6 @@ impl State {
     fn pop_scope(&mut self) {
         self.scope_stack.pop();
     }
-}
-
-pub struct Resolution {
-    pub identifiers: BiHashMap<IdentId, String>,
-    pub identifier_refs: VecMap<IdentRefId, IdentifierRef<Bound>>,
-    pub symbols: VecMap<SymbolId, Symbol>,
-    pub stmt_symbols: HashMap<(StmtId, usize), SymbolId>,
-    pub types: BiHashMap<Type, TypeId>,
-    pub expressions: VecMap<ExprId, Expression<Typed>>,
-    pub statements: VecMap<StmtId, Statement<Typed, Bound>>,
-    pub root: Vec<StmtId>,
-}
-
-pub struct Output {
-    pub identifiers: VecMap<IdentId, String>,
-    pub identifier_refs: VecMap<IdentRefId, IdentifierRef<Bound>>,
-    pub symbols: VecMap<SymbolId, Symbol>,
-    pub types: VecMap<TypeId, Type>,
-    pub expressions: VecMap<ExprId, Expression<Typed>>,
-    pub statements: VecMap<StmtId, Statement<Typed, Bound>>,
-    pub root: Vec<StmtId>,
 }
 
 struct Scope {

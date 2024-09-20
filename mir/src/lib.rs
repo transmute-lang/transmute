@@ -1,4 +1,4 @@
-#![allow(unused)]
+#![allow(unused)] // todo:refactor remove
 
 use std::any::type_name;
 use std::collections::{BTreeMap, HashMap};
@@ -873,7 +873,7 @@ pub enum ExpressionKind {
     FunctionCall(SymbolId, Vec<ExprId>),
     While(ExprId, ExprId),
     Block(Vec<StmtId>),
-    // todo(refacotring) only keep one of SymbolId or StructId? also, the field's SymbolId does not
+    // todo:refactoring only keep one of SymbolId or StructId? also, the field's SymbolId does not
     //   seem useful
     StructInstantiation(SymbolId, StructId, Vec<(SymbolId, ExprId)>),
 }

@@ -1,6 +1,6 @@
 macro_rules! make_id {
     ($name:ident) => {
-        #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+        #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
         pub struct $name {
             id: usize,
         }

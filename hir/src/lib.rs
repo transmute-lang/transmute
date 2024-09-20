@@ -72,43 +72,29 @@ where
 
 impl UnresolvedHir {
     pub fn resolve(self, natives: Natives) -> Result<ResolvedHir, Diagnostics> {
-        let expressions_count = self.expressions.len();
-        let statements_count = self.statements.len();
+        #[cfg(debug_assertions)]
+        let (expressions_count, statements_count) = (self.expressions.len(), self.statements.len());
 
-        Resolver::new(&self.exit_points.exit_points, &self.exit_points.unreachable)
-            .resolve(
-                self.identifiers,
-                self.identifier_refs,
-                self.expressions,
-                self.statements,
-                self.roots,
-                natives,
-            )
-            .map(|r| {
-                debug_assert!(
-                    expressions_count == r.expressions.len(),
-                    "expr count don't match ({} != {})",
-                    expressions_count,
-                    r.expressions.len()
-                );
-                debug_assert!(
-                    statements_count == r.statements.len(),
-                    "stmt count don't match ({} != {})",
-                    statements_count,
-                    r.statements.len()
-                );
+        let resolved_hir = Resolver::new().resolve(natives, self)?;
 
-                Hir::<Typed, Bound> {
-                    identifiers: r.identifiers,
-                    identifier_refs: r.identifier_refs,
-                    expressions: r.expressions,
-                    statements: r.statements,
-                    roots: r.root,
-                    symbols: r.symbols,
-                    types: r.types,
-                    exit_points: self.exit_points,
-                }
-            })
+        #[cfg(debug_assertions)]
+        {
+            debug_assert!(
+                expressions_count == resolved_hir.expressions.len(),
+                "expr count don't match ({} != {})",
+                expressions_count,
+                resolved_hir.expressions.len()
+            );
+
+            debug_assert!(
+                statements_count == resolved_hir.statements.len(),
+                "expr count don't match ({} != {})",
+                statements_count,
+                resolved_hir.statements.len()
+            );
+        }
+
+        Ok(resolved_hir)
     }
 }
 

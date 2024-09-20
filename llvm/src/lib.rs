@@ -1388,9 +1388,7 @@ impl LlvmImpl for NativeFnKind {
 mod tests {
     use crate::Codegen;
     use inkwell::context::Context;
-    use inkwell::targets::{
-        CodeModel, InitializationConfig, RelocMode, Target, TargetTriple,
-    };
+    use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetTriple};
     use inkwell::OptimizationLevel;
     use insta::assert_snapshot;
     use transmute_ast::lexer::Lexer;
