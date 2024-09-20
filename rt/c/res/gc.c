@@ -3,7 +3,8 @@
 //  - GC_LOGS: compile with logs support
 //
 // standard env. variables
-//  - GC_ENABLE: if set to 0, GC is not executed
+//  - GC_ENABLE:      if set to 0, GC is not executed
+//  - GC_PRINT_STATS: if set to 1, GC stats are printed at the end of execution
 //
 // if compiled with GC_LOGS:
 //  - GC_LOG_LEVEL:       if set to 1, print GC messages; if set to 2, print more GC messages, etc.
@@ -229,17 +230,21 @@ void gc_pool_dump() {
 
 void gc_print_statistics() {
     printf("\nStatistics:\n\n");
-    printf("  Executions            %4i\n", gc.execution_count);
-    printf("  Alloc                 %4i blocks\n", gc.alloc_count);
-    printf("  Free                  %4i blocks\n", gc.free_count);
-    printf("  Total alloc           %4li bytes\n", gc.total_alloc_sz);
-    printf("  Object alloc          %4li bytes\n", gc.object_alloc_sz);
-    printf("  Total free            %4li bytes\n", gc.total_free_sz);
-    printf("  Object free           %4li bytes\n", gc.object_free_sz);
-    printf("  Max alloc             %4li bytes\n", gc.max_alloc_sz);
-    printf("  Max object alloc      %4li bytes\n", gc.max_object_alloc_sz);
-    printf("  Current alloc         %4li bytes\n", gc.current_alloc_sz);
-    printf("  Current object alloc  %4li bytes\n", gc.current_object_alloc_sz);
+    printf("  Executions ......%4i\n", gc.execution_count);
+    printf("  Allocated .......%4i blocks\n", gc.alloc_count);
+    printf("    Total\n");
+    printf("      objects      %4li bytes\n", gc.object_alloc_sz);
+    printf("      blocks       %4li bytes\n", gc.total_alloc_sz);
+    printf("    Max\n");
+    printf("      objects      %4li bytes\n", gc.max_object_alloc_sz);
+    printf("      blocks       %4li bytes\n", gc.max_alloc_sz);
+    printf("    End\n");
+    printf("      objects      %4li bytes\n", gc.current_object_alloc_sz);
+    printf("      blocks       %4li bytes\n", gc.current_alloc_sz);
+    printf("  Freed ...........%4i blocks\n", gc.free_count);
+    printf("    Total\n");
+    printf("      objects      %4li bytes\n", gc.object_free_sz);
+    printf("      blocks       %4li bytes\n", gc.total_free_sz);
     printf("\n");
 }
 
@@ -300,6 +305,15 @@ LOG(1, 0, "Initialize GC with log level: %i\n", gc.log_level);
     gc.pool_free = gc.pool + BOUNDARY_SIZE;
 
     gc_pool_dump();
+#endif // GC_TEST
+}
+
+void gc_teardown() {
+#ifndef GC_TEST
+    char *gc_print_stats_env = getenv("GC_PRINT_STATS");
+    if (gc_print_stats_env && strcmp(gc_print_stats_env, "1") == 0) {
+        gc_print_statistics();
+    }
 #endif // GC_TEST
 }
 
@@ -460,22 +474,20 @@ void* gc_malloc(int64_t data_size) {
 }
 
 void gc_free(GcBlock *block) {
-#ifdef GC_TEST
-    LOG(3, 0, "memset %#02x at %p for %li bytes\n", FREED, block, sizeof(GcBlock) + block->data_size);
-
     gc.free_count++;
     gc.total_free_sz += sizeof(GcBlock) + block->data_size;
     gc.current_alloc_sz -= sizeof(GcBlock) + block->data_size;
     gc.object_free_sz += block->data_size;
     gc.current_object_alloc_sz -= block->data_size;
 
+#ifdef GC_TEST
     if (gc.test_dump_color) {
         block->next = gc.freed_blocks_chain;
         gc.freed_blocks_chain = block;
     } else {
+        LOG(3, 0, "memset %#02x at %p for %li bytes\n", FREED, block, sizeof(GcBlock) + block->data_size);
         memset((void *)block, FREED, sizeof(GcBlock) + block->data_size);
     }
-
 #else
     free(block);
 #endif // GC_TEST

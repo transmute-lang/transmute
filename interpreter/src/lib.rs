@@ -70,6 +70,7 @@ mod tests {
         ($name:ident) => {
             #[test]
             fn $name() {
+                // todo:test this requires that the binary already exists
                 assert_cmd_snapshot!(Command::new(get_cargo_bin("tmi"))
                     .arg(concat!("../examples/", stringify!($name), ".tm"))
                     .arg("9"));

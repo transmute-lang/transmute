@@ -28,6 +28,8 @@ int main(int argc, char **argv) {
     gc_print_statistics();
 #endif
 
+    gc_teardown();
+
     return 0;
 }
 

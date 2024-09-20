@@ -910,17 +910,21 @@ main(9) = 36
 
 Statistics:
 
-  Executions              60
-  Alloc                   30 blocks
-  Free                    27 blocks
-  Total alloc           1200 bytes
-  Object alloc           480 bytes
-  Total free            1080 bytes
-  Object free            432 bytes
-  Max alloc              120 bytes
-  Max object alloc        48 bytes
-  Current alloc          120 bytes
-  Current object alloc    48 bytes
+  Executions ......  60
+  Allocated .......  30 blocks
+    Total
+      objects       480 bytes
+      blocks       1200 bytes
+    Max
+      objects        48 bytes
+      blocks        120 bytes
+    End
+      objects        48 bytes
+      blocks        120 bytes
+  Freed ...........  27 blocks
+    Total
+      objects       432 bytes
+      blocks       1080 bytes
 
 
 
