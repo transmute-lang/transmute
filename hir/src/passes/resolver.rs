@@ -929,6 +929,11 @@ impl Resolver {
             })
             .collect::<Vec<Field<Typed, Unbound>>>();
 
+        // struct fields are in the scope of the struct itself, we want to make sure that no other
+        // field with the same name exists in the current struct, but the same identifier might
+        // exist outside and this is not an issue
+        self.push_scope();
+
         let fields = fields
             .into_iter()
             .enumerate()
@@ -953,6 +958,8 @@ impl Resolver {
                 }
             })
             .collect::<Vec<Field<Typed, Bound>>>();
+
+        self.pop_scope();
 
         let symbol_id = self
             .struct_symbols
@@ -1925,23 +1932,21 @@ mod tests {
         "let f(): number { let g(): boolean { true; }; 1; }"
     );
 
-    // fixme un-comment the following test
-    // test_type_ok!(
-    //     struct_same_field_name,
-    //     r#"
-    //     struct Inner { field: number };
-    //     struct Outer { field: Inner };
-    //     "#
-    // );
-    // fixme un-comment the following test
-    // test_type_ok!(
-    //     struct_instantiation_same_field_name,
-    //     r#"
-    //     struct Inner { field: number };
-    //     struct Outer { field: Inner };
-    //     let s = Outer { field: Inner { field: 1 } };
-    //     "#
-    // );
+    test_type_ok!(
+        struct_same_field_name,
+        r#"
+        struct Inner { field: number };
+        struct Outer { field: number };
+        "#
+    );
+    test_type_ok!(
+        struct_instantiation_same_field_name,
+        r#"
+        struct Inner { field: number };
+        struct Outer { field: Inner };
+        let s = Outer { field: Inner { field: 1 } };
+        "#
+    );
 
     test_type_ok!(void_function_explicit_void_ret, "let f() { ret; }");
     test_type_ok!(void_function_implicit_void_ret, "let f() { }");
@@ -1972,12 +1977,4 @@ mod tests {
         "Function f expected to return type number, got void",
         Span::new(1, 30, 29, 3)
     );
-
-    // fixme un-comment the following test
-    // test_type_error!(
-    //     return_value_from_void,
-    //     "let f(n: number): number { n; }",
-    //     "Function f expected to return type number, got void",
-    //     Span::new(1, 30, 29, 3)
-    // );
 }

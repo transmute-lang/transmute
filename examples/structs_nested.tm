@@ -3,7 +3,7 @@ struct Inner {
 }
 
 struct Outer {
-    inner: Inner,
+    field: Inner,
 }
 
 let main(i: number): number {
@@ -15,9 +15,9 @@ let f2(i: number): number {
         field: i
     };
     let outer = Outer {
-        inner: inner,
+        field: inner,
     };
-    let inner = outer.inner;
+    let inner = outer.field;
     inner.field;
 }
 
@@ -26,26 +26,26 @@ let f3(i: number): number {
          field: i
      };
      let outer = Outer {
-         inner: inner,
+         field: inner,
      };
-     outer.inner.field;
+     outer.field.field;
  }
 
 let f4(i: number): number {
     let outer = Outer {
-        inner: Inner {
+        field: Inner {
             field: i
         },
     };
-    let inner = outer.inner;
+    let inner = outer.field;
     inner.field;
 }
 
 let f5(i: number): number {
     let outer = Outer {
-        inner: Inner {
+        field: Inner {
             field: i
         },
     };
-    outer.inner.field;
+    outer.field.field;
 }

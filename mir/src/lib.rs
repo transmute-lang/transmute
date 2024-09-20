@@ -1062,6 +1062,16 @@ mod tests {
     }
 
     #[test]
+    fn test_structs_same_field_names() {
+        let ast = transmute_ast::parse(r#"
+            struct Inner { field: number }
+            struct Outer { field: Inner }
+        "#).unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
     fn test_struct_instantiation() {
         let ast = transmute_ast::parse(
             r#"
