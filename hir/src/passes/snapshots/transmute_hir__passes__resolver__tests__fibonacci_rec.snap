@@ -4,10 +4,10 @@ expression: "&hir"
 ---
 Hir {
     identifiers: [
-        IdentId(0) => "f",
+        IdentId(0) => "main",
         IdentId(1) => "n",
         IdentId(2) => "number",
-        IdentId(3) => "le",
+        IdentId(3) => "lt",
         IdentId(4) => "sub",
         IdentId(5) => "add",
         IdentId(6) => "boolean",
@@ -15,7 +15,7 @@ Hir {
         IdentId(8) => "eq",
         IdentId(9) => "ge",
         IdentId(10) => "gt",
-        IdentId(11) => "lt",
+        IdentId(11) => "le",
         IdentId(12) => "mul",
         IdentId(13) => "neg",
         IdentId(14) => "neq",
@@ -27,7 +27,7 @@ Hir {
             id: IdentRefId(0),
             ident: Identifier {
                 id: IdentId(2),
-                span: 2:10; [22, 28],
+                span: 1:13; [12, 18],
                 bound: Bound(2),
             },
         },
@@ -35,7 +35,7 @@ Hir {
             id: IdentRefId(1),
             ident: Identifier {
                 id: IdentId(2),
-                span: 2:19; [31, 37],
+                span: 1:22; [21, 27],
                 bound: Bound(2),
             },
         },
@@ -43,7 +43,7 @@ Hir {
             id: IdentRefId(2),
             ident: Identifier {
                 id: IdentId(1),
-                span: 3:8; [47, 48],
+                span: 2:8; [37, 38],
                 bound: Bound(20),
             },
         },
@@ -51,7 +51,7 @@ Hir {
             id: IdentRefId(3),
             ident: Identifier {
                 id: IdentId(1),
-                span: 4:13; [68, 69],
+                span: 3:13; [57, 58],
                 bound: Bound(20),
             },
         },
@@ -59,7 +59,7 @@ Hir {
             id: IdentRefId(4),
             ident: Identifier {
                 id: IdentId(1),
-                span: 7:7; [84, 85],
+                span: 5:10; [75, 76],
                 bound: Bound(20),
             },
         },
@@ -67,7 +67,7 @@ Hir {
             id: IdentRefId(5),
             ident: Identifier {
                 id: IdentId(0),
-                span: 7:5; [82, 83],
+                span: 5:5; [70, 74],
                 bound: Bound(19),
             },
         },
@@ -75,7 +75,7 @@ Hir {
             id: IdentRefId(6),
             ident: Identifier {
                 id: IdentId(1),
-                span: 7:18; [95, 96],
+                span: 5:24; [89, 90],
                 bound: Bound(20),
             },
         },
@@ -83,55 +83,39 @@ Hir {
             id: IdentRefId(7),
             ident: Identifier {
                 id: IdentId(0),
-                span: 7:16; [93, 94],
+                span: 5:19; [84, 88],
                 bound: Bound(19),
             },
         },
         IdentRefId(8) => IdentifierRef {
             id: IdentRefId(8),
             ident: Identifier {
-                id: IdentId(0),
-                span: 10:1; [106, 107],
-                bound: Bound(19),
+                id: IdentId(3),
+                span: 2:10; [39, 40],
+                bound: Bound(11),
             },
         },
         IdentRefId(9) => IdentifierRef {
             id: IdentRefId(9),
             ident: Identifier {
-                id: IdentId(3),
-                span: 3:10; [49, 51],
-                bound: Bound(12),
+                id: IdentId(4),
+                span: 5:12; [77, 78],
+                bound: Bound(4),
             },
         },
         IdentRefId(10) => IdentifierRef {
             id: IdentRefId(10),
             ident: Identifier {
                 id: IdentId(4),
-                span: 7:9; [86, 87],
+                span: 5:26; [91, 92],
                 bound: Bound(4),
             },
         },
         IdentRefId(11) => IdentifierRef {
             id: IdentRefId(11),
             ident: Identifier {
-                id: IdentId(4),
-                span: 7:20; [97, 98],
-                bound: Bound(4),
-            },
-        },
-        IdentRefId(12) => IdentifierRef {
-            id: IdentRefId(12),
-            ident: Identifier {
                 id: IdentId(5),
-                span: 7:14; [91, 92],
-                bound: Bound(18),
-            },
-        },
-        IdentRefId(13) => IdentifierRef {
-            id: IdentRefId(13),
-            ident: Identifier {
-                id: IdentId(5),
-                span: 10:6; [111, 112],
+                span: 5:17; [82, 83],
                 bound: Bound(18),
             },
         },
@@ -142,33 +126,33 @@ Hir {
             kind: Literal(
                 Literal {
                     kind: IdentRefId(2),
-                    span: 3:8; [47, 48],
+                    span: 2:8; [37, 38],
                 },
             ),
-            span: 3:8; [47, 48],
+            span: 2:8; [37, 38],
             typed: Typed(4),
         },
         ExprId(1) => Expression {
             id: ExprId(1),
             kind: Literal(
                 Literal {
-                    kind: Number(1),
-                    span: 3:13; [52, 53],
+                    kind: Number(2),
+                    span: 2:12; [41, 42],
                 },
             ),
-            span: 3:13; [52, 53],
+            span: 2:12; [41, 42],
             typed: Typed(4),
         },
         ExprId(2) => Expression {
             id: ExprId(2),
             kind: FunctionCall(
-                IdentRefId(9),
+                IdentRefId(8),
                 [
                     ExprId(0),
                     ExprId(1),
                 ],
             ),
-            span: 3:8; [47, 53],
+            span: 2:8; [37, 42],
             typed: Typed(3),
         },
         ExprId(3) => Expression {
@@ -176,10 +160,10 @@ Hir {
             kind: Literal(
                 Literal {
                     kind: IdentRefId(3),
-                    span: 4:13; [68, 69],
+                    span: 3:13; [57, 58],
                 },
             ),
-            span: 4:13; [68, 69],
+            span: 3:13; [57, 58],
             typed: Typed(4),
         },
         ExprId(4) => Expression {
@@ -189,7 +173,7 @@ Hir {
                     StmtId(0),
                 ],
             ),
-            span: 3:15; [54, 76],
+            span: 2:14; [43, 65],
             typed: Typed(2),
         },
         ExprId(5) => Expression {
@@ -199,7 +183,7 @@ Hir {
                 ExprId(4),
                 None,
             ),
-            span: 3:5; [44, 76],
+            span: 2:5; [34, 65],
             typed: Typed(1),
         },
         ExprId(6) => Expression {
@@ -207,10 +191,10 @@ Hir {
             kind: Literal(
                 Literal {
                     kind: IdentRefId(4),
-                    span: 7:7; [84, 85],
+                    span: 5:10; [75, 76],
                 },
             ),
-            span: 7:7; [84, 85],
+            span: 5:10; [75, 76],
             typed: Typed(4),
         },
         ExprId(7) => Expression {
@@ -218,22 +202,22 @@ Hir {
             kind: Literal(
                 Literal {
                     kind: Number(1),
-                    span: 7:11; [88, 89],
+                    span: 5:14; [79, 80],
                 },
             ),
-            span: 7:11; [88, 89],
+            span: 5:14; [79, 80],
             typed: Typed(4),
         },
         ExprId(8) => Expression {
             id: ExprId(8),
             kind: FunctionCall(
-                IdentRefId(10),
+                IdentRefId(9),
                 [
                     ExprId(6),
                     ExprId(7),
                 ],
             ),
-            span: 7:7; [84, 89],
+            span: 5:10; [75, 80],
             typed: Typed(4),
         },
         ExprId(9) => Expression {
@@ -244,7 +228,7 @@ Hir {
                     ExprId(8),
                 ],
             ),
-            span: 7:5; [82, 90],
+            span: 5:5; [70, 81],
             typed: Typed(4),
         },
         ExprId(10) => Expression {
@@ -252,10 +236,10 @@ Hir {
             kind: Literal(
                 Literal {
                     kind: IdentRefId(6),
-                    span: 7:18; [95, 96],
+                    span: 5:24; [89, 90],
                 },
             ),
-            span: 7:18; [95, 96],
+            span: 5:24; [89, 90],
             typed: Typed(4),
         },
         ExprId(11) => Expression {
@@ -263,22 +247,22 @@ Hir {
             kind: Literal(
                 Literal {
                     kind: Number(2),
-                    span: 7:22; [99, 100],
+                    span: 5:28; [93, 94],
                 },
             ),
-            span: 7:22; [99, 100],
+            span: 5:28; [93, 94],
             typed: Typed(4),
         },
         ExprId(12) => Expression {
             id: ExprId(12),
             kind: FunctionCall(
-                IdentRefId(11),
+                IdentRefId(10),
                 [
                     ExprId(10),
                     ExprId(11),
                 ],
             ),
-            span: 7:18; [95, 100],
+            span: 5:24; [89, 94],
             typed: Typed(4),
         },
         ExprId(13) => Expression {
@@ -289,19 +273,19 @@ Hir {
                     ExprId(12),
                 ],
             ),
-            span: 7:16; [93, 101],
+            span: 5:19; [84, 95],
             typed: Typed(4),
         },
         ExprId(14) => Expression {
             id: ExprId(14),
             kind: FunctionCall(
-                IdentRefId(12),
+                IdentRefId(11),
                 [
                     ExprId(9),
                     ExprId(13),
                 ],
             ),
-            span: 7:5; [82, 101],
+            span: 5:5; [70, 95],
             typed: Typed(4),
         },
         ExprId(15) => Expression {
@@ -312,53 +296,8 @@ Hir {
                     StmtId(2),
                 ],
             ),
-            span: 2:26; [38, 104],
+            span: 1:29; [28, 98],
             typed: Typed(2),
-        },
-        ExprId(16) => Expression {
-            id: ExprId(16),
-            kind: Literal(
-                Literal {
-                    kind: Number(9),
-                    span: 10:3; [108, 109],
-                },
-            ),
-            span: 10:3; [108, 109],
-            typed: Typed(4),
-        },
-        ExprId(17) => Expression {
-            id: ExprId(17),
-            kind: FunctionCall(
-                IdentRefId(8),
-                [
-                    ExprId(16),
-                ],
-            ),
-            span: 10:1; [106, 110],
-            typed: Typed(4),
-        },
-        ExprId(18) => Expression {
-            id: ExprId(18),
-            kind: Literal(
-                Literal {
-                    kind: Number(8),
-                    span: 10:8; [113, 114],
-                },
-            ),
-            span: 10:8; [113, 114],
-            typed: Typed(4),
-        },
-        ExprId(19) => Expression {
-            id: ExprId(19),
-            kind: FunctionCall(
-                IdentRefId(13),
-                [
-                    ExprId(17),
-                    ExprId(18),
-                ],
-            ),
-            span: 10:1; [106, 114],
-            typed: Typed(4),
         },
     ],
     statements: [
@@ -370,14 +309,14 @@ Hir {
                 ),
                 Explicit,
             ),
-            span: 4:9; [64, 70],
+            span: 3:9; [53, 59],
         },
         StmtId(1) => Statement {
             id: StmtId(1),
             kind: Expression(
                 ExprId(5),
             ),
-            span: 3:5; [44, 76],
+            span: 2:5; [34, 65],
         },
         StmtId(2) => Statement {
             id: StmtId(2),
@@ -387,25 +326,25 @@ Hir {
                 ),
                 Implicit,
             ),
-            span: 7:5; [82, 102],
+            span: 5:5; [70, 96],
         },
         StmtId(3) => Statement {
             id: StmtId(3),
             kind: LetFn(
                 Identifier {
                     id: IdentId(0),
-                    span: 2:5; [17, 18],
+                    span: 1:5; [4, 8],
                     bound: Bound(19),
                 },
                 [
                     Parameter {
                         identifier: Identifier {
                             id: IdentId(1),
-                            span: 2:7; [19, 20],
+                            span: 1:10; [9, 10],
                             bound: Bound(20),
                         },
                         ty: IdentRefId(0),
-                        span: 2:7; [19, 28],
+                        span: 1:10; [9, 18],
                         typed: Typed(4),
                     },
                 ],
@@ -417,19 +356,11 @@ Hir {
                 },
                 ExprId(15),
             ),
-            span: 2:1; [13, 104],
-        },
-        StmtId(4) => Statement {
-            id: StmtId(4),
-            kind: Expression(
-                ExprId(19),
-            ),
-            span: 10:1; [106, 115],
+            span: 1:1; [0, 98],
         },
     ],
     roots: [
         StmtId(3),
-        StmtId(4),
     ],
     symbols: [
         SymbolId(0) => Symbol {
@@ -552,7 +483,7 @@ Hir {
         SymbolId(11) => Symbol {
             id: SymbolId(11),
             kind: Native(
-                IdentId(11),
+                IdentId(3),
                 [
                     TypeId(4),
                     TypeId(4),
@@ -565,7 +496,7 @@ Hir {
         SymbolId(12) => Symbol {
             id: SymbolId(12),
             kind: Native(
-                IdentId(3),
+                IdentId(11),
                 [
                     TypeId(4),
                     TypeId(4),

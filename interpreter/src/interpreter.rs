@@ -25,8 +25,44 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    pub fn start(&mut self) -> i64 {
-        let val = self.visit_statements(&self.hir.roots);
+    pub fn start(&mut self, main_parameters: Vec<Value>) -> i64 {
+        let (parameters, expr_id) = self
+            .hir
+            .roots
+            .iter()
+            .filter_map(|stmt_id| {
+                if let StatementKind::LetFn(ident, params, _, expr_id) =
+                    &self.hir.statements[*stmt_id].kind
+                {
+                    if &self.hir.identifiers[ident.id] == "main" {
+                        return Some((params, *expr_id));
+                    }
+                }
+                None
+            })
+            .next()
+            .expect("main function exists");
+
+        let val = match &self.hir.expressions[expr_id].kind {
+            ExpressionKind::Block(stmts) => {
+                let mut env = HashMap::with_capacity(parameters.len());
+
+                for (param, value) in parameters.iter().zip(main_parameters.into_iter()) {
+                    self.heap.push(value);
+                    env.insert(param.identifier.id, Ref(self.heap.len() - 1));
+                }
+
+                self.stack.push(env);
+
+                let ret = self.visit_statements(stmts);
+
+                let _ = self.stack.pop();
+
+                Val::of_option(ret.value_ref)
+            }
+            _ => panic!("block expected as main function body"),
+        };
+
         let val = val
             .value_ref
             .map(|r| &self.heap[r.0])
@@ -467,7 +503,7 @@ mod tests {
                     .resolve(Natives::default())
                     .unwrap();
 
-                let actual = Interpreter::new(&hir).start();
+                let actual = Interpreter::new(&hir).start(vec![]);
 
                 assert_eq!(actual, $value)
             }
@@ -490,43 +526,43 @@ mod tests {
            // };
     }
 
-    eval!(simple_precedence_1, "2 + 20 * 2;" => 42);
-    eval!(simple_precedence_2, "20 * 2 + 2;" => 42);
-    eval!(parenthesis_precedence, "(20 + 1) * 2;" => 42);
-    eval!(negative_number, "-1 + 43;" => 42);
-    eval!(unary_operator_minus_number, "- 1 + 43;" => 42);
-    eval!(binary_operator_minus, "43 - 1;" => 42);
-    eval!(unary_operator_minus_negative_number, "--42;" => 42);
-    eval!(division, "85 / 2;" => 42);
-    eval!(let_stmt, "let forty_two = 42;" => 0);
-    eval!(let_stmt_then_expression, "let forty = 2 * 20; forty + 2;" => 42);
-    eval!(function, "let times_two(v: number): number = v * 2;" => 0);
-    eval!(function_call, "let times_two(v: number): number = v * 2; times_two(21);" => 42);
-    eval!(complex_function_call, "let plus_one_times_two(v: number): number = { let res = v + 1; res * 2; } plus_one_times_two(20);" => 42);
-    eval!(ret_function_call, "let times_two(v: number): number = { 41; ret v * 2; 43; } times_two(21);" => 42);
-    eval!(bool_true, "true;" => 1);
-    eval!(bool_false, "false;" => 0);
-    eval!(equality_numbers_eq_true, "42 == 42;" => 1);
-    eval!(equality_numbers_eq_false, "42 == 41;" => 0);
-    eval!(equality_numbers_neq_true, "42 != 42;" => 0);
-    eval!(equality_numbers_neq_false, "42 != 42;" => 0);
-    eval!(equality_booleans_eq_true, "true == true;" => 1);
-    eval!(equality_booleans_eq_false, "true == false;" => 0);
-    eval!(equality_booleans_neq_true, "true != true;" => 0);
-    eval!(equality_booleans_neq_false, "true != false;" => 1);
-    eval!(gt, "42 > 42;" => 0);
-    eval!(lt, "42 < 42;" => 0);
-    eval!(ge, "42 >= 42;" => 1);
-    eval!(le, "42 <= 42;" => 1);
-    eval!(comparison_1, "(42 > 42) != (42 >= 42);" => 1);
-    eval!(comparison_2, "(42 > 42) != (42 <= 42);" => 1);
-    eval!(comparison_3, "(42 == 42) == (42 >= 42);" => 1);
-    eval!(comparison_4, "(42 == 42) == (42 <= 42);" => 1);
-    eval!(comparison_5, "(42 > 42) == (42 < 42);" => 1);
-    eval!(equality_bool_eq1, "true == true;" => 1);
-    eval!(equality_bool_eq2, "false == false;" => 1);
-    eval!(equality_bool_neq1, "true == false;" => 0);
-    eval!(equality_bool_neq2, "false == true;" => 0);
+    eval!(simple_precedence_1, "let main() { 2 + 20 * 2; }" => 42);
+    eval!(simple_precedence_2, "let main() { 20 * 2 + 2; }" => 42);
+    eval!(parenthesis_precedence, "let main() { (20 + 1) * 2; }" => 42);
+    eval!(negative_number, "let main() { -1 + 43; }" => 42);
+    eval!(unary_operator_minus_number, "let main() { - 1 + 43; }" => 42);
+    eval!(binary_operator_minus, "let main() { 43 - 1; }" => 42);
+    eval!(unary_operator_minus_negative_number, "let main() { --42; }" => 42);
+    eval!(division, "let main() { 85 / 2; }" => 42);
+    eval!(let_stmt, "let main() {  let forty_two = 42; }" => 0);
+    eval!(let_stmt_then_expression, "let main() {  let forty = 2 * 20; forty + 2; }" => 42);
+    eval!(function, "let main() {  let times_two(v: number): number = v * 2; }" => 0);
+    eval!(function_call, "let main() {  let times_two(v: number): number = v * 2; times_two(21); }" => 42);
+    eval!(complex_function_call, "let main() {  let plus_one_times_two(v: number): number = { let res = v + 1; res * 2; } plus_one_times_two(20); }" => 42);
+    eval!(ret_function_call, "let main() {  let times_two(v: number): number = { 41; ret v * 2; 43; } times_two(21); }" => 42);
+    eval!(bool_true, "let main() {  true; }" => 1);
+    eval!(bool_false, "let main() {  false; }" => 0);
+    eval!(equality_numbers_eq_true, "let main() {  42 == 42; }" => 1);
+    eval!(equality_numbers_eq_false, "let main() {  42 == 41; }" => 0);
+    eval!(equality_numbers_neq_true, "let main() {  42 != 42; }" => 0);
+    eval!(equality_numbers_neq_false, "let main() {  42 != 42; }" => 0);
+    eval!(equality_booleans_eq_true, "let main() {  true == true; }" => 1);
+    eval!(equality_booleans_eq_false, "let main() {  true == false; }" => 0);
+    eval!(equality_booleans_neq_true, "let main() {  true != true; }" => 0);
+    eval!(equality_booleans_neq_false, "let main() {  true != false; }" => 1);
+    eval!(gt, "let main() {  42 > 42; }" => 0);
+    eval!(lt, "let main() {  42 < 42; }" => 0);
+    eval!(ge, "let main() {  42 >= 42; }" => 1);
+    eval!(le, "let main() {  42 <= 42; }" => 1);
+    eval!(comparison_1, "let main() {  (42 > 42) != (42 >= 42); }" => 1);
+    eval!(comparison_2, "let main() {  (42 > 42) != (42 <= 42); }" => 1);
+    eval!(comparison_3, "let main() {  (42 == 42) == (42 >= 42); }" => 1);
+    eval!(comparison_4, "let main() {  (42 == 42) == (42 <= 42); }" => 1);
+    eval!(comparison_5, "let main() {  (42 > 42) == (42 < 42); }" => 1);
+    eval!(equality_bool_eq1, "let main() {  true == true; }" => 1);
+    eval!(equality_bool_eq2, "let main() {  false == false; }" => 1);
+    eval!(equality_bool_neq1, "let main() {  true == false; }" => 0);
+    eval!(equality_bool_neq2, "let main() {  false == true; }" => 0);
     eval!(fibonacci_rec, r#"
         let f(n: number): number = {
             if n <= 1 {
@@ -534,7 +570,10 @@ mod tests {
             }
             f(n - 1) + f(n - 2);
         }
-        f(9) + 8;
+
+        let main() {
+            f(9) + 8;
+        }
     "# => 42);
     eval!(fibonacci_iter, r#"
         let f(n: number): number = {
@@ -555,7 +594,10 @@ mod tests {
 
             current;
         }
-        f(9) + 8;
+
+        let main() {
+            f(9) + 8;
+        }
     "# => 42);
     eval!(wtf, r#"
         let wtf(i: number, j: number): number = {
@@ -568,11 +610,13 @@ mod tests {
             };
         }
 
-        let seven = wtf(5, 2);
-        let tree = wtf(2, 3);
-        let twenty_one = wtf(11, 21);
+        let main() {
+            let seven = wtf(5, 2);
+            let tree = wtf(2, 3);
+            let twenty_one = wtf(11, 21);
 
-        seven * tree + twenty_one;
+            seven * tree + twenty_one;
+        }
     "# => 42);
     eval!(fact, r#"
         let fact(n: number): number = {
@@ -584,26 +628,33 @@ mod tests {
             }
             product;
         }
-        fact(3);
+
+        let main() {
+            fact(3);
+        }
     "# => 6);
     eval!(area, r#"
         struct Point {
             x: number,
             y: number
         }
+
         let area(p1: Point, p2: Point): number = {
             (p2.x - p1.x) * (p2.y - p1.y);
         }
-        area(
-            Point {
-                x: 1,
-                y: 1
-            },
-            Point {
-                x: 1 + 6,
-                y: 1 + 7
-            }
-        );
+
+        let main() {
+            area(
+                Point {
+                    x: 1,
+                    y: 1
+                },
+                Point {
+                    x: 1 + 6,
+                    y: 1 + 7
+                }
+            );
+        }
     "# => 42);
     eval!(area_nested_struct, r#"
         struct Point {
@@ -620,24 +671,26 @@ mod tests {
             (s.p2.x - s.p1.x) * (s.p2.y - s.p1.y);
         }
 
-        let p1 = Point {
-            x: 1,
-            y: 1
-        };
+        let main() {
+            let p1 = Point {
+                x: 1,
+                y: 1
+            };
 
-        let p2 = Point {
-            x: 6,
-            y: 7
-        };
+            let p2 = Point {
+                x: 6,
+                y: 7
+            };
 
-        p2.x = p2.x + 1;
-        p2.y = p2.y + 1;
+            p2.x = p2.x + 1;
+            p2.y = p2.y + 1;
 
-        area(
-            Square {
-                p1: p1,
-                p2: p2
-            }
-        );
+            area(
+                Square {
+                    p1: p1,
+                    p2: p2
+                }
+            );
+        }
     "# => 42);
 }

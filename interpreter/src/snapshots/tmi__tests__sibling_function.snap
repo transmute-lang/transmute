@@ -1,0 +1,14 @@
+---
+source: interpreter/src/lib.rs
+info:
+  program: tmi
+  args:
+    - "../examples/sibling_function.tm"
+    - "9"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Result: 34
+
+----- stderr -----

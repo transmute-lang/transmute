@@ -6,12 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `eof`, expected one of (2) identifier 762, `}` 761",
+                message: "Unexpected `eof`, expected one of (2) identifier 786, `}` 785",
                 span: 1:22; [21, 21],
                 level: Error,
                 generated_at: (
                     "ast/src/parser.rs",
-                    757,
+                    781,
                 ),
             },
         ],

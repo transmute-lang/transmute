@@ -8,3 +8,7 @@ transmute-core = {path = "../core" }
 transmute-hir = {path = "../hir" }
 transmute-ast = {path = "../ast" }
 clap = { version = "4.5.8", features = ["derive"] }
+
+[dev-dependencies]
+insta = "1.34.0"
+insta-cmd = "0.6.0"

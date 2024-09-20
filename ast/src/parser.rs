@@ -11,6 +11,8 @@ use crate::Ast;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use transmute_core::error::Diagnostics;
+#[cfg(all(not(test), not(feature = "allow-any-root-kind")))]
+use transmute_core::error::{Diagnostic, Level};
 use transmute_core::ids::{id, ExprId, IdentId, IdentRefId, StmtId};
 use transmute_core::span::Span;
 
@@ -212,9 +214,31 @@ impl<'s> Parser<'s> {
     pub fn parse(mut self) -> Result<Ast, Diagnostics> {
         let mut statements = Vec::new();
 
-        // fixme only allow functions and structs at top level
         while let Some(statement) = self.parse_statement() {
-            statements.push(statement.id);
+            match &statement.kind {
+                StatementKind::LetFn(_, _, _, _) | StatementKind::Struct(_, _) => {
+                    statements.push(statement.id)
+                }
+                StatementKind::Expression(_)
+                | StatementKind::Let(_, _)
+                | StatementKind::Ret(_, _) => {
+                    // when testing we are find with having any statement as top level... while not
+                    // perfect, this eases things a lot
+                    #[cfg(any(test, feature = "allow-any-root-kind"))]
+                    statements.push(statement.id);
+
+                    #[cfg(all(not(test), not(feature = "allow-any-root-kind")))]
+                    {
+                        let span = statement.span.clone();
+                        self.diagnostics.push(Diagnostic::new(
+                            "Only functions and structs are allowed at top level",
+                            span,
+                            Level::Error,
+                            (file!(), line!()),
+                        ))
+                    }
+                }
+            }
         }
 
         let mut identifiers = self

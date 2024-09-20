@@ -5,12 +5,16 @@ use crate::exit_points::ExitPoints;
 use crate::expression::{Expression, ExpressionKind, Target};
 use crate::identifier::Identifier;
 use crate::identifier_ref::IdentifierRef;
+use crate::literal::LiteralKind;
 use crate::natives::{Native, Natives, Type};
 use crate::passes::exit_points_resolver::ExitPoint;
 use crate::statement::{Field, Parameter, Return, Statement, StatementKind};
 use crate::symbol::{Symbol, SymbolKind};
 use crate::typed::{Typed, Untyped};
-use crate::{Hir, literal, ResolvedExpression, ResolvedHir, ResolvedIdentifierRef, ResolvedStatement, UnresolvedHir};
+use crate::{
+    literal, Hir, ResolvedExpression, ResolvedHir, ResolvedIdentifierRef, ResolvedStatement,
+    UnresolvedHir,
+};
 use bimap::BiHashMap;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -19,7 +23,6 @@ use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use transmute_core::span::Span;
 use transmute_core::vec_map::VecMap;
-use crate::literal::LiteralKind;
 
 type Function<T, B> = (Identifier<B>, Vec<Parameter<T, B>>, Return<T>);
 
@@ -691,7 +694,11 @@ impl Resolver {
 
                 self.statements.insert(
                     stmt_id,
-                    Statement::new(stmt_id, StatementKind::Let(ident.bind(symbol_id), expr), span),
+                    Statement::new(
+                        stmt_id,
+                        StatementKind::Let(ident.bind(symbol_id), expr),
+                        span,
+                    ),
                 );
 
                 self.void_type_id
@@ -709,7 +716,8 @@ impl Resolver {
                 self.none_type_id
             }
             StatementKind::LetFn(ident, params, ret_type, expr) => {
-                let res = self.resolve_function(hir, stmt_id, (ident, params, ret_type), expr, &span);
+                let res =
+                    self.resolve_function(hir, stmt_id, (ident, params, ret_type), expr, &span);
 
                 if let Ok((identifier, parameters, ret_type)) = res {
                     self.statements.insert(
@@ -1443,11 +1451,9 @@ mod tests {
     #[test]
     fn fibonacci_rec() {
         let hir = UnresolvedHir::from(
-            Parser::new(Lexer::new(include_str!(
-                "../../../examples/fibonacci_rec.tm"
-            )))
-            .parse()
-            .unwrap(),
+            Parser::new(Lexer::new(include_str!("../../../examples/fibo_rec.tm")))
+                .parse()
+                .unwrap(),
         )
         .resolve(Natives::default())
         .unwrap();

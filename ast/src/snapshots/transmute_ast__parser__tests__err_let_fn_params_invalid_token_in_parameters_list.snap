@@ -6,12 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `if`, expected one of (1) `)` 471",
+                message: "Unexpected `if`, expected one of (1) `)` 495",
                 span: 1:7; [6, 8],
                 level: Error,
                 generated_at: (
                     "ast/src/parser.rs",
-                    468,
+                    492,
                 ),
             },
         ],

@@ -41,14 +41,14 @@ impl Ast {
         identifier_refs: Vec<IdentifierRef>,
         expressions: Vec<Expression>,
         statements: Vec<Statement>,
-        root: Vec<StmtId>,
+        roots: Vec<StmtId>,
     ) -> Self {
         Self {
             identifiers: identifiers.into(),
             identifier_refs: identifier_refs.into(),
             expressions: expressions.into(),
             statements: statements.into(),
-            roots: root,
+            roots,
         }
     }
 }

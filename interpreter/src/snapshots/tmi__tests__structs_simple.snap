@@ -1,0 +1,14 @@
+---
+source: interpreter/src/lib.rs
+info:
+  program: tmi
+  args:
+    - "../examples/structs_simple.tm"
+    - "9"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Result: 19
+
+----- stderr -----

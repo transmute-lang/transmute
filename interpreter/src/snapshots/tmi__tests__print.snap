@@ -1,0 +1,16 @@
+---
+source: interpreter/src/lib.rs
+info:
+  program: tmi
+  args:
+    - "../examples/print.tm"
+    - "9"
+---
+success: true
+exit_code: 0
+----- stdout -----
+9
+false
+Result: 9
+
+----- stderr -----

@@ -13,6 +13,9 @@ pub struct Cli {
     /// Write HTML file
     #[arg(long, default_value_t = false)]
     pub output_html: bool,
+
+    /// The parameters to pass to main
+    pub params: Vec<i64>,
 }
 
 pub fn parse_args() -> Cli {

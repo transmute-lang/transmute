@@ -68,12 +68,7 @@ impl Transformer {
                 HirStatementKind::Struct(identifier, fields) => {
                     self.transform_struct(&mut hir, stmt_id, identifier, fields)
                 }
-                _ => diagnostics.push(Diagnostic::new(
-                    "only functions are allowed at top level",
-                    stmt.span,
-                    Level::Error,
-                    (file!(), line!()),
-                )),
+                kind => panic!("function or struct expected, got {kind:?}"),
             }
         }
 
@@ -963,21 +958,7 @@ mod tests {
     use insta::assert_debug_snapshot;
 
     #[test]
-    fn test_main_with_free_statements() {
-        let ast = transmute_ast::parse("let main() {}; let a = 1;").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_free_statements_without_main() {
-        let ast = transmute_ast::parse("let a = 1;").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_main_without_free_statements() {
+    fn test_main() {
         let ast = transmute_ast::parse("let main() {}").unwrap();
         let hir = transmute_hir::resolve(ast).unwrap();
         assert_debug_snapshot!(make_mir(hir));
@@ -1063,10 +1044,13 @@ mod tests {
 
     #[test]
     fn test_structs_same_field_names() {
-        let ast = transmute_ast::parse(r#"
+        let ast = transmute_ast::parse(
+            r#"
             struct Inner { field: number }
             struct Outer { field: Inner }
-        "#).unwrap();
+        "#,
+        )
+        .unwrap();
         let hir = transmute_hir::resolve(ast).unwrap();
         assert_debug_snapshot!(make_mir(hir));
     }
