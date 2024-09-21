@@ -237,12 +237,6 @@ impl Resolver {
             .remove(expr_id)
             .expect("expr is not resolved");
 
-        if hir.exit_points.unreachable.contains(&expr_id) {
-            self.expressions
-                .insert(expr.id, expr.typed(self.void_type_id));
-            return self.void_type_id;
-        }
-
         let type_id = match &expr.kind {
             ExpressionKind::Assignment(Target::Direct(ident_ref), expr) => {
                 self.resolve_assignment(hir, *ident_ref, *expr)
@@ -1880,34 +1874,32 @@ mod tests {
         "No function 'n' found for parameters of types ()",
         Span::new(1, 13, 12, 1)
     );
-    // fixme un-comment the following test
-    // test_type_ok!(
-    //     unreachable_statement1,
-    //     r#"
-    //     let f(n: number): number = {
-    //         if n == 42 {
-    //             let m = 0;
-    //             ret m + 1;
-    //         } else {
-    //             let m = 0;
-    //             ret m - 1;
-    //         };
-    //         ret f(42);
-    //     }
-    //     "#
-    // );
-    // fixme un-comment the following test
-    // test_type_ok!(
-    //     unreachable_statement1,
-    //     r#"
-    //     let f(n: number): number = {
-    //         while n != 42 {
-    //             ret n;
-    //         }
-    //         ret n;
-    //     }
-    //     "#
-    // );
+    test_type_ok!(
+        unreachable_statement1,
+        r#"
+        let f(n: number): number = {
+            if n == 42 {
+                let m = 0;
+                ret m + 1;
+            } else {
+                let m = 0;
+                ret m - 1;
+            };
+            ret f(42);
+        }
+        "#
+    );
+    test_type_ok!(
+        unreachable_statement3,
+        r#"
+        let f(n: number): number = {
+            while n != 42 {
+                ret n;
+            }
+            ret n;
+        }
+        "#
+    );
     test_type_ok!(
         unreachable_statement2,
         r#"
