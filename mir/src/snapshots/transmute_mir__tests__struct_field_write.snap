@@ -26,6 +26,7 @@ Ok(
                 },
                 body: ExprId(7),
                 ret: TypeId(4),
+                parent: None,
             },
         ],
         structs: [
@@ -46,6 +47,7 @@ Ok(
                         type_id: TypeId(4),
                     },
                 ],
+                parent: None,
             },
         ],
         identifiers: [

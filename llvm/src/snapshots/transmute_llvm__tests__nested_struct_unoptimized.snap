@@ -5,6 +5,8 @@ expression: llvm_ir
 ; ModuleID = 'main'
 source_filename = "main"
 
+@layout_sN1f1n8MyStruct = global [1 x i64] zeroinitializer
+
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
 
@@ -21,10 +23,14 @@ entry:
   unreachable
 }
 
-define i1 @_TM0_1f2nn(i64 %"l#param#sym20#", i64 %"r#param#sym21#") gc "shadow-stack" {
+define void @_TM0_1f1n(i64 %"n#param#sym21#") gc "shadow-stack" {
 entry:
-  %"eq#" = icmp eq i64 %"l#param#sym20#", %"r#param#sym21#"
-  ret i1 %"eq#"
+  ret void
+}
+
+define void @_TM0_N1f1n1g1sN1f1n8MyStruct(ptr %"p#param#sym23#") gc "shadow-stack" {
+entry:
+  ret void
 }
 
 attributes #0 = { nounwind }

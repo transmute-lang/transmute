@@ -26,6 +26,7 @@ Ok(
                 },
                 body: ExprId(3),
                 ret: TypeId(1),
+                parent: None,
             },
         ],
         structs: [],

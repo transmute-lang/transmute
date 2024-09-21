@@ -52,13 +52,12 @@ impl Transformer {
             let stmt = hir.statements.remove(stmt_id).unwrap();
 
             match stmt.kind {
-                HirStatementKind::LetFn(identifier, parameters, ret_type, expr_id) => {
-                    self.transform_function(&mut hir, identifier, parameters, ret_type, expr_id)
-                }
+                HirStatementKind::LetFn(identifier, parameters, ret_type, expr_id) => self
+                    .transform_function(&mut hir, None, identifier, parameters, ret_type, expr_id),
                 HirStatementKind::Struct(identifier, fields) => {
-                    self.transform_struct(stmt_id, identifier, fields)
+                    self.transform_struct(None, stmt_id, identifier, fields)
                 }
-                kind => panic!("function or struct expected, got {kind:?}"),
+                kind => panic!("function or struct expected, got {:?}", kind),
             }
         }
 
@@ -156,6 +155,7 @@ impl Transformer {
     fn transform_function(
         &mut self,
         hir: &mut Hir,
+        parent: Option<FunctionId>,
         identifier: HirIdentifier,
         parameters: Vec<HirParameter>,
         ret: HirReturn,
@@ -164,7 +164,8 @@ impl Transformer {
         let function_id = self.functions.create();
 
         let expression = hir.expressions.remove(expr_id).unwrap();
-        let (mutated_symbol_ids, mut variables) = self.transform_expression(hir, expression);
+        let (mutated_symbol_ids, mut variables) =
+            self.transform_expression(hir, Some(function_id), expression);
 
         let parameters = parameters
             .into_iter()
@@ -189,6 +190,7 @@ impl Transformer {
             variables,
             body: expr_id,
             ret: ret.resolved_type_id(),
+            parent,
         };
 
         self.functions.insert(function_id, function);
@@ -196,6 +198,7 @@ impl Transformer {
 
     fn transform_struct(
         &mut self,
+        parent: Option<FunctionId>,
         stmt_id: StmtId,
         identifier: HirIdentifier,
         fields: Vec<HirField>,
@@ -217,6 +220,7 @@ impl Transformer {
                         identifier: field.identifier.into(),
                     })
                     .collect::<Vec<Field>>(),
+                parent,
             },
         );
         self.structs_map.insert(stmt_id, (symbol_id, struct_id));
@@ -225,6 +229,7 @@ impl Transformer {
     fn transform_expression(
         &mut self,
         hir: &mut Hir,
+        parent: Option<FunctionId>,
         expression: HirExpression,
     ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let type_id = expression.resolved_type_id();
@@ -232,6 +237,7 @@ impl Transformer {
         match expression.kind {
             HirExpressionKind::Assignment(target, expr_id) => self.transform_assignment(
                 hir,
+                parent,
                 expression.id,
                 expression.span,
                 type_id,
@@ -240,6 +246,7 @@ impl Transformer {
             ),
             HirExpressionKind::If(cond_expr_id, true_expr_id, false_expr_id) => self.transform_if(
                 hir,
+                parent,
                 expression.id,
                 expression.span,
                 type_id,
@@ -253,6 +260,7 @@ impl Transformer {
             }
             HirExpressionKind::Access(expr, ident_ref_id) => self.transform_access(
                 hir,
+                parent,
                 expression.id,
                 expression.span,
                 type_id,
@@ -261,6 +269,7 @@ impl Transformer {
             ),
             HirExpressionKind::FunctionCall(ident_ref_id, params) => self.transform_function_call(
                 hir,
+                parent,
                 expression.id,
                 expression.span,
                 type_id,
@@ -269,18 +278,25 @@ impl Transformer {
             ),
             HirExpressionKind::While(cond_expr_id, body_expr_id) => self.transform_while(
                 hir,
+                parent,
                 expression.id,
                 expression.span,
                 type_id,
                 cond_expr_id,
                 body_expr_id,
             ),
-            HirExpressionKind::Block(stmt_ids) => {
-                self.transform_block(hir, expression.id, expression.span, type_id, stmt_ids)
-            }
+            HirExpressionKind::Block(stmt_ids) => self.transform_block(
+                hir,
+                parent,
+                expression.id,
+                expression.span,
+                type_id,
+                stmt_ids,
+            ),
             HirExpressionKind::StructInstantiation(ident_ref_id, fields) => self
                 .transform_struct_instantiation(
                     hir,
+                    parent,
                     expression.id,
                     expression.span,
                     type_id,
@@ -340,9 +356,11 @@ impl Transformer {
         };
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn transform_access(
         &mut self,
         hir: &mut Hir,
+        parent: Option<FunctionId>,
         expr_id: ExprId,
         span: Span,
         type_id: TypeId,
@@ -350,7 +368,7 @@ impl Transformer {
         ident_ref_id: IdentRefId,
     ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let expression = hir.expressions.remove(target_expr_id).unwrap();
-        self.transform_expression(hir, expression);
+        self.transform_expression(hir, parent, expression);
 
         let symbol_id = hir.identifier_refs[ident_ref_id].resolved_symbol_id();
 
@@ -368,9 +386,11 @@ impl Transformer {
     }
 
     /// Transform the assignment and return the mutated `SymbolId`
+    #[allow(clippy::too_many_arguments)]
     fn transform_assignment(
         &mut self,
         hir: &mut Hir,
+        parent: Option<FunctionId>,
         expr_id: ExprId,
         span: Span,
         type_id: TypeId,
@@ -379,7 +399,8 @@ impl Transformer {
     ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let expression = hir.expressions.remove(value_expr_id).unwrap();
 
-        let (mut mutated_symbol_ids, mut variables) = self.transform_expression(hir, expression);
+        let (mut mutated_symbol_ids, mut variables) =
+            self.transform_expression(hir, parent, expression);
 
         match target {
             HirTarget::Direct(ident_ref_id) => {
@@ -399,7 +420,7 @@ impl Transformer {
             HirTarget::Indirect(target_expr_id) => {
                 let expression = hir.expressions.remove(target_expr_id).unwrap();
                 let (new_mutated_symbol_ids, new_variables) =
-                    self.transform_expression(hir, expression);
+                    self.transform_expression(hir, parent, expression);
 
                 self.expressions.insert(
                     expr_id,
@@ -426,6 +447,7 @@ impl Transformer {
     fn transform_if(
         &mut self,
         hir: &mut Hir,
+        parent: Option<FunctionId>,
         expr_id: ExprId,
         span: Span,
         type_id: TypeId,
@@ -434,16 +456,17 @@ impl Transformer {
         false_expr_id: Option<ExprId>,
     ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let expr = hir.expressions.remove(cond_expr_id).unwrap();
-        let (mut mutated_symbols_ids, mut variables) = self.transform_expression(hir, expr);
+        let (mut mutated_symbols_ids, mut variables) = self.transform_expression(hir, parent, expr);
 
         let expr = hir.expressions.remove(true_expr_id).unwrap();
-        let (new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, expr);
+        let (new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, parent, expr);
         mutated_symbols_ids.extend(new_mutated_symbols_ids);
         variables.extend(new_variables);
 
         if let Some(false_expr_id) = false_expr_id {
             let expr = hir.expressions.remove(false_expr_id).unwrap();
-            let (new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, expr);
+            let (new_mutated_symbols_ids, new_variables) =
+                self.transform_expression(hir, parent, expr);
             mutated_symbols_ids.extend(new_mutated_symbols_ids);
             variables.extend(new_variables);
         }
@@ -461,9 +484,11 @@ impl Transformer {
         (mutated_symbols_ids, variables)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn transform_function_call(
         &mut self,
         hir: &mut Hir,
+        parent: Option<FunctionId>,
         expr_id: ExprId,
         span: Span,
         type_id: TypeId,
@@ -478,7 +503,7 @@ impl Transformer {
         for expr_id in params.iter() {
             let expression = hir.expressions.remove(*expr_id).unwrap();
             let (new_mutated_symbol_ids, new_variables) =
-                self.transform_expression(hir, expression);
+                self.transform_expression(hir, parent, expression);
             mutated_symbol_ids.extend(new_mutated_symbol_ids);
             variables.extend(new_variables);
         }
@@ -496,9 +521,11 @@ impl Transformer {
         (mutated_symbol_ids, variables)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn transform_while(
         &mut self,
         hir: &mut Hir,
+        parent: Option<FunctionId>,
         expr_id: ExprId,
         span: Span,
         type_id: TypeId,
@@ -506,10 +533,10 @@ impl Transformer {
         body_expr_id: ExprId,
     ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let expr = hir.expressions.remove(cond_expr_id).unwrap();
-        let (mut mutated_symbols_ids, mut variables) = self.transform_expression(hir, expr);
+        let (mut mutated_symbols_ids, mut variables) = self.transform_expression(hir, parent, expr);
 
         let expr = hir.expressions.remove(body_expr_id).unwrap();
-        let (new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, expr);
+        let (new_mutated_symbols_ids, new_variables) = self.transform_expression(hir, parent, expr);
         mutated_symbols_ids.extend(new_mutated_symbols_ids);
         variables.extend(new_variables);
 
@@ -529,6 +556,7 @@ impl Transformer {
     fn transform_block(
         &mut self,
         hir: &mut Hir,
+        parent: Option<FunctionId>,
         expr_id: ExprId,
         span: Span,
         type_id: TypeId,
@@ -542,20 +570,22 @@ impl Transformer {
             let stmt = hir.statements.remove(stmt_id).unwrap();
             match stmt.kind {
                 HirStatementKind::Expression(expr_id) => {
-                    let (new_mutated_symbol_ids, new_variables) =
-                        self.transform_expression_statement(hir, stmt.id, stmt.span, expr_id);
+                    let (new_mutated_symbol_ids, new_variables) = self
+                        .transform_expression_statement(hir, parent, stmt.id, stmt.span, expr_id);
                     mutated_symbols.extend(new_mutated_symbol_ids);
                     variables.extend(new_variables);
                     kept_stmt_ids.push(stmt.id);
                 }
                 HirStatementKind::Let(ident, expr_id) => {
-                    let new_variable = self.transform_let(hir, stmt_id, stmt.span, ident, expr_id);
+                    let new_variable =
+                        self.transform_let(hir, parent, stmt_id, stmt.span, ident, expr_id);
                     variables.insert(new_variable.symbol_id, new_variable);
                     kept_stmt_ids.push(stmt.id);
                 }
                 HirStatementKind::Ret(expr_id, _) => {
                     mutated_symbols.extend(self.transform_ret(
                         hir,
+                        parent,
                         stmt.id,
                         stmt.span.clone(),
                         expr_id,
@@ -563,10 +593,10 @@ impl Transformer {
                     kept_stmt_ids.push(stmt.id)
                 }
                 HirStatementKind::LetFn(identifier, parameters, ret_type, expr_id) => {
-                    self.transform_function(hir, identifier, parameters, ret_type, expr_id);
+                    self.transform_function(hir, parent, identifier, parameters, ret_type, expr_id);
                 }
                 HirStatementKind::Struct(identifier, fields) => {
-                    self.transform_struct(stmt_id, identifier, fields)
+                    self.transform_struct(parent, stmt_id, identifier, fields)
                 }
             }
         }
@@ -584,9 +614,11 @@ impl Transformer {
         (mutated_symbols, variables)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn transform_struct_instantiation(
         &mut self,
         hir: &mut Hir,
+        parent: Option<FunctionId>,
         expr_id: ExprId,
         span: Span,
         type_id: TypeId,
@@ -600,7 +632,7 @@ impl Transformer {
         for (field_ident_ref_id, field_expr_id) in fields.into_iter() {
             let expression = hir.expressions.remove(field_expr_id).unwrap();
             let (new_mutated_symbol_ids, new_variables) =
-                self.transform_expression(hir, expression);
+                self.transform_expression(hir, parent, expression);
             mutated_symbol_ids.extend(new_mutated_symbol_ids);
             variables.extend(new_variables);
 
@@ -651,12 +683,13 @@ impl Transformer {
     fn transform_expression_statement(
         &mut self,
         hir: &mut Hir,
+        parent: Option<FunctionId>,
         stmt_id: StmtId,
         span: Span,
         expr_id: ExprId,
     ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let expression = hir.expressions.remove(expr_id).unwrap();
-        let res = self.transform_expression(hir, expression);
+        let res = self.transform_expression(hir, parent, expression);
 
         self.statements.insert(
             stmt_id,
@@ -673,6 +706,7 @@ impl Transformer {
     fn transform_let(
         &mut self,
         hir: &mut Hir,
+        parent: Option<FunctionId>,
         stmt_id: StmtId,
         span: Span,
         identifier: HirIdentifier,
@@ -681,7 +715,7 @@ impl Transformer {
         let expression = hir.expressions.remove(expr_id).unwrap();
         let type_id = expression.resolved_type_id();
         let expr_span = expression.span.clone();
-        let (mutated_symbol_ids, variables) = self.transform_expression(hir, expression);
+        let (mutated_symbol_ids, variables) = self.transform_expression(hir, parent, expression);
 
         assert!(mutated_symbol_ids.is_empty());
         assert!(variables.is_empty());
@@ -721,6 +755,7 @@ impl Transformer {
     fn transform_ret(
         &mut self,
         hir: &mut Hir,
+        parent: Option<FunctionId>,
         stmt_id: StmtId,
         span: Span,
         expr_id: Option<ExprId>,
@@ -728,7 +763,7 @@ impl Transformer {
         let mutated_symbols = expr_id
             .map(|expr_id| {
                 let expr = hir.expressions.remove(expr_id).unwrap();
-                let (mutated_symbols, variables) = self.transform_expression(hir, expr);
+                let (mutated_symbols, variables) = self.transform_expression(hir, parent, expr);
 
                 debug_assert!(variables.is_empty());
                 mutated_symbols
@@ -775,6 +810,7 @@ pub struct Function {
     pub variables: BTreeMap<SymbolId, Variable>,
     pub body: ExprId,
     pub ret: TypeId,
+    pub parent: Option<FunctionId>,
 }
 
 #[derive(Debug)]
@@ -814,6 +850,7 @@ pub struct Struct {
     pub identifier: Identifier,
     pub symbol_id: SymbolId,
     pub fields: Vec<Field>,
+    pub parent: Option<FunctionId>,
 }
 
 #[derive(Debug)]
@@ -1026,6 +1063,13 @@ mod tests {
     #[test]
     fn test_struct() {
         let ast = transmute_ast::parse("struct Struct { field: number }").unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_inner_struct() {
+        let ast = transmute_ast::parse("let f() { struct Struct { field: number } }").unwrap();
         let hir = transmute_hir::resolve(ast).unwrap();
         assert_debug_snapshot!(make_mir(hir));
     }

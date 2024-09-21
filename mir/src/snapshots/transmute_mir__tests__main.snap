@@ -15,6 +15,7 @@ Ok(
                 variables: {},
                 body: ExprId(0),
                 ret: TypeId(1),
+                parent: None,
             },
         ],
         structs: [],

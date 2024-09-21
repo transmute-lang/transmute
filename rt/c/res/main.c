@@ -6,8 +6,8 @@
 
 #include "gc.h"
 
-// main(number) -> _TM0_4main1Pn
-int64_t _TM0_4main1Pn(int64_t n);
+// main(number) -> _TM0_4main1n
+int64_t _TM0_4main1n(int64_t n);
 
 int main(int argc, char **argv) {
     gc_init();
@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
     int64_t n = strtoll(argv[1], NULL, 10);
 
     for (int64_t i = 0; i < n; i++) {
-        printf("main(%li) = %li\n", i, _TM0_4main1Pn(i));
+        printf("main(%li) = %li\n", i, _TM0_4main1n(i));
     }
 
 #ifdef GC_TEST
@@ -33,13 +33,13 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-// print(number) -> _TM0_5print1Pn
-void _TM0_5print1Pn(int64_t a) {
+// print(number) -> _TM0_5print1n
+void _TM0_5print1n(int64_t a) {
     printf("%li\n", a);
 }
 
-// print(boolean) -> _TM0_5print1Pb
-void _TM0_5print1Pb(int8_t b) {
+// print(boolean) -> _TM0_5print1b
+void _TM0_5print1b(int8_t b) {
     if (b) {
         printf("true\n");
     } else {

@@ -1972,6 +1972,14 @@ mod tests {
         Span::new(1, 30, 29, 3)
     );
 
+    // fixme uncomment this test
+    // test_type_error!(
+    //     return_from_void2,
+    //     "let fibo(n: number) { 0; }",
+    //     "",
+    //     Span::default()
+    // );
+
     test_type_ok!(
         struct_in_function,
         r#"

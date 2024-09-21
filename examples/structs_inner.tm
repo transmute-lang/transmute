@@ -1,5 +1,9 @@
 #!transmute
 
+struct Point {
+    a: number,
+}
+
 let area(n: number): number = {
     struct Point {
         x: number,

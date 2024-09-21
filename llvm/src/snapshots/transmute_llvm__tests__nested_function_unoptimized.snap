@@ -12,22 +12,22 @@ declare ptr @gc_malloc(i64)
 
 declare void @gc_run()
 
-declare void @_TM0_5print1Pn(i64)
+declare void @_TM0_5print1n(i64)
 
-declare void @_TM0_5print1Pb(i1)
+declare void @_TM0_5print1b(i1)
 
 define private void @_glob() {
 entry:
   unreachable
 }
 
-define i64 @_TM0_1f0P() gc "shadow-stack" {
+define i64 @_TM0_1f0() gc "shadow-stack" {
 entry:
-  %"g#res#" = call i64 @_TM0_1g0P()
+  %"g#res#" = call i64 @_TM0_N1f01g0()
   ret i64 %"g#res#"
 }
 
-define i64 @_TM0_1g0P() gc "shadow-stack" {
+define i64 @_TM0_N1f01g0() gc "shadow-stack" {
 entry:
   ret i64 1
 }

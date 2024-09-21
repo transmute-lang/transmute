@@ -23,6 +23,7 @@ Ok(
                         type_id: TypeId(4),
                     },
                 ],
+                parent: None,
             },
             StructId(1) => Struct {
                 identifier: Identifier {
@@ -41,6 +42,7 @@ Ok(
                         type_id: TypeId(11),
                     },
                 ],
+                parent: None,
             },
         ],
         identifiers: [

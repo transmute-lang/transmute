@@ -7,7 +7,7 @@ source_filename = "main"
 
 %"Struct#id0" = type { i64 }
 
-@layout_struct_Struct = global [1 x i64] zeroinitializer
+@layout_s6Struct = global [1 x i64] zeroinitializer
 
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
@@ -16,21 +16,21 @@ declare ptr @gc_malloc(i64)
 
 declare void @gc_run()
 
-declare void @_TM0_5print1Pn(i64)
+declare void @_TM0_5print1n(i64)
 
-declare void @_TM0_5print1Pb(i1)
+declare void @_TM0_5print1b(i1)
 
 define private void @_glob() {
 entry:
   unreachable
 }
 
-define i64 @_TM0_1f0P() gc "shadow-stack" {
+define i64 @_TM0_1f0() gc "shadow-stack" {
 entry:
   %"s#local#sym23#" = alloca ptr, align 8
   store ptr null, ptr %"s#local#sym23#", align 8
-  call void @llvm.gcroot(ptr %"s#local#sym23#", ptr @layout_struct_Struct)
-  %"g#res#" = call ptr @_TM0_1g0P()
+  call void @llvm.gcroot(ptr %"s#local#sym23#", ptr @layout_s6Struct)
+  %"g#res#" = call ptr @_TM0_1g0()
   store ptr %"g#res#", ptr %"s#local#sym23#", align 8
   call void @gc_run()
   %"s#local#sym23#1" = load ptr, ptr %"s#local#sym23#", align 8
@@ -39,11 +39,11 @@ entry:
   ret i64 %"s#local#sym23#1.field#idx0#sym22#2"
 }
 
-define ptr @_TM0_1g0P() gc "shadow-stack" {
+define ptr @_TM0_1g0() gc "shadow-stack" {
 entry:
   %"gcroot#heap#struct#Struct#id0#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#struct#Struct#id0#", align 8
-  call void @llvm.gcroot(ptr %"gcroot#heap#struct#Struct#id0#", ptr @layout_struct_Struct)
+  call void @llvm.gcroot(ptr %"gcroot#heap#struct#Struct#id0#", ptr @layout_s6Struct)
   %"heap#struct#Struct#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"Struct#id0", ptr null, i32 1) to i64))
   store ptr %"heap#struct#Struct#id0#", ptr %"gcroot#heap#struct#Struct#id0#", align 8
   %"heap#struct#Struct#id0#.field#idx0#sym22" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0

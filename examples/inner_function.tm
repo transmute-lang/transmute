@@ -1,3 +1,7 @@
+let fibo(n: number): number {
+    0;
+}
+
 let main(n: number): number {
     let fibo(n: number): number {
         if n < 2 {

@@ -1,6 +1,6 @@
 mod mangling;
 
-use crate::mangling::mangle;
+use crate::mangling::{mangle_function_name, mangle_struct_name};
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::memory_buffer::MemoryBuffer;
@@ -212,7 +212,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     pub fn gen(mut self, mir: &Mir, optimize: bool) -> Result<Module<'ctx>, Diagnostics> {
         for (symbol_id, symbol) in mir.symbols.iter() {
             if let SymbolKind::Native(ident_id, parameters, _, native_kind) = &symbol.kind {
-                let fn_name = mangle(mir, *ident_id, parameters);
+                let fn_name = mangle_function_name(mir, *ident_id, parameters, None);
                 match native_kind {
                     NativeFnKind::PrintNumber => {
                         let print_fn_type = self.void_type.fn_type(&[self.i64_type.into()], false);
@@ -245,8 +245,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         );
         let block = self.context.append_basic_block(f, "entry");
         self.builder.position_at_end(block);
-        for (struct_id, _) in mir.structs.iter() {
-            self.gen_struct_layout(mir, struct_id);
+        for (struct_id, s) in mir.structs.iter() {
+            self.gen_struct_layout(mir, struct_id, s.symbol_id);
         }
         self.builder.build_unreachable().unwrap();
 
@@ -343,8 +343,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             i64_array_type,
             None,
             &format!(
-                "layout_struct_{}",
-                mir.identifiers[mir.structs[struct_id].identifier.id]
+                "layout_{}",
+                mangle_struct_name(mir, struct_id, struct_def.symbol_id),
             ),
         );
         // global.set_constant(true);
@@ -362,12 +362,12 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     /// then, n pairs of i64 follows:
     ///  - the first element is the field's offset
     ///  - the second element is the field's layout pointer
-    fn gen_struct_layout(&mut self, mir: &Mir, struct_id: StructId) {
+    fn gen_struct_layout(&mut self, mir: &Mir, struct_id: StructId, symbol_id: SymbolId) {
         let global = self
             .module
             .get_global(&format!(
-                "layout_struct_{}",
-                mir.identifiers[mir.structs[struct_id].identifier.id]
+                "layout_{}",
+                mangle_struct_name(mir, struct_id, symbol_id),
             ))
             .unwrap();
 
@@ -448,7 +448,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             Type::None => todo!(),
         };
 
-        let fn_name = mangle(
+        let fn_name = mangle_function_name(
             mir,
             function.identifier.id,
             function
@@ -457,6 +457,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 .map(|p| p.type_id)
                 .collect::<Vec<TypeId>>()
                 .as_slice(),
+            function.parent,
         );
         let f = self.module.add_function(&fn_name, fn_type, None);
         f.set_gc("shadow-stack");
@@ -1658,6 +1659,26 @@ mod tests {
                 1;
             };
             g();
+        }
+        "#
+    );
+    gen!(
+        deeply_nested_function,
+        r#"
+        let f() {
+            let g() {
+                let h() {
+                }
+            }
+        }
+        "#
+    );
+    gen!(
+        nested_struct,
+        r#"
+        let f(n: number) {
+            struct MyStruct {}
+            let g(p: MyStruct) {}
         }
         "#
     );

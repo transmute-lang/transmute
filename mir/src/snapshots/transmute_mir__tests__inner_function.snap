@@ -15,6 +15,7 @@ Ok(
                 variables: {},
                 body: ExprId(3),
                 ret: TypeId(4),
+                parent: None,
             },
             FunctionId(1) => Function {
                 identifier: Identifier {
@@ -26,6 +27,9 @@ Ok(
                 variables: {},
                 body: ExprId(1),
                 ret: TypeId(3),
+                parent: Some(
+                    FunctionId(0),
+                ),
             },
         ],
         structs: [],
