@@ -580,7 +580,9 @@ impl Transformer {
                 HirStatementKind::LetFn(identifier, parameters, ret_type, expr_id) => {
                     self.transform_function(hir, identifier, parameters, ret_type, expr_id);
                 }
-                HirStatementKind::Struct(_, _) => todo!(),
+                HirStatementKind::Struct(identifier, fields) => {
+                    self.transform_struct(hir, stmt_id, identifier, fields)
+                }
             }
         }
 

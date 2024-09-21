@@ -1,6 +1,6 @@
 #!transmute
 
-let area() = {
+let area(n: number): number = {
     struct Point {
         x: number,
         y: number,
@@ -12,8 +12,10 @@ let area() = {
 
     f(
         Point {x: 1, y: 1},
-        Point {x: 7, y: 8},
+        Point {x: n + 7, y: n + 8},
     );
 }
 
-area();
+let main(n: number): number {
+    area(n);
+}

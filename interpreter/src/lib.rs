@@ -91,4 +91,5 @@ mod tests {
     exec!(structs_fn);
     exec!(structs_nested);
     exec!(structs_simple);
+    exec!(structs_inner);
 }

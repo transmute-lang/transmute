@@ -58,8 +58,6 @@ pub struct Resolver {
     not_found_symbol_id: SymbolId,
 }
 
-// fixme add support for struct nested in function (examples/.inner_struct.tm)
-
 impl Resolver {
     pub fn new() -> Self {
         Self {
@@ -499,8 +497,7 @@ impl Resolver {
             return self.invalid_type_id;
         }
 
-        self
-            .resolve_ident_ref(hir, ident_ref, Some(&param_types))
+        self.resolve_ident_ref(hir, ident_ref, Some(&param_types))
             .map(|s| match &self.symbols[s].kind {
                 SymbolKind::LetFn(_, _, _, ret_type) => *ret_type,
                 SymbolKind::Native(_, _, ret_type, _) => *ret_type,
@@ -774,6 +771,17 @@ impl Resolver {
     ) -> Result<Function<Typed, Bound>, ()> {
         self.push_scope();
 
+        if let ExpressionKind::Block(stmt_ids) = &hir.expressions[body_expr_id].kind {
+            let stmt_ids = stmt_ids
+                .iter()
+                .filter(|stmt_id| {
+                    matches!(hir.statements[**stmt_id].kind, StatementKind::Struct(..))
+                })
+                .copied()
+                .collect::<Vec<StmtId>>();
+            self.insert_structs(hir, &stmt_ids);
+        }
+
         // fixme manage duplicate functions (for whatever it means ... - at least same name same
         //   first parameter type)
 
@@ -803,7 +811,7 @@ impl Resolver {
                 let ident_id = parameter.identifier.id;
                 let symbol_kind = SymbolKind::Parameter(ident_id, stmt_id, index);
 
-                if self.symbol_exists(ident_id, &symbol_kind) {
+                if self.symbol_exists_in_current_scope(ident_id, &symbol_kind) {
                     self.diagnostics.report_err(
                         format!(
                             "Parameter '{ident}' is already defined",
@@ -939,7 +947,7 @@ impl Resolver {
                 let ident_id = field.identifier.id;
                 let symbol_kind = SymbolKind::Field(ident_id, stmt_id, index);
 
-                if self.symbol_exists(ident_id, &symbol_kind) {
+                if self.symbol_exists_in_current_scope(ident_id, &symbol_kind) {
                     self.diagnostics.report_err(
                         format!(
                             "Field '{ident}' is already defined",
@@ -1151,7 +1159,7 @@ impl Resolver {
             let ident_id = identifier.id;
             let symbol_kind = SymbolKind::Struct(ident_id, stmt_id);
 
-            if self.symbol_exists(ident_id, &symbol_kind) {
+            if self.symbol_exists_in_current_scope(ident_id, &symbol_kind) {
                 self.diagnostics.report_err(
                     format!(
                         "Struct '{ident}' is already defined in scope",
@@ -1185,7 +1193,7 @@ impl Resolver {
     }
 
     /// Returns `true` if a symbol of the same kind already exists in the current scope.
-    fn symbol_exists(&self, ident_id: IdentId, kind: &SymbolKind) -> bool {
+    fn symbol_exists_in_current_scope(&self, ident_id: IdentId, kind: &SymbolKind) -> bool {
         match self
             .scope_stack
             .last()
@@ -1970,5 +1978,19 @@ mod tests {
         "let g() {} let f(): number { g(); }",
         "Function f expected to return type number, got void",
         Span::new(1, 30, 29, 3)
+    );
+
+    test_type_ok!(
+        struct_in_function,
+        r#"
+        let f() {
+            struct S {
+                field: number
+            }
+            let s = S {
+                field: 1
+            };
+        }
+        "#
     );
 }

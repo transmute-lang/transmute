@@ -28,7 +28,6 @@ use transmute_mir::{
 use transmute_mir::{LiteralKind, SymbolKind, Target as AssignmentTarget};
 use transmute_mir::{NativeFnKind, Variable};
 
-// fixme add support for structs nested in functions (does not work because of resolver)
 // todo:refactoring refactor struct layout so we dont need a `_glob` function. we can do it on the
 //   fly, the first time a struct is instantiated
 
