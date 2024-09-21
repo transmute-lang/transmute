@@ -1,27 +1,19 @@
-#![allow(unused)] // todo:refactor remove
-
-use std::any::type_name;
-use std::collections::{BTreeMap, HashMap};
-use std::env::var;
-use std::thread::available_parallelism;
-use transmute_core::error::{Diagnostic, Diagnostics, Level};
-use transmute_core::id;
+use std::collections::BTreeMap;
+use transmute_core::error::Diagnostics;
 use transmute_core::ids::{
     ExprId, FunctionId, IdentId, IdentRefId, StmtId, StructId, SymbolId, TypeId,
 };
 use transmute_core::span::Span;
 use transmute_core::vec_map::VecMap;
-use transmute_hir::bound::{Bound, BoundState};
 use transmute_hir::expression::{ExpressionKind as HirExpressionKind, Target as HirTarget};
 use transmute_hir::literal::{Literal as HirLiteral, LiteralKind as HirLiteralKind};
 use transmute_hir::natives::Type as HirType;
-use transmute_hir::statement::{RetMode, Return, StatementKind as HirStatementKind};
-use transmute_hir::symbol::{Symbol as HirSymbol, SymbolKind as HirSymbolKind};
-use transmute_hir::typed::{Typed, TypedState};
+use transmute_hir::statement::StatementKind as HirStatementKind;
+use transmute_hir::symbol::SymbolKind as HirSymbolKind;
 use transmute_hir::{
     ResolvedExpression as HirExpression, ResolvedField as HirField,
     ResolvedIdentifier as HirIdentifier, ResolvedIdentifierRef as HirIdentifierRef,
-    ResolvedParameter as HirParameter, ResolvedStatement as HirStatement,
+    ResolvedParameter as HirParameter,
 };
 use transmute_hir::{ResolvedHir as Hir, ResolvedReturn as HirReturn};
 
@@ -53,8 +45,6 @@ impl Transformer {
     }
 
     pub fn transform(mut self, mut hir: Hir) -> Result<Mir, Diagnostics> {
-        let mut diagnostics = Diagnostics::default();
-
         self.expressions.resize(hir.expressions.len());
         self.statements.resize(hir.statements.len());
 
@@ -66,14 +56,10 @@ impl Transformer {
                     self.transform_function(&mut hir, identifier, parameters, ret_type, expr_id)
                 }
                 HirStatementKind::Struct(identifier, fields) => {
-                    self.transform_struct(&mut hir, stmt_id, identifier, fields)
+                    self.transform_struct(stmt_id, identifier, fields)
                 }
                 kind => panic!("function or struct expected, got {kind:?}"),
             }
-        }
-
-        if !diagnostics.is_empty() {
-            return Err(diagnostics);
         }
 
         debug_assert!(hir.expressions.is_empty());
@@ -210,7 +196,6 @@ impl Transformer {
 
     fn transform_struct(
         &mut self,
-        hir: &mut Hir,
         stmt_id: StmtId,
         identifier: HirIdentifier,
         fields: Vec<HirField>,
@@ -492,7 +477,7 @@ impl Transformer {
 
         for expr_id in params.iter() {
             let expression = hir.expressions.remove(*expr_id).unwrap();
-            let (new_mutated_symbol_ids, mut new_variables) =
+            let (new_mutated_symbol_ids, new_variables) =
                 self.transform_expression(hir, expression);
             mutated_symbol_ids.extend(new_mutated_symbol_ids);
             variables.extend(new_variables);
@@ -581,7 +566,7 @@ impl Transformer {
                     self.transform_function(hir, identifier, parameters, ret_type, expr_id);
                 }
                 HirStatementKind::Struct(identifier, fields) => {
-                    self.transform_struct(hir, stmt_id, identifier, fields)
+                    self.transform_struct(stmt_id, identifier, fields)
                 }
             }
         }

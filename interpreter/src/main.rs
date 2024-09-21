@@ -1,4 +1,3 @@
-#![allow(dead_code)] // todo:refactoring eventually remove
 extern crate core;
 
 use crate::cli::parse_args;

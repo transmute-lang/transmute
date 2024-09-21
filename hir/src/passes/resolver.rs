@@ -1,10 +1,6 @@
-#![allow(unused)] // todo:refactor remove
-
 use crate::bound::{Bound, Unbound};
-use crate::exit_points::ExitPoints;
-use crate::expression::{Expression, ExpressionKind, Target};
+use crate::expression::{ExpressionKind, Target};
 use crate::identifier::Identifier;
-use crate::identifier_ref::IdentifierRef;
 use crate::literal::LiteralKind;
 use crate::natives::{Native, Natives, Type};
 use crate::passes::exit_points_resolver::ExitPoint;
@@ -12,13 +8,10 @@ use crate::statement::{Field, Parameter, Return, Statement, StatementKind};
 use crate::symbol::{Symbol, SymbolKind};
 use crate::typed::{Typed, Untyped};
 use crate::{
-    literal, Hir, ResolvedExpression, ResolvedHir, ResolvedIdentifierRef, ResolvedStatement,
-    UnresolvedHir,
+    ResolvedExpression, ResolvedHir, ResolvedIdentifierRef, ResolvedStatement, UnresolvedHir,
 };
 use bimap::BiHashMap;
 use std::collections::HashMap;
-use std::ops::Deref;
-use transmute_ast::literal::Literal;
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
 use transmute_core::span::Span;
@@ -720,7 +713,7 @@ impl Resolver {
                 self.void_type_id
             }
             StatementKind::Struct(ident, fields) => {
-                let (ident, fields) = self.resolve_struct(hir, stmt_id, ident, fields);
+                let (ident, fields) = self.resolve_struct(stmt_id, ident, fields);
 
                 self.statements.insert(
                     stmt_id,
@@ -904,11 +897,11 @@ impl Resolver {
                         .collect::<Vec<TypeId>>(),
                 ),
             ) {
-                return (Ok((
+                return Ok((
                     ident.bind(symbol_id),
                     parameters,
                     ret_type.typed(ret_type_id),
-                )));
+                ));
             }
         }
 
@@ -917,7 +910,6 @@ impl Resolver {
 
     fn resolve_struct(
         &mut self,
-        hir: &mut UnresolvedHir,
         stmt_id: StmtId,
         identifier: Identifier<Unbound>,
         fields: Vec<Field<Untyped, Unbound>>,
