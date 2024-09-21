@@ -358,7 +358,6 @@ Ok(
             SymbolId(19) => Symbol {
                 id: SymbolId(19),
                 kind: LetFn(
-                    StmtId(3),
                     [],
                     TypeId(4),
                 ),
@@ -368,7 +367,6 @@ Ok(
             SymbolId(20) => Symbol {
                 id: SymbolId(20),
                 kind: LetFn(
-                    StmtId(1),
                     [],
                     TypeId(3),
                 ),

@@ -688,7 +688,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
                 let symbol = &mir.symbols[*symbol_id];
                 let (ident_id, index) = match symbol.kind {
-                    SymbolKind::Field(_, ident_id, index) => (ident_id, index),
+                    SymbolKind::Field(ident_id, index) => (ident_id, index),
                     _ => panic!("only fields can be accessed"),
                 };
 
@@ -827,11 +827,11 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         };
 
         match &symbol.kind {
-            SymbolKind::Let(_) => {
+            SymbolKind::Let => {
                 unreachable!("handled in the if variable.contains_key(..) above")
             }
-            SymbolKind::LetFn(_, _, _) => todo!(),
-            SymbolKind::Parameter(_, index) => {
+            SymbolKind::LetFn(_, _) => todo!(),
+            SymbolKind::Parameter(index) => {
                 let value = self
                     .current_function()
                     .get_nth_param(*index as u32)
@@ -848,8 +848,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     BasicTypeEnum::VectorType(_) => todo!(),
                 }
             }
-            SymbolKind::Struct(_) => todo!(),
-            SymbolKind::Field(_, _, _) => todo!(),
+            SymbolKind::Struct => todo!(),
+            SymbolKind::Field(_, _) => todo!(),
             SymbolKind::NativeType(_, _) => todo!(),
             SymbolKind::Native(_, _, _, _) => todo!(),
         }
@@ -858,7 +858,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     fn gen_access(&mut self, mir: &Mir, expr_id: ExprId, symbol_id: SymbolId) -> Value<'ctx> {
         let symbol = &mir.symbols[symbol_id];
         let (ident_id, index) = match &symbol.kind {
-            SymbolKind::Field(_, ident_id, index) => (*ident_id, *index),
+            SymbolKind::Field(ident_id, index) => (*ident_id, *index),
             _ => panic!("invalid symbol type"),
         };
 
@@ -915,7 +915,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             SymbolKind::Native(_, _, _, kind) if kind.is_instr() => {
                 return kind.gen_instr(mir, self, params);
             }
-            SymbolKind::Native(_, _, return_type, _) | SymbolKind::LetFn(_, _, return_type) => {
+            SymbolKind::Native(_, _, return_type, _) | SymbolKind::LetFn(_, return_type) => {
                 match mir.types[*return_type] {
                     Type::Boolean | Type::Struct(_, _) | Type::Number => {
                         Some(self.llvm_type(mir, *return_type))

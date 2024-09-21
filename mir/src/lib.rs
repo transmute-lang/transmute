@@ -96,16 +96,16 @@ impl Transformer {
                             ident_id: *ident_id,
                             kind: match symbol.kind {
                                 HirSymbolKind::NotFound => unreachable!(),
-                                HirSymbolKind::Let(_, stmt_id) => SymbolKind::Let(stmt_id),
-                                HirSymbolKind::LetFn(_, stmt_id, params, ret_type_id) => {
-                                    SymbolKind::LetFn(stmt_id, params, ret_type_id)
+                                HirSymbolKind::Let(_, _) => SymbolKind::Let,
+                                HirSymbolKind::LetFn(_, _, params, ret_type_id) => {
+                                    SymbolKind::LetFn(params, ret_type_id)
                                 }
-                                HirSymbolKind::Parameter(_, stmt_id, index) => {
-                                    SymbolKind::Parameter(stmt_id, index)
+                                HirSymbolKind::Parameter(_, _, index) => {
+                                    SymbolKind::Parameter(index)
                                 }
-                                HirSymbolKind::Struct(_, stmt_id) => SymbolKind::Struct(stmt_id),
-                                HirSymbolKind::Field(ident_id, stmt_id, index) => {
-                                    SymbolKind::Field(stmt_id, ident_id, index)
+                                HirSymbolKind::Struct(_, _) => SymbolKind::Struct,
+                                HirSymbolKind::Field(ident_id, _, index) => {
+                                    SymbolKind::Field(ident_id, index)
                                 }
                                 HirSymbolKind::NativeType(ident_id, t) => SymbolKind::NativeType(
                                     ident_id,
@@ -958,21 +958,13 @@ pub struct Symbol {
 
 #[derive(Debug, PartialEq)]
 pub enum SymbolKind {
-    // todo:refactoring StmtId does not really make sense as the statements is not in the MIR
-    //   anymore.
-    Let(StmtId),
-    // todo:refactoring StmtId does not really make sense as the statements is not in the MIR
-    //   anymore.
-    LetFn(StmtId, Vec<TypeId>, TypeId),
-    // todo:refactoring StmtId does not really make sense as the statements is not in the MIR
-    //   anymore
-    Parameter(StmtId, usize),
-    // todo:refactoring StmtId does not really make sense as the statements is not in the MIR
-    //   anymore
-    Struct(StmtId),
-    // todo:refactoring StmtId does not really make sense as the statements is not in the MIR
-    //   anymore
-    Field(StmtId, IdentId, usize),
+    Let,
+    // todo:refactoring should we keep TypeId?
+    LetFn(Vec<TypeId>, TypeId),
+    Parameter(usize),
+    Struct,
+    // todo:refactoring do IdentId and usize make sense?
+    Field(IdentId, usize),
     NativeType(IdentId, Type),
     Native(IdentId, Vec<TypeId>, TypeId, NativeFnKind),
 }

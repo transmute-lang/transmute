@@ -383,7 +383,6 @@ Ok(
             SymbolId(19) => Symbol {
                 id: SymbolId(19),
                 kind: LetFn(
-                    StmtId(2),
                     [],
                     TypeId(1),
                 ),
@@ -392,17 +391,13 @@ Ok(
             },
             SymbolId(20) => Symbol {
                 id: SymbolId(20),
-                kind: Let(
-                    StmtId(0),
-                ),
+                kind: Let,
                 type_id: TypeId(4),
                 ident_id: IdentId(1),
             },
             SymbolId(21) => Symbol {
                 id: SymbolId(21),
-                kind: Let(
-                    StmtId(1),
-                ),
+                kind: Let,
                 type_id: TypeId(4),
                 ident_id: IdentId(2),
             },

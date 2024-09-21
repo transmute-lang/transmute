@@ -339,7 +339,6 @@ Ok(
             SymbolId(19) => Symbol {
                 id: SymbolId(19),
                 kind: LetFn(
-                    StmtId(1),
                     [],
                     TypeId(1),
                 ),

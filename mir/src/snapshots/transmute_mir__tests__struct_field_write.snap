@@ -445,16 +445,13 @@ Ok(
             },
             SymbolId(19) => Symbol {
                 id: SymbolId(19),
-                kind: Struct(
-                    StmtId(0),
-                ),
+                kind: Struct,
                 type_id: TypeId(11),
                 ident_id: IdentId(0),
             },
             SymbolId(20) => Symbol {
                 id: SymbolId(20),
                 kind: LetFn(
-                    StmtId(4),
                     [],
                     TypeId(4),
                 ),
@@ -464,7 +461,6 @@ Ok(
             SymbolId(21) => Symbol {
                 id: SymbolId(21),
                 kind: Field(
-                    StmtId(0),
                     IdentId(1),
                     0,
                 ),
@@ -473,9 +469,7 @@ Ok(
             },
             SymbolId(22) => Symbol {
                 id: SymbolId(22),
-                kind: Let(
-                    StmtId(1),
-                ),
+                kind: Let,
                 type_id: TypeId(11),
                 ident_id: IdentId(4),
             },
