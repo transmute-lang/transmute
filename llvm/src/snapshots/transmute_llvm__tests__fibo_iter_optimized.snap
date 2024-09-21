@@ -44,19 +44,19 @@ end_if3:                                          ; preds = %entry
   br label %cond
 
 cond:                                             ; preds = %body, %end_if3
-  %"prev#local#sym22#9" = phi i64 [ %"add#", %body ], [ 1, %end_if3 ]
-  %"prev_prev#local#sym21#7" = phi i64 [ %"prev#local#sym22#9", %body ], [ 0, %end_if3 ]
+  %"prev#local#sym22#8" = phi i64 [ %"add#", %body ], [ 1, %end_if3 ]
+  %"prev_prev#local#sym21#7" = phi i64 [ %"prev#local#sym22#8", %body ], [ 0, %end_if3 ]
   %"current#local#sym23#12" = phi i64 [ %"add#", %body ], [ 0, %end_if3 ]
   %"n#local#sym20#11" = phi i64 [ %"sub#", %body ], [ %"n#param#sym20#", %end_if3 ]
   %"gt#" = icmp sgt i64 %"n#local#sym20#11", 1
   br i1 %"gt#", label %body, label %common.ret
 
 body:                                             ; preds = %cond
-  %"add#" = add i64 %"prev#local#sym22#9", %"prev_prev#local#sym21#7"
+  %"add#" = add i64 %"prev#local#sym22#8", %"prev_prev#local#sym21#7"
   call void @gc_run()
   call void @gc_run()
   call void @gc_run()
-  %"sub#" = sub i64 %"n#local#sym20#11", 1
+  %"sub#" = add i64 %"n#local#sym20#11", -1
   call void @gc_run()
   br label %cond
 }

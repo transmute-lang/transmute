@@ -33,9 +33,8 @@ common.ret:                                       ; preds = %entry, %false_branc
   ret i1 %common.ret.op
 
 false_branch:                                     ; preds = %entry
-  %"sub#" = sub i64 %"n#param#sym20#", 1
   call void @gc_run()
-  %"eq#2" = icmp eq i64 %"sub#", 42
+  %"eq#2" = icmp eq i64 %"n#param#sym20#", 43
   br label %common.ret
 }
 

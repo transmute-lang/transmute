@@ -25,7 +25,7 @@ entry:
 
 define i1 @_TM0_1f2Pbb(i1 %"l#param#sym20#", i1 %"r#param#sym21#") gc "shadow-stack" {
 entry:
-  %"ne#" = icmp ne i1 %"l#param#sym20#", %"r#param#sym21#"
+  %"ne#" = xor i1 %"l#param#sym20#", %"r#param#sym21#"
   ret i1 %"ne#"
 }
 

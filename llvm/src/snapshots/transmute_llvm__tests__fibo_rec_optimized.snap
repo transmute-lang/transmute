@@ -25,7 +25,7 @@ entry:
 
 define i64 @_TM0_1f1Pn(i64 %"n#param#sym20#") gc "shadow-stack" {
 entry:
-  %"le#" = icmp sle i64 %"n#param#sym20#", 1
+  %"le#" = icmp slt i64 %"n#param#sym20#", 2
   br i1 %"le#", label %common.ret, label %end_if
 
 common.ret:                                       ; preds = %entry, %end_if
@@ -33,9 +33,9 @@ common.ret:                                       ; preds = %entry, %end_if
   ret i64 %common.ret.op
 
 end_if:                                           ; preds = %entry
-  %"sub#" = sub i64 %"n#param#sym20#", 1
+  %"sub#" = add nsw i64 %"n#param#sym20#", -1
   %"f#res#" = call i64 @_TM0_1f1Pn(i64 %"sub#")
-  %"sub#1" = sub i64 %"n#param#sym20#", 2
+  %"sub#1" = add nsw i64 %"n#param#sym20#", -2
   %"f#res#2" = call i64 @_TM0_1f1Pn(i64 %"sub#1")
   %"add#" = add i64 %"f#res#2", %"f#res#"
   br label %common.ret

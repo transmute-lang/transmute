@@ -25,7 +25,7 @@ entry:
 
 define i1 @_TM0_1f2Pnb(i64 %"n#param#sym20#", i1 %"c#param#sym21#") gc "shadow-stack" {
 entry:
-  %"sub#" = sub i64 %"n#param#sym20#", 1
+  %"sub#" = add i64 %"n#param#sym20#", -1
   %"add#" = add i64 %"n#param#sym20#", 1
   %if_result = select i1 %"c#param#sym21#", i64 %"sub#", i64 %"add#"
   call void @gc_run()

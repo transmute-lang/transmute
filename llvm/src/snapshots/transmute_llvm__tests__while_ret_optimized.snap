@@ -25,8 +25,9 @@ entry:
 
 define i64 @_TM0_1f1Pn(i64 %"n#param#sym20#") gc "shadow-stack" {
 entry:
-  %"ne#" = icmp ne i64 %"n#param#sym20#", 42
-  call void @llvm.assume(i1 %"ne#")
+  %"ne#.not" = icmp eq i64 %"n#param#sym20#", 42
+  %0 = xor i1 %"ne#.not", true
+  call void @llvm.assume(i1 %0)
   ret i64 %"n#param#sym20#"
 }
 

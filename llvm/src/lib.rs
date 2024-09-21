@@ -272,7 +272,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
     fn optimize(&self) {
         let passes: &[&str] = &[
-            // "instcombine", // fixme why doesn't this work?
+            "instcombine",
             "reassociate",
             "gvn",
             "simplifycfg",

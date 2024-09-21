@@ -25,17 +25,16 @@ entry:
 
 define i1 @_TM0_1f1Pn(i64 %"n#param#sym20#") gc "shadow-stack" {
 entry:
-  %"ne#" = icmp ne i64 %"n#param#sym20#", 42
-  br i1 %"ne#", label %true_branch, label %common.ret
+  %"ne#.not" = icmp eq i64 %"n#param#sym20#", 42
+  br i1 %"ne#.not", label %common.ret, label %true_branch
 
 common.ret:                                       ; preds = %entry, %true_branch
   %common.ret.op = phi i1 [ %"eq#", %true_branch ], [ true, %entry ]
   ret i1 %common.ret.op
 
 true_branch:                                      ; preds = %entry
-  %"sub#" = sub i64 %"n#param#sym20#", 1
   call void @gc_run()
-  %"eq#" = icmp eq i64 %"sub#", 42
+  %"eq#" = icmp eq i64 %"n#param#sym20#", 43
   br label %common.ret
 }
 
