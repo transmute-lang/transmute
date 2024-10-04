@@ -97,20 +97,34 @@ Hir {
                             span: 1:7; [6, 7],
                             bound: Bound(20),
                         },
-                        ty: IdentRefId(0),
+                        type_def_id: TypeDefId(0),
                         span: 1:7; [6, 15],
                         typed: Typed(4),
                     },
                 ],
                 Return {
-                    ret: Some(
-                        IdentRefId(1),
+                    type_def_id: Some(
+                        TypeDefId(1),
                     ),
                     typed: Typed(4),
                 },
                 ExprId(1),
             ),
             span: 1:1; [0, 33],
+        },
+    ],
+    type_defs: [
+        TypeDefId(0) => TypeDef {
+            kind: Simple(
+                IdentRefId(0),
+            ),
+            span: 1:10; [9, 15],
+        },
+        TypeDefId(1) => TypeDef {
+            kind: Simple(
+                IdentRefId(1),
+            ),
+            span: 1:19; [18, 24],
         },
     ],
     roots: [

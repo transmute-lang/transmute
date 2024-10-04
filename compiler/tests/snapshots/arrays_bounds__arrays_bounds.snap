@@ -1,0 +1,31 @@
+---
+source: compiler/tests/arrays_bounds.rs
+expression: "format!(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(),\n    String :: from_utf8(output.stdout).unwrap(), String ::\n    from_utf8(output.stderr).unwrap())"
+---
+success:false
+stdout:
+Initialize GC with log level: 2
+Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
+
+Start GC
+Phase: init.
+Phase: mark
+  frame 0 (1 roots):
+    root 0: skipped (nil)
+Phase: sweep
+allocated block of size 32 at 0x10010, returning object of size 8 at 0x10028(+24)
+
+Start GC
+Phase: init.
+  block at 0x10010 (object of size 8 at 0x10028): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x10028 (block at 0x10010): 1 pointers, unreachable
+Phase: sweep
+  block at 0x10010 (object of size 8 at 0x10028): reachable
+
+
+stderr:
+error at line 4, column 7
+index out of bounds: the len is 1 but the index is 1

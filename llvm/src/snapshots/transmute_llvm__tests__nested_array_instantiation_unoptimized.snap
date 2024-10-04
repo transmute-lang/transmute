@@ -1,0 +1,69 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+@layout_a2n = global [3 x i64] [i64 1, i64 2, i64 0]
+@layout_a2a2n = global [3 x i64] [i64 1, i64 2, i64 ptrtoint (ptr @layout_a2n to i64)]
+
+; Function Attrs: nounwind
+declare void @llvm.gcroot(ptr, ptr) #0
+
+declare ptr @gc_malloc(i64)
+
+declare void @gc_run()
+
+declare void @tmc_check_array_index(i64, i64, i64, i64)
+
+declare void @_TM0_5print1n(i64)
+
+declare void @_TM0_5print1b(i1)
+
+define private void @_glob() {
+entry:
+  unreachable
+}
+
+define i64 @_TM0_1f0() gc "shadow-stack" {
+entry:
+  %"gcroot#heap#array#2" = alloca ptr, align 8
+  store ptr null, ptr %"gcroot#heap#array#2", align 8
+  call void @llvm.gcroot(ptr %"gcroot#heap#array#2", ptr @layout_a2n)
+  %"gcroot#heap#array#" = alloca ptr, align 8
+  store ptr null, ptr %"gcroot#heap#array#", align 8
+  call void @llvm.gcroot(ptr %"gcroot#heap#array#", ptr @layout_a2n)
+  %"a#local#sym20#" = alloca ptr, align 8
+  store ptr null, ptr %"a#local#sym20#", align 8
+  call void @llvm.gcroot(ptr %"a#local#sym20#", ptr @layout_a2a2n)
+  %"heap#array#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr ([2 x i64], ptr null, i32 1) to i64))
+  store ptr %"heap#array#", ptr %"gcroot#heap#array#", align 8
+  %"heap#array#1" = load [2 x i64], ptr %"heap#array#", align 4
+  %"heap#array#[0]#" = insertvalue [2 x i64] %"heap#array#1", i64 0, 0
+  %"heap#array#[1]#" = insertvalue [2 x i64] %"heap#array#[0]#", i64 1, 1
+  store [2 x i64] %"heap#array#[1]#", ptr %"heap#array#", align 4
+  %"heap#array#3" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr ([2 x i64], ptr null, i32 1) to i64))
+  store ptr %"heap#array#3", ptr %"gcroot#heap#array#2", align 8
+  %"heap#array#4" = load [2 x i64], ptr %"heap#array#3", align 4
+  %"heap#array#[0]#5" = insertvalue [2 x i64] %"heap#array#4", i64 3, 0
+  %"heap#array#[1]#6" = insertvalue [2 x i64] %"heap#array#[0]#5", i64 4, 1
+  store [2 x i64] %"heap#array#[1]#6", ptr %"heap#array#3", align 4
+  %"heap#array#7" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr ([2 x ptr], ptr null, i32 1) to i64))
+  %"heap#array#8" = load [2 x ptr], ptr %"heap#array#7", align 8
+  %"heap#array#[0]#9" = insertvalue [2 x ptr] %"heap#array#8", ptr %"heap#array#", 0
+  %"heap#array#[1]#10" = insertvalue [2 x ptr] %"heap#array#[0]#9", ptr %"heap#array#3", 1
+  store [2 x ptr] %"heap#array#[1]#10", ptr %"heap#array#7", align 8
+  store ptr %"heap#array#7", ptr %"a#local#sym20#", align 8
+  call void @gc_run()
+  %"a#local#sym20#11" = load ptr, ptr %"a#local#sym20#", align 8
+  call void @tmc_check_array_index(i64 0, i64 2, i64 4, i64 15)
+  %"array[?]#" = getelementptr [2 x ptr], ptr %"a#local#sym20#11", i64 0, i64 0
+  %"array[?]#12" = load ptr, ptr %"array[?]#", align 8
+  call void @tmc_check_array_index(i64 0, i64 2, i64 4, i64 18)
+  %"array[?]#13" = getelementptr [2 x i64], ptr %"array[?]#12", i64 0, i64 0
+  %"array[?]#14" = load i64, ptr %"array[?]#13", align 4
+  ret i64 %"array[?]#14"
+}
+
+attributes #0 = { nounwind }

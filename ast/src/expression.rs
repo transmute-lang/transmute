@@ -29,6 +29,8 @@ pub enum ExpressionKind {
     While(ExprId, ExprId),
     Block(Vec<StmtId>),
     StructInstantiation(IdentRefId, Vec<(IdentRefId, ExprId)>),
+    ArrayInstantiation(Vec<ExprId>),
+    ArrayAccess(ExprId, ExprId),
     /// A dummy expression kind, inserted by the parser when the expression could not be parsed
     Dummy,
 }

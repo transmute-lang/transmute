@@ -1,0 +1,73 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"[1, 2][0];\")).parse()"
+---
+Ok(
+    Ast {
+        identifiers: [],
+        identifier_refs: [],
+        expressions: [
+            ExprId(0) => Expression {
+                id: ExprId(0),
+                kind: Literal(
+                    Literal {
+                        kind: Number(1),
+                        span: 1:2; [1, 2],
+                    },
+                ),
+                span: 1:2; [1, 2],
+            },
+            ExprId(1) => Expression {
+                id: ExprId(1),
+                kind: Literal(
+                    Literal {
+                        kind: Number(2),
+                        span: 1:5; [4, 5],
+                    },
+                ),
+                span: 1:5; [4, 5],
+            },
+            ExprId(2) => Expression {
+                id: ExprId(2),
+                kind: ArrayInstantiation(
+                    [
+                        ExprId(0),
+                        ExprId(1),
+                    ],
+                ),
+                span: 1:1; [0, 6],
+            },
+            ExprId(3) => Expression {
+                id: ExprId(3),
+                kind: Literal(
+                    Literal {
+                        kind: Number(0),
+                        span: 1:8; [7, 8],
+                    },
+                ),
+                span: 1:8; [7, 8],
+            },
+            ExprId(4) => Expression {
+                id: ExprId(4),
+                kind: ArrayAccess(
+                    ExprId(2),
+                    ExprId(3),
+                ),
+                span: 1:7; [6, 9],
+            },
+        ],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Expression(
+                    ExprId(4),
+                ),
+                span: 1:7; [6, 10],
+            },
+        ],
+        type_defs: [],
+        roots: [
+            StmtId(0),
+        ],
+    },
+)

@@ -1,0 +1,213 @@
+---
+source: hir/src/passes/exit_points_resolver.rs
+expression: "(ast, block_exit_points)"
+---
+(
+    Ast {
+        identifiers: [
+            IdentId(0) => "f",
+            IdentId(1) => "a",
+        ],
+        identifier_refs: [],
+        expressions: [
+            ExprId(0) => Expression {
+                id: ExprId(0),
+                kind: Literal(
+                    Literal {
+                        kind: Boolean(true),
+                        span: 3:29; [51, 55],
+                    },
+                ),
+                span: 3:29; [51, 55],
+            },
+            ExprId(1) => Expression {
+                id: ExprId(1),
+                kind: Literal(
+                    Literal {
+                        kind: Number(0),
+                        span: 3:40; [62, 63],
+                    },
+                ),
+                span: 3:40; [62, 63],
+            },
+            ExprId(2) => Expression {
+                id: ExprId(2),
+                kind: Block(
+                    [
+                        StmtId(0),
+                    ],
+                ),
+                span: 3:34; [56, 66],
+            },
+            ExprId(3) => Expression {
+                id: ExprId(3),
+                kind: Literal(
+                    Literal {
+                        kind: Number(1),
+                        span: 3:56; [78, 79],
+                    },
+                ),
+                span: 3:56; [78, 79],
+            },
+            ExprId(4) => Expression {
+                id: ExprId(4),
+                kind: Block(
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 3:50; [72, 82],
+            },
+            ExprId(5) => Expression {
+                id: ExprId(5),
+                kind: If(
+                    ExprId(0),
+                    ExprId(2),
+                    Some(
+                        ExprId(4),
+                    ),
+                ),
+                span: 3:26; [48, 82],
+            },
+            ExprId(6) => Expression {
+                id: ExprId(6),
+                kind: ArrayInstantiation(
+                    [
+                        ExprId(5),
+                    ],
+                ),
+                span: 3:25; [47, 83],
+            },
+            ExprId(7) => Expression {
+                id: ExprId(7),
+                kind: Literal(
+                    Literal {
+                        kind: Number(2),
+                        span: 4:21; [105, 106],
+                    },
+                ),
+                span: 4:21; [105, 106],
+            },
+            ExprId(8) => Expression {
+                id: ExprId(8),
+                kind: Block(
+                    [
+                        StmtId(2),
+                        StmtId(3),
+                    ],
+                ),
+                span: 2:21; [21, 121],
+            },
+        ],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Ret(
+                    Some(
+                        ExprId(1),
+                    ),
+                    Explicit,
+                ),
+                span: 3:36; [58, 64],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: Ret(
+                    Some(
+                        ExprId(3),
+                    ),
+                    Explicit,
+                ),
+                span: 3:52; [74, 80],
+            },
+            StmtId(2) => Statement {
+                id: StmtId(2),
+                kind: Let(
+                    Identifier {
+                        id: IdentId(1),
+                        span: 3:21; [43, 44],
+                    },
+                    ExprId(6),
+                ),
+                span: 3:17; [39, 84],
+            },
+            StmtId(3) => Statement {
+                id: StmtId(3),
+                kind: Ret(
+                    Some(
+                        ExprId(7),
+                    ),
+                    Explicit,
+                ),
+                span: 4:17; [101, 107],
+            },
+            StmtId(4) => Statement {
+                id: StmtId(4),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 2:17; [17, 18],
+                    },
+                    [],
+                    Return {
+                        type_def_id: None,
+                    },
+                    ExprId(8),
+                ),
+                span: 2:13; [13, 121],
+            },
+        ],
+        type_defs: [],
+        roots: [
+            StmtId(4),
+        ],
+    },
+    [
+        (
+            ExprId(2),
+            Output {
+                exit_points: [
+                    Explicit(
+                        Some(
+                            ExprId(1),
+                        ),
+                    ),
+                ],
+                unreachable: [],
+            },
+        ),
+        (
+            ExprId(4),
+            Output {
+                exit_points: [
+                    Explicit(
+                        Some(
+                            ExprId(3),
+                        ),
+                    ),
+                ],
+                unreachable: [],
+            },
+        ),
+        (
+            ExprId(8),
+            Output {
+                exit_points: [
+                    Explicit(
+                        Some(
+                            ExprId(1),
+                        ),
+                    ),
+                    Explicit(
+                        Some(
+                            ExprId(3),
+                        ),
+                    ),
+                ],
+                unreachable: [
+                    ExprId(7),
+                ],
+            },
+        ),
+    ],
+)

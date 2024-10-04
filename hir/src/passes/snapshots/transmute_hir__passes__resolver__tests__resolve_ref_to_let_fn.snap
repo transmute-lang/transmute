@@ -63,7 +63,7 @@ Hir {
                 },
                 [],
                 Return {
-                    ret: None,
+                    type_def_id: None,
                     typed: Typed(1),
                 },
                 ExprId(0),
@@ -86,6 +86,7 @@ Hir {
             span: 1:11; [10, 13],
         },
     ],
+    type_defs: [],
     roots: [
         StmtId(0),
         StmtId(1),

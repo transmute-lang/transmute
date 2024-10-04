@@ -5,6 +5,8 @@ use std::fmt::{Debug, Display, Formatter};
 use std::str::Chars;
 use transmute_core::span::Span;
 
+// fixme comments dont move spans (they behave as if the do not exist at all)
+
 #[derive(Debug)]
 pub struct Lexer<'s> {
     source: &'s str,
@@ -145,6 +147,16 @@ impl<'s> Lexer<'s> {
                 self.advance_column();
                 self.advance_consumed(span.len);
                 (TokenKind::CloseParenthesis, span)
+            }
+            '[' => {
+                self.advance_column();
+                self.advance_consumed(span.len);
+                (TokenKind::OpenBracket, span)
+            }
+            ']' => {
+                self.advance_column();
+                self.advance_consumed(span.len);
+                (TokenKind::CloseBracket, span)
             }
             '.' => {
                 self.advance_column();
@@ -452,6 +464,7 @@ impl Token {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TokenKind {
+    CloseBracket,
     CloseCurlyBracket,
     CloseParenthesis,
     Colon,
@@ -469,6 +482,7 @@ pub enum TokenKind {
     Let,
     Minus,
     Number(i64),
+    OpenBracket,
     OpenCurlyBracket,
     OpenParenthesis,
     Plus,
@@ -488,6 +502,7 @@ pub enum TokenKind {
 impl TokenKind {
     pub fn description(&self) -> Cow<'_, str> {
         match self {
+            TokenKind::CloseBracket => Cow::from("`]`"),
             TokenKind::CloseCurlyBracket => Cow::from("`}`"),
             TokenKind::CloseParenthesis => Cow::from("`)`"),
             TokenKind::Colon => Cow::from("`:`"),
@@ -505,6 +520,7 @@ impl TokenKind {
             TokenKind::Let => Cow::from("`let`"),
             TokenKind::Minus => Cow::from("`-`"),
             TokenKind::Number(_) => Cow::from("number"),
+            TokenKind::OpenBracket => Cow::from("`[`"),
             TokenKind::OpenCurlyBracket => Cow::from("`{`"),
             TokenKind::OpenParenthesis => Cow::from("`(`"),
             TokenKind::Plus => Cow::from("`+`"),
@@ -561,6 +577,9 @@ impl TokenKind {
             TokenKind::Smaller => 27,
             TokenKind::SmallerEqual => 28,
 
+            TokenKind::CloseBracket => 29,
+            TokenKind::OpenBracket => 30,
+
             TokenKind::Eof => 254,
             TokenKind::Bad(_) => 255,
         }
@@ -582,6 +601,9 @@ impl Ord for TokenKind {
 impl Display for TokenKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            TokenKind::CloseBracket => {
+                write!(f, "`]`")
+            }
             TokenKind::CloseCurlyBracket => {
                 write!(f, "`}}`")
             }
@@ -632,6 +654,9 @@ impl Display for TokenKind {
             }
             TokenKind::Number(n) => {
                 write!(f, "number({n})")
+            }
+            TokenKind::OpenBracket => {
+                write!(f, "`[`")
             }
             TokenKind::OpenCurlyBracket => {
                 write!(f, "`{{`")
@@ -751,6 +776,8 @@ mod tests {
     lexer_test_next!(next_dot, ".");
     lexer_test_next!(next_open_curly_bracket, "{");
     lexer_test_next!(next_close_curly_bracket, "}");
+    lexer_test_next!(next_open_bracket, "[");
+    lexer_test_next!(next_close_bracket, "]");
     lexer_test_next!(semicolon, ";");
     lexer_test_next!(colon, ":");
     lexer_test_next!(bad, "\\");

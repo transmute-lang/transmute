@@ -130,6 +130,7 @@ Hir {
             span: 1:26; [25, 31],
         },
     ],
+    type_defs: [],
     roots: [
         StmtId(0),
         StmtId(1),

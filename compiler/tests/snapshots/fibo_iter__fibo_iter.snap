@@ -5,189 +5,868 @@ expression: "format!(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.sta
 success:true
 stdout:
 Initialize GC with log level: 2
-Allocate test GC memory pool (4130 bytes): mmap returned 0x10000 (Success)
+Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
 main(0) = 0
 main(1) = 1
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
 main(2) = 1
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
 main(3) = 2
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
 main(4) = 3
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
 main(5) = 5
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
 main(6) = 8
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
 main(7) = 13
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
 main(8) = 21
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
 main(9) = 34
+
+GC Teardown
+
+Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
 
 Statistics:
 
-  Executions ...... 168
+  Executions ...... 169
   Allocated .......   0 blocks
     Total
       objects         0 bytes

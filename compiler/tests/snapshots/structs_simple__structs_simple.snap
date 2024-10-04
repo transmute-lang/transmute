@@ -5,208 +5,338 @@ expression: "format!(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.sta
 success:true
 stdout:
 Initialize GC with log level: 2
-Allocate test GC memory pool (4130 bytes): mmap returned 0x10000 (Success)
+Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
+
 Start GC
+Phase: init.
+Phase: mark
   frame 0 (1 roots):
     root 0: skipped (nil)
+Phase: sweep
 allocated block of size 32 at 0x10010, returning object of size 8 at 0x10028(+24)
+
 Start GC
+Phase: init.
   block at 0x10010 (object of size 8 at 0x10028): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10028 (block at 0x10010): 0 pointers, unreachable
+Phase: sweep
   block at 0x10010 (object of size 8 at 0x10028): reachable
+
 Start GC
+Phase: init.
   block at 0x10010 (object of size 8 at 0x10028): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10028 (block at 0x10010): 0 pointers, unreachable
+Phase: sweep
   block at 0x10010 (object of size 8 at 0x10028): reachable
 main(0) = 1
+
 Start GC
+Phase: init.
   block at 0x10010 (object of size 8 at 0x10028): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0: skipped (nil)
+Phase: sweep
   block at 0x10010 (object of size 8 at 0x10028): unreachable
 freeing block at 0x10010 (object size: 8)
 allocated block of size 32 at 0x10030, returning object of size 8 at 0x10048(+24)
+
 Start GC
+Phase: init.
   block at 0x10030 (object of size 8 at 0x10048): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10048 (block at 0x10030): 0 pointers, unreachable
+Phase: sweep
   block at 0x10030 (object of size 8 at 0x10048): reachable
+
 Start GC
+Phase: init.
   block at 0x10030 (object of size 8 at 0x10048): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10048 (block at 0x10030): 0 pointers, unreachable
+Phase: sweep
   block at 0x10030 (object of size 8 at 0x10048): reachable
 main(1) = 3
+
 Start GC
+Phase: init.
   block at 0x10030 (object of size 8 at 0x10048): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0: skipped (nil)
+Phase: sweep
   block at 0x10030 (object of size 8 at 0x10048): unreachable
 freeing block at 0x10030 (object size: 8)
 allocated block of size 32 at 0x10050, returning object of size 8 at 0x10068(+24)
+
 Start GC
+Phase: init.
   block at 0x10050 (object of size 8 at 0x10068): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10068 (block at 0x10050): 0 pointers, unreachable
+Phase: sweep
   block at 0x10050 (object of size 8 at 0x10068): reachable
+
 Start GC
+Phase: init.
   block at 0x10050 (object of size 8 at 0x10068): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10068 (block at 0x10050): 0 pointers, unreachable
+Phase: sweep
   block at 0x10050 (object of size 8 at 0x10068): reachable
 main(2) = 5
+
 Start GC
+Phase: init.
   block at 0x10050 (object of size 8 at 0x10068): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0: skipped (nil)
+Phase: sweep
   block at 0x10050 (object of size 8 at 0x10068): unreachable
 freeing block at 0x10050 (object size: 8)
 allocated block of size 32 at 0x10070, returning object of size 8 at 0x10088(+24)
+
 Start GC
+Phase: init.
   block at 0x10070 (object of size 8 at 0x10088): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10088 (block at 0x10070): 0 pointers, unreachable
+Phase: sweep
   block at 0x10070 (object of size 8 at 0x10088): reachable
+
 Start GC
+Phase: init.
   block at 0x10070 (object of size 8 at 0x10088): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10088 (block at 0x10070): 0 pointers, unreachable
+Phase: sweep
   block at 0x10070 (object of size 8 at 0x10088): reachable
 main(3) = 7
+
 Start GC
+Phase: init.
   block at 0x10070 (object of size 8 at 0x10088): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0: skipped (nil)
+Phase: sweep
   block at 0x10070 (object of size 8 at 0x10088): unreachable
 freeing block at 0x10070 (object size: 8)
 allocated block of size 32 at 0x10090, returning object of size 8 at 0x100a8(+24)
+
 Start GC
+Phase: init.
   block at 0x10090 (object of size 8 at 0x100a8): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x100a8 (block at 0x10090): 0 pointers, unreachable
+Phase: sweep
   block at 0x10090 (object of size 8 at 0x100a8): reachable
+
 Start GC
+Phase: init.
   block at 0x10090 (object of size 8 at 0x100a8): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x100a8 (block at 0x10090): 0 pointers, unreachable
+Phase: sweep
   block at 0x10090 (object of size 8 at 0x100a8): reachable
 main(4) = 9
+
 Start GC
+Phase: init.
   block at 0x10090 (object of size 8 at 0x100a8): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0: skipped (nil)
+Phase: sweep
   block at 0x10090 (object of size 8 at 0x100a8): unreachable
 freeing block at 0x10090 (object size: 8)
 allocated block of size 32 at 0x100b0, returning object of size 8 at 0x100c8(+24)
+
 Start GC
+Phase: init.
   block at 0x100b0 (object of size 8 at 0x100c8): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x100c8 (block at 0x100b0): 0 pointers, unreachable
+Phase: sweep
   block at 0x100b0 (object of size 8 at 0x100c8): reachable
+
 Start GC
+Phase: init.
   block at 0x100b0 (object of size 8 at 0x100c8): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x100c8 (block at 0x100b0): 0 pointers, unreachable
+Phase: sweep
   block at 0x100b0 (object of size 8 at 0x100c8): reachable
 main(5) = 11
+
 Start GC
+Phase: init.
   block at 0x100b0 (object of size 8 at 0x100c8): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0: skipped (nil)
+Phase: sweep
   block at 0x100b0 (object of size 8 at 0x100c8): unreachable
 freeing block at 0x100b0 (object size: 8)
 allocated block of size 32 at 0x100d0, returning object of size 8 at 0x100e8(+24)
+
 Start GC
+Phase: init.
   block at 0x100d0 (object of size 8 at 0x100e8): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x100e8 (block at 0x100d0): 0 pointers, unreachable
+Phase: sweep
   block at 0x100d0 (object of size 8 at 0x100e8): reachable
+
 Start GC
+Phase: init.
   block at 0x100d0 (object of size 8 at 0x100e8): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x100e8 (block at 0x100d0): 0 pointers, unreachable
+Phase: sweep
   block at 0x100d0 (object of size 8 at 0x100e8): reachable
 main(6) = 13
+
 Start GC
+Phase: init.
   block at 0x100d0 (object of size 8 at 0x100e8): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0: skipped (nil)
+Phase: sweep
   block at 0x100d0 (object of size 8 at 0x100e8): unreachable
 freeing block at 0x100d0 (object size: 8)
 allocated block of size 32 at 0x100f0, returning object of size 8 at 0x10108(+24)
+
 Start GC
+Phase: init.
   block at 0x100f0 (object of size 8 at 0x10108): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10108 (block at 0x100f0): 0 pointers, unreachable
+Phase: sweep
   block at 0x100f0 (object of size 8 at 0x10108): reachable
+
 Start GC
+Phase: init.
   block at 0x100f0 (object of size 8 at 0x10108): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10108 (block at 0x100f0): 0 pointers, unreachable
+Phase: sweep
   block at 0x100f0 (object of size 8 at 0x10108): reachable
 main(7) = 15
+
 Start GC
+Phase: init.
   block at 0x100f0 (object of size 8 at 0x10108): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0: skipped (nil)
+Phase: sweep
   block at 0x100f0 (object of size 8 at 0x10108): unreachable
 freeing block at 0x100f0 (object size: 8)
 allocated block of size 32 at 0x10110, returning object of size 8 at 0x10128(+24)
+
 Start GC
+Phase: init.
   block at 0x10110 (object of size 8 at 0x10128): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10128 (block at 0x10110): 0 pointers, unreachable
+Phase: sweep
   block at 0x10110 (object of size 8 at 0x10128): reachable
+
 Start GC
+Phase: init.
   block at 0x10110 (object of size 8 at 0x10128): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10128 (block at 0x10110): 0 pointers, unreachable
+Phase: sweep
   block at 0x10110 (object of size 8 at 0x10128): reachable
 main(8) = 17
+
 Start GC
+Phase: init.
   block at 0x10110 (object of size 8 at 0x10128): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0: skipped (nil)
+Phase: sweep
   block at 0x10110 (object of size 8 at 0x10128): unreachable
 freeing block at 0x10110 (object size: 8)
 allocated block of size 32 at 0x10130, returning object of size 8 at 0x10148(+24)
+
 Start GC
+Phase: init.
   block at 0x10130 (object of size 8 at 0x10148): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10148 (block at 0x10130): 0 pointers, unreachable
+Phase: sweep
   block at 0x10130 (object of size 8 at 0x10148): reachable
+
 Start GC
+Phase: init.
   block at 0x10130 (object of size 8 at 0x10148): unreachable
+Phase: mark
   frame 0 (1 roots):
     root 0:
       object at 0x10148 (block at 0x10130): 0 pointers, unreachable
+Phase: sweep
   block at 0x10130 (object of size 8 at 0x10148): reachable
 main(9) = 19
 
+GC Teardown
+
+Start GC
+Phase: init.
+  block at 0x10130 (object of size 8 at 0x10148): unreachable
+Phase: mark
+Phase: sweep
+  block at 0x10130 (object of size 8 at 0x10148): unreachable
+freeing block at 0x10130 (object size: 8)
+
 Statistics:
 
-  Executions ......  30
+  Executions ......  31
   Allocated .......  10 blocks
     Total
       objects        80 bytes
@@ -215,12 +345,12 @@ Statistics:
       objects         8 bytes
       blocks         32 bytes
     End
-      objects         8 bytes
-      blocks         32 bytes
-  Freed ...........   9 blocks
+      objects         0 bytes
+      blocks          0 bytes
+  Freed ...........  10 blocks
     Total
-      objects        72 bytes
-      blocks        288 bytes
+      objects        80 bytes
+      blocks        320 bytes
 
 
 

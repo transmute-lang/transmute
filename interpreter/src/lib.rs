@@ -68,6 +68,10 @@ mod tests {
         };
     }
 
+    exec!(arrays_bounds);
+    exec!(arrays_if);
+    exec!(arrays_nested);
+    exec!(arrays_of_structs);
     exec!(fibo_iter);
     exec!(fibo_rec);
     exec!(gc);
@@ -79,7 +83,8 @@ mod tests {
     exec!(sibling_function);
     exec!(structs_anon);
     exec!(structs_fn);
-    exec!(structs_nested);
-    exec!(structs_simple);
     exec!(structs_inner);
+    exec!(structs_nested);
+    exec!(structs_of_arrays);
+    exec!(structs_simple);
 }

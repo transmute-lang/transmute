@@ -6,15 +6,20 @@ use crate::literal::{Literal, LiteralKind};
 use crate::operators::{
     BinaryOperator, BinaryOperatorKind, Precedence, UnaryOperator, UnaryOperatorKind,
 };
-use crate::statement::{Field, Parameter, RetMode, Return, StatementKind};
+use crate::statement::{Field, Parameter, RetMode, Return, StatementKind, TypeDef, TypeDefKind};
 use crate::Ast;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use transmute_core::error::Diagnostics;
 #[cfg(all(not(test), not(feature = "allow-any-root-kind")))]
 use transmute_core::error::{Diagnostic, Level};
-use transmute_core::ids::{id, ExprId, IdentId, IdentRefId, StmtId};
+use transmute_core::ids::{id, ExprId, IdentId, IdentRefId, StmtId, TypeDefId};
 use transmute_core::span::Span;
+
+// todo:ux review how diagnostics work. it would be nice to be able to keep tokens in a list
+//   to reports the missing token, together with what token it is supposed to close, even when other
+//   tokens can be expected. eg.: for `[a;` we can expect either `1`, etc., or `]` which closes the
+//   `]`. the current diagnostic mechanism is not flexible enough.
 
 type Expression = crate::expression::Expression;
 type Statement = crate::statement::Statement;
@@ -25,46 +30,47 @@ pub struct Parser<'s> {
     identifier_refs: Vec<IdentifierRef>,
     expressions: Vec<Expression>,
     statements: Vec<Statement>,
+    type_defs: Vec<TypeDef>,
     diagnostics: Diagnostics,
     potential_tokens: HashSet<ExpectedToken>,
     eof: bool,
 }
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "debug-expected-token")]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 struct ExpectedToken(TokenKind, &'static str, u32);
 
-#[cfg(not(debug_assertions))]
+#[cfg(not(feature = "debug-expected-token"))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 struct ExpectedToken(TokenKind);
 
 impl ExpectedToken {
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "debug-expected-token")]
     fn description(&self) -> Cow<'_, str> {
         Cow::from(format!("{} {}", self.0.description(), self.2))
     }
 
-    #[cfg(not(debug_assertions))]
+    #[cfg(not(feature = "debug-expected-token"))]
     fn description(&self) -> Cow<'_, str> {
         self.0.description()
     }
 }
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "debug-expected-token")]
 macro_rules! expected_token {
     ($token:expr) => {
         ExpectedToken($token, file!(), line!())
     };
 }
 
-#[cfg(not(debug_assertions))]
+#[cfg(not(feature = "debug-expected-token"))]
 macro_rules! expected_token {
     ($token:expr) => {
         ExpectedToken($token)
     };
 }
 
-/// Reports an unexpected token, together with the token that were expected.
+/// Reports an unexpected token, together with the tokens that were expected.
 macro_rules! report_unexpected_token {
     ($self:ident, $token:ident, [$($expected:expr,)*]) => {
         if !$self.eof {
@@ -119,9 +125,8 @@ macro_rules! report_missing_token_and_push_back {
                 .iter()
                 .collect::<Vec<_>>();
             potential_tokens.sort();
-            let span = $token.span.clone();
             let token_desc = if matches!(&$token.kind, TokenKind::Identifier) {
-                format!("{}({})", &$token.kind.to_string(), $self.lexer.span(&span))
+                format!("{}({})", &$token.kind.to_string(), $self.lexer.span(&$token.span))
             } else {
                 $token.kind.to_string()
             };
@@ -205,6 +210,7 @@ impl<'s> Parser<'s> {
             identifier_refs: Default::default(),
             expressions: Default::default(),
             statements: Default::default(),
+            type_defs: Default::default(),
             diagnostics: Default::default(),
             potential_tokens: Default::default(),
             eof: false,
@@ -222,7 +228,7 @@ impl<'s> Parser<'s> {
                 StatementKind::Expression(_)
                 | StatementKind::Let(_, _)
                 | StatementKind::Ret(_, _) => {
-                    // when testing we are find with having any statement as top level... while not
+                    // when testing we are fine with having any statement as top level... while not
                     // perfect, this eases things a lot
                     #[cfg(any(test, feature = "allow-any-root-kind"))]
                     statements.push(statement.id);
@@ -260,6 +266,7 @@ impl<'s> Parser<'s> {
                 self.expressions,
                 self.statements,
                 statements,
+                self.type_defs,
             ))
         } else {
             Err(self.diagnostics)
@@ -370,6 +377,7 @@ impl<'s> Parser<'s> {
             | TokenKind::Minus
             | TokenKind::Number(_)
             | TokenKind::OpenParenthesis
+            | TokenKind::OpenBracket
             | TokenKind::True => {
                 let expression = self.parse_expression(true, true).0;
                 let span = expression.span.clone();
@@ -394,6 +402,7 @@ impl<'s> Parser<'s> {
                         expected_token!(TokenKind::True),
                         expected_token!(TokenKind::False),
                         expected_token!(TokenKind::OpenParenthesis),
+                        expected_token!(TokenKind::OpenBracket),
                         expected_token!(TokenKind::Let),
                         expected_token!(TokenKind::Ret),
                         expected_token!(TokenKind::If),
@@ -427,7 +436,6 @@ impl<'s> Parser<'s> {
         let mut next = TokenKind::Identifier;
 
         loop {
-            // todo:refactoring review parameters parsing (see struct)
             let token = self.lexer.next();
             match &token.kind {
                 TokenKind::CloseParenthesis => {
@@ -447,34 +455,21 @@ impl<'s> Parser<'s> {
                         Identifier::new(self.push_identifier(&token.span), token.span.clone());
 
                     let colon = self.lexer.next();
-                    let mut error = false;
-                    if colon.kind != TokenKind::Colon {
+                    let type_def_id = if !matches!(colon.kind, TokenKind::Colon) {
                         report_missing_token_and_push_back!(self, colon, TokenKind::Colon);
-                        error = true;
-                    }
+                        self.parse_type(false)
+                    } else {
+                        self.parse_type(true)
+                    };
 
-                    let ty = self.lexer.next();
-                    if ty.kind != TokenKind::Identifier {
-                        if !error {
-                            report_unexpected_token!(
-                                self,
-                                ty,
-                                [expected_token!(TokenKind::Identifier),]
-                            );
-                        }
-                        self.lexer.push_next(ty);
-                        self.potential_tokens
-                            .insert(expected_token!(TokenKind::Comma));
-                        next = TokenKind::Comma;
-                        continue;
-                    }
-                    let type_identifier =
-                        Identifier::new(self.push_identifier(&ty.span), ty.span.clone());
-                    let span = ident.span.extend_to(&type_identifier.span);
-                    let type_ident_ref_id = self.push_identifier_ref(type_identifier);
-                    parameters.push(Parameter::new(ident, type_ident_ref_id, span));
+                    let parameter_span =
+                        ident.span.extend_to(&self.type_defs[id!(type_def_id)].span);
+
+                    parameters.push(Parameter::new(ident, type_def_id, parameter_span));
+
                     self.potential_tokens
                         .insert(expected_token!(TokenKind::Comma));
+
                     next = TokenKind::Comma;
                 }
                 TokenKind::Eof => {
@@ -505,20 +500,7 @@ impl<'s> Parser<'s> {
         let ty = if self.lexer.peek().kind == TokenKind::Colon {
             self.lexer.next();
             self.potential_tokens.clear();
-
-            let ty = self.lexer.next();
-            if ty.kind == TokenKind::Identifier {
-                self.potential_tokens.clear();
-
-                let identifier = Identifier::new(self.push_identifier(&ty.span), ty.span.clone());
-                let ident_ref_id = self.push_identifier_ref(identifier);
-
-                Return::some(ident_ref_id)
-            } else {
-                // fixme need to report error
-                self.lexer.push_next(ty);
-                Return::none()
-            }
+            Return::some(self.parse_type(true))
         } else {
             Return::none()
         };
@@ -581,6 +563,105 @@ impl<'s> Parser<'s> {
         );
 
         Some(&self.statements[id!(stmt_id)])
+    }
+
+    fn parse_type(&mut self, mut report_err: bool) -> TypeDefId {
+        let token = self.lexer.next();
+        match &token.kind {
+            TokenKind::Identifier => {
+                let identifier =
+                    Identifier::new(self.push_identifier(&token.span), token.span.clone());
+                let identifier_span = identifier.span.clone();
+                let ident_ref_id = self.push_identifier_ref(identifier);
+                self.type_defs.push(TypeDef {
+                    kind: TypeDefKind::Simple(ident_ref_id),
+                    span: identifier_span,
+                });
+                TypeDefId::from(self.type_defs.len() - 1)
+            }
+            TokenKind::OpenBracket => {
+                let base = self.parse_type(true);
+
+                let semi = self.lexer.next();
+
+                if !matches!(semi.kind, TokenKind::Semicolon) {
+                    report_unexpected_token!(self, semi, [expected_token!(TokenKind::Semicolon),]);
+                    report_err = false;
+                    self.lexer.push_next(semi);
+                }
+
+                let len = self.lexer.next();
+                let type_def_kind = if let TokenKind::Number(len) = len.kind {
+                    TypeDefKind::Array(base, len as usize)
+                } else {
+                    if report_err {
+                        report_unexpected_token!(
+                            self,
+                            len,
+                            [expected_token!(TokenKind::Number(0)),]
+                        );
+                    }
+                    report_err = false;
+                    self.lexer.push_next(len);
+                    TypeDefKind::Dummy
+                };
+
+                let close_bracket = self.lexer.next();
+                if !matches!(close_bracket.kind, TokenKind::CloseBracket) {
+                    if report_err {
+                        report_unexpected_token!(
+                            self,
+                            close_bracket,
+                            [expected_token!(TokenKind::CloseBracket),]
+                        );
+                    }
+
+                    self.lexer.push_next(close_bracket);
+                    self.take_until_one_of(vec![
+                        TokenKind::CloseBracket,
+                        TokenKind::Semicolon,
+                        TokenKind::OpenCurlyBracket,
+                        TokenKind::CloseCurlyBracket,
+                        TokenKind::Comma,
+                        TokenKind::OpenParenthesis,
+                        TokenKind::CloseParenthesis,
+                    ]);
+
+                    self.type_defs.push(TypeDef {
+                        kind: TypeDefKind::Dummy,
+                        span: token.span,
+                    });
+                    return TypeDefId::from(self.type_defs.len() - 1);
+                }
+
+                self.type_defs.push(TypeDef {
+                    kind: type_def_kind,
+                    span: token.span.extend_to(&close_bracket.span),
+                });
+                TypeDefId::from(self.type_defs.len() - 1)
+            }
+            _ => {
+                if report_err {
+                    report_unexpected_token!(
+                        self,
+                        token,
+                        [
+                            expected_token!(TokenKind::Identifier),
+                            expected_token!(TokenKind::OpenBracket),
+                        ]
+                    );
+                }
+
+                self.type_defs.push(TypeDef {
+                    kind: TypeDefKind::Dummy,
+                    span: Span::new(token.span.line, token.span.column, token.span.start, 0),
+                });
+
+                self.lexer.push_next(token);
+
+                TypeDefId::from(self.type_defs.len() - 1)
+            }
+        }
     }
 
     fn parse_struct(&mut self) -> Option<&Statement> {
@@ -695,75 +776,10 @@ impl<'s> Parser<'s> {
 
                     // struct ident { ... , ident : 'ident , ... }
 
-                    let token = self.lexer.next();
-                    match &token.kind {
-                        TokenKind::Identifier => {
-                            // struct ident { ... , ident : 'ident , ... }
-                            let type_identifier =
-                                Identifier::new(self.push_identifier(&token.span), token.span);
-                            let field_span = ident.span.extend_to(&type_identifier.span);
-                            let type_ident_ref_id = self.push_identifier_ref(type_identifier);
+                    let type_def_id = self.parse_type(true);
+                    let field_span = ident.span.extend_to(&self.type_defs[id!(type_def_id)].span);
 
-                            fields.push(Field::new(ident, type_ident_ref_id, field_span));
-                        }
-                        TokenKind::Comma => {
-                            // we missed the type and got the comma. try to parse next field from
-                            // here
-
-                            // struct ident { ... , ident : ', ... }
-                            report_unexpected_token!(
-                                self,
-                                token,
-                                [expected_token!(TokenKind::Identifier),]
-                            );
-                            expect_more = true;
-                            continue;
-                        }
-                        _ => {
-                            // we missed the type
-                            report_unexpected_token!(
-                                self,
-                                token,
-                                [expected_token!(TokenKind::Identifier),]
-                            );
-                            self.take_until_one_of(vec![
-                                TokenKind::Identifier,
-                                TokenKind::Comma,
-                                TokenKind::CloseCurlyBracket,
-                            ]);
-
-                            let token = self.lexer.next();
-                            match &token.kind {
-                                TokenKind::Identifier => {
-                                    // struct ident { ... , ident : ... 'ident, ... }
-
-                                    // we found the type, create the field
-                                    let type_identifier = Identifier::new(
-                                        self.push_identifier(&token.span),
-                                        token.span,
-                                    );
-                                    let field_span = ident.span.extend_to(&type_identifier.span);
-                                    let type_ident_ref_id =
-                                        self.push_identifier_ref(type_identifier);
-
-                                    fields.push(Field::new(ident, type_ident_ref_id, field_span));
-                                }
-                                TokenKind::Comma => {
-                                    // we found a comma, abort the current field and parse
-                                    // the next one...
-
-                                    // struct ident { ... , ident : ... ', ... }
-                                    expect_more = true;
-                                    continue;
-                                }
-                                TokenKind::CloseCurlyBracket | TokenKind::Eof => {
-                                    // we reached the end of the struct
-                                    break token;
-                                }
-                                _ => unreachable!(),
-                            }
-                        }
-                    }
+                    fields.push(Field::new(ident, type_def_id, field_span));
 
                     // finally, if the next token is a comma, we eat it and continue
                     // processing the next field
@@ -834,6 +850,12 @@ impl<'s> Parser<'s> {
     /// ```raw
     /// 'expr
     /// ```
+    ///
+    /// If `allow_struct` is set to `true`, a struct instantiation expression is allowed. If
+    /// `allow_assignment` is set to `true` an assignment expression is allowed.
+    ///
+    /// Returns an `Expression` and a `bool` indicating whether a semicolon is required as the next
+    /// token.
     fn parse_expression(
         &mut self,
         allow_struct: bool,
@@ -936,6 +958,10 @@ impl<'s> Parser<'s> {
                     token.span.clone(),
                 )
             }
+            TokenKind::OpenBracket => {
+                self.potential_tokens.clear();
+                self.parse_array_instantiation(token.span)
+            }
             TokenKind::OpenParenthesis => {
                 self.potential_tokens.clear();
                 let open_loc = token.span;
@@ -974,6 +1000,7 @@ impl<'s> Parser<'s> {
                         expected_token!(TokenKind::Minus),
                         expected_token!(TokenKind::True),
                         expected_token!(TokenKind::False),
+                        expected_token!(TokenKind::OpenBracket),
                         expected_token!(TokenKind::OpenParenthesis),
                     ]
                 );
@@ -982,6 +1009,7 @@ impl<'s> Parser<'s> {
                 match &token.kind {
                     TokenKind::Eof
                     | TokenKind::Semicolon
+                    | TokenKind::CloseBracket
                     | TokenKind::CloseParenthesis
                     | TokenKind::CloseCurlyBracket
                     | TokenKind::OpenCurlyBracket
@@ -1023,11 +1051,11 @@ impl<'s> Parser<'s> {
         loop {
             match &self.lexer.peek().kind {
                 TokenKind::Dot => {
-                    // todo:refactoring should be part of operator with precedence parsing
                     // expr . 'identifier
                     let _dot = self.lexer.next();
                     self.potential_tokens.clear();
 
+                    // todo:check is that useful?
                     need_semi = true;
 
                     let token = self.lexer.next();
@@ -1057,10 +1085,51 @@ impl<'s> Parser<'s> {
                         }
                     }
                 }
+                TokenKind::OpenBracket => {
+                    // expr [ 'expression
+                    let open_bracket = self.lexer.next();
+                    self.potential_tokens.clear();
+
+                    // todo:check is that useful?
+                    need_semi = true;
+
+                    let index = self.parse_expression(true, false).0.id;
+
+                    let close_bracket = self.lexer.next();
+
+                    expr_id = self.push_expression(
+                        ExpressionKind::ArrayAccess(expr_id, index),
+                        open_bracket.span.extend_to(&close_bracket.span),
+                    );
+
+                    if !matches!(&close_bracket.kind, TokenKind::CloseBracket) {
+                        report_missing_token_and_push_back!(
+                            self,
+                            close_bracket,
+                            [
+                                expected_token!(TokenKind::CloseBracket),
+                                expected_token!(TokenKind::EqualEqual),
+                                expected_token!(TokenKind::ExclaimEqual),
+                                expected_token!(TokenKind::Greater),
+                                expected_token!(TokenKind::GreaterEqual),
+                                expected_token!(TokenKind::Smaller),
+                                expected_token!(TokenKind::SmallerEqual),
+                                expected_token!(TokenKind::Minus),
+                                expected_token!(TokenKind::Plus),
+                                expected_token!(TokenKind::Slash),
+                                expected_token!(TokenKind::Star),
+                                expected_token!(TokenKind::Dot),
+                                expected_token!(TokenKind::OpenBracket),
+                            ]
+                        );
+                    }
+                }
                 _ => {
                     // ignore and keep parsing
                     self.potential_tokens
                         .insert(expected_token!(TokenKind::Dot));
+                    self.potential_tokens
+                        .insert(expected_token!(TokenKind::OpenBracket));
                     break;
                 }
             }
@@ -1093,7 +1162,7 @@ impl<'s> Parser<'s> {
                             self.expressions.push(lhs);
                         }
                     },
-                    ExpressionKind::Access(_, _) => {
+                    ExpressionKind::Access(_, _) | ExpressionKind::ArrayAccess(_, _) => {
                         self.lexer.next();
                         self.potential_tokens.clear();
                         need_semi = true;
@@ -1130,6 +1199,15 @@ impl<'s> Parser<'s> {
         }
 
         (&self.expressions[id!(expr_id)], need_semi)
+    }
+
+    fn parse_array_instantiation(&mut self, start_span: Span) -> ExprId {
+        // [ 'expr ... ]
+
+        let (arguments, end_span) = self.parse_arguments(1, TokenKind::CloseBracket);
+
+        let span = start_span.extend_to(&end_span);
+        self.push_expression(ExpressionKind::ArrayInstantiation(arguments), span)
     }
 
     fn parse_binary_operator_with_higher_precedence(
@@ -1256,11 +1334,14 @@ impl<'s> Parser<'s> {
     ) -> &Expression {
         let left_span = self.expressions[id!(left)].span.clone();
 
-        let (right, _) = self.parse_expression_with_precedence(
-            operator.kind.precedence(),
-            allow_struct,
-            allow_assignment,
-        );
+        let right = self
+            .parse_expression_with_precedence(
+                operator.kind.precedence(),
+                allow_struct,
+                allow_assignment,
+            )
+            .0;
+
         let span = left_span.extend_to(&right.span);
 
         let id = right.id;
@@ -1405,16 +1486,53 @@ impl<'s> Parser<'s> {
 
         assert_eq!(&open_parenthesis_token.kind, &TokenKind::OpenParenthesis);
 
+        let (arguments, span) = self.parse_arguments(0, TokenKind::CloseParenthesis);
+        let span = identifier.span.extend_to(&span);
+
+        // identifier ( expr , ... ) '
+        let ident_ref = self.push_identifier_ref(identifier);
+        let id = self.push_expression(ExpressionKind::FunctionCall(ident_ref, arguments), span);
+
+        &self.expressions[id!(id)]
+    }
+
+    fn parse_arguments(
+        &mut self,
+        min_arguments_count: usize,
+        closing_token: TokenKind,
+    ) -> (Vec<ExprId>, Span) {
         let mut arguments = Vec::new();
         let mut comma_seen = true;
 
         let span = loop {
             let token = self.lexer.next();
-            match &token.kind {
-                TokenKind::CloseParenthesis => {
-                    self.potential_tokens.clear();
-                    break identifier.span.extend_to(&token.span);
+            if &token.kind == &closing_token {
+                if arguments.len() < min_arguments_count {
+                    if !comma_seen {
+                        report_unexpected_token!(self, token, [expected_token!(TokenKind::Comma),]);
+                    } else {
+                        report_unexpected_token!(
+                            self,
+                            token,
+                            [
+                                expected_token!(TokenKind::Identifier),
+                                expected_token!(TokenKind::Number(0)),
+                                expected_token!(TokenKind::Minus),
+                                expected_token!(TokenKind::True),
+                                expected_token!(TokenKind::False),
+                                expected_token!(TokenKind::OpenBracket),
+                                expected_token!(TokenKind::OpenParenthesis),
+                                expected_token!(TokenKind::If),
+                                expected_token!(TokenKind::While),
+                            ]
+                        );
+                    }
                 }
+                self.potential_tokens.clear();
+                break token.span;
+            }
+
+            match &token.kind {
                 TokenKind::Comma => {
                     if !comma_seen {
                         self.potential_tokens.clear();
@@ -1424,18 +1542,77 @@ impl<'s> Parser<'s> {
                             self,
                             token,
                             [
-                                expected_token!(TokenKind::CloseParenthesis),
+                                expected_token!(closing_token.clone()),
                                 expected_token!(TokenKind::Identifier),
                                 expected_token!(TokenKind::Number(0)),
                                 expected_token!(TokenKind::Minus),
                                 expected_token!(TokenKind::True),
                                 expected_token!(TokenKind::False),
+                                expected_token!(TokenKind::OpenBracket),
                                 expected_token!(TokenKind::OpenParenthesis),
                                 expected_token!(TokenKind::If),
                                 expected_token!(TokenKind::While),
                             ]
                         );
                     }
+                }
+                TokenKind::Eof | TokenKind::Semicolon => {
+                    let span = token.span.clone();
+                    if !comma_seen {
+                        if arguments.len() < min_arguments_count {
+                            report_unexpected_token!(
+                                self,
+                                token,
+                                [expected_token!(TokenKind::Comma),]
+                            );
+                        } else {
+                            report_unexpected_token!(
+                                self,
+                                token,
+                                [
+                                    expected_token!(TokenKind::Comma),
+                                    expected_token!(closing_token.clone()),
+                                ]
+                            );
+                        }
+                    } else {
+                        if arguments.len() < min_arguments_count {
+                            report_unexpected_token!(
+                                self,
+                                token,
+                                [
+                                    expected_token!(TokenKind::Identifier),
+                                    expected_token!(TokenKind::Number(0)),
+                                    expected_token!(TokenKind::Minus),
+                                    expected_token!(TokenKind::True),
+                                    expected_token!(TokenKind::False),
+                                    expected_token!(TokenKind::OpenBracket),
+                                    expected_token!(TokenKind::OpenParenthesis),
+                                    expected_token!(TokenKind::If),
+                                    expected_token!(TokenKind::While),
+                                ]
+                            );
+                        } else {
+                            report_unexpected_token!(
+                                self,
+                                token,
+                                [
+                                    expected_token!(closing_token.clone()),
+                                    expected_token!(TokenKind::Identifier),
+                                    expected_token!(TokenKind::Number(0)),
+                                    expected_token!(TokenKind::Minus),
+                                    expected_token!(TokenKind::True),
+                                    expected_token!(TokenKind::False),
+                                    expected_token!(TokenKind::OpenBracket),
+                                    expected_token!(TokenKind::OpenParenthesis),
+                                    expected_token!(TokenKind::If),
+                                    expected_token!(TokenKind::While),
+                                ]
+                            );
+                        }
+                    }
+                    self.lexer.push_next(token);
+                    break span;
                 }
                 _ => {
                     if !comma_seen {
@@ -1450,11 +1627,7 @@ impl<'s> Parser<'s> {
             }
         };
 
-        // identifier ( expr , ... ) '
-        let ident_ref = self.push_identifier_ref(identifier);
-        let id = self.push_expression(ExpressionKind::FunctionCall(ident_ref, arguments), span);
-
-        &self.expressions[id!(id)]
+        (arguments, span)
     }
 
     fn parse_struct_instantiation(&mut self, struct_identifier: Identifier) -> ExprId {
@@ -1526,7 +1699,6 @@ impl<'s> Parser<'s> {
                                     // next one
 
                                     // ident { ... , ident ... ', ... }
-                                    // self.expected.clear();
                                     expect_more = true;
                                     continue;
                                 }
@@ -1777,6 +1949,9 @@ mod tests {
     test_syntax!(struct_instantiation_one_field => "S { x: 1 };");
     test_syntax!(struct_instantiation_two_fields => "S { x: 1, y: 2 };");
     test_syntax!(struct_instantiation_two_fields_trailing_coma => "S { x: 1, y: 2, };");
+    test_syntax!(array_instantiation_one_element => "[0];");
+    test_syntax!(array_instantiation_two_elements => "[0, 2];");
+    test_syntax!(array_instantiation_trailing_comma => "[0, 2, ];");
     test_syntax!(err_expression_missing_right_parenthesis => "(42;");
     test_syntax!(err_expression_missing_right_parenthesis_eof => "(42");
     test_syntax!(err_expression_inserted_token_before_expression => "^42;");
@@ -1806,6 +1981,8 @@ mod tests {
     test_syntax!(err_while_missing_close_curly_bracket => "while true {");
     test_syntax!(err_function_call_unwanted_comma => "f(42,,43);");
     test_syntax!(err_function_call_missing_comma => "f(42 43);");
+    test_syntax!(err_function_call_missing_closing_parenthesis => "f(42;");
+    test_syntax!(err_function_call_missing_closing_parenthesis_no_arguments => "f(;");
     test_syntax!(err_struct_missing_name => "struct { }");
     test_syntax!(err_struct_missing_open_curly_one_field => "struct S a: number }");
     test_syntax!(err_struct_missing_open_curly_no_fields => "struct S }");
@@ -1842,4 +2019,27 @@ mod tests {
     test_syntax!(err_unprotected_struct_in_if_expression_4 => "if (1 + 1) - Point{} {}");
     test_syntax!(err_unprotected_struct_in_while_expression_1 => "while Point{} {}");
     test_syntax!(err_missing_semicolon_after_if_expression => "if true { 1; } else{ 1; } - 1 12;");
+    test_syntax!(err_array_instantiation_empty => "[];");
+    test_syntax!(err_array_instantiation_missing_element => "[0, ,];");
+    test_syntax!(err_array_instantiation_missing_closing_bracket_no_element => "[;");
+    test_syntax!(err_array_instantiation_missing_closing_bracket => "[0;");
+    test_syntax!(err_array_instantiation_missing_closing_bracket_after_comma => "[0,;");
+    test_syntax!(array_access => "a[0];");
+    test_syntax!(array_access_multi => "a[0][0];");
+    test_syntax!(array_access_expr => "a[i + 1];");
+    test_syntax!(array_and_dot_access_1 => "a.b[0];");
+    test_syntax!(array_and_dot_access_2 => "a[0].b;");
+    test_syntax!(array_and_dot_access => "a.b[0].c;");
+    test_syntax!(array_assign => "a[0] = 1;");
+    test_syntax!(array_instantiation_and_access => "[1, 2][0];");
+    test_syntax!(err_array_access_missing_bracked_semi => "a[0;");
+    test_syntax!(err_array_access_missing_bracked_eof => "a[0");
+    test_syntax!(array_type => "struct S { field: [number; 4] }");
+    test_syntax!(array_type_nested => "struct S { field: [[number; 2]; 4] }");
+    test_syntax!(err_array_type_missing_base => "struct S { field: [; 4] }");
+    test_syntax!(err_array_type_missing_after_open_bracket => "struct S { field: [");
+    test_syntax!(err_array_type_missing_semi => "struct S { field: [number 4] }");
+    test_syntax!(err_array_type_missing_len => "struct S { field: [number; ] }");
+    test_syntax!(err_array_type_missing_close_bracket => "struct S { field: [number; 4 }");
+    test_syntax!(err_array_type_missing_after_base => "struct S { field: [number }");
 }

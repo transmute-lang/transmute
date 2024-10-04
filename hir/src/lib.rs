@@ -8,14 +8,14 @@ use crate::passes::exit_points_resolver::ExitPointsResolver;
 use crate::passes::implicit_ret_converter::ImplicitRetConverter;
 use crate::passes::operators_converter::OperatorsConverter;
 use crate::passes::resolver::Resolver;
-use crate::statement::{Field, Parameter, Return, Statement};
+use crate::statement::{Field, Parameter, Return, Statement, TypeDef};
 use crate::symbol::Symbol;
 use crate::typed::{Typed, TypedState, Untyped};
 use std::collections::HashMap;
 use transmute_ast::statement::StatementKind as AstStatementKind;
 use transmute_ast::Ast;
 use transmute_core::error::Diagnostics;
-use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
+use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeDefId, TypeId};
 use transmute_core::vec_map::VecMap;
 
 pub mod bound;
@@ -59,6 +59,8 @@ where
     pub expressions: VecMap<ExprId, Expression<T>>,
     /// All statements
     pub statements: VecMap<StmtId, Statement<T, B>>,
+    /// Types
+    pub type_defs: VecMap<TypeDefId, TypeDef>,
     /// Root statements
     pub roots: Vec<StmtId>,
     /// All symbols
@@ -147,6 +149,11 @@ impl From<Ast> for UnresolvedHir {
                 .into_iter()
                 .map(|s| (s.0, Statement::from(s.1)))
                 .collect::<VecMap<StmtId, Statement<Untyped, Unbound>>>(),
+            type_defs: ast
+                .type_defs
+                .into_iter()
+                .map(|e| (e.0, TypeDef::from(e.1)))
+                .collect::<VecMap<TypeDefId, TypeDef>>(),
             roots: ast.roots,
             symbols: Default::default(),
             types: Default::default(),

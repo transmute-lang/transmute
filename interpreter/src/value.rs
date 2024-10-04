@@ -5,6 +5,7 @@ pub enum Value {
     Boolean(bool),
     Number(i64),
     Struct(Vec<Ref>),
+    Array(Vec<Ref>),
     #[default]
     Void,
 }
@@ -37,6 +38,20 @@ impl Value {
             _ => panic!("{} is not a struct", self),
         }
     }
+
+    pub fn as_array(&self) -> &Vec<Ref> {
+        match self {
+            Value::Array(v) => v,
+            _ => panic!("{} is not an array", self),
+        }
+    }
+
+    pub fn as_mut_array(&mut self) -> &mut Vec<Ref> {
+        match self {
+            Value::Array(v) => v,
+            _ => panic!("{} is not an array", self),
+        }
+    }
 }
 
 impl Display for Value {
@@ -60,6 +75,16 @@ impl Display for Value {
                     write!(f, "{}", value)?;
                 }
                 write!(f, "}}")
+            }
+            Value::Array(values) => {
+                write!(f, "[")?;
+                for (index, value) in values.iter().enumerate() {
+                    if index > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", value)?;
+                }
+                write!(f, "]")
             }
         }
     }

@@ -10,4 +10,9 @@ transmute-core = {path = "../core" }
 insta = "1.34.0"
 
 [features]
+#default = ["debug-expected-token"]
+
 allow-any-root-kind = []
+# if enabled, prints the position where the expected token was put in the list
+debug-expected-token = []
+

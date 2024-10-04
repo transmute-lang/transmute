@@ -19,7 +19,7 @@ cargo run \
   examples/gc.tm -o target/gc              || exit 1
 
 export GC_ENABLE=1
-export GC_LOG_LEVEL=2
+export GC_LOG_LEVEL=3
 export GC_TEST_DUMP=1
 export GC_TEST_DUMP_COLOR=1
 

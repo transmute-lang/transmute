@@ -1,0 +1,55 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"[0, 2, ];\")).parse()"
+---
+Ok(
+    Ast {
+        identifiers: [],
+        identifier_refs: [],
+        expressions: [
+            ExprId(0) => Expression {
+                id: ExprId(0),
+                kind: Literal(
+                    Literal {
+                        kind: Number(0),
+                        span: 1:2; [1, 2],
+                    },
+                ),
+                span: 1:2; [1, 2],
+            },
+            ExprId(1) => Expression {
+                id: ExprId(1),
+                kind: Literal(
+                    Literal {
+                        kind: Number(2),
+                        span: 1:5; [4, 5],
+                    },
+                ),
+                span: 1:5; [4, 5],
+            },
+            ExprId(2) => Expression {
+                id: ExprId(2),
+                kind: ArrayInstantiation(
+                    [
+                        ExprId(0),
+                        ExprId(1),
+                    ],
+                ),
+                span: 1:1; [0, 8],
+            },
+        ],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Expression(
+                    ExprId(2),
+                ),
+                span: 1:1; [0, 9],
+            },
+        ],
+        type_defs: [],
+        roots: [
+            StmtId(0),
+        ],
+    },
+)

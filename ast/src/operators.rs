@@ -88,8 +88,6 @@ pub enum Precedence {
     Sum,
     Product,
     Prefix,
-    // todo:refactoring see comment in Parser::parse_expression_with_precedence
-    Access,
 }
 
 #[derive(Debug, Clone, PartialEq)]

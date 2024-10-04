@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"struct S { field: [; 4] }\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `;`, expected one of (2) identifier, `[`",
+                span: 1:20; [19, 20],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    645,
+                ),
+            },
+        ],
+    },
+)

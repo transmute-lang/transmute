@@ -33,12 +33,20 @@ Ok(
                                 id: IdentId(1),
                                 span: 1:12; [11, 12],
                             },
-                            ty: IdentRefId(0),
+                            type_def_id: TypeDefId(0),
                             span: 1:12; [11, 20],
                         },
                     ],
                 ),
                 span: 1:1; [0, 23],
+            },
+        ],
+        type_defs: [
+            TypeDefId(0) => TypeDef {
+                kind: Simple(
+                    IdentRefId(0),
+                ),
+                span: 1:15; [14, 20],
             },
         ],
         roots: [

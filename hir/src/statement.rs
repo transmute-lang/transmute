@@ -7,7 +7,9 @@ use transmute_ast::statement::RetMode as AstRetMode;
 use transmute_ast::statement::Return as AstReturn;
 use transmute_ast::statement::Statement as AstStatement;
 use transmute_ast::statement::StatementKind as AstStatementKind;
-use transmute_core::ids::{ExprId, IdentRefId, StmtId, SymbolId, TypeId};
+use transmute_ast::statement::TypeDef as AstTypeDef;
+use transmute_ast::statement::TypeDefKind as AstTypeDefKind;
+use transmute_core::ids::{ExprId, IdentRefId, StmtId, SymbolId, TypeDefId, TypeId};
 use transmute_core::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -106,13 +108,50 @@ impl From<AstRetMode> for RetMode {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct TypeDef {
+    pub kind: TypeDefKind,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypeDefKind {
+    Simple(IdentRefId),
+    Array(TypeDefId, usize),
+}
+
+// impl TypeDef {
+//     pub fn identifier_ref_id(&self) -> IdentRefId {
+//         match self.kind {
+//             TypeDefKind::Simple(ident_ref_id) => ident_ref_id,
+//             TypeDefKind::Array(type_def_id, _) => ident_ref_id,
+//         }
+//     }
+// }
+
+impl From<AstTypeDef> for TypeDef {
+    fn from(value: AstTypeDef) -> Self {
+        match value.kind {
+            AstTypeDefKind::Simple(ident_ref_id) => TypeDef {
+                kind: TypeDefKind::Simple(ident_ref_id),
+                span: value.span,
+            },
+            AstTypeDefKind::Array(type_def_id, len) => TypeDef {
+                kind: TypeDefKind::Array(type_def_id, len),
+                span: value.span,
+            },
+            AstTypeDefKind::Dummy => panic!("Cannot convert AstType::Dummy"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Parameter<T, B>
 where
     T: TypedState,
     B: BoundState,
 {
     pub identifier: Identifier<B>,
-    pub ty: IdentRefId,
+    pub type_def_id: TypeDefId,
     pub span: Span,
     /// When `Typed`, corresponds to the `TypeId` of the parameter, as derived from the `ty` during
     /// resolution
@@ -124,7 +163,7 @@ impl Parameter<Untyped, Unbound> {
     pub fn bind(self, type_id: TypeId, symbol_id: SymbolId) -> Parameter<Typed, Bound> {
         Parameter::<Typed, Bound> {
             identifier: self.identifier.bind(symbol_id),
-            ty: self.ty,
+            type_def_id: self.type_def_id,
             span: self.span,
             typed: Typed(type_id),
         }
@@ -135,7 +174,7 @@ impl From<AstParameter> for Parameter<Untyped, Unbound> {
     fn from(value: AstParameter) -> Self {
         Self {
             span: value.span.clone(),
-            ty: value.ty,
+            type_def_id: value.type_def_id,
             identifier: Identifier::from(value.identifier),
             typed: Untyped,
         }
@@ -165,14 +204,14 @@ pub struct Return<T>
 where
     T: TypedState,
 {
-    pub ret: Option<IdentRefId>,
+    pub type_def_id: Option<TypeDefId>,
     typed: T,
 }
 
 impl Return<Untyped> {
     pub fn typed(self, type_id: TypeId) -> Return<Typed> {
         Return::<Typed> {
-            ret: self.ret,
+            type_def_id: self.type_def_id,
             typed: Typed(type_id),
         }
     }
@@ -181,7 +220,7 @@ impl Return<Untyped> {
 impl From<AstReturn> for Return<Untyped> {
     fn from(value: AstReturn) -> Self {
         Self {
-            ret: value.ret,
+            type_def_id: value.type_def_id,
             typed: Untyped,
         }
     }
@@ -200,7 +239,7 @@ where
     B: BoundState,
 {
     pub identifier: Identifier<B>,
-    pub ty: IdentRefId,
+    pub type_def_id: TypeDefId,
     pub span: Span,
     /// When `Typed`, corresponds to the `TypeId` of the field, as derived from the `ty` during
     /// resolution
@@ -208,10 +247,10 @@ where
 }
 
 impl Field<Untyped, Unbound> {
-    pub fn new(identifier: Identifier<Unbound>, ty: IdentRefId, span: Span) -> Self {
+    pub fn new(identifier: Identifier<Unbound>, type_def_id: TypeDefId, span: Span) -> Self {
         Self {
             identifier,
-            ty,
+            type_def_id,
             span,
             typed: Untyped,
         }
@@ -221,9 +260,9 @@ impl Field<Untyped, Unbound> {
 impl From<AstField> for Field<Untyped, Unbound> {
     fn from(value: AstField) -> Self {
         Self {
-            ty: value.ty(),
-            span: value.span().clone(),
-            identifier: Identifier::from(value.take_identifier()),
+            type_def_id: value.type_def_id,
+            span: value.span,
+            identifier: Identifier::from(value.identifier),
             typed: Untyped,
         }
     }
@@ -236,7 +275,7 @@ where
     pub fn typed(self, type_id: TypeId) -> Field<Typed, B> {
         Field {
             identifier: self.identifier,
-            ty: self.ty,
+            type_def_id: self.type_def_id,
             span: self.span,
             typed: Typed(type_id),
         }
@@ -259,7 +298,7 @@ where
     pub fn bind(self, symbol_id: SymbolId) -> Field<T, Bound> {
         Field {
             identifier: self.identifier.bind(symbol_id),
-            ty: self.ty,
+            type_def_id: self.type_def_id,
             span: self.span,
             typed: self.typed,
         }

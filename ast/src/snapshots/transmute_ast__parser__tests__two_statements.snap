@@ -58,6 +58,7 @@ Ok(
                 span: 1:21; [20, 30],
             },
         ],
+        type_defs: [],
         roots: [
             StmtId(0),
             StmtId(1),

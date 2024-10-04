@@ -1,0 +1,357 @@
+---
+source: compiler/tests/arrays_simple.rs
+expression: "format!(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(),\n    String :: from_utf8(output.stdout).unwrap(), String ::\n    from_utf8(output.stderr).unwrap())"
+---
+success:true
+stdout:
+Initialize GC with log level: 2
+Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
+
+Start GC
+Phase: init.
+Phase: mark
+  frame 0 (1 roots):
+    root 0: skipped (nil)
+Phase: sweep
+allocated block of size 48 at 0x10010, returning object of size 24 at 0x10028(+24)
+
+Start GC
+Phase: init.
+  block at 0x10010 (object of size 24 at 0x10028): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x10028 (block at 0x10010): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10010 (object of size 24 at 0x10028): reachable
+
+Start GC
+Phase: init.
+  block at 0x10010 (object of size 24 at 0x10028): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x10028 (block at 0x10010): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10010 (object of size 24 at 0x10028): reachable
+main(0) = 3
+
+Start GC
+Phase: init.
+  block at 0x10010 (object of size 24 at 0x10028): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0: skipped (nil)
+Phase: sweep
+  block at 0x10010 (object of size 24 at 0x10028): unreachable
+freeing block at 0x10010 (object size: 24)
+allocated block of size 48 at 0x10040, returning object of size 24 at 0x10058(+24)
+
+Start GC
+Phase: init.
+  block at 0x10040 (object of size 24 at 0x10058): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x10058 (block at 0x10040): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10040 (object of size 24 at 0x10058): reachable
+
+Start GC
+Phase: init.
+  block at 0x10040 (object of size 24 at 0x10058): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x10058 (block at 0x10040): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10040 (object of size 24 at 0x10058): reachable
+main(1) = 6
+
+Start GC
+Phase: init.
+  block at 0x10040 (object of size 24 at 0x10058): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0: skipped (nil)
+Phase: sweep
+  block at 0x10040 (object of size 24 at 0x10058): unreachable
+freeing block at 0x10040 (object size: 24)
+allocated block of size 48 at 0x10070, returning object of size 24 at 0x10088(+24)
+
+Start GC
+Phase: init.
+  block at 0x10070 (object of size 24 at 0x10088): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x10088 (block at 0x10070): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10070 (object of size 24 at 0x10088): reachable
+
+Start GC
+Phase: init.
+  block at 0x10070 (object of size 24 at 0x10088): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x10088 (block at 0x10070): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10070 (object of size 24 at 0x10088): reachable
+main(2) = 9
+
+Start GC
+Phase: init.
+  block at 0x10070 (object of size 24 at 0x10088): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0: skipped (nil)
+Phase: sweep
+  block at 0x10070 (object of size 24 at 0x10088): unreachable
+freeing block at 0x10070 (object size: 24)
+allocated block of size 48 at 0x100a0, returning object of size 24 at 0x100b8(+24)
+
+Start GC
+Phase: init.
+  block at 0x100a0 (object of size 24 at 0x100b8): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x100b8 (block at 0x100a0): 3 pointers, unreachable
+Phase: sweep
+  block at 0x100a0 (object of size 24 at 0x100b8): reachable
+
+Start GC
+Phase: init.
+  block at 0x100a0 (object of size 24 at 0x100b8): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x100b8 (block at 0x100a0): 3 pointers, unreachable
+Phase: sweep
+  block at 0x100a0 (object of size 24 at 0x100b8): reachable
+main(3) = 12
+
+Start GC
+Phase: init.
+  block at 0x100a0 (object of size 24 at 0x100b8): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0: skipped (nil)
+Phase: sweep
+  block at 0x100a0 (object of size 24 at 0x100b8): unreachable
+freeing block at 0x100a0 (object size: 24)
+allocated block of size 48 at 0x100d0, returning object of size 24 at 0x100e8(+24)
+
+Start GC
+Phase: init.
+  block at 0x100d0 (object of size 24 at 0x100e8): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x100e8 (block at 0x100d0): 3 pointers, unreachable
+Phase: sweep
+  block at 0x100d0 (object of size 24 at 0x100e8): reachable
+
+Start GC
+Phase: init.
+  block at 0x100d0 (object of size 24 at 0x100e8): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x100e8 (block at 0x100d0): 3 pointers, unreachable
+Phase: sweep
+  block at 0x100d0 (object of size 24 at 0x100e8): reachable
+main(4) = 15
+
+Start GC
+Phase: init.
+  block at 0x100d0 (object of size 24 at 0x100e8): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0: skipped (nil)
+Phase: sweep
+  block at 0x100d0 (object of size 24 at 0x100e8): unreachable
+freeing block at 0x100d0 (object size: 24)
+allocated block of size 48 at 0x10100, returning object of size 24 at 0x10118(+24)
+
+Start GC
+Phase: init.
+  block at 0x10100 (object of size 24 at 0x10118): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x10118 (block at 0x10100): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10100 (object of size 24 at 0x10118): reachable
+
+Start GC
+Phase: init.
+  block at 0x10100 (object of size 24 at 0x10118): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x10118 (block at 0x10100): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10100 (object of size 24 at 0x10118): reachable
+main(5) = 18
+
+Start GC
+Phase: init.
+  block at 0x10100 (object of size 24 at 0x10118): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0: skipped (nil)
+Phase: sweep
+  block at 0x10100 (object of size 24 at 0x10118): unreachable
+freeing block at 0x10100 (object size: 24)
+allocated block of size 48 at 0x10130, returning object of size 24 at 0x10148(+24)
+
+Start GC
+Phase: init.
+  block at 0x10130 (object of size 24 at 0x10148): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x10148 (block at 0x10130): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10130 (object of size 24 at 0x10148): reachable
+
+Start GC
+Phase: init.
+  block at 0x10130 (object of size 24 at 0x10148): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x10148 (block at 0x10130): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10130 (object of size 24 at 0x10148): reachable
+main(6) = 21
+
+Start GC
+Phase: init.
+  block at 0x10130 (object of size 24 at 0x10148): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0: skipped (nil)
+Phase: sweep
+  block at 0x10130 (object of size 24 at 0x10148): unreachable
+freeing block at 0x10130 (object size: 24)
+allocated block of size 48 at 0x10160, returning object of size 24 at 0x10178(+24)
+
+Start GC
+Phase: init.
+  block at 0x10160 (object of size 24 at 0x10178): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x10178 (block at 0x10160): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10160 (object of size 24 at 0x10178): reachable
+
+Start GC
+Phase: init.
+  block at 0x10160 (object of size 24 at 0x10178): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x10178 (block at 0x10160): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10160 (object of size 24 at 0x10178): reachable
+main(7) = 24
+
+Start GC
+Phase: init.
+  block at 0x10160 (object of size 24 at 0x10178): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0: skipped (nil)
+Phase: sweep
+  block at 0x10160 (object of size 24 at 0x10178): unreachable
+freeing block at 0x10160 (object size: 24)
+allocated block of size 48 at 0x10190, returning object of size 24 at 0x101a8(+24)
+
+Start GC
+Phase: init.
+  block at 0x10190 (object of size 24 at 0x101a8): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x101a8 (block at 0x10190): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10190 (object of size 24 at 0x101a8): reachable
+
+Start GC
+Phase: init.
+  block at 0x10190 (object of size 24 at 0x101a8): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x101a8 (block at 0x10190): 3 pointers, unreachable
+Phase: sweep
+  block at 0x10190 (object of size 24 at 0x101a8): reachable
+main(8) = 27
+
+Start GC
+Phase: init.
+  block at 0x10190 (object of size 24 at 0x101a8): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0: skipped (nil)
+Phase: sweep
+  block at 0x10190 (object of size 24 at 0x101a8): unreachable
+freeing block at 0x10190 (object size: 24)
+allocated block of size 48 at 0x101c0, returning object of size 24 at 0x101d8(+24)
+
+Start GC
+Phase: init.
+  block at 0x101c0 (object of size 24 at 0x101d8): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x101d8 (block at 0x101c0): 3 pointers, unreachable
+Phase: sweep
+  block at 0x101c0 (object of size 24 at 0x101d8): reachable
+
+Start GC
+Phase: init.
+  block at 0x101c0 (object of size 24 at 0x101d8): unreachable
+Phase: mark
+  frame 0 (1 roots):
+    root 0:
+      object at 0x101d8 (block at 0x101c0): 3 pointers, unreachable
+Phase: sweep
+  block at 0x101c0 (object of size 24 at 0x101d8): reachable
+main(9) = 30
+
+GC Teardown
+
+Start GC
+Phase: init.
+  block at 0x101c0 (object of size 24 at 0x101d8): unreachable
+Phase: mark
+Phase: sweep
+  block at 0x101c0 (object of size 24 at 0x101d8): unreachable
+freeing block at 0x101c0 (object size: 24)
+
+Statistics:
+
+  Executions ......  31
+  Allocated .......  10 blocks
+    Total
+      objects       240 bytes
+      blocks        480 bytes
+    Max
+      objects        24 bytes
+      blocks         48 bytes
+    End
+      objects         0 bytes
+      blocks          0 bytes
+  Freed ...........  10 blocks
+    Total
+      objects       240 bytes
+      blocks        480 bytes
+
+
+
+stderr:

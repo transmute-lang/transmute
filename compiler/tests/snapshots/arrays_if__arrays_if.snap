@@ -1,0 +1,167 @@
+---
+source: compiler/tests/arrays_if.rs
+expression: "format!(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(),\n    String :: from_utf8(output.stdout).unwrap(), String ::\n    from_utf8(output.stderr).unwrap())"
+---
+success:true
+stdout:
+Initialize GC with log level: 2
+Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
+
+Start GC
+Phase: init.
+Phase: mark
+  frame 0 (2 roots):
+    root 0: skipped (nil)
+    root 1: skipped (nil)
+Phase: sweep
+allocated block of size 104 at 0x10010, returning object of size 80 at 0x10028(+24)
+main(0) = 0
+
+Start GC
+Phase: init.
+  block at 0x10010 (object of size 80 at 0x10028): unreachable
+Phase: mark
+  frame 0 (2 roots):
+    root 0: skipped (nil)
+    root 1: skipped (nil)
+Phase: sweep
+  block at 0x10010 (object of size 80 at 0x10028): unreachable
+freeing block at 0x10010 (object size: 80)
+allocated block of size 104 at 0x10078, returning object of size 80 at 0x10090(+24)
+main(1) = 2
+
+Start GC
+Phase: init.
+  block at 0x10078 (object of size 80 at 0x10090): unreachable
+Phase: mark
+  frame 0 (2 roots):
+    root 0: skipped (nil)
+    root 1: skipped (nil)
+Phase: sweep
+  block at 0x10078 (object of size 80 at 0x10090): unreachable
+freeing block at 0x10078 (object size: 80)
+allocated block of size 104 at 0x100e0, returning object of size 80 at 0x100f8(+24)
+main(2) = 4
+
+Start GC
+Phase: init.
+  block at 0x100e0 (object of size 80 at 0x100f8): unreachable
+Phase: mark
+  frame 0 (2 roots):
+    root 0: skipped (nil)
+    root 1: skipped (nil)
+Phase: sweep
+  block at 0x100e0 (object of size 80 at 0x100f8): unreachable
+freeing block at 0x100e0 (object size: 80)
+allocated block of size 104 at 0x10148, returning object of size 80 at 0x10160(+24)
+main(3) = 6
+
+Start GC
+Phase: init.
+  block at 0x10148 (object of size 80 at 0x10160): unreachable
+Phase: mark
+  frame 0 (2 roots):
+    root 0: skipped (nil)
+    root 1: skipped (nil)
+Phase: sweep
+  block at 0x10148 (object of size 80 at 0x10160): unreachable
+freeing block at 0x10148 (object size: 80)
+allocated block of size 104 at 0x101b0, returning object of size 80 at 0x101c8(+24)
+main(4) = 8
+
+Start GC
+Phase: init.
+  block at 0x101b0 (object of size 80 at 0x101c8): unreachable
+Phase: mark
+  frame 0 (2 roots):
+    root 0: skipped (nil)
+    root 1: skipped (nil)
+Phase: sweep
+  block at 0x101b0 (object of size 80 at 0x101c8): unreachable
+freeing block at 0x101b0 (object size: 80)
+allocated block of size 104 at 0x10218, returning object of size 80 at 0x10230(+24)
+main(5) = 10
+
+Start GC
+Phase: init.
+  block at 0x10218 (object of size 80 at 0x10230): unreachable
+Phase: mark
+  frame 0 (2 roots):
+    root 0: skipped (nil)
+    root 1: skipped (nil)
+Phase: sweep
+  block at 0x10218 (object of size 80 at 0x10230): unreachable
+freeing block at 0x10218 (object size: 80)
+allocated block of size 104 at 0x10280, returning object of size 80 at 0x10298(+24)
+main(6) = 12
+
+Start GC
+Phase: init.
+  block at 0x10280 (object of size 80 at 0x10298): unreachable
+Phase: mark
+  frame 0 (2 roots):
+    root 0: skipped (nil)
+    root 1: skipped (nil)
+Phase: sweep
+  block at 0x10280 (object of size 80 at 0x10298): unreachable
+freeing block at 0x10280 (object size: 80)
+allocated block of size 104 at 0x102e8, returning object of size 80 at 0x10300(+24)
+main(7) = 14
+
+Start GC
+Phase: init.
+  block at 0x102e8 (object of size 80 at 0x10300): unreachable
+Phase: mark
+  frame 0 (2 roots):
+    root 0: skipped (nil)
+    root 1: skipped (nil)
+Phase: sweep
+  block at 0x102e8 (object of size 80 at 0x10300): unreachable
+freeing block at 0x102e8 (object size: 80)
+allocated block of size 104 at 0x10350, returning object of size 80 at 0x10368(+24)
+main(8) = 16
+
+Start GC
+Phase: init.
+  block at 0x10350 (object of size 80 at 0x10368): unreachable
+Phase: mark
+  frame 0 (2 roots):
+    root 0: skipped (nil)
+    root 1: skipped (nil)
+Phase: sweep
+  block at 0x10350 (object of size 80 at 0x10368): unreachable
+freeing block at 0x10350 (object size: 80)
+allocated block of size 104 at 0x103b8, returning object of size 80 at 0x103d0(+24)
+main(9) = 18
+
+GC Teardown
+
+Start GC
+Phase: init.
+  block at 0x103b8 (object of size 80 at 0x103d0): unreachable
+Phase: mark
+Phase: sweep
+  block at 0x103b8 (object of size 80 at 0x103d0): unreachable
+freeing block at 0x103b8 (object size: 80)
+
+Statistics:
+
+  Executions ......  11
+  Allocated .......  10 blocks
+    Total
+      objects       800 bytes
+      blocks       1040 bytes
+    Max
+      objects        80 bytes
+      blocks        104 bytes
+    End
+      objects         0 bytes
+      blocks          0 bytes
+  Freed ...........  10 blocks
+    Total
+      objects       800 bytes
+      blocks       1040 bytes
+
+
+
+stderr:

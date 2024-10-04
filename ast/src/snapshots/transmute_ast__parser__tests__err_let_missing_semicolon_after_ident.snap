@@ -6,12 +6,12 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `eof`, expected one of (14) `;` 1624, `.` 1063, `{` 882, `(` 879, `*` 1232, `/` 1230, `-` 1226, `+` 1228, `==` 1214, `!=` 1216, `>` 1218, `>=` 1220, `<` 1222, `<=` 1224",
+                message: "Unexpected `eof`, expected one of (15) `;`, `.`, `{`, `(`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`, `[`",
                 span: 1:18; [17, 17],
                 level: Error,
                 generated_at: (
                     "ast/src/parser.rs",
-                    1624,
+                    1796,
                 ),
             },
         ],

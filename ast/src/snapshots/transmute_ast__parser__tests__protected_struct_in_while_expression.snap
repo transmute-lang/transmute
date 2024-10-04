@@ -50,6 +50,7 @@ Ok(
                 span: 1:1; [0, 20],
             },
         ],
+        type_defs: [],
         roots: [
             StmtId(0),
         ],

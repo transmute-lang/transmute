@@ -93,7 +93,7 @@ Hir {
                             span: 1:12; [11, 12],
                             bound: Bound(3),
                         },
-                        ty: IdentRefId(0),
+                        type_def_id: TypeDefId(0),
                         span: 1:12; [11, 15],
                         typed: Typed(5),
                     },
@@ -126,7 +126,7 @@ Hir {
                             span: 1:25; [24, 25],
                             bound: Bound(4),
                         },
-                        ty: IdentRefId(1),
+                        type_def_id: TypeDefId(1),
                         span: 1:25; [24, 28],
                         typed: Typed(5),
                     },
@@ -136,20 +136,46 @@ Hir {
                             span: 1:31; [30, 31],
                             bound: Bound(5),
                         },
-                        ty: IdentRefId(2),
+                        type_def_id: TypeDefId(2),
                         span: 1:31; [30, 34],
                         typed: Typed(5),
                     },
                 ],
                 Return {
-                    ret: Some(
-                        IdentRefId(3),
+                    type_def_id: Some(
+                        TypeDefId(3),
                     ),
                     typed: Typed(5),
                 },
                 ExprId(1),
             ),
             span: 1:19; [18, 45],
+        },
+    ],
+    type_defs: [
+        TypeDefId(0) => TypeDef {
+            kind: Simple(
+                IdentRefId(0),
+            ),
+            span: 1:15; [14, 15],
+        },
+        TypeDefId(1) => TypeDef {
+            kind: Simple(
+                IdentRefId(1),
+            ),
+            span: 1:28; [27, 28],
+        },
+        TypeDefId(2) => TypeDef {
+            kind: Simple(
+                IdentRefId(2),
+            ),
+            span: 1:34; [33, 34],
+        },
+        TypeDefId(3) => TypeDef {
+            kind: Simple(
+                IdentRefId(3),
+            ),
+            span: 1:38; [37, 38],
         },
     ],
     roots: [

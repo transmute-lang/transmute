@@ -1,6 +1,6 @@
 mod mangling;
 
-use crate::mangling::{mangle_function_name, mangle_struct_name};
+use crate::mangling::{mangle_array_name, mangle_function_name, mangle_struct_name};
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::memory_buffer::MemoryBuffer;
@@ -10,7 +10,8 @@ use inkwell::targets::{
     CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine, TargetTriple,
 };
 use inkwell::types::{
-    BasicMetadataTypeEnum, BasicType, BasicTypeEnum, IntType, PointerType, StructType, VoidType,
+    ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, IntType, PointerType, StructType,
+    VoidType,
 };
 use inkwell::values::{
     BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue, PointerValue,
@@ -27,9 +28,6 @@ use transmute_mir::{
 };
 use transmute_mir::{LiteralKind, SymbolKind, Target as AssignmentTarget};
 use transmute_mir::{NativeFnKind, Variable};
-
-// todo:refactoring refactor struct layout so we dont need a `_glob` function. we can do it on the
-//   fly, the first time a struct is instantiated
 
 pub struct LlvmIrGen {
     context: Context,
@@ -147,14 +145,21 @@ struct Codegen<'ctx, 't> {
     bool_type: IntType<'ctx>,
     i64_type: IntType<'ctx>,
     void_type: VoidType<'ctx>,
+    size_type: IntType<'ctx>,
     ptr_type: PointerType<'ctx>,
+    i64_array3_type: ArrayType<'ctx>,
 
     llvm_gcroot: FunctionValue<'ctx>,
     malloc: FunctionValue<'ctx>,
     #[cfg(any(test, feature = "gc-aggressive"))]
     gc_run: FunctionValue<'ctx>,
+    tmc_check_array_index: FunctionValue<'ctx>,
 
+    // todo:refactor could replace struct_types, array_types and all the *_types above with a unique
+    //   map from TypeId to LLVM type. Once done, things can be updated at least in gen_access and
+    //   gen_array_access
     struct_types: HashMap<StructId, StructType<'ctx>>,
+    array_types: HashMap<(TypeId, usize), ArrayType<'ctx>>,
     type_layouts: HashMap<TypeId, PointerValue<'ctx>>,
     variables: HashMap<SymbolId, PointerValue<'ctx>>,
     functions: HashMap<SymbolId, FunctionValue<'ctx>>,
@@ -178,13 +183,17 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let void_type = context.void_type();
         let ptr_type = context.ptr_type(Default::default());
 
+        let i64_array3_type = i64_type.array_type(3);
+
         Self {
             context,
             builder,
             bool_type,
             i64_type,
             void_type,
+            size_type,
             ptr_type,
+            i64_array3_type,
             llvm_gcroot: {
                 let llvm_gcroot_fn_type =
                     void_type.fn_type(&[ptr_type.into(), ptr_type.into()], false);
@@ -199,7 +208,17 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 let gc_fn_type = void_type.fn_type(&[], false);
                 module.add_function("gc_run", gc_fn_type, None)
             },
+            tmc_check_array_index: {
+                let fn_type = void_type.fn_type(&[
+                    size_type.into(),
+                    size_type.into(),
+                    size_type.into(),
+                    size_type.into(),
+                ], false);
+                module.add_function("tmc_check_array_index", fn_type, None)
+            },
             struct_types: Default::default(),
+            array_types: Default::default(),
             type_layouts: Default::default(),
             variables: Default::default(),
             functions: Default::default(),
@@ -325,7 +344,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let fields = struct_def
             .fields
             .iter()
-            .map(|field| self.repr(self.llvm_type(mir, field.type_id)))
+            .map(|field| {
+                let llvm_type = self.llvm_type(mir, field.type_id);
+                self.repr(llvm_type)
+            })
             .collect::<Vec<BasicTypeEnum>>();
 
         let struct_type = *self.struct_types.get(&struct_id).unwrap();
@@ -338,7 +360,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .count();
 
         // todo:refactoring find a way to make it using structs instead of a flat array of i64
-        let i64_array_type = self.i64_type.array_type(offsets_count as u32 * 2 + 1);
+        let i64_array_type = self.i64_type.array_type(offsets_count as u32 * 2 + 2);
         let global = self.module.add_global(
             i64_array_type,
             None,
@@ -358,10 +380,13 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     }
 
     /// the struct layout is an array of i64.
-    /// the first one gives the count of pointer fields, n
+    /// the first one is set to 1
+    /// the second one gives the count of pointer fields, n
     /// then, n pairs of i64 follows:
     ///  - the first element is the field's offset
     ///  - the second element is the field's layout pointer
+    // todo:refactor move that into gen_layout, so we trigger it on the fly, the first time a
+    //   struct is instantiated
     fn gen_struct_layout(&mut self, mir: &Mir, struct_id: StructId, symbol_id: SymbolId) {
         let global = self
             .module
@@ -371,48 +396,92 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             ))
             .unwrap();
 
-        debug_assert!(global.get_value_type().into_array_type().len() % 2 == 1);
-
         let mut offsets =
             Vec::with_capacity(global.get_value_type().into_array_type().len() as usize);
+
+        // we push the union tag
+        offsets.push(self.i64_type.const_int(0, false));
+        // then the count
         let entries_count = (global.get_value_type().into_array_type().len() - 1) / 2;
         offsets.push(self.i64_type.const_int(entries_count as u64, false));
 
         let struct_type = self.struct_types[&struct_id];
         for field in mir.structs[struct_id].fields.iter() {
-            if let Some(field_layout_ptr) = self.type_layouts.get(&field.type_id) {
+            if let Some(field_layout_ptr) = self.gen_layout(mir, field.type_id) {
+                let name = format!("offset_struct{struct_id}_field{index}", index = field.index);
                 let field_pointer = self
                     .builder
                     .build_struct_gep(
                         struct_type,
                         self.ptr_type.const_null(),
                         field.index as u32,
-                        &format!("offset_struct{struct_id}_field{index}", index = field.index),
+                        &name,
                     )
                     .unwrap();
                 let field_offset = self
                     .builder
-                    .build_ptr_to_int(
-                        field_pointer,
-                        self.i64_type,
-                        &format!("offset_struct{struct_id}_field{index}", index = field.index),
-                    )
+                    .build_ptr_to_int(field_pointer, self.i64_type, &name)
                     .unwrap();
                 offsets.push(field_offset);
 
                 let field_layout_ptr = self
                     .builder
-                    .build_ptr_to_int(
-                        *field_layout_ptr,
-                        self.i64_type,
-                        &format!("offset_struct{struct_id}_field{index}", index = field.index),
-                    )
+                    .build_ptr_to_int(field_layout_ptr, self.i64_type, &name)
                     .unwrap();
                 offsets.push(field_layout_ptr);
             }
         }
 
         global.set_initializer(&self.i64_type.const_array(&offsets));
+    }
+
+    fn gen_layout(&mut self, mir: &Mir, type_id: TypeId) -> Option<PointerValue<'ctx>> {
+        match self.type_layouts.get(&type_id) {
+            Some(layout) => Some(*layout),
+            None => {
+                match &mir.types[type_id] {
+                    Type::Array(element_type_id, len) => {
+                        let mut layout = Vec::with_capacity(3);
+
+                        // we push the union tag
+                        layout.push(self.i64_type.const_int(1, false));
+
+                        // we push the len
+                        layout.push(self.i64_type.const_int(*len as u64, false));
+
+                        // we push the type layout
+                        let element_layout_ptr = self
+                            .gen_layout(mir, *element_type_id)
+                            .unwrap_or_else(|| self.ptr_type.const_null());
+
+                        layout.push(
+                            self.builder
+                                .build_ptr_to_int(
+                                    element_layout_ptr,
+                                    self.i64_type,
+                                    &format!("type_layout#{type_id}#"),
+                                )
+                                .unwrap(),
+                        );
+
+                        let global = self.module.add_global(
+                            self.i64_array3_type,
+                            None,
+                            &format!("layout_{}", mangle_array_name(mir, *element_type_id, *len),),
+                        );
+                        global.set_initializer(&self.i64_type.const_array(&layout));
+
+                        let layout_ptr = global.as_pointer_value();
+
+                        self.type_layouts.insert(type_id, layout_ptr);
+
+                        Some(layout_ptr)
+                    }
+                    Type::Struct(_, _) => panic!("Struct layouts already created"),
+                    _ => None,
+                }
+            }
+        }
     }
 
     fn gen_function_signature(&mut self, mir: &Mir, function: &Function) {
@@ -422,11 +491,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .map(|param| {
                 let parameter_type = self.llvm_type(mir, param.type_id);
                 match parameter_type {
-                    BasicTypeEnum::ArrayType(_) => todo!(),
                     BasicTypeEnum::FloatType(_) => parameter_type.into(),
                     BasicTypeEnum::IntType(_) => parameter_type.into(),
                     BasicTypeEnum::PointerType(_) => unimplemented!("pointers are not supported"),
-                    BasicTypeEnum::StructType(_) => {
+                    BasicTypeEnum::StructType(_) | BasicTypeEnum::ArrayType(_) => {
                         // structs are passed by ref
                         BasicTypeEnum::PointerType(self.ptr_type).into()
                     }
@@ -438,12 +506,12 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let resolved_ret_type = &mir.types[function.ret];
         let fn_type = match resolved_ret_type {
             Type::Boolean => self.bool_type.fn_type(&parameters_types, false),
+            Type::Number => self.i64_type.fn_type(&parameters_types, false),
             Type::Function(_, _) => todo!(),
-            Type::Struct(_, _) => {
-                // structs are returned by ref
+            Type::Struct(_, _) | Type::Array(_, _) => {
+                // are returned by ref
                 self.ptr_type.fn_type(&parameters_types, false)
             }
-            Type::Number => self.i64_type.fn_type(&parameters_types, false),
             Type::Void => self.void_type.fn_type(&parameters_types, false),
             Type::None => todo!(),
         };
@@ -487,7 +555,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 Value::Number(val) => {
                     self.builder.build_return(Some(&val)).unwrap();
                 }
-                Value::Struct(val, _) => {
+                Value::Struct(val, _) | Value::Array(val, _) => {
                     self.builder.build_return(Some(&val)).unwrap();
                 }
             };
@@ -545,7 +613,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     }
 
     fn gen_variable(&mut self, mir: &Mir, variable: &Variable) {
-        let llvm_type = self.repr(self.llvm_type(mir, variable.type_id));
+        let llvm_type = self.llvm_type(mir, variable.type_id);
+        let llvm_type = self.repr(llvm_type);
 
         let ptr = self.gen_alloca(
             llvm_type,
@@ -557,15 +626,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             None,
         );
 
-        if matches!(
-            mir.types[mir.symbols[variable.symbol_id].type_id],
-            Type::Struct(_, _)
-        ) {
+        if let Some(layout) = self.gen_layout(mir, mir.symbols[variable.symbol_id].type_id) {
             self.builder
                 .build_store(ptr, self.ptr_type.const_zero())
                 .unwrap();
-
-            let layout = self.type_layouts[&mir.symbols[variable.symbol_id].type_id];
 
             self.builder
                 .build_call(self.llvm_gcroot, &[ptr.into(), layout.into()], "gcroot")
@@ -619,6 +683,12 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             ExpressionKind::StructInstantiation(_, struct_id, fields) => {
                 self.gen_struct_instantiation(mir, *struct_id, fields, must_create_gcroot)
             }
+            ExpressionKind::ArrayInstantiation(values) => {
+                self.gen_array_instantiation(mir, expr.type_id, values, must_create_gcroot)
+            }
+            ExpressionKind::ArrayAccess(base_expr_id, index_expr_id) => {
+                self.gen_array_access(mir, *base_expr_id, *index_expr_id, must_create_gcroot)
+            }
         };
 
         #[cfg(debug_assertions)]
@@ -660,6 +730,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         Value::None
     }
 
+    // todo:refactoring what is the relation between gen_pointer_expression, gen_access and
+    //   gen_array_access: can we reuse code somehow? in particular, fetching the element pointer
+    //   here for the the ArrayAccess is exactly the same as in gen_array_access...
     fn gen_pointer_expression(
         &mut self,
         mir: &Mir,
@@ -705,6 +778,42 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     .unwrap();
 
                 (field_ptr, self.llvm_type(mir, symbol.type_id))
+            }
+            ExpressionKind::ArrayAccess(base_expr_id, index_expr_id) => {
+                let index = self.gen_expression(mir, &mir.expressions[*index_expr_id], false);
+                let index = match index {
+                    Value::Number(index) => index,
+                    value => panic!("invalid value: {:?}", value),
+                };
+
+                match self.gen_expression(mir, &mir.expressions[*base_expr_id], false) {
+                    Value::Array(array_ptr, array_type) => {
+                        // todo:refactor remove the unsafe once inkewell provides an safe alternative
+                        let element_ptr = unsafe {
+                            // first index is the array index, in a hypothetical array of arrays. second
+                            // index is the element's array
+                            self.builder.build_gep(
+                                array_type,
+                                array_ptr,
+                                &[self.i64_type.const_int(0, false), index],
+                                "array[?]#",
+                            )
+                        }
+                        .unwrap();
+
+                        let element_type_id =
+                            match mir.types[mir.expressions[*base_expr_id].type_id] {
+                                Type::Array(element_type_id, _) => element_type_id,
+                                _ => panic!("type of expression must be array"),
+                            };
+
+                        let llvm_element_type = self.llvm_type(mir, element_type_id);
+
+                        // let element_llvm_type = array_type.into_array_type().get_element_type();
+                        (element_ptr, llvm_element_type)
+                    }
+                    value => panic!("invalid value: {:?}", value),
+                }
             }
             _ => panic!(),
         }
@@ -776,6 +885,15 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 if_value.add_incoming(&[(&then_value, then_block), (&else_value, else_block)]);
                 Value::Struct(if_value.as_basic_value().into_pointer_value(), then_type)
             }
+            (Value::Array(then_value, then_type), Value::Array(else_value, else_type)) => {
+                debug_assert_eq!(then_type, else_type);
+                let if_value = self
+                    .builder
+                    .build_phi(then_value.get_type(), "if_result")
+                    .unwrap();
+                if_value.add_incoming(&[(&then_value, then_block), (&else_value, else_block)]);
+                Value::Array(if_value.as_basic_value().into_pointer_value(), then_type)
+            }
             // todo:check it seems strange: if one branch is "none" it means that it does not
             //  exist (cannot really hold for the then branch, but for the else it can. In that case
             //  the whole if expression cannot be of the other branch. At most, it can be an
@@ -798,7 +916,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         }
     }
 
-    fn gen_expression_ident(&self, mir: &Mir, symbol_id: SymbolId) -> Value<'ctx> {
+    fn gen_expression_ident(&mut self, mir: &Mir, symbol_id: SymbolId) -> Value<'ctx> {
         let symbol = &mir.symbols[symbol_id];
         let type_id = mir.symbols[symbol_id].type_id;
         let llvm_type = self.llvm_type(mir, type_id);
@@ -809,21 +927,27 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 mir.identifiers[mir.symbols[symbol_id].ident_id], symbol_id
             );
 
-            if matches!(&mir.types[type_id], Type::Struct(_, _)) {
-                return Value::Struct(
+            return match &mir.types[type_id] {
+                Type::Struct(_, _) => Value::Struct(
                     self.builder
                         .build_load(self.ptr_type, *variable, &name)
                         .unwrap()
                         .into_pointer_value(),
                     llvm_type,
-                );
-            }
-
-            return Value::from(
-                self.builder
-                    .build_load(llvm_type, *variable, &name)
-                    .unwrap(),
-            );
+                ),
+                Type::Array(_, _) => Value::Array(
+                    self.builder
+                        .build_load(self.ptr_type, *variable, &name)
+                        .unwrap()
+                        .into_pointer_value(),
+                    llvm_type,
+                ),
+                _ => Value::from(
+                    self.builder
+                        .build_load(llvm_type, *variable, &name)
+                        .unwrap(),
+                ),
+            };
         };
 
         match &symbol.kind {
@@ -880,23 +1004,36 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
                 let symbol_llvm_type = self.llvm_type(mir, symbol.type_id);
 
-                if matches!(mir.types[symbol.type_id], Type::Struct(_, _)) {
-                    // the field is a struct type, we deref the field pointer to its value which is
-                    // a pointer to a struct
-                    let value = self
-                        .builder
-                        .build_load(self.ptr_type, field_pointer, &name)
-                        .unwrap()
-                        .into_pointer_value();
-                    Value::Struct(value, symbol_llvm_type)
-                } else {
-                    // if the field holds the value, we dereference the field pointer to itss value
-                    let value = self
-                        .builder
-                        .build_load(symbol_llvm_type, field_pointer, &name)
-                        .unwrap();
-                    debug_assert!(!matches!(value, BasicValueEnum::PointerValue(_)));
-                    Value::from(value)
+                match &mir.types[symbol.type_id] {
+                    Type::Struct(_, _) => {
+                        // the field is a struct type, we deref the field pointer to its value which is
+                        // a pointer to a struct
+                        let value = self
+                            .builder
+                            .build_load(self.ptr_type, field_pointer, &name)
+                            .unwrap()
+                            .into_pointer_value();
+                        Value::Struct(value, symbol_llvm_type)
+                    }
+                    Type::Array(_, _) => {
+                        // the field is an array type, we deref the field pointer to its value
+                        // which is a pointer to an array
+                        let value = self
+                            .builder
+                            .build_load(self.ptr_type, field_pointer, &name)
+                            .unwrap()
+                            .into_pointer_value();
+                        Value::Array(value, symbol_llvm_type)
+                    }
+                    _ => {
+                        // if the field holds the value, we dereference the field pointer to its value
+                        let value = self
+                            .builder
+                            .build_load(symbol_llvm_type, field_pointer, &name)
+                            .unwrap();
+                        debug_assert!(!matches!(value, BasicValueEnum::PointerValue(_)));
+                        Value::from(value)
+                    }
                 }
             }
             value => panic!("invalid value: {:?}", value),
@@ -917,9 +1054,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             }
             SymbolKind::Native(_, _, return_type, _) | SymbolKind::LetFn(_, return_type) => {
                 match mir.types[*return_type] {
-                    Type::Boolean | Type::Struct(_, _) | Type::Number => {
+                    Type::Boolean | Type::Number | Type::Struct(_, _) => {
                         Some(self.llvm_type(mir, *return_type))
                     }
+                    Type::Array(_, _) => todo!(),
                     Type::Function(_, _) => todo!(),
                     Type::Void | Type::None => None,
                 }
@@ -933,7 +1071,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 |e| match self.gen_expression(mir, &mir.expressions[*e], true) {
                     Value::None | Value::Never => panic!(),
                     Value::Number(val) => BasicMetadataValueEnum::IntValue(val),
-                    Value::Struct(val, _) => BasicMetadataValueEnum::PointerValue(val),
+                    Value::Struct(val, _) | Value::Array(val, _) => {
+                        BasicMetadataValueEnum::PointerValue(val)
+                    }
                 },
             )
             .collect::<Vec<BasicMetadataValueEnum>>();
@@ -958,6 +1098,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 Some(BasicTypeEnum::IntType(_)) => Some(Value::from(ret)),
                 Some(BasicTypeEnum::PointerType(_)) => unimplemented!("pointers are not supported"),
                 Some(t @ BasicTypeEnum::StructType(_)) => {
+                    // fixme this must become a gcroot otherwise it will be GCed
                     Some(Value::Struct(ret.into_pointer_value(), t))
                 }
                 Some(BasicTypeEnum::VectorType(_)) => todo!(),
@@ -1012,7 +1153,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 |(_, expr_id)| match self.gen_expression(mir, &mir.expressions[*expr_id], true) {
                     Value::Number(val) => val.into(),
                     Value::Struct(pointer_value, _) => pointer_value.into(),
-                    _ => panic!("value expected"),
+                    Value::Array(pointer_value, _) => pointer_value.into(),
+                    Value::Never | Value::None => panic!("value expected"),
                 },
             )
             .collect::<Vec<BasicValueEnum>>();
@@ -1025,7 +1167,13 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let gcroot = if must_create_gcroot {
             // todo:feature these gc root don't live for the whole of the frame, we can set them
             //   to null when the value is assigned to something else
-            Some(self.create_gcroot(&name, mir.symbols[mir.structs[struct_id].symbol_id].type_id))
+            // todo:refactor the type_id can come from the expression, as we to in array
+            //   instantiation
+            Some(self.create_gcroot(
+                mir,
+                &name,
+                mir.symbols[mir.structs[struct_id].symbol_id].type_id,
+            ))
         } else {
             None
         };
@@ -1065,7 +1213,165 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         Value::Struct(struct_ptr, struct_type.into())
     }
 
-    fn create_gcroot(&self, for_name: &str, type_id: TypeId) -> PointerValue<'ctx> {
+    fn gen_array_instantiation(
+        &mut self,
+        mir: &Mir,
+        array_type_id: TypeId,
+        values: &[ExprId],
+        must_create_gcroot: bool,
+    ) -> Value<'ctx> {
+        let values = values
+            .iter()
+            .map(
+                |expr_id| match self.gen_expression(mir, &mir.expressions[*expr_id], true) {
+                    Value::Number(val) => val.into(),
+                    Value::Struct(pointer_value, _) | Value::Array(pointer_value, _) => {
+                        pointer_value.into()
+                    }
+                    _ => panic!("value expected"),
+                },
+            )
+            .collect::<Vec<BasicValueEnum>>();
+
+        let name = "heap#array#";
+
+        let gcroot = if must_create_gcroot {
+            // todo:feature these gc root don't live for the whole of the frame, we can set them
+            //   to null when the value is assigned to something else
+            Some(self.create_gcroot(mir, &name, array_type_id))
+        } else {
+            None
+        };
+
+        let array_type = self.llvm_type(mir, array_type_id);
+
+        let array_ptr = self
+            .builder
+            .build_call(
+                self.malloc,
+                &[array_type.size_of().unwrap().as_basic_value_enum().into()],
+                &name,
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        if let Some(gcroot) = gcroot {
+            self.builder.build_store(gcroot, array_ptr).unwrap();
+        }
+
+        let mut array = self
+            .builder
+            .build_load(array_type, array_ptr, name)
+            .unwrap()
+            .into_array_value();
+
+        for (index, value) in values.into_iter().enumerate() {
+            let name = format!("{}[{}]#", name, index,);
+
+            array = self
+                .builder
+                .build_insert_value(array, value, index as u32, &name)
+                .unwrap()
+                .into_array_value();
+        }
+
+        self.builder.build_store(array_ptr, array).unwrap();
+
+        Value::Array(array_ptr, array_type.into())
+    }
+
+    fn gen_array_access(
+        &mut self,
+        mir: &Mir,
+        base_expr_id: ExprId,
+        index_expr_id: ExprId,
+        must_create_gcroot: bool,
+    ) -> Value<'ctx> {
+        let index = self.gen_expression(mir, &mir.expressions[index_expr_id], must_create_gcroot);
+        let index = match index {
+            Value::Number(index) => index,
+            value => panic!("invalid value: {:?}", value),
+        };
+
+        match self.gen_expression(mir, &mir.expressions[base_expr_id], must_create_gcroot) {
+            Value::Array(array_ptr, array_type) => {
+                let (element_type_id, element_type, elements_count) =
+                    match mir.types[mir.expressions[base_expr_id].type_id] {
+                        Type::Array(element_type_id, len) => {
+                            (element_type_id, &mir.types[element_type_id], len)
+                        }
+                        _ => panic!("type of expression must be array"),
+                    };
+
+                self.builder
+                    .build_call(
+                        self.tmc_check_array_index,
+                        &[
+                            index.into(),
+                            self.size_type.const_int(elements_count as u64, false).into(),
+                            self.size_type.const_int(mir.expressions[index_expr_id].span.line as u64, false).into(),
+                            self.size_type.const_int(mir.expressions[index_expr_id].span.column as u64, false).into(),
+                        ],
+                        "",
+                    )
+                    .unwrap();
+
+                // todo:refactor remove the unsafe once inkewell provides an safe alternative
+                let element_ptr = unsafe {
+                    // the first index is the array index, in a hypothetical array of arrays.
+                    // the second index is the element's array
+                    self.builder.build_gep(
+                        array_type,
+                        array_ptr,
+                        &[self.i64_type.const_int(0, false), index],
+                        "array[?]#",
+                    )
+                }
+                .unwrap();
+
+                let llvm_element_type = self.llvm_type(mir, element_type_id);
+
+                match element_type {
+                    Type::Struct(_, _) => {
+                        // the cell is a struct type, we deref the cell pointer to its value which
+                        // is a pointer to a struct
+                        let value = self
+                            .builder
+                            .build_load(self.ptr_type, element_ptr, "array[?]#")
+                            .unwrap()
+                            .into_pointer_value();
+                        Value::Struct(value, llvm_element_type)
+                    }
+                    Type::Array(_, _) => {
+                        // the cell is a struct type, we deref the cell pointer to its value which
+                        // is a pointer to a struct
+                        let value = self
+                            .builder
+                            .build_load(self.ptr_type, element_ptr, "array[?]#")
+                            .unwrap()
+                            .into_pointer_value();
+                        Value::Array(value, llvm_element_type)
+                    }
+                    _ => {
+                        // if the cell holds the value, we dereference the cell pointer to its
+                        // value
+                        let value = self
+                            .builder
+                            .build_load(llvm_element_type, element_ptr, "array[?]#")
+                            .unwrap();
+                        debug_assert!(!matches!(value, BasicValueEnum::PointerValue(_)));
+                        Value::from(value)
+                    }
+                }
+            }
+            value => panic!("invalid value: {:?}", value),
+        }
+    }
+
+    fn create_gcroot(&mut self, mir: &Mir, for_name: &str, type_id: TypeId) -> PointerValue<'ctx> {
         let builder = self.context.create_builder();
         let first_basic_bloc = self.current_function().get_first_basic_block().unwrap();
 
@@ -1086,7 +1392,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .build_store(gcroot, self.ptr_type.const_zero())
             .unwrap();
 
-        let layout = self.type_layouts[&type_id];
+        let layout = self.gen_layout(mir, type_id).unwrap();
 
         builder
             .build_call(self.llvm_gcroot, &[gcroot.into(), layout.into()], "gcroot")
@@ -1102,14 +1408,28 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .unwrap()
     }
 
-    fn llvm_type(&self, mir: &Mir, type_id: TypeId) -> BasicTypeEnum<'ctx> {
+    fn llvm_type(&mut self, mir: &Mir, type_id: TypeId) -> BasicTypeEnum<'ctx> {
         match &mir.types[type_id] {
+            Type::Number => self.i64_type.as_basic_type_enum(),
             Type::Boolean => self.bool_type.as_basic_type_enum(),
             Type::Function(_, _) => todo!(),
             Type::Struct(_, struct_id) => {
                 BasicTypeEnum::StructType(*self.struct_types.get(struct_id).unwrap())
             }
-            Type::Number => self.i64_type.as_basic_type_enum(),
+            Type::Array(element_type_id, len) => {
+                match self.array_types.get(&(*element_type_id, *len)) {
+                    None => {
+                        let element_type = self.llvm_type(mir, *element_type_id);
+                        let element_type = self.repr(element_type);
+
+                        let array_type = element_type.array_type(*len as u32);
+                        self.array_types
+                            .insert((*element_type_id, *len), array_type);
+                        array_type.as_basic_type_enum()
+                    }
+                    Some(array_type) => array_type.as_basic_type_enum(),
+                }
+            }
             Type::Void => unreachable!("void is not a basic type"),
             Type::None => unreachable!("none is not a basic type"),
         }
@@ -1141,16 +1461,18 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         ptr
     }
 
+    /// Reruns the actual LLVM type (on stack, and in containers) for a given LLVM type.
+    /// Typically, numbers are actually represented by number, whereas structs and arrays are
+    /// represented as pointers to a heap allocated object.
     fn repr(&self, llvm_type: BasicTypeEnum<'ctx>) -> BasicTypeEnum<'ctx> {
         match llvm_type {
-            BasicTypeEnum::ArrayType(_) => self.ptr_type.into(),
+            BasicTypeEnum::ArrayType(_) | BasicTypeEnum::StructType(_) => {
+                // todo:feature arrays and small structs may be inlined
+                self.ptr_type.into()
+            }
             BasicTypeEnum::FloatType(_) => llvm_type,
             BasicTypeEnum::IntType(_) => llvm_type,
             BasicTypeEnum::PointerType(_) => unimplemented!("pointers are not supported"),
-            BasicTypeEnum::StructType(_) => {
-                // todo:feature small structs may be inlined
-                self.ptr_type.into()
-            }
             BasicTypeEnum::VectorType(_) => todo!(),
         }
     }
@@ -1162,6 +1484,7 @@ enum Value<'ctx> {
     None,
     Number(IntValue<'ctx>),
     Struct(PointerValue<'ctx>, BasicTypeEnum<'ctx>),
+    Array(PointerValue<'ctx>, BasicTypeEnum<'ctx>),
 }
 
 impl<'ctx> From<BasicValueEnum<'ctx>> for Value<'ctx> {
@@ -1190,7 +1513,7 @@ impl<'ctx> From<Value<'ctx>> for BasicValueEnum<'ctx> {
         match value {
             Value::Never | Value::None => panic!(),
             Value::Number(val) => val.into(),
-            Value::Struct(val, _) => val.into(),
+            Value::Struct(val, _) | Value::Array(val, _) => val.into(),
         }
     }
 }
@@ -1202,6 +1525,7 @@ impl<'ctx> From<Value<'ctx>> for IntValue<'ctx> {
             Value::None => panic!(),
             Value::Number(val) => val,
             Value::Struct(_, _) => panic!(),
+            Value::Array(_, _) => panic!(),
         }
     }
 }
@@ -1950,6 +2274,160 @@ mod tests {
         let g() {}
         let f() {
             g();
+        }
+        "#
+    );
+
+    gen!(
+        array_instantiation,
+        r#"
+        let f(): number {
+            [0, 1];
+            1;
+        }
+        "#
+    );
+    gen!(
+        array_let_instantiation,
+        r#"
+        let f() {
+            let a = [0, 1];
+        }
+        "#
+    );
+
+    gen!(
+        array_instantiation_inside_if,
+        r#"
+        let f(): number {
+            if true {
+                [0, 1];
+            } else {
+                [2, 3];
+            }[0];
+        }
+        "#
+    );
+    gen!(
+        nested_array_instantiation,
+        r#"
+        let f(): number {
+            let a = [ [0, 1], [3, 4] ];
+            a[0][0];
+        }
+        "#
+    );
+    gen!(
+        array_instantiation_struct,
+        r#"
+        struct S {
+            field: number
+        }
+        let f() {
+            let a = [ S { field: 0 }, S { field: 1 } ];
+        }
+        "#
+    );
+    gen!(
+        array_read_access,
+        r#"
+        let f() {
+            let a = [ 0, 1, 2 ];
+            let b = a[1];
+        }
+        "#
+    );
+    gen!(
+        array_write_access,
+        r#"
+        let f() {
+            let a = [ 0 ];
+            a[0] = 1;
+        }
+        "#
+    );
+    gen!(
+        array_of_structs_read_tmp_var,
+        r#"
+        struct S { field: number }
+        let f(): number {
+            let a = [
+                S { field: 0 },
+            ];
+            let b = a[0];
+            b.field;
+        }
+        "#
+    );
+    gen!(
+        array_of_structs_read_direct,
+        r#"
+        struct S { field: number }
+        let f(): number {
+            let a = [
+                S { field: 0 },
+            ];
+            a[0].field;
+        }
+        "#
+    );
+    gen!(
+        array_of_structs_write_direct,
+        r#"
+        struct S { field: number }
+        let f(): number {
+            let a = [
+                S { field: 0 },
+            ];
+            a[0].field = 1;
+            1;
+        }
+        "#
+    );
+    gen!(
+        array_of_structs_write_tmp_var,
+        r#"
+        struct S { field: number }
+        let f(): number {
+            let a = [
+                S { field: 0 },
+            ];
+            let a0 = a[0];
+            a0.field = 1;
+            1;
+        }
+        "#
+    );
+    gen!(
+        struct_of_array,
+        r#"
+        struct S {
+            field: [number; 2]
+        }
+        let f(): number {
+            let a = S {
+                field: [ 0, 1 ]
+            };
+            a.field[0];
+        }
+        "#
+    );
+    gen!(
+        function_return_array,
+        r#"
+        let f(): [number; 2] {
+            [0, 1];
+        }
+        "#
+    );
+    gen!(
+        function_takes_array,
+        r#"
+        let g(): number {
+            f([0, 1]);
+        }
+        let f(p: [number; 2]): number {
+             1;
         }
         "#
     );

@@ -192,6 +192,32 @@ impl<'a> ExitPointsResolver<'a> {
 
                 (collected, always_returns)
             }
+            ExpressionKind::ArrayInstantiation(values) => {
+                let mut always_returns = false;
+                let mut collected = Collected::default();
+
+                for value in values {
+                    let (param_collected, param_always_returns) =
+                        self.visit_expression(*value, depth + 1, unreachable || always_returns);
+
+                    always_returns = always_returns || param_always_returns;
+                    collected.merge(param_collected);
+                }
+
+                (collected, always_returns)
+            }
+            ExpressionKind::ArrayAccess(base_expr_id, index_expr_id) => {
+                let (mut collected, always_returns) =
+                    self.visit_expression(*base_expr_id, depth + 1, false);
+
+                let (index_collected, index_always_returns) =
+                    self.visit_expression(*index_expr_id, depth + 1, unreachable || always_returns);
+
+                let always_returns = always_returns || index_always_returns;
+                collected.merge(index_collected);
+
+                (collected, always_returns)
+            }
             ExpressionKind::Dummy => {
                 panic!("cannot compute exit points of an invalid source code")
             }
@@ -753,6 +779,70 @@ mod tests {
                     ret true;
                 };
                 ret 1;
+            }
+            "#,
+        ))
+        .parse()
+        .unwrap();
+
+        let block_exit_points = ast
+            .expressions
+            .iter()
+            .filter_map(|(expr_id, expression)| {
+                if matches!(expression.kind, ExpressionKind::Block(_)) {
+                    Some((
+                        expr_id,
+                        ExitPointsResolver::new(&ast.expressions, &ast.statements)
+                            .exit_points(expr_id),
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<(ExprId, Output)>>();
+
+        assert_debug_snapshot!((ast, block_exit_points));
+    }
+
+    #[test]
+    fn array_instantiation() {
+        let ast = Parser::new(Lexer::new(
+            r#"
+            let f() {
+                let a = [if true { ret 0; } else { ret 1; }];
+                ret 2;
+            }
+            "#,
+        ))
+        .parse()
+        .unwrap();
+
+        let block_exit_points = ast
+            .expressions
+            .iter()
+            .filter_map(|(expr_id, expression)| {
+                if matches!(expression.kind, ExpressionKind::Block(_)) {
+                    Some((
+                        expr_id,
+                        ExitPointsResolver::new(&ast.expressions, &ast.statements)
+                            .exit_points(expr_id),
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<(ExprId, Output)>>();
+
+        assert_debug_snapshot!((ast, block_exit_points));
+    }
+
+    #[test]
+    fn array_access() {
+        let ast = Parser::new(Lexer::new(
+            r#"
+            let f() {
+                let a = a[if true { ret 0; } else { ret 1; }];
+                ret 2;
             }
             "#,
         ))

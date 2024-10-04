@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"[0;\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `;`, expected one of (14) `,`, `.`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`, `]`, `[`",
+                span: 1:3; [2, 3],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    1569,
+                ),
+            },
+        ],
+    },
+)

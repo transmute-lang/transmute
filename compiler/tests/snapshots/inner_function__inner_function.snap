@@ -5,7 +5,7 @@ expression: "format!(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.sta
 success:true
 stdout:
 Initialize GC with log level: 2
-Allocate test GC memory pool (4130 bytes): mmap returned 0x10000 (Success)
+Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
 main(0) = 0
 main(1) = 1
 main(2) = 1
@@ -17,9 +17,16 @@ main(7) = 13
 main(8) = 21
 main(9) = 34
 
+GC Teardown
+
+Start GC
+Phase: init.
+Phase: mark
+Phase: sweep
+
 Statistics:
 
-  Executions ......   0
+  Executions ......   1
   Allocated .......   0 blocks
     Total
       objects         0 bytes

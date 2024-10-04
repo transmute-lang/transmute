@@ -77,6 +77,10 @@ impl<'a> Interpreter<'a> {
                 eprintln!("Cannot return a struct");
                 0
             }
+            Value::Array(_) => {
+                eprintln!("Cannot return an array");
+                0
+            }
             Value::Void => 0,
         }
     }
@@ -146,6 +150,11 @@ impl<'a> Interpreter<'a> {
                 self.visit_assignment(ident, expr)
             }
             ExpressionKind::Assignment(Target::Indirect(lhs_expr_id), rhs_expr_id) => {
+                let rhs_val = self.visit_expression(*rhs_expr_id);
+                if rhs_val.is_ret {
+                    return rhs_val;
+                }
+
                 let (lhs_val, index) = match &self.hir.expressions[*lhs_expr_id].kind {
                     ExpressionKind::Access(expr_id, ident_ref_id) => {
                         let val = self.visit_expression(*expr_id);
@@ -154,26 +163,42 @@ impl<'a> Interpreter<'a> {
                         }
 
                         let symbol = self.hir.symbol_by_ident_ref_id(*ident_ref_id);
-                        match &symbol.kind {
-                            SymbolKind::Field(_, _, index) => (val, index),
+                        let index = match &symbol.kind {
+                            SymbolKind::Field(_, _, index) => *index,
                             _ => panic!("field expected"),
-                        }
+                        };
+
+                        let val = self
+                            .heap
+                            .get_mut(val.value_ref.expect("lhs has value").0)
+                            .expect("rhs value exists");
+
+                        (val.as_mut_struct(), index)
                     }
-                    _ => panic!("access expected"),
+                    ExpressionKind::ArrayAccess(base, index) => {
+                        let base = self.visit_expression(*base);
+                        if base.is_ret {
+                            return base;
+                        }
+
+                        let index = self.visit_expression(*index);
+                        if index.is_ret {
+                            return index;
+                        }
+
+                        let index = self.heap[index.value_ref.expect("index exists").0].as_i64();
+
+                        let base = self
+                            .heap
+                            .get_mut(base.value_ref.expect("lhs has value").0)
+                            .expect("rhs value exists");
+
+                        (base.as_mut_array(), index as usize)
+                    }
+                    _ => panic!("either struct access or array access expected"),
                 };
 
-                let rhs_val = self.visit_expression(*rhs_expr_id);
-                if rhs_val.is_ret {
-                    return rhs_val;
-                }
-
-                let lhs_val = self
-                    .heap
-                    .get_mut(lhs_val.value_ref.expect("lhs has value").0)
-                    .expect("rhs value exists");
-                let lhs_val = lhs_val.as_mut_struct();
-
-                lhs_val[*index] = rhs_val.value_ref.expect("rhs has value");
+                lhs_val[index] = rhs_val.value_ref.expect("rhs has value");
 
                 rhs_val
             }
@@ -196,6 +221,35 @@ impl<'a> Interpreter<'a> {
                 self.heap.push(Value::Struct(values));
 
                 Val::of(Ref(self.heap.len() - 1))
+            }
+            ExpressionKind::ArrayInstantiation(elements) => {
+                let mut values = Vec::with_capacity(elements.len());
+                for expr_id in elements {
+                    let val = self.visit_expression(*expr_id);
+                    if val.is_ret {
+                        return val;
+                    }
+                    values.push(val.value_ref.expect("field has value"));
+                }
+                self.heap.push(Value::Array(values));
+
+                Val::of(Ref(self.heap.len() - 1))
+            }
+            ExpressionKind::ArrayAccess(base, index) => {
+                let base = self.visit_expression(*base);
+                if base.is_ret {
+                    return base;
+                }
+
+                let index = self.visit_expression(*index);
+                if index.is_ret {
+                    return index;
+                }
+
+                let values = self.heap[base.value_ref.expect("base exists").0].as_array();
+                let index = self.heap[index.value_ref.expect("index exists").0].as_i64();
+
+                Val::of(values[index as usize])
             }
         }
     }

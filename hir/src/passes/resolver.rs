@@ -4,7 +4,7 @@ use crate::identifier::Identifier;
 use crate::literal::LiteralKind;
 use crate::natives::{Native, Natives, Type};
 use crate::passes::exit_points_resolver::ExitPoint;
-use crate::statement::{Field, Parameter, Return, Statement, StatementKind};
+use crate::statement::{Field, Parameter, Return, Statement, StatementKind, TypeDefKind};
 use crate::symbol::{Symbol, SymbolKind};
 use crate::typed::{Typed, Untyped};
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
 use bimap::BiHashMap;
 use std::collections::HashMap;
 use transmute_core::error::Diagnostics;
-use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeId};
+use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeDefId, TypeId};
 use transmute_core::span::Span;
 use transmute_core::vec_map::VecMap;
 
@@ -182,6 +182,7 @@ impl Resolver {
             identifier_refs: self.identifier_refs,
             expressions: self.expressions,
             statements: self.statements,
+            type_defs: hir.type_defs,
             roots: hir.roots,
             symbols: self.symbols,
             types: VecMap::from_iter(self.types),
@@ -237,13 +238,10 @@ impl Resolver {
                 let rhs_type_id = self.resolve_expression(hir, *rhs_expr_id);
 
                 if lhs_type_id == self.invalid_type_id {
-                    return lhs_type_id;
-                }
-                if rhs_type_id == self.invalid_type_id {
-                    return rhs_type_id;
-                }
-
-                if lhs_type_id != rhs_type_id {
+                    self.invalid_type_id
+                } else if rhs_type_id == self.invalid_type_id {
+                    self.invalid_type_id
+                } else if lhs_type_id != rhs_type_id {
                     self.diagnostics.report_err(
                         format!(
                             "RSH expected to be of type {}, got {}",
@@ -253,10 +251,10 @@ impl Resolver {
                         self.expressions[*rhs_expr_id].span.clone(),
                         (file!(), line!()),
                     );
-                    return self.invalid_type_id;
+                    self.invalid_type_id
+                } else {
+                    lhs_type_id
                 }
-
-                rhs_type_id
             }
             ExpressionKind::If(cond, true_branch, false_branch) => {
                 self.resolve_if(hir, *cond, *true_branch, *false_branch)
@@ -347,6 +345,12 @@ impl Resolver {
             ExpressionKind::Block(stmts) => self.resolve_block(hir, &stmts.clone()),
             ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
                 self.resolve_struct_instantiation(hir, *ident_ref_id, fields, &expr.span)
+            }
+            ExpressionKind::ArrayInstantiation(values) => {
+                self.resolve_array_instantiation(hir, values)
+            }
+            ExpressionKind::ArrayAccess(expr, index) => {
+                self.resolve_array_access(hir, *expr, *index)
             }
         };
 
@@ -619,6 +623,68 @@ impl Resolver {
         }
     }
 
+    fn resolve_array_instantiation(
+        &mut self,
+        hir: &mut UnresolvedHir,
+        values: &[ExprId],
+    ) -> TypeId {
+        let expected_type_id =
+            self.resolve_expression(hir, *values.get(0).expect("array has at least one element"));
+
+        for (index, expr_id) in values.iter().enumerate().skip(1) {
+            let type_id = self.resolve_expression(hir, *expr_id);
+            if type_id != expected_type_id {
+                self.diagnostics.report_err(
+                    format!(
+                        "Expected value of type {expected_type}, got {actual_type} at index {index}",
+                        expected_type = self.find_type_by_type_id(expected_type_id),
+                        actual_type = self.find_type_by_type_id(type_id)
+                    ),
+                    self.expressions[*expr_id].span.clone(),
+                    (file!(), line!()),
+                );
+            }
+        }
+
+        self.insert_type(Type::Array(expected_type_id, values.len()))
+    }
+
+    fn resolve_array_access(
+        &mut self,
+        hir: &mut UnresolvedHir,
+        base_expr_id: ExprId,
+        value_expr_id: ExprId,
+    ) -> TypeId {
+        let array_type_id = self.resolve_expression(hir, base_expr_id);
+        let array_type = self.find_type_by_type_id(array_type_id);
+
+        let type_id = match array_type {
+            Type::Array(elements_type_id, _) => *elements_type_id,
+            _ => {
+                self.diagnostics.report_err(
+                    format!("Expected type array, got {}", array_type),
+                    self.expressions[base_expr_id].span.clone(),
+                    (file!(), line!()),
+                );
+                self.invalid_type_id
+            }
+        };
+
+        let index_type_id = self.resolve_expression(hir, value_expr_id);
+        if !matches!(self.find_type_by_type_id(index_type_id), Type::Number) {
+            self.diagnostics.report_err(
+                format!(
+                    "Expected index to be of type number, got {}",
+                    self.find_type_by_type_id(index_type_id)
+                ),
+                self.expressions[base_expr_id].span.clone(),
+                (file!(), line!()),
+            );
+        }
+
+        type_id
+    }
+
     // todo:refactoring think about passing the Statement directly
     fn resolve_statements(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId]) -> TypeId {
         let mut ret_type = self.void_type_id;
@@ -713,7 +779,7 @@ impl Resolver {
                 self.void_type_id
             }
             StatementKind::Struct(ident, fields) => {
-                let (ident, fields) = self.resolve_struct(stmt_id, ident, fields);
+                let (ident, fields) = self.resolve_struct(hir, stmt_id, ident, fields);
 
                 self.statements.insert(
                     stmt_id,
@@ -910,6 +976,7 @@ impl Resolver {
 
     fn resolve_struct(
         &mut self,
+        hir: &mut UnresolvedHir,
         stmt_id: StmtId,
         identifier: Identifier<Unbound>,
         fields: Vec<Field<Untyped, Unbound>>,
@@ -917,13 +984,11 @@ impl Resolver {
         let fields = fields
             .into_iter()
             .map(|field| {
-                let type_identifier = &self.identifier_refs[field.ty].ident;
-
-                let ty = self
-                    .find_type_id_by_identifier(type_identifier.id)
+                let type_id = self
+                    .find_type_id_by_type_def_id(hir, field.type_def_id)
                     .unwrap_or(self.invalid_type_id);
 
-                field.typed(ty)
+                field.typed(type_id)
             })
             .collect::<Vec<Field<Typed, Unbound>>>();
 
@@ -1036,6 +1101,17 @@ impl Resolver {
         }
     }
 
+    fn resolve_type_def(&mut self, hir: &mut UnresolvedHir, type_def_id: TypeDefId) {
+        match hir.type_defs[type_def_id].kind {
+            TypeDefKind::Simple(ident_ref_id) => {
+                self.resolve_ident_ref(hir, ident_ref_id, None);
+            }
+            TypeDefKind::Array(type_def_id, _) => {
+                self.resolve_type_def(hir, type_def_id);
+            }
+        }
+    }
+
     /// Resolves an identifier by its `IdentId` and returns the corresponding `SymbolId`. The
     /// resolution starts in the current scope and crawls the scopes stack up until the identifier
     /// is found.
@@ -1066,22 +1142,24 @@ impl Resolver {
             .iter()
             .filter_map(|stmt_id| match &hir.statements[*stmt_id].kind {
                 StatementKind::LetFn(_, params, ret, ..) => {
-                    let mut ident_ref_ids =
-                        params.iter().map(|p| p.ty).collect::<Vec<IdentRefId>>();
+                    let mut type_def_ids = params
+                        .iter()
+                        .map(|p| p.type_def_id)
+                        .collect::<Vec<TypeDefId>>();
 
-                    if let Some(ident_ref_id) = ret.ret {
-                        ident_ref_ids.push(ident_ref_id);
+                    if let Some(type_def) = &ret.type_def_id {
+                        type_def_ids.push(*type_def);
                     }
 
-                    Some(ident_ref_ids)
+                    Some(type_def_ids)
                 }
                 _ => None,
             })
             .flatten()
-            .collect::<Vec<IdentRefId>>();
+            .collect::<Vec<TypeDefId>>();
 
         for ident_ref_id in ident_ref_ids.into_iter() {
-            self.resolve_ident_ref(hir, ident_ref_id, None);
+            self.resolve_type_def(hir, ident_ref_id);
         }
 
         // ... then, we proceed with the function
@@ -1092,19 +1170,16 @@ impl Resolver {
                     let parameter_types = params
                         .iter()
                         .map(|p| {
-                            let identifier = &self.identifier_refs[p.ty].ident;
-
-                            self.find_type_id_by_identifier(identifier.id)
+                            self.find_type_id_by_type_def_id(hir, p.type_def_id)
                                 .unwrap_or(self.invalid_type_id)
                         })
                         .collect::<Vec<TypeId>>();
 
                     let ret_type_id = ret_type
-                        .ret
-                        .map(|ident_ref_id| {
-                            let identifier = &self.identifier_refs[ident_ref_id].ident;
-
-                            self.find_type_id_by_identifier(identifier.id)
+                        .type_def_id
+                        .as_ref()
+                        .map(|type_def_id| {
+                            self.find_type_id_by_type_def_id(hir, *type_def_id)
                                 .unwrap_or(self.invalid_type_id)
                         })
                         .unwrap_or(self.void_type_id);
@@ -1168,19 +1243,22 @@ impl Resolver {
         }
 
         // then we resolve their fields types
-        let ident_ref_ids = stmts
+        let type_def_ids = stmts
             .iter()
             .filter_map(|stmt_id| match &hir.statements[*stmt_id].kind {
-                StatementKind::Struct(_, fields) => {
-                    Some(fields.iter().map(|p| p.ty).collect::<Vec<IdentRefId>>())
-                }
+                StatementKind::Struct(_, fields) => Some(
+                    fields
+                        .iter()
+                        .map(|p| p.type_def_id)
+                        .collect::<Vec<TypeDefId>>(),
+                ),
                 _ => None,
             })
             .flatten()
-            .collect::<Vec<IdentRefId>>();
+            .collect::<Vec<TypeDefId>>();
 
-        for ident_ref_id in ident_ref_ids.into_iter() {
-            self.resolve_ident_ref(hir, ident_ref_id, None);
+        for type_def_id in type_def_ids.into_iter() {
+            self.resolve_type_def(hir, type_def_id);
         }
     }
 
@@ -1247,6 +1325,22 @@ impl Resolver {
             let did_overwrite = self.types.insert(id, ty).did_overwrite();
             debug_assert!(!did_overwrite);
             id
+        }
+    }
+
+    fn find_type_id_by_type_def_id(
+        &mut self,
+        hir: &UnresolvedHir,
+        type_def_id: TypeDefId,
+    ) -> Option<TypeId> {
+        match &hir.type_defs[type_def_id].kind {
+            TypeDefKind::Simple(ident_ref_id) => {
+                self.find_type_id_by_identifier(self.identifier_refs[*ident_ref_id].ident.id)
+            }
+            TypeDefKind::Array(type_def_id, len) => self
+                .find_type_id_by_type_def_id(hir, *type_def_id)
+                .map(|base| Type::Array(base, *len))
+                .map(|t| self.insert_type(t)),
         }
     }
 
@@ -1971,7 +2065,7 @@ mod tests {
         Span::new(1, 30, 29, 3)
     );
 
-    // fixme uncomment this test
+    // fixme:void-fn uncomment this test
     // test_type_error!(
     //     return_from_void2,
     //     "let fibo(n: number) { 0; }",
@@ -1991,5 +2085,164 @@ mod tests {
             };
         }
         "#
+    );
+    test_type_ok!(
+        struct_assignment,
+        r#"
+        struct S {
+            field: number
+        }
+        let f() {
+            let s = S { field: 1 };
+            s.field = 2;
+        }
+        "#
+    );
+    test_type_error!(
+        struct_assignment_wrong_type,
+        r#"
+        struct S {
+            field: number
+        }
+        let f() {
+            let s = S { field: 1 };
+            s.field = false;
+        }
+        "#,
+        "RSH expected to be of type number, got boolean",
+        Span::new(7, 23, 132, 5)
+    );
+
+    test_type_ok!(
+        array_homogenous_types,
+        r#"
+        let f() {
+            let a = [0, 1];
+        }
+        "#
+    );
+    test_type_ok!(
+        array_return_type,
+        r#"
+        let f(): [number; 2] {
+            [0, 1];
+        }
+        "#
+    );
+    test_type_error!(
+        array_return_type_wrong_len,
+        r#"
+        let f(): [number; 2] {
+            [0, 1, 2];
+        }
+        "#,
+        "Function f expected to return type array[2], got array[3]",
+        Span::new(3, 13, 44, 9)
+    );
+    test_type_error!(
+        array_return_type_wrong_base_typee,
+        r#"
+        let f(): [number; 2] {
+            [true, false];
+        }
+        "#,
+        // todo:ux have the base type in the error message
+        "Function f expected to return type array[2], got array[2]",
+        Span::new(3, 13, 44, 13)
+    );
+    test_type_ok!(
+        array_parameter_type,
+        r#"
+        let f(a: [number; 2]) {
+        }
+        let g() {
+            f([1, 2]);
+        }
+        "#
+    );
+    test_type_ok!(
+        array_of_structs,
+        r#"
+        struct S { field: number }
+        let f() {
+            let a = [
+                S { field: 1 },
+                S { field: 2 },
+            ];
+        }
+        "#
+    );
+    test_type_ok!(
+        struct_of_array,
+        r#"
+        struct S {
+            field: [number; 2]
+        }
+        let f() {
+            let a = [
+                S { field: [0, 1] },
+                S { field: [2, 3] },
+            ];
+        }
+        "#
+    );
+    test_type_error!(
+        array_heterogeneous_types,
+        "let f() { let a = [0, false]; }",
+        "Expected value of type number, got boolean at index 1",
+        Span::new(1, 23, 22, 5)
+    );
+    test_type_error!(
+        array_type_1,
+        "let f() { if true { [0, 1]; } else { [2, 3, 4]; } }",
+        "Expected type array[2], got array[3]",
+        Span::new(1, 36, 35, 14)
+    );
+    // todo:ux we must have the inner type name in the error (this has to do with the Display impl.
+    //   of Type
+    test_type_error!(
+        array_type_2,
+        "let f() { if true { [0, 1]; } else { [true, false]; } }",
+        "Expected type array[2], got array[2]",
+        Span::new(1, 36, 35, 18)
+    );
+    test_type_ok!(array_access, "let f() { let a = [0]; a[0]; }");
+    test_type_ok!(array_write_access, "let f() { let a = [0]; a[0] = 1; }");
+    test_type_error!(
+        array_write_access_wrong_type,
+        "let f() { let a = [0]; a[0] = false; }",
+        "RSH expected to be of type number, got boolean",
+        Span::new(1, 31, 30, 5)
+    );
+    test_type_ok!(array_instantiation_and_access, "let f() { [0, 1][0]; }");
+    test_type_error!(
+        array_access_not_array,
+        "let f() { let a = 1; a[0]; }",
+        "Expected type array, got number",
+        Span::new(1, 22, 21, 1)
+    );
+    test_type_error!(
+        array_access_not_numeric_index,
+        "let f() { let a = [0]; a[true]; }",
+        "Expected index to be of type number, got boolean",
+        Span::new(1, 24, 23, 1)
+    );
+    test_type_error!(
+        array_return_wrong_length,
+        "let f(): [number; 1] { [0, 1]; }",
+        "Function f expected to return type array[1], got array[2]",
+        Span::new(1, 24, 23, 6)
+    );
+    test_type_error!(
+        array_parameter_wrong_length,
+        r#"
+        let f(a: [number; 2]) {
+        }
+        let g() {
+            f([1, 2, 3]);
+        }
+        "#,
+        "No function 'f' found for parameters of types (array[3])",
+        Span::new(5, 13, 73, 1)
     );
 }

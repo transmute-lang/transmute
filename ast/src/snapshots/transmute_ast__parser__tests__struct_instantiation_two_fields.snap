@@ -80,6 +80,7 @@ Ok(
                 span: 1:1; [0, 17],
             },
         ],
+        type_defs: [],
         roots: [
             StmtId(0),
         ],

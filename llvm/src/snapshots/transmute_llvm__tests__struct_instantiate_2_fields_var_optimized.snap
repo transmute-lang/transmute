@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %"Struct#id0" = type { i64, i64 }
 
-@layout_s6Struct = global [1 x i64] zeroinitializer
+@layout_s6Struct = global [2 x i64] zeroinitializer
 
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
@@ -17,6 +17,8 @@ declare void @llvm.gcroot(ptr, ptr) #0
 declare ptr @gc_malloc(i64)
 
 declare void @gc_run()
+
+declare void @tmc_check_array_index(i64, i64, i64, i64)
 
 declare void @_TM0_5print1n(i64)
 

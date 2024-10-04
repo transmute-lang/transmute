@@ -37,6 +37,24 @@ let main(n: number): number {
 
     let a2 = area(r2);
 
+    [
+        Point {
+            x: 1,
+            y: 1,
+        },
+        Point {
+            x: 2,
+            y: 2,
+        },
+        Point {
+            x: 3,
+            y: 3,
+        },
+    ];
+
+    # trigger gc
+    let a = 0;
+
     a1 + a2;
 }
 

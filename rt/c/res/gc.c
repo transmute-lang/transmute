@@ -28,7 +28,13 @@
 // todo:feature keep track of freed blocks to return them instead of a full cycle of free/malloc syscalls
 
 #ifdef GC_TEST
+#include <sys/mman.h>
+#include <errno.h>
+
+#ifndef GC_LOGS
 #define GC_LOGS
+#endif // ifndef GC_LOGS
+
 #define BOUNDARY             0xBB
 #define FREE                 0xFF
 #define ALLOCATED            0xAA
@@ -55,14 +61,29 @@
 #endif
 
 typedef struct GcStructField {
-    size_t                 offset;
-    struct GcStructLayout *layout;
+    size_t                  offset;
+    struct GcPointeeLayout *layout;
 } GcStructField;
 
-typedef struct GcStructLayout {
-    size_t                 count;
-    GcStructField          fields[0];
-} GcStructLayout;
+typedef struct GcArrayElement {
+    struct GcPointeeLayout  *layout;
+} GcArrayElement;
+
+typedef union GcPointeeKind {
+    GcArrayElement          array_element;
+    GcStructField           struct_fields[0];
+} GcPointeeKind;
+
+typedef enum GcPointeeKindTag {
+    Struct = 0,
+    Array  = 1
+} GcPointeeKindTag;
+
+typedef struct GcPointeeLayout {
+    GcPointeeKindTag        tag;
+    size_t                  count;
+    GcPointeeKind           pointee;
+} GcPointeeLayout;
 
 typedef enum GcBlockState {
     Unreachable = 0,
@@ -158,7 +179,7 @@ Gc gc = {
 void gc_run();
 void* gc_malloc(int64_t data_size);
 void gc_free(GcBlock *block);
-void gc_mark_visitor(int depth, void *object, const GcStructLayout *layout);
+void gc_mark(int depth, void *object, const GcPointeeLayout *layout);
 
 #ifdef GC_LOGS
 static inline void gc_log(int level, int depth, const char *fmt, ...) {
@@ -279,9 +300,6 @@ LOG(1, 0, "Initialize GC with log level: %i\n", gc.log_level);
         gc.test_dump_color = 1;
     }
 
-#include <sys/mman.h>
-#include <errno.h>
-
     gc.pool = mmap(
         (void *)POOL_START,
         gc.pool_size + 2 * BOUNDARY_SIZE,
@@ -309,7 +327,17 @@ LOG(1, 0, "Initialize GC with log level: %i\n", gc.log_level);
 }
 
 void gc_teardown() {
-#ifndef GC_TEST
+    LOG(2, 0, "\nGC Teardown\n");
+
+#ifdef GC_TEST
+    // no blocks are reachable anymore
+    llvm_gc_root_chain = NULL;
+    gc_run(); // we don't run the gc in non test mode as the OS will free all remaining memory for us anyway
+
+    gc_pool_dump();
+    gc_print_statistics();
+    assert(munmap((void *)gc.pool, gc.pool_size + 2 * BOUNDARY_SIZE) == 0);
+#else
     char *gc_print_stats_env = getenv("GC_PRINT_STATS");
     if (gc_print_stats_env && strcmp(gc_print_stats_env, "1") == 0) {
         gc_print_statistics();
@@ -324,8 +352,9 @@ void gc_run() {
 
     gc.execution_count++;
 
-    LOG(2, 0, "Start GC\n");
+    LOG(2, 0, "\nStart GC\n");
 
+    LOG(2, 0, "Phase: init.\n");
     GcBlock *block = gc.blocks_chain;
     while (block) {
         block->state = Unreachable;
@@ -333,6 +362,7 @@ void gc_run() {
         block = block->next;
     }
 
+    LOG(2, 0, "Phase: mark\n");
     LlvmStackFrame *frame = llvm_gc_root_chain;
     for (int frame_idx = 0; frame; frame_idx++) {
         // all roots have a meta associated
@@ -345,7 +375,7 @@ void gc_run() {
         for (int32_t root_idx = 0; root_idx < frame->map->num_roots; root_idx++) {
             if (frame->roots[root_idx]) {
                 LOG(2, 0, "    root %i:\n", root_idx);
-                gc_mark_visitor(0, frame->roots[root_idx], frame->map->meta[root_idx]);
+                gc_mark(0, frame->roots[root_idx], frame->map->meta[root_idx]);
             } else {
                 LOG(2, 0, "    root %i: skipped (nil)\n", root_idx);
             }
@@ -354,6 +384,7 @@ void gc_run() {
         frame = frame->next;
     }
 
+    LOG(2, 0, "Phase: sweep\n");
     GcBlock *prev = NULL;
     block = gc.blocks_chain;
     while (block) {
@@ -376,7 +407,7 @@ void gc_run() {
     }
 }
 
-void gc_mark_visitor(int depth, void *object, const GcStructLayout *layout) {
+void gc_mark(int depth, void *object, const GcPointeeLayout *layout) {
     GcBlock *block = object - sizeof(GcBlock);
 
 #ifdef GC_LOGS
@@ -403,20 +434,39 @@ void gc_mark_visitor(int depth, void *object, const GcStructLayout *layout) {
     }
     block->state = Reachable;
 
-    LOG(3, depth, "         layout->count=%li\n", layout->count);
-    for (int64_t i = 0; i < layout->count; i++) {
-        LOG(3, depth, "         layout->fields[%li].offset=%li\n", i, layout->fields[i].offset);
-        LOG(3, depth, "         layout->fields[%li].layout=%p\n", i, (void *)layout->fields[i].layout);
+    switch (layout->tag) {
+        case Struct: {
+            LOG(3, depth, "      -fields count: %li\n", layout->count);
+            for (size_t i = 0; i < layout->count; i++) {
+                GcStructField field = layout->pointee.struct_fields[i];
+                int64_t offset = field.offset;
+                const GcPointeeLayout *child_layout = field.layout;
 
-        int64_t offset = layout->fields[i].offset;
-        void *child_offset = object + offset;
-        void *child = (void *)*(int64_t *)child_offset;
+                LOG(3, depth, "      -fields[%li] offset: %li\n", i, offset);
+                LOG(3, depth, "      -fields[%li] layout: %p\n", i, (void *)child_layout);
 
-        LOG(2, depth, "        %li. %p(+%li) -> %p\n", i, child_offset, offset, child);
+                void *child_offset = object + offset;
+                void *child = (void *)*(size_t *)child_offset;
+                LOG(2, depth, "        %li. %p(+%li) -> %p\n", i, child_offset, offset, child);
 
-        const GcStructLayout *child_layout = layout->fields[i].layout;
+                gc_mark(depth + 1, child, child_layout);
+            }
+            break;
+        }
+        case Array: {
+            GcPointeeLayout *child_layout = layout->pointee.array_element.layout;
 
-        gc_mark_visitor(depth + 1, child, child_layout);
+            LOG(3, depth, "      -elements count: %li\n", layout->count);
+            LOG(3, depth, "      -elements layout: %p\n", (void *)child_layout);
+
+            if (child_layout) {
+                void **array = (void **)object;
+                for (size_t i = 0; i < layout->count; i++) {
+//                    void *element = (void *)*(size_t *)array[i];
+                    LOG(2, depth, "        %li. %p(+%li) -> %p\n", i, &array[i], i * sizeof(void *), array[i]);
+                }
+            }
+        }
     }
 }
 

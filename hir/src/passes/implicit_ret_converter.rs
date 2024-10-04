@@ -351,6 +351,45 @@ impl ImplicitRetConverter {
 
                 always_return
             }
+            ExpressionKind::ArrayInstantiation(values) => {
+                let mut always_return = false;
+                for expr_id in values {
+                    let value_expression = expressions.remove(*expr_id).unwrap();
+
+                    let expression_returns = self.visit_expression(
+                        statements,
+                        expressions,
+                        value_expression,
+                        depth + 1,
+                        unreachable || always_return,
+                    );
+
+                    always_return = always_return || expression_returns;
+                }
+
+                self.expressions.insert(expression.id, expression);
+
+                always_return
+            }
+            ExpressionKind::ArrayAccess(base_expr_id, index_expr_id) => {
+                let expr = expressions.remove(*base_expr_id).unwrap();
+                let mut always_return =
+                    self.visit_expression(statements, expressions, expr, depth + 1, false);
+
+                let index = expressions.remove(*index_expr_id).unwrap();
+                always_return = always_return
+                    || self.visit_expression(
+                        statements,
+                        expressions,
+                        index,
+                        depth + 1,
+                        always_return,
+                    );
+
+                self.expressions.insert(expression.id, expression);
+
+                always_return
+            }
             ExpressionKind::Dummy => {
                 panic!("should not compute exit points of an invalid source code")
             }
@@ -619,4 +658,16 @@ mod tests {
     t!(if_empty_branches, "let f() = { if true { } else { }; }");
 
     t!(while_empty_branches, "let f() = { while true { }; }");
+
+    t!(
+        array_value_always_ret,
+        "let f(): number { let a = [1, if true { ret 2; } else { ret 3; }, 4]; 5; }"
+    );
+    t!(array, "let f(): number { let a = [1, 2, 4]; 5; }");
+
+    t!(array_access_no_ret, "let f() { a[1]; }");
+    t!(
+        array_access_ret,
+        "let f() { a[ if true { ret 1; } else { ret 2; } ]; }"
+    );
 }

@@ -284,9 +284,12 @@ pub enum Type {
     Invalid,
 
     Boolean,
-    Function(Vec<TypeId>, TypeId),
-    Struct(StmtId),
     Number,
+
+    Function(Vec<TypeId>, TypeId),
+
+    Struct(StmtId),
+    Array(TypeId, usize),
 
     /// This value is used when the statement/expression does not have any value. This is the
     /// case for `let` and `let fn`.
@@ -301,7 +304,11 @@ pub enum Type {
 impl Type {
     pub fn identifier(&self) -> &'static str {
         match self {
-            Type::Invalid | Type::None | Type::Function(..) | Type::Struct(..) => unimplemented!(),
+            Type::Invalid
+            | Type::None
+            | Type::Function(..)
+            | Type::Struct(..)
+            | Type::Array(..) => unimplemented!(),
             Type::Boolean => "boolean",
             Type::Number => "number",
             Type::Void => "void",
@@ -313,9 +320,10 @@ impl Display for Type {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Type::Boolean => write!(f, "boolean"),
+            Type::Number => write!(f, "number"),
             Type::Function(..) => write!(f, "function"),
             Type::Struct(..) => write!(f, "struct"),
-            Type::Number => write!(f, "number"),
+            Type::Array(_, len) => write!(f, "array[{len}]"),
             Type::Void => write!(f, "void"),
             Type::None => write!(f, "no type"),
             Type::Invalid => write!(f, "invalid"),

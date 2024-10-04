@@ -1,5 +1,5 @@
 use crate::identifier::Identifier;
-use transmute_core::ids::{ExprId, IdentRefId, StmtId};
+use transmute_core::ids::{ExprId, IdentRefId, StmtId, TypeDefId};
 use transmute_core::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -40,17 +40,41 @@ impl RetMode {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct TypeDef {
+    pub kind: TypeDefKind,
+    pub span: Span,
+}
+
+impl TypeDef {
+    pub fn identifier_ref_id(&self) -> IdentRefId {
+        match &self.kind {
+            TypeDefKind::Simple(ident_ref_id) => *ident_ref_id,
+            TypeDefKind::Array(_, _) => todo!(),
+            _ => panic!("no identifier_ref_id for TypeDefKind::Dummy"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypeDefKind {
+    Simple(IdentRefId),
+    Array(TypeDefId, usize),
+    /// A dummy type kind, inserted by the parser when the type could not be parsed
+    Dummy,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Parameter {
     pub identifier: Identifier,
-    pub ty: IdentRefId,
+    pub type_def_id: TypeDefId,
     pub span: Span,
 }
 
 impl Parameter {
-    pub fn new(identifier: Identifier, ty: IdentRefId, span: Span) -> Self {
+    pub fn new(identifier: Identifier, type_def_id: TypeDefId, span: Span) -> Self {
         Self {
             identifier,
-            ty,
+            type_def_id,
             span,
         }
     }
@@ -58,17 +82,17 @@ impl Parameter {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Return {
-    pub ret: Option<IdentRefId>,
+    pub type_def_id: Option<TypeDefId>,
 }
 
 impl Return {
     pub fn none() -> Self {
-        Self { ret: None }
+        Self { type_def_id: None }
     }
 
-    pub fn some(ident_ref_id: IdentRefId) -> Self {
+    pub fn some(type_def_id: TypeDefId) -> Self {
         Self {
-            ret: Some(ident_ref_id),
+            type_def_id: Some(type_def_id),
         }
     }
 }
@@ -76,19 +100,20 @@ impl Return {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
     pub identifier: Identifier,
-    pub ty: IdentRefId,
+    pub type_def_id: TypeDefId,
     pub span: Span,
 }
 
 impl Field {
-    pub fn new(identifier: Identifier, ty: IdentRefId, span: Span) -> Self {
+    pub fn new(identifier: Identifier, type_def_id: TypeDefId, span: Span) -> Self {
         Self {
             identifier,
-            ty,
+            type_def_id,
             span,
         }
     }
 
+    // todo:refactor remove the following methods: they are not useful as all fields are pub
     pub fn identifier(&self) -> &Identifier {
         &self.identifier
     }
@@ -97,8 +122,8 @@ impl Field {
         self.identifier
     }
 
-    pub fn ty(&self) -> IdentRefId {
-        self.ty
+    pub fn type_def_id(&self) -> TypeDefId {
+        self.type_def_id
     }
 
     pub fn span(&self) -> &Span {

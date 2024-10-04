@@ -118,6 +118,7 @@ impl Transformer {
                                             Type::Function(params, ret_type)
                                         }
                                         HirType::Struct(_) => todo!(),
+                                        HirType::Array(_, _) => todo!(),
                                         HirType::Number => Type::Number,
                                         HirType::Void => Type::Void,
                                         HirType::None => Type::None,
@@ -143,6 +144,9 @@ impl Transformer {
                     HirType::Struct(stmt_id) => {
                         let (symbol_id, struct_id) = self.structs_map[stmt_id];
                         Some((type_id, Type::Struct(symbol_id, struct_id)))
+                    }
+                    HirType::Array(value_type_id, len) => {
+                        Some((type_id, Type::Array(value_type_id, len)))
                     }
                     HirType::Number => Some((type_id, Type::Number)),
                     HirType::Void => Some((type_id, Type::Void)),
@@ -302,6 +306,24 @@ impl Transformer {
                     type_id,
                     ident_ref_id,
                     fields,
+                ),
+            HirExpressionKind::ArrayInstantiation(values) => self.transform_array_instantiation(
+                hir,
+                parent,
+                expression.id,
+                expression.span,
+                type_id,
+                values,
+            ),
+            HirExpressionKind::ArrayAccess(base_expr_id, index_expr_id) => self
+                .transform_array_access(
+                    hir,
+                    parent,
+                    expression.id,
+                    expression.span,
+                    type_id,
+                    base_expr_id,
+                    index_expr_id,
                 ),
         }
     }
@@ -625,7 +647,7 @@ impl Transformer {
         ident_ref_id: IdentRefId,
         fields: Vec<(IdentRefId, ExprId)>,
     ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
-        let mut transformed_fields = Vec::new();
+        let mut transformed_fields = Vec::with_capacity(fields.len());
         let mut mutated_symbol_ids = Vec::new();
         let mut variables = BTreeMap::new();
 
@@ -672,6 +694,77 @@ impl Transformer {
                         .map(|(_, symbol_id, expr_id)| (symbol_id, expr_id))
                         .collect::<Vec<(SymbolId, ExprId)>>(),
                 ),
+                span,
+                type_id,
+            },
+        );
+
+        (mutated_symbol_ids, variables)
+    }
+
+    fn transform_array_instantiation(
+        &mut self,
+        hir: &mut Hir,
+        parent: Option<FunctionId>,
+        expr_id: ExprId,
+        span: Span,
+        type_id: TypeId,
+        values: Vec<ExprId>,
+    ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
+        let mut transformed_values = Vec::with_capacity(values.len());
+
+        let mut mutated_symbol_ids = Vec::new();
+        let mut variables = BTreeMap::new();
+
+        for value_expr_id in values.into_iter() {
+            let expression = hir.expressions.remove(value_expr_id).unwrap();
+            let (new_mutated_symbol_ids, new_variables) =
+                self.transform_expression(hir, parent, expression);
+            mutated_symbol_ids.extend(new_mutated_symbol_ids);
+            variables.extend(new_variables);
+
+            transformed_values.push(value_expr_id);
+        }
+
+        self.expressions.insert(
+            expr_id,
+            Expression {
+                id: expr_id,
+                kind: ExpressionKind::ArrayInstantiation(transformed_values),
+                span,
+                type_id,
+            },
+        );
+
+        (mutated_symbol_ids, variables)
+    }
+
+    fn transform_array_access(
+        &mut self,
+        hir: &mut Hir,
+        parent: Option<FunctionId>,
+        expr_id: ExprId,
+        span: Span,
+        type_id: TypeId,
+        base_expr_id: ExprId,
+        index_expr_id: ExprId,
+    ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
+        let base_expression = hir.expressions.remove(base_expr_id).unwrap();
+        let (mut mutated_symbol_ids, mut variables) =
+            self.transform_expression(hir, parent, base_expression);
+
+        let index_expression = hir.expressions.remove(index_expr_id).unwrap();
+        let (new_mutated_symbol_ids, new_variables) =
+            self.transform_expression(hir, parent, index_expression);
+
+        mutated_symbol_ids.extend(new_mutated_symbol_ids);
+        variables.extend(new_variables);
+
+        self.expressions.insert(
+            expr_id,
+            Expression {
+                id: expr_id,
+                kind: ExpressionKind::ArrayAccess(base_expr_id, index_expr_id),
                 span,
                 type_id,
             },
@@ -896,6 +989,8 @@ pub enum ExpressionKind {
     // todo:refactoring only keep one of SymbolId or StructId? also, the field's SymbolId does not
     //   seem useful
     StructInstantiation(SymbolId, StructId, Vec<(SymbolId, ExprId)>),
+    ArrayInstantiation(Vec<ExprId>),
+    ArrayAccess(ExprId, ExprId),
 }
 
 #[derive(Debug)]
@@ -934,10 +1029,13 @@ pub enum StatementKind {
 #[derive(Debug, Eq, PartialEq)]
 pub enum Type {
     Boolean,
+    Number,
+
     Function(Vec<TypeId>, TypeId),
+
     // todo:refactoring keep ony one?
     Struct(SymbolId, StructId),
-    Number,
+    Array(TypeId, usize),
 
     /// This value is used when the statement/expression does not have any value. This is the
     /// case for `let` and `let fn`.
@@ -1154,6 +1252,49 @@ mod tests {
             s.field = 2;
 
             1;
+        }
+        "#,
+        )
+        .unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_array_instantiate() {
+        let ast = transmute_ast::parse(
+            r#"
+        let f() {
+            let a = [1, 2];
+        }
+        "#,
+        )
+        .unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_array_access() {
+        let ast = transmute_ast::parse(
+            r#"
+        let f() {
+            let a = [1, 2];
+            let b = a[0];
+        }
+        "#,
+        )
+        .unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_array_instantiate_and_access() {
+        let ast = transmute_ast::parse(
+            r#"
+        let f() {
+            [1, 2][0];
         }
         "#,
         )

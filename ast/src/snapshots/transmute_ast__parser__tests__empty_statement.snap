@@ -8,6 +8,7 @@ Ok(
         identifier_refs: [],
         expressions: [],
         statements: [],
+        type_defs: [],
         roots: [],
     },
 )

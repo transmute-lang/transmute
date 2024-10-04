@@ -23,11 +23,6 @@ int main(int argc, char **argv) {
         printf("main(%li) = %li\n", i, _TM0_4main1n(i));
     }
 
-#ifdef GC_TEST
-    gc_pool_dump();
-    gc_print_statistics();
-#endif
-
     gc_teardown();
 
     return 0;

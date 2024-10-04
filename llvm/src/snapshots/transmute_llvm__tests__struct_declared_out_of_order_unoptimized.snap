@@ -8,8 +8,8 @@ source_filename = "main"
 %"StructInner#id1" = type {}
 %"StructOuter#id0" = type { ptr }
 
-@layout_s11StructOuter = global [3 x i64] [i64 1, i64 0, i64 ptrtoint (ptr @layout_s11StructInner to i64)]
-@layout_s11StructInner = global [1 x i64] zeroinitializer
+@layout_s11StructOuter = global [4 x i64] [i64 0, i64 1, i64 0, i64 ptrtoint (ptr @layout_s11StructInner to i64)]
+@layout_s11StructInner = global [2 x i64] zeroinitializer
 
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
@@ -17,6 +17,8 @@ declare void @llvm.gcroot(ptr, ptr) #0
 declare ptr @gc_malloc(i64)
 
 declare void @gc_run()
+
+declare void @tmc_check_array_index(i64, i64, i64, i64)
 
 declare void @_TM0_5print1n(i64)
 

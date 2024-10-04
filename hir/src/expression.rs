@@ -55,6 +55,12 @@ impl From<AstExpression> for Expression<Untyped> {
                 AstExpressionKind::StructInstantiation(ident_ref_id, fields) => {
                     ExpressionKind::StructInstantiation(ident_ref_id, fields)
                 }
+                AstExpressionKind::ArrayInstantiation(values) => {
+                    ExpressionKind::ArrayInstantiation(values)
+                }
+                AstExpressionKind::ArrayAccess(expr, index) => {
+                    ExpressionKind::ArrayAccess(expr, index)
+                }
                 AstExpressionKind::Unary(_, _) => panic!("Cannot convert AstExpressionKind::Unary"),
                 AstExpressionKind::Binary(_, _, _) => {
                     panic!("Cannot convert AstExpressionKind::Binary")
@@ -82,6 +88,8 @@ pub enum ExpressionKind {
     While(ExprId, ExprId),
     Block(Vec<StmtId>),
     StructInstantiation(IdentRefId, Vec<(IdentRefId, ExprId)>),
+    ArrayInstantiation(Vec<ExprId>),
+    ArrayAccess(ExprId, ExprId),
 }
 
 #[derive(Debug, Clone, PartialEq)]

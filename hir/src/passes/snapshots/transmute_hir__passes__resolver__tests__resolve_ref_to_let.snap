@@ -108,14 +108,22 @@ Hir {
                 },
                 [],
                 Return {
-                    ret: Some(
-                        IdentRefId(0),
+                    type_def_id: Some(
+                        TypeDefId(0),
                     ),
                     typed: Typed(4),
                 },
                 ExprId(2),
             ),
             span: 1:1; [0, 35],
+        },
+    ],
+    type_defs: [
+        TypeDefId(0) => TypeDef {
+            kind: Simple(
+                IdentRefId(0),
+            ),
+            span: 1:10; [9, 15],
         },
     ],
     roots: [

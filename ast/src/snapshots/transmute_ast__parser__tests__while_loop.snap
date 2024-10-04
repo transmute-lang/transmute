@@ -61,6 +61,7 @@ Ok(
                 span: 1:1; [0, 18],
             },
         ],
+        type_defs: [],
         roots: [
             StmtId(1),
         ],

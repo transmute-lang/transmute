@@ -96,18 +96,32 @@ Ok(
                                 id: IdentId(1),
                                 span: 1:15; [14, 15],
                             },
-                            ty: IdentRefId(0),
+                            type_def_id: TypeDefId(0),
                             span: 1:15; [14, 23],
                         },
                     ],
                     Return {
-                        ret: Some(
-                            IdentRefId(1),
+                        type_def_id: Some(
+                            TypeDefId(1),
                         ),
                     },
                     ExprId(3),
                 ),
                 span: 1:1; [0, 41],
+            },
+        ],
+        type_defs: [
+            TypeDefId(0) => TypeDef {
+                kind: Simple(
+                    IdentRefId(0),
+                ),
+                span: 1:18; [17, 23],
+            },
+            TypeDefId(1) => TypeDef {
+                kind: Simple(
+                    IdentRefId(1),
+                ),
+                span: 1:27; [26, 32],
             },
         ],
         roots: [

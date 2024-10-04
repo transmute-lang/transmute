@@ -41,7 +41,7 @@ Ok(
                                 id: IdentId(1),
                                 span: 1:12; [11, 12],
                             },
-                            ty: IdentRefId(0),
+                            type_def_id: TypeDefId(0),
                             span: 1:12; [11, 20],
                         },
                         Field {
@@ -49,12 +49,26 @@ Ok(
                                 id: IdentId(3),
                                 span: 1:23; [22, 23],
                             },
-                            ty: IdentRefId(1),
+                            type_def_id: TypeDefId(1),
                             span: 1:23; [22, 31],
                         },
                     ],
                 ),
                 span: 1:1; [0, 33],
+            },
+        ],
+        type_defs: [
+            TypeDefId(0) => TypeDef {
+                kind: Simple(
+                    IdentRefId(0),
+                ),
+                span: 1:15; [14, 20],
+            },
+            TypeDefId(1) => TypeDef {
+                kind: Simple(
+                    IdentRefId(1),
+                ),
+                span: 1:26; [25, 31],
             },
         ],
         roots: [

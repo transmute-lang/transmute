@@ -2,9 +2,9 @@ use crate::expression::Expression;
 use crate::identifier_ref::IdentifierRef;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
-use crate::statement::Statement;
+use crate::statement::{Statement, TypeDef};
 use transmute_core::error::Diagnostics;
-use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId};
+use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, TypeDefId};
 use transmute_core::vec_map::VecMap;
 
 pub mod expression;
@@ -31,6 +31,8 @@ pub struct Ast {
     pub expressions: VecMap<ExprId, Expression>,
     /// All statements
     pub statements: VecMap<StmtId, Statement>,
+    /// Types
+    pub type_defs: VecMap<TypeDefId, TypeDef>,
     /// Root statements
     pub roots: Vec<StmtId>,
 }
@@ -42,12 +44,14 @@ impl Ast {
         expressions: Vec<Expression>,
         statements: Vec<Statement>,
         roots: Vec<StmtId>,
+        type_defs: Vec<TypeDef>,
     ) -> Self {
         Self {
             identifiers: identifiers.into(),
             identifier_refs: identifier_refs.into(),
             expressions: expressions.into(),
             statements: statements.into(),
+            type_defs: type_defs.into(),
             roots,
         }
     }

@@ -27,13 +27,14 @@ Ok(
                     },
                     [],
                     Return {
-                        ret: None,
+                        type_def_id: None,
                     },
                     ExprId(0),
                 ),
                 span: 1:1; [0, 10],
             },
         ],
+        type_defs: [],
         roots: [
             StmtId(0),
         ],

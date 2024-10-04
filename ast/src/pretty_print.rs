@@ -1,10 +1,10 @@
 use crate::expression::{Expression, ExpressionKind, Target};
 use crate::literal::{Literal, LiteralKind};
 use crate::operators::{BinaryOperatorKind, UnaryOperatorKind};
-use crate::statement::{RetMode, Statement, StatementKind};
+use crate::statement::{RetMode, Statement, StatementKind, TypeDefKind};
 use crate::Ast;
 use std::fmt::{Result, Write};
-use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId};
+use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, TypeDefId};
 
 pub trait PrettyPrint {
     fn pretty_print<W>(
@@ -157,6 +157,24 @@ impl PrettyPrint for Expression {
                 }
                 write!(f, "}}")
             }
+            ExpressionKind::ArrayInstantiation(values) => {
+                write!(f, "[")?;
+                for (i, expr_id) in values.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " ")?;
+                    }
+                    ctx.pretty_print_expression(*expr_id, opts, f)?;
+                    write!(f, ",")?;
+                }
+                write!(f, "]")
+            }
+            ExpressionKind::ArrayAccess(base_expr_id, index_expr_id) => {
+                ctx.pretty_print_expression(*base_expr_id, opts, f).unwrap();
+                write!(f, "[")?;
+                ctx.pretty_print_expression(*index_expr_id, opts, f)
+                    .unwrap();
+                write!(f, "]")
+            }
             ExpressionKind::Dummy => unreachable!(),
         }
     }
@@ -222,15 +240,16 @@ impl PrettyPrint for Statement {
                     }
                     write!(
                         f,
-                        "{ident}: {ty}",
+                        "{ident}: ",
                         ident = ctx.identifier(parameter.identifier.id),
-                        ty = ctx.identifier_ref(parameter.ty)
                     )?;
+                    parameter.type_def_id.pretty_print(ctx, opts, f)?;
                 }
 
                 write!(f, ")")?;
-                if let Some(ret_type) = ret_type.ret {
-                    write!(f, ": {ret_type}", ret_type = ctx.identifier_ref(ret_type))?;
+                if let Some(ret_type) = &ret_type.type_def_id {
+                    write!(f, ": ",)?;
+                    ret_type.pretty_print(ctx, opts, f)?;
                 }
                 writeln!(f, " = {{")?;
                 ctx.level += 1;
@@ -247,15 +266,35 @@ impl PrettyPrint for Statement {
                 )?;
 
                 for field in fields.iter() {
-                    writeln!(
+                    write!(
                         f,
-                        "{indent}  {ident}: {ty},",
+                        "{indent}  {ident}: ",
                         ident = ctx.identifier(field.identifier.id),
-                        ty = ctx.identifier_ref(field.ty())
                     )?;
+                    field.type_def_id.pretty_print(ctx, opts, f)?;
+                    writeln!(f, ",")?;
                 }
                 writeln!(f, "{indent}}}")
             }
+        }
+    }
+}
+
+impl PrettyPrint for TypeDefId {
+    fn pretty_print<W>(&self, ctx: &mut PrettyPrintContext<'_>, opts: &Options, f: &mut W) -> Result
+    where
+        W: Write,
+    {
+        match ctx.ast.type_defs[*self].kind {
+            TypeDefKind::Simple(ident_ref_id) => {
+                write!(f, "{}", ctx.identifier_ref(ident_ref_id))
+            }
+            TypeDefKind::Array(base, len) => {
+                write!(f, "[")?;
+                base.pretty_print(ctx, opts, f)?;
+                write!(f, "; {len}]")
+            }
+            TypeDefKind::Dummy => unreachable!(),
         }
     }
 }
@@ -355,7 +394,7 @@ mod tests {
 
     #[test]
     fn literal_boolean() {
-        let ast = Ast::new(vec![], vec![], vec![], vec![], vec![]);
+        let ast = Ast::new(vec![], vec![], vec![], vec![], vec![], vec![]);
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -371,7 +410,7 @@ mod tests {
 
     #[test]
     fn literal_number() {
-        let ast = Ast::new(vec![], vec![], vec![], vec![], vec![]);
+        let ast = Ast::new(vec![], vec![], vec![], vec![], vec![], vec![]);
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -390,6 +429,7 @@ mod tests {
         let ast = Ast::new(
             identifiers!["ident"],
             identifier_refs!(0),
+            vec![],
             vec![],
             vec![],
             vec![],
@@ -867,6 +907,50 @@ mod tests {
     #[test]
     fn struct_nested_access() {
         let ast = Parser::new(Lexer::new("s.f.g;")).parse().unwrap();
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_snapshot!(w);
+    }
+
+    #[test]
+    fn array_instantiation() {
+        let ast = Parser::new(Lexer::new("[1, 2, 3];")).parse().unwrap();
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_snapshot!(w);
+    }
+
+    #[test]
+    fn array_access() {
+        let ast = Parser::new(Lexer::new("a[1];")).parse().unwrap();
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_snapshot!(w);
+    }
+
+    #[test]
+    fn array_access_dot_access() {
+        let ast = Parser::new(Lexer::new("a[1].b;")).parse().unwrap();
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_snapshot!(w);
+    }
+
+    #[test]
+    fn dot_acces_array_access() {
+        let ast = Parser::new(Lexer::new("a.b[1];")).parse().unwrap();
 
         let mut w = String::new();
 

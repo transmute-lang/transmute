@@ -112,6 +112,7 @@ mod tests {
                     identifier_refs: output.identifier_refs,
                     expressions: output.expressions,
                     statements: ast.statements,
+                    type_defs: ast.type_defs,
                     roots: ast.roots,
                 };
 

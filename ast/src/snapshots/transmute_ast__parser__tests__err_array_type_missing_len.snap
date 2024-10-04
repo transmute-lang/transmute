@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser::new(Lexer::new(\"struct S { field: [number; ] }\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `]`, expected one of (1) number",
+                span: 1:28; [27, 28],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    598,
+                ),
+            },
+        ],
+    },
+)

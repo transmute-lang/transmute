@@ -343,20 +343,34 @@ Hir {
                             span: 1:10; [9, 10],
                             bound: Bound(20),
                         },
-                        ty: IdentRefId(0),
+                        type_def_id: TypeDefId(0),
                         span: 1:10; [9, 18],
                         typed: Typed(4),
                     },
                 ],
                 Return {
-                    ret: Some(
-                        IdentRefId(1),
+                    type_def_id: Some(
+                        TypeDefId(1),
                     ),
                     typed: Typed(4),
                 },
                 ExprId(15),
             ),
             span: 1:1; [0, 98],
+        },
+    ],
+    type_defs: [
+        TypeDefId(0) => TypeDef {
+            kind: Simple(
+                IdentRefId(0),
+            ),
+            span: 1:13; [12, 18],
+        },
+        TypeDefId(1) => TypeDef {
+            kind: Simple(
+                IdentRefId(1),
+            ),
+            span: 1:22; [21, 27],
         },
     ],
     roots: [

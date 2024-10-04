@@ -70,7 +70,7 @@ expression: "(ast, block_exit_points)"
                     },
                     [],
                     Return {
-                        ret: None,
+                        type_def_id: None,
                     },
                     ExprId(1),
                 ),
@@ -95,13 +95,14 @@ expression: "(ast, block_exit_points)"
                     },
                     [],
                     Return {
-                        ret: None,
+                        type_def_id: None,
                     },
                     ExprId(3),
                 ),
                 span: 2:13; [13, 134],
             },
         ],
+        type_defs: [],
         roots: [
             StmtId(3),
         ],

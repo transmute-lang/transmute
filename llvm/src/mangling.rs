@@ -71,11 +71,12 @@ fn mangle_parameters(mir: &Mir, parameters: &[TypeId]) -> String {
 fn mangle_type(mir: &Mir, t: &Type) -> Cow<'static, str> {
     match t {
         Type::Boolean => Cow::Borrowed("b"),
+        Type::Number => Cow::Borrowed("n"),
         Type::Function(_, _) => todo!(),
         Type::Struct(symbol_id, struct_id) => {
             Cow::Owned(mangle_struct_name(mir, *struct_id, *symbol_id))
         }
-        Type::Number => Cow::Borrowed("n"),
+        Type::Array(type_id, len) => Cow::Owned(mangle_array_name(mir, *type_id, *len)),
         Type::Void => Cow::Borrowed("v"),
         Type::None => unimplemented!("none is not a valid type"),
     }
@@ -89,4 +90,8 @@ pub fn mangle_struct_name(mir: &Mir, struct_id: StructId, symbol_id: SymbolId) -
 
     let ident = mangle_identifier(&mir.identifiers[mir.symbols[symbol_id].ident_id]);
     format!("s{parent_name}{ident}")
+}
+
+pub fn mangle_array_name(mir: &Mir, type_id: TypeId, len: usize) -> String {
+    format!("a{len}{t}", t = mangle_type(mir, &mir.types[type_id]))
 }
