@@ -25,7 +25,6 @@ pub mod identifier;
 pub mod identifier_ref;
 pub mod literal;
 pub mod natives;
-pub mod output;
 pub mod passes;
 pub mod statement;
 pub mod symbol;

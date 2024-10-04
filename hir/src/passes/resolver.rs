@@ -1342,9 +1342,8 @@ impl Scope {
 #[cfg(test)]
 mod tests {
     use crate::natives::Natives;
-    use crate::output::xml::XmlWriter;
     use crate::UnresolvedHir;
-    use insta::{assert_debug_snapshot, assert_snapshot};
+    use insta::assert_debug_snapshot;
     use transmute_ast::lexer::Lexer;
     use transmute_ast::parser::Parser;
     use transmute_core::error::Level;
@@ -1360,7 +1359,7 @@ mod tests {
         .resolve(Natives::default())
         .unwrap();
 
-        assert_snapshot!(XmlWriter::new(&hir).serialize());
+        assert_debug_snapshot!(hir);
     }
 
     #[test]
@@ -1373,7 +1372,7 @@ mod tests {
         .resolve(Natives::default())
         .unwrap();
 
-        assert_snapshot!(XmlWriter::new(&hir).serialize());
+        assert_debug_snapshot!(hir);
     }
 
     #[test]
@@ -1386,7 +1385,7 @@ mod tests {
         .resolve(Natives::default())
         .unwrap();
 
-        assert_snapshot!(XmlWriter::new(&hir).serialize());
+        assert_debug_snapshot!(hir);
     }
 
     #[test]
@@ -1401,7 +1400,7 @@ mod tests {
         .resolve(Natives::default())
         .unwrap();
 
-        assert_snapshot!(XmlWriter::new(&hir).serialize());
+        assert_debug_snapshot!(hir);
     }
 
     #[test]
@@ -1435,7 +1434,7 @@ mod tests {
         .resolve(Natives::default())
         .unwrap();
 
-        assert_snapshot!("rebinding-xml", XmlWriter::new(&hir).serialize());
+        assert_debug_snapshot!(hir);
     }
 
     #[test]

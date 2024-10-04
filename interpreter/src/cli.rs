@@ -10,10 +10,6 @@ pub struct Cli {
     #[arg(long, default_value_t = false)]
     pub output_parsed: bool,
 
-    /// Write HTML file
-    #[arg(long, default_value_t = false)]
-    pub output_html: bool,
-
     /// The parameters to pass to main
     pub params: Vec<i64>,
 }
