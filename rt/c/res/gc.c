@@ -1,10 +1,10 @@
 // defines:
-//  - GC_TEST: compile with test mode support
-//  - GC_LOGS: compile with logs support
+//  - GC_TEST:            compile with test mode support
+//  - GC_LOGS:            compile with logs support
 //
 // standard env. variables
-//  - GC_ENABLE:      if set to 0, GC is not executed
-//  - GC_PRINT_STATS: if set to 1, GC stats are printed at the end of execution
+//  - GC_ENABLE:          if set to 0, GC is not executed
+//  - GC_PRINT_STATS:     if set to 1, GC stats are printed at the end of execution
 //
 // if compiled with GC_LOGS:
 //  - GC_LOG_LEVEL:       if set to 1, print GC messages; if set to 2, print more GC messages, etc.
@@ -12,7 +12,8 @@
 // if compiled with GC_TEST:
 //  - GC_TEST_POOL_SIZE:  if set, the pool size; otherwise it takes the value of the DEFAULT_POOL_SIZE constant
 //  - GC_TEST_DUMP:       if set to 1, a memory dump is printed to stdout at the end of program execution
-//  - GC_TEST_DUMP_COLOR: if set to 1, the memory dump is colored
+//  - GC_TEST_DUMP_COLOR: if set to 1, the memory dump is colored (implied GC_TEST_DUMP=1)
+//  - GC_TEST_FINAL_RUN:  if set to 0, the GC is not run during the teardown phase
 
 #include <assert.h>
 #include <stdint.h>
@@ -137,6 +138,7 @@ typedef struct Gc {
     size_t pool_size;
     uint8_t *pool;
     uint8_t *pool_free;
+    int test_final_run;
     int test_dump;
     int test_dump_color;
 #endif // GC_TEST
@@ -171,6 +173,7 @@ Gc gc = {
     .pool_size = DEFAULT_POOL_SIZE,
     .pool = NULL,
     .pool_free = NULL,
+    .test_final_run = 1,
     .test_dump = 0,
     .test_dump_color = 0,
 #endif // GC_TEST
@@ -297,7 +300,13 @@ LOG(1, 0, "Initialize GC with log level: %i\n", gc.log_level);
 
     char *gc_test_dump_color_env = getenv("GC_TEST_DUMP_COLOR");
     if (gc_test_dump_color_env && strcmp(gc_test_dump_color_env, "1") == 0) {
+        gc.test_dump = 1;
         gc.test_dump_color = 1;
+    }
+
+    char *gc_test_final_run = getenv("GC_TEST_FINAL_RUN");
+    if (gc_test_final_run && strcmp(gc_test_final_run, "0") == 0) {
+        gc.test_final_run = 0;
     }
 
     gc.pool = mmap(
@@ -330,9 +339,11 @@ void gc_teardown() {
     LOG(2, 0, "\nGC Teardown\n");
 
 #ifdef GC_TEST
-    // no blocks are reachable anymore
-    llvm_gc_root_chain = NULL;
-    gc_run(); // we don't run the gc in non test mode as the OS will free all remaining memory for us anyway
+    if (gc.test_final_run) {
+        // no blocks are reachable anymore
+        llvm_gc_root_chain = NULL;
+        gc_run(); // we don't run the gc in non test mode as the OS will free all remaining memory for us anyway
+    }
 
     gc_pool_dump();
     gc_print_statistics();
