@@ -16,6 +16,7 @@
 //  - GC_TEST_FINAL_RUN:  if set to 0, the GC is not run during the teardown phase
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -77,7 +78,8 @@ typedef union GcPointeeKind {
 
 typedef enum GcPointeeKindTag {
     Struct = 0,
-    Array  = 1
+    Array  = 1,
+    Opaque = 2,
 } GcPointeeKindTag;
 
 typedef struct GcPointeeLayout {
@@ -87,14 +89,26 @@ typedef struct GcPointeeLayout {
 } GcPointeeLayout;
 
 typedef enum GcBlockState {
-    Unreachable = 0,
-    Reachable   = 1
+    // The block is managed by the GC and is not reachable. All Reachable blocks are flagged as Unreachable when
+    // the GC starts.
+    Unreachable    = 0,
+    // The block is reachable and must not be freed. Unreachable blocks that can be reached are flagged as Reachable
+    // during the mark phase of the GC.
+    Reachable      = 1,
+    // The block is not collectable, it's state will not be updated by any phase of the GC. A NotCollectable block
+    // can be flagged a collectable using the gc_set_collectable function. Inversely, any block can become non
+    // collectable by using the same gc_set_collectable function.
+    NotCollectable = 2,
+    // The block must be collected during the next GC execution and its reachability must not be checked.
+    ToCollect      = 3,
 } GcBlockState;
 
 static inline char* state_to_char(GcBlockState state) {
     switch (state) {
         case Unreachable: return "unreachable";
         case Reachable: return "reachable";
+        case NotCollectable: return "not collectable";
+        case ToCollect: return "to collect";
         default: {
             fprintf(stderr, "PANIC: Invalid state: %i\n", (int)state);
             exit(1);
@@ -104,13 +118,16 @@ static inline char* state_to_char(GcBlockState state) {
 
 typedef struct GcBlock {
     GcBlockState     state;
+    void           (*collect_fn)(void *);
     struct GcBlock  *next;
     size_t           data_size;
     uint8_t          data[];
 } GcBlock;
 
+#define OBJECT_TO_BLOCK(object) ((void *)object - sizeof(GcBlock))
+
 typedef struct Gc {
-    int enable;
+    bool enable;
     GcBlock *blocks_chain;
 
     int execution_count;
@@ -138,9 +155,9 @@ typedef struct Gc {
     size_t pool_size;
     uint8_t *pool;
     uint8_t *pool_free;
-    int test_final_run;
-    int test_dump;
-    int test_dump_color;
+    bool test_final_run;
+    bool test_dump;
+    bool test_dump_color;
 #endif // GC_TEST
 } Gc;
 
@@ -180,7 +197,7 @@ Gc gc = {
 };
 
 void gc_run();
-void* gc_malloc(size_t data_size, size_t align);
+void* gc_malloc(size_t data_size, size_t align, bool collectable);
 void gc_free(GcBlock *block);
 void gc_mark(int depth, void *object, const GcPointeeLayout *layout);
 
@@ -201,7 +218,7 @@ void gc_block_print(GcBlock *block) {
     gc_log(2, 0, "  block at %p (object of size %li at %p): %s\n",
         block,
         block->data_size,
-        (void *)block + sizeof(GcBlock),
+        &block->data,
         state_to_char(block->state)
     );
 }
@@ -270,12 +287,19 @@ void gc_print_statistics() {
     printf("      objects      %4li bytes\n", gc.object_free_sz);
     printf("      blocks       %4li bytes\n", gc.total_free_sz);
     printf("\n");
+    printf("Live blocks\n");
+    GcBlock *block = gc.blocks_chain;
+    while (block) {
+        LOG_BLOCK(block);
+        block = block->next;
+    }
+    printf("\n");
 }
 
 void gc_init() {
     char *gc_enable_env = getenv("GC_ENABLE");
     if (gc_enable_env && strcmp(gc_enable_env, "0") == 0) {
-        gc.enable = 0;
+        gc.enable = false;
     }
 
 #ifdef GC_LOGS
@@ -295,18 +319,18 @@ LOG(1, 0, "Initialize GC with log level: %i\n", gc.log_level);
 
     char *gc_test_dump_env = getenv("GC_TEST_DUMP");
     if (gc_test_dump_env && strcmp(gc_test_dump_env, "1") == 0) {
-        gc.test_dump = 1;
+        gc.test_dump = true;
     }
 
     char *gc_test_dump_color_env = getenv("GC_TEST_DUMP_COLOR");
     if (gc_test_dump_color_env && strcmp(gc_test_dump_color_env, "1") == 0) {
-        gc.test_dump = 1;
-        gc.test_dump_color = 1;
+        gc.test_dump = true;
+        gc.test_dump_color = true;
     }
 
     char *gc_test_final_run = getenv("GC_TEST_FINAL_RUN");
     if (gc_test_final_run && strcmp(gc_test_final_run, "0") == 0) {
-        gc.test_final_run = 0;
+        gc.test_final_run = false;
     }
 
     gc.pool = mmap(
@@ -368,7 +392,9 @@ void gc_run() {
     LOG(2, 0, "Phase: init.\n");
     GcBlock *block = gc.blocks_chain;
     while (block) {
-        block->state = Unreachable;
+        if (block->state == Reachable) {
+            block->state = Unreachable;
+        }
         LOG_BLOCK(block);
         block = block->next;
     }
@@ -400,7 +426,7 @@ void gc_run() {
     block = gc.blocks_chain;
     while (block) {
         LOG_BLOCK(block);
-        if (block->state == Unreachable) {
+        if (block->state == Unreachable || block->state == ToCollect) {
             if (block == gc.blocks_chain) {
                 gc.blocks_chain = block->next;
             } else {
@@ -408,7 +434,6 @@ void gc_run() {
                 prev->next = block->next;
             }
             GcBlock *next = block->next;
-            LOG(1, 0, "freeing block at %p (object size: %li)\n", block, block->data_size);
             gc_free(block);
             block = next;
         } else {
@@ -419,10 +444,16 @@ void gc_run() {
 }
 
 void gc_mark(int depth, void *object, const GcPointeeLayout *layout) {
-    GcBlock *block = object - sizeof(GcBlock);
+    GcBlock *block = OBJECT_TO_BLOCK(object);
 
 #ifdef GC_LOGS
-    if (gc.log_level >= 3) {
+    if (layout->tag == Opaque) {
+        LOG(2, depth, "      object at %p (block at %p): opaque layout, %s\n",
+            object,
+            block,
+            state_to_char(block->state)
+        );
+    } else if (gc.log_level >= 3) {
         LOG(3, depth, "      object at %p (block at %p): %li pointers (layout %p), %s\n",
             object,
             block,
@@ -473,15 +504,17 @@ void gc_mark(int depth, void *object, const GcPointeeLayout *layout) {
             if (child_layout) {
                 void **array = (void **)object;
                 for (size_t i = 0; i < layout->count; i++) {
-//                    void *element = (void *)*(size_t *)array[i];
                     LOG(2, depth, "        %li. %p(+%li) -> %p\n", i, &array[i], i * sizeof(void *), array[i]);
                 }
             }
         }
+        case Opaque: {
+            LOG(3, depth, "      -collect fn: %p\n", block->collect_fn);
+        }
     }
 }
 
-void* gc_malloc(size_t data_size, size_t align) {
+void* gc_malloc(size_t data_size, size_t align, bool collectable) {
     gc_run();
 
     size_t alloc_size = sizeof(GcBlock) + data_size;
@@ -510,7 +543,12 @@ void* gc_malloc(size_t data_size, size_t align) {
     assert(block != NULL);
 #endif // GC_TEST
 
-    block->state = Unreachable;
+    if (collectable) {
+        block->state = Unreachable;
+    } else {
+        block->state = NotCollectable;
+    }
+    block->collect_fn = NULL;
     block->data_size = data_size;
     block->next = gc.blocks_chain;
     gc.blocks_chain = block;
@@ -527,10 +565,12 @@ void* gc_malloc(size_t data_size, size_t align) {
         gc.max_object_alloc_sz = gc.current_object_alloc_sz;
     }
 
-    LOG(1, 0, "allocated block of size %li at %p, returning object of size %li at %p(+%li)\n",
+    LOG(1, 0, "allocated %s block of size %li at %p, returning object of size %li:%li at %p(+%li)\n",
+        collectable ? "collectable" : "non collectable",
         alloc_size,
         block,
         data_size,
+        align,
         &block->data,
         (uint8_t *)block->data - (uint8_t *)block
     );
@@ -539,6 +579,12 @@ void* gc_malloc(size_t data_size, size_t align) {
 }
 
 void gc_free(GcBlock *block) {
+    if (block->collect_fn) {
+        LOG(2, 0, "call collect fn %p for block %p to free\n", block->collect_fn, block);
+        block->collect_fn(block->data);
+    }
+    LOG(1, 0, "freeing block at %p (object size: %li)\n", block, block->data_size);
+
     gc.free_count++;
     gc.total_free_sz += sizeof(GcBlock) + block->data_size;
     gc.current_alloc_sz -= sizeof(GcBlock) + block->data_size;
@@ -556,4 +602,23 @@ void gc_free(GcBlock *block) {
 #else
     free(block);
 #endif // GC_TEST
+}
+
+void gc_collect(void *object) {
+    LOG(2, 0, "force collect object at %p\n", object);
+    GcBlock *block = OBJECT_TO_BLOCK(object);
+    block->state = ToCollect;
+    LOG_BLOCK(block);
+}
+
+void gc_set_collectable(void *object, bool collectable, void (*collect_fn)(void *)) {
+    if (collectable) {
+        LOG(2, 0, "marked %p as collectable\n", object);
+    } else {
+        LOG(2, 0, "marked %p as not collectable\n", object);
+    }
+    GcBlock *block = OBJECT_TO_BLOCK(object);
+    block->state = Unreachable;
+    block->collect_fn = collect_fn;
+    LOG_BLOCK(block);
 }

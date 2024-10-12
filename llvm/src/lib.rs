@@ -200,7 +200,11 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 module.add_function("llvm.gcroot", llvm_gcroot_fn_type, None)
             },
             malloc: {
-                let malloc_fn_type = ptr_type.fn_type(&[size_type.into(), size_type.into()], false);
+                let malloc_fn_type = ptr_type.fn_type(&[
+                    size_type.into(),
+                    size_type.into(),
+                    bool_type.into(),
+                ], false);
                 module.add_function("gc_malloc", malloc_fn_type, None)
             },
             #[cfg(any(test, feature = "gc-aggressive"))]
@@ -1188,6 +1192,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 &[
                     struct_type.size_of().unwrap().as_basic_value_enum().into(),
                     struct_type.get_alignment().into(),
+                    self.bool_type.const_int(1u64, false).into()
                 ],
                 &name,
             )
@@ -1258,6 +1263,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 &[
                     array_type.size_of().unwrap().as_basic_value_enum().into(),
                     array_type.into_array_type().get_alignment().into(),
+                    self.bool_type.const_int(1u64, false).into()
                 ],
                 &name,
             )

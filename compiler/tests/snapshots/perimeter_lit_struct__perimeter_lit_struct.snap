@@ -15,934 +15,934 @@ Phase: mark
     root 1: skipped (nil)
     root 2: skipped (nil)
 Phase: sweep
-allocated block of size 40 at 0x10010, returning object of size 16 at 0x10028(+24)
+allocated collectable block of size 48 at 0x10010, returning object of size 16:8 at 0x10030(+32)
 
 Start GC
 Phase: init.
-  block at 0x10010 (object of size 16 at 0x10028): unreachable
+  block at 0x10010 (object of size 16 at 0x10030): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2:
-      object at 0x10028 (block at 0x10010): 0 pointers, unreachable
+      object at 0x10030 (block at 0x10010): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10010 (object of size 16 at 0x10028): reachable
-allocated block of size 40 at 0x10038, returning object of size 16 at 0x10050(+24)
+  block at 0x10010 (object of size 16 at 0x10030): reachable
+allocated collectable block of size 48 at 0x10040, returning object of size 16:8 at 0x10060(+32)
 
 Start GC
 Phase: init.
-  block at 0x10038 (object of size 16 at 0x10050): unreachable
-  block at 0x10010 (object of size 16 at 0x10028): unreachable
+  block at 0x10040 (object of size 16 at 0x10060): unreachable
+  block at 0x10010 (object of size 16 at 0x10030): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1:
-      object at 0x10050 (block at 0x10038): 0 pointers, unreachable
+      object at 0x10060 (block at 0x10040): 0 pointers, unreachable
     root 2:
-      object at 0x10028 (block at 0x10010): 0 pointers, unreachable
+      object at 0x10030 (block at 0x10010): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10038 (object of size 16 at 0x10050): reachable
-  block at 0x10010 (object of size 16 at 0x10028): reachable
-allocated block of size 40 at 0x10060, returning object of size 16 at 0x10078(+24)
+  block at 0x10040 (object of size 16 at 0x10060): reachable
+  block at 0x10010 (object of size 16 at 0x10030): reachable
+allocated collectable block of size 48 at 0x10070, returning object of size 16:8 at 0x10090(+32)
 
 Start GC
 Phase: init.
-  block at 0x10060 (object of size 16 at 0x10078): unreachable
-  block at 0x10038 (object of size 16 at 0x10050): unreachable
-  block at 0x10010 (object of size 16 at 0x10028): unreachable
+  block at 0x10070 (object of size 16 at 0x10090): unreachable
+  block at 0x10040 (object of size 16 at 0x10060): unreachable
+  block at 0x10010 (object of size 16 at 0x10030): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x10078 (block at 0x10060): 2 pointers, unreachable
-        0. 0x10078(+0) -> 0x10028
-        object at 0x10028 (block at 0x10010): 0 pointers, unreachable
-        1. 0x10080(+8) -> 0x10050
-        object at 0x10050 (block at 0x10038): 0 pointers, unreachable
+      object at 0x10090 (block at 0x10070): 2 pointers, unreachable
+        0. 0x10090(+0) -> 0x10030
+        object at 0x10030 (block at 0x10010): 0 pointers, unreachable
+        1. 0x10098(+8) -> 0x10060
+        object at 0x10060 (block at 0x10040): 0 pointers, unreachable
     root 1:
-      object at 0x10050 (block at 0x10038): 0 pointers, reachable
+      object at 0x10060 (block at 0x10040): 0 pointers, reachable
     root 2:
-      object at 0x10028 (block at 0x10010): 0 pointers, reachable
+      object at 0x10030 (block at 0x10010): 0 pointers, reachable
 Phase: sweep
-  block at 0x10060 (object of size 16 at 0x10078): reachable
-  block at 0x10038 (object of size 16 at 0x10050): reachable
-  block at 0x10010 (object of size 16 at 0x10028): reachable
+  block at 0x10070 (object of size 16 at 0x10090): reachable
+  block at 0x10040 (object of size 16 at 0x10060): reachable
+  block at 0x10010 (object of size 16 at 0x10030): reachable
 
 Start GC
 Phase: init.
-  block at 0x10060 (object of size 16 at 0x10078): unreachable
-  block at 0x10038 (object of size 16 at 0x10050): unreachable
-  block at 0x10010 (object of size 16 at 0x10028): unreachable
+  block at 0x10070 (object of size 16 at 0x10090): unreachable
+  block at 0x10040 (object of size 16 at 0x10060): unreachable
+  block at 0x10010 (object of size 16 at 0x10030): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x10078 (block at 0x10060): 2 pointers, unreachable
-        0. 0x10078(+0) -> 0x10028
-        object at 0x10028 (block at 0x10010): 0 pointers, unreachable
-        1. 0x10080(+8) -> 0x10050
-        object at 0x10050 (block at 0x10038): 0 pointers, unreachable
+      object at 0x10090 (block at 0x10070): 2 pointers, unreachable
+        0. 0x10090(+0) -> 0x10030
+        object at 0x10030 (block at 0x10010): 0 pointers, unreachable
+        1. 0x10098(+8) -> 0x10060
+        object at 0x10060 (block at 0x10040): 0 pointers, unreachable
     root 1:
-      object at 0x10050 (block at 0x10038): 0 pointers, reachable
+      object at 0x10060 (block at 0x10040): 0 pointers, reachable
     root 2:
-      object at 0x10028 (block at 0x10010): 0 pointers, reachable
+      object at 0x10030 (block at 0x10010): 0 pointers, reachable
 Phase: sweep
-  block at 0x10060 (object of size 16 at 0x10078): reachable
-  block at 0x10038 (object of size 16 at 0x10050): reachable
-  block at 0x10010 (object of size 16 at 0x10028): reachable
+  block at 0x10070 (object of size 16 at 0x10090): reachable
+  block at 0x10040 (object of size 16 at 0x10060): reachable
+  block at 0x10010 (object of size 16 at 0x10030): reachable
 main(0) = 0
 
 Start GC
 Phase: init.
-  block at 0x10060 (object of size 16 at 0x10078): unreachable
-  block at 0x10038 (object of size 16 at 0x10050): unreachable
-  block at 0x10010 (object of size 16 at 0x10028): unreachable
+  block at 0x10070 (object of size 16 at 0x10090): unreachable
+  block at 0x10040 (object of size 16 at 0x10060): unreachable
+  block at 0x10010 (object of size 16 at 0x10030): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2: skipped (nil)
 Phase: sweep
-  block at 0x10060 (object of size 16 at 0x10078): unreachable
-freeing block at 0x10060 (object size: 16)
-  block at 0x10038 (object of size 16 at 0x10050): unreachable
-freeing block at 0x10038 (object size: 16)
-  block at 0x10010 (object of size 16 at 0x10028): unreachable
+  block at 0x10070 (object of size 16 at 0x10090): unreachable
+freeing block at 0x10070 (object size: 16)
+  block at 0x10040 (object of size 16 at 0x10060): unreachable
+freeing block at 0x10040 (object size: 16)
+  block at 0x10010 (object of size 16 at 0x10030): unreachable
 freeing block at 0x10010 (object size: 16)
-allocated block of size 40 at 0x10088, returning object of size 16 at 0x100a0(+24)
+allocated collectable block of size 48 at 0x100a0, returning object of size 16:8 at 0x100c0(+32)
 
 Start GC
 Phase: init.
-  block at 0x10088 (object of size 16 at 0x100a0): unreachable
+  block at 0x100a0 (object of size 16 at 0x100c0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2:
-      object at 0x100a0 (block at 0x10088): 0 pointers, unreachable
+      object at 0x100c0 (block at 0x100a0): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10088 (object of size 16 at 0x100a0): reachable
-allocated block of size 40 at 0x100b0, returning object of size 16 at 0x100c8(+24)
+  block at 0x100a0 (object of size 16 at 0x100c0): reachable
+allocated collectable block of size 48 at 0x100d0, returning object of size 16:8 at 0x100f0(+32)
 
 Start GC
 Phase: init.
-  block at 0x100b0 (object of size 16 at 0x100c8): unreachable
-  block at 0x10088 (object of size 16 at 0x100a0): unreachable
+  block at 0x100d0 (object of size 16 at 0x100f0): unreachable
+  block at 0x100a0 (object of size 16 at 0x100c0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1:
-      object at 0x100c8 (block at 0x100b0): 0 pointers, unreachable
+      object at 0x100f0 (block at 0x100d0): 0 pointers, unreachable
     root 2:
-      object at 0x100a0 (block at 0x10088): 0 pointers, unreachable
+      object at 0x100c0 (block at 0x100a0): 0 pointers, unreachable
 Phase: sweep
-  block at 0x100b0 (object of size 16 at 0x100c8): reachable
-  block at 0x10088 (object of size 16 at 0x100a0): reachable
-allocated block of size 40 at 0x100d8, returning object of size 16 at 0x100f0(+24)
+  block at 0x100d0 (object of size 16 at 0x100f0): reachable
+  block at 0x100a0 (object of size 16 at 0x100c0): reachable
+allocated collectable block of size 48 at 0x10100, returning object of size 16:8 at 0x10120(+32)
 
 Start GC
 Phase: init.
-  block at 0x100d8 (object of size 16 at 0x100f0): unreachable
-  block at 0x100b0 (object of size 16 at 0x100c8): unreachable
-  block at 0x10088 (object of size 16 at 0x100a0): unreachable
+  block at 0x10100 (object of size 16 at 0x10120): unreachable
+  block at 0x100d0 (object of size 16 at 0x100f0): unreachable
+  block at 0x100a0 (object of size 16 at 0x100c0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x100f0 (block at 0x100d8): 2 pointers, unreachable
-        0. 0x100f0(+0) -> 0x100a0
-        object at 0x100a0 (block at 0x10088): 0 pointers, unreachable
-        1. 0x100f8(+8) -> 0x100c8
-        object at 0x100c8 (block at 0x100b0): 0 pointers, unreachable
+      object at 0x10120 (block at 0x10100): 2 pointers, unreachable
+        0. 0x10120(+0) -> 0x100c0
+        object at 0x100c0 (block at 0x100a0): 0 pointers, unreachable
+        1. 0x10128(+8) -> 0x100f0
+        object at 0x100f0 (block at 0x100d0): 0 pointers, unreachable
     root 1:
-      object at 0x100c8 (block at 0x100b0): 0 pointers, reachable
+      object at 0x100f0 (block at 0x100d0): 0 pointers, reachable
     root 2:
-      object at 0x100a0 (block at 0x10088): 0 pointers, reachable
+      object at 0x100c0 (block at 0x100a0): 0 pointers, reachable
 Phase: sweep
-  block at 0x100d8 (object of size 16 at 0x100f0): reachable
-  block at 0x100b0 (object of size 16 at 0x100c8): reachable
-  block at 0x10088 (object of size 16 at 0x100a0): reachable
+  block at 0x10100 (object of size 16 at 0x10120): reachable
+  block at 0x100d0 (object of size 16 at 0x100f0): reachable
+  block at 0x100a0 (object of size 16 at 0x100c0): reachable
 
 Start GC
 Phase: init.
-  block at 0x100d8 (object of size 16 at 0x100f0): unreachable
-  block at 0x100b0 (object of size 16 at 0x100c8): unreachable
-  block at 0x10088 (object of size 16 at 0x100a0): unreachable
+  block at 0x10100 (object of size 16 at 0x10120): unreachable
+  block at 0x100d0 (object of size 16 at 0x100f0): unreachable
+  block at 0x100a0 (object of size 16 at 0x100c0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x100f0 (block at 0x100d8): 2 pointers, unreachable
-        0. 0x100f0(+0) -> 0x100a0
-        object at 0x100a0 (block at 0x10088): 0 pointers, unreachable
-        1. 0x100f8(+8) -> 0x100c8
-        object at 0x100c8 (block at 0x100b0): 0 pointers, unreachable
+      object at 0x10120 (block at 0x10100): 2 pointers, unreachable
+        0. 0x10120(+0) -> 0x100c0
+        object at 0x100c0 (block at 0x100a0): 0 pointers, unreachable
+        1. 0x10128(+8) -> 0x100f0
+        object at 0x100f0 (block at 0x100d0): 0 pointers, unreachable
     root 1:
-      object at 0x100c8 (block at 0x100b0): 0 pointers, reachable
+      object at 0x100f0 (block at 0x100d0): 0 pointers, reachable
     root 2:
-      object at 0x100a0 (block at 0x10088): 0 pointers, reachable
+      object at 0x100c0 (block at 0x100a0): 0 pointers, reachable
 Phase: sweep
-  block at 0x100d8 (object of size 16 at 0x100f0): reachable
-  block at 0x100b0 (object of size 16 at 0x100c8): reachable
-  block at 0x10088 (object of size 16 at 0x100a0): reachable
+  block at 0x10100 (object of size 16 at 0x10120): reachable
+  block at 0x100d0 (object of size 16 at 0x100f0): reachable
+  block at 0x100a0 (object of size 16 at 0x100c0): reachable
 main(1) = 4
 
 Start GC
 Phase: init.
-  block at 0x100d8 (object of size 16 at 0x100f0): unreachable
-  block at 0x100b0 (object of size 16 at 0x100c8): unreachable
-  block at 0x10088 (object of size 16 at 0x100a0): unreachable
+  block at 0x10100 (object of size 16 at 0x10120): unreachable
+  block at 0x100d0 (object of size 16 at 0x100f0): unreachable
+  block at 0x100a0 (object of size 16 at 0x100c0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2: skipped (nil)
 Phase: sweep
-  block at 0x100d8 (object of size 16 at 0x100f0): unreachable
-freeing block at 0x100d8 (object size: 16)
-  block at 0x100b0 (object of size 16 at 0x100c8): unreachable
-freeing block at 0x100b0 (object size: 16)
-  block at 0x10088 (object of size 16 at 0x100a0): unreachable
-freeing block at 0x10088 (object size: 16)
-allocated block of size 40 at 0x10100, returning object of size 16 at 0x10118(+24)
+  block at 0x10100 (object of size 16 at 0x10120): unreachable
+freeing block at 0x10100 (object size: 16)
+  block at 0x100d0 (object of size 16 at 0x100f0): unreachable
+freeing block at 0x100d0 (object size: 16)
+  block at 0x100a0 (object of size 16 at 0x100c0): unreachable
+freeing block at 0x100a0 (object size: 16)
+allocated collectable block of size 48 at 0x10130, returning object of size 16:8 at 0x10150(+32)
 
 Start GC
 Phase: init.
-  block at 0x10100 (object of size 16 at 0x10118): unreachable
+  block at 0x10130 (object of size 16 at 0x10150): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2:
-      object at 0x10118 (block at 0x10100): 0 pointers, unreachable
+      object at 0x10150 (block at 0x10130): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10100 (object of size 16 at 0x10118): reachable
-allocated block of size 40 at 0x10128, returning object of size 16 at 0x10140(+24)
+  block at 0x10130 (object of size 16 at 0x10150): reachable
+allocated collectable block of size 48 at 0x10160, returning object of size 16:8 at 0x10180(+32)
 
 Start GC
 Phase: init.
-  block at 0x10128 (object of size 16 at 0x10140): unreachable
-  block at 0x10100 (object of size 16 at 0x10118): unreachable
+  block at 0x10160 (object of size 16 at 0x10180): unreachable
+  block at 0x10130 (object of size 16 at 0x10150): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1:
-      object at 0x10140 (block at 0x10128): 0 pointers, unreachable
+      object at 0x10180 (block at 0x10160): 0 pointers, unreachable
     root 2:
-      object at 0x10118 (block at 0x10100): 0 pointers, unreachable
+      object at 0x10150 (block at 0x10130): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10128 (object of size 16 at 0x10140): reachable
-  block at 0x10100 (object of size 16 at 0x10118): reachable
-allocated block of size 40 at 0x10150, returning object of size 16 at 0x10168(+24)
+  block at 0x10160 (object of size 16 at 0x10180): reachable
+  block at 0x10130 (object of size 16 at 0x10150): reachable
+allocated collectable block of size 48 at 0x10190, returning object of size 16:8 at 0x101b0(+32)
 
 Start GC
 Phase: init.
-  block at 0x10150 (object of size 16 at 0x10168): unreachable
-  block at 0x10128 (object of size 16 at 0x10140): unreachable
-  block at 0x10100 (object of size 16 at 0x10118): unreachable
+  block at 0x10190 (object of size 16 at 0x101b0): unreachable
+  block at 0x10160 (object of size 16 at 0x10180): unreachable
+  block at 0x10130 (object of size 16 at 0x10150): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x10168 (block at 0x10150): 2 pointers, unreachable
-        0. 0x10168(+0) -> 0x10118
-        object at 0x10118 (block at 0x10100): 0 pointers, unreachable
-        1. 0x10170(+8) -> 0x10140
-        object at 0x10140 (block at 0x10128): 0 pointers, unreachable
+      object at 0x101b0 (block at 0x10190): 2 pointers, unreachable
+        0. 0x101b0(+0) -> 0x10150
+        object at 0x10150 (block at 0x10130): 0 pointers, unreachable
+        1. 0x101b8(+8) -> 0x10180
+        object at 0x10180 (block at 0x10160): 0 pointers, unreachable
     root 1:
-      object at 0x10140 (block at 0x10128): 0 pointers, reachable
+      object at 0x10180 (block at 0x10160): 0 pointers, reachable
     root 2:
-      object at 0x10118 (block at 0x10100): 0 pointers, reachable
+      object at 0x10150 (block at 0x10130): 0 pointers, reachable
 Phase: sweep
-  block at 0x10150 (object of size 16 at 0x10168): reachable
-  block at 0x10128 (object of size 16 at 0x10140): reachable
-  block at 0x10100 (object of size 16 at 0x10118): reachable
+  block at 0x10190 (object of size 16 at 0x101b0): reachable
+  block at 0x10160 (object of size 16 at 0x10180): reachable
+  block at 0x10130 (object of size 16 at 0x10150): reachable
 
 Start GC
 Phase: init.
-  block at 0x10150 (object of size 16 at 0x10168): unreachable
-  block at 0x10128 (object of size 16 at 0x10140): unreachable
-  block at 0x10100 (object of size 16 at 0x10118): unreachable
+  block at 0x10190 (object of size 16 at 0x101b0): unreachable
+  block at 0x10160 (object of size 16 at 0x10180): unreachable
+  block at 0x10130 (object of size 16 at 0x10150): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x10168 (block at 0x10150): 2 pointers, unreachable
-        0. 0x10168(+0) -> 0x10118
-        object at 0x10118 (block at 0x10100): 0 pointers, unreachable
-        1. 0x10170(+8) -> 0x10140
-        object at 0x10140 (block at 0x10128): 0 pointers, unreachable
+      object at 0x101b0 (block at 0x10190): 2 pointers, unreachable
+        0. 0x101b0(+0) -> 0x10150
+        object at 0x10150 (block at 0x10130): 0 pointers, unreachable
+        1. 0x101b8(+8) -> 0x10180
+        object at 0x10180 (block at 0x10160): 0 pointers, unreachable
     root 1:
-      object at 0x10140 (block at 0x10128): 0 pointers, reachable
+      object at 0x10180 (block at 0x10160): 0 pointers, reachable
     root 2:
-      object at 0x10118 (block at 0x10100): 0 pointers, reachable
+      object at 0x10150 (block at 0x10130): 0 pointers, reachable
 Phase: sweep
-  block at 0x10150 (object of size 16 at 0x10168): reachable
-  block at 0x10128 (object of size 16 at 0x10140): reachable
-  block at 0x10100 (object of size 16 at 0x10118): reachable
+  block at 0x10190 (object of size 16 at 0x101b0): reachable
+  block at 0x10160 (object of size 16 at 0x10180): reachable
+  block at 0x10130 (object of size 16 at 0x10150): reachable
 main(2) = 8
 
 Start GC
 Phase: init.
-  block at 0x10150 (object of size 16 at 0x10168): unreachable
-  block at 0x10128 (object of size 16 at 0x10140): unreachable
-  block at 0x10100 (object of size 16 at 0x10118): unreachable
+  block at 0x10190 (object of size 16 at 0x101b0): unreachable
+  block at 0x10160 (object of size 16 at 0x10180): unreachable
+  block at 0x10130 (object of size 16 at 0x10150): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2: skipped (nil)
 Phase: sweep
-  block at 0x10150 (object of size 16 at 0x10168): unreachable
-freeing block at 0x10150 (object size: 16)
-  block at 0x10128 (object of size 16 at 0x10140): unreachable
-freeing block at 0x10128 (object size: 16)
-  block at 0x10100 (object of size 16 at 0x10118): unreachable
-freeing block at 0x10100 (object size: 16)
-allocated block of size 40 at 0x10178, returning object of size 16 at 0x10190(+24)
+  block at 0x10190 (object of size 16 at 0x101b0): unreachable
+freeing block at 0x10190 (object size: 16)
+  block at 0x10160 (object of size 16 at 0x10180): unreachable
+freeing block at 0x10160 (object size: 16)
+  block at 0x10130 (object of size 16 at 0x10150): unreachable
+freeing block at 0x10130 (object size: 16)
+allocated collectable block of size 48 at 0x101c0, returning object of size 16:8 at 0x101e0(+32)
 
 Start GC
 Phase: init.
-  block at 0x10178 (object of size 16 at 0x10190): unreachable
+  block at 0x101c0 (object of size 16 at 0x101e0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2:
-      object at 0x10190 (block at 0x10178): 0 pointers, unreachable
+      object at 0x101e0 (block at 0x101c0): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10178 (object of size 16 at 0x10190): reachable
-allocated block of size 40 at 0x101a0, returning object of size 16 at 0x101b8(+24)
+  block at 0x101c0 (object of size 16 at 0x101e0): reachable
+allocated collectable block of size 48 at 0x101f0, returning object of size 16:8 at 0x10210(+32)
 
 Start GC
 Phase: init.
-  block at 0x101a0 (object of size 16 at 0x101b8): unreachable
-  block at 0x10178 (object of size 16 at 0x10190): unreachable
+  block at 0x101f0 (object of size 16 at 0x10210): unreachable
+  block at 0x101c0 (object of size 16 at 0x101e0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1:
-      object at 0x101b8 (block at 0x101a0): 0 pointers, unreachable
+      object at 0x10210 (block at 0x101f0): 0 pointers, unreachable
     root 2:
-      object at 0x10190 (block at 0x10178): 0 pointers, unreachable
+      object at 0x101e0 (block at 0x101c0): 0 pointers, unreachable
 Phase: sweep
-  block at 0x101a0 (object of size 16 at 0x101b8): reachable
-  block at 0x10178 (object of size 16 at 0x10190): reachable
-allocated block of size 40 at 0x101c8, returning object of size 16 at 0x101e0(+24)
+  block at 0x101f0 (object of size 16 at 0x10210): reachable
+  block at 0x101c0 (object of size 16 at 0x101e0): reachable
+allocated collectable block of size 48 at 0x10220, returning object of size 16:8 at 0x10240(+32)
 
 Start GC
 Phase: init.
-  block at 0x101c8 (object of size 16 at 0x101e0): unreachable
-  block at 0x101a0 (object of size 16 at 0x101b8): unreachable
-  block at 0x10178 (object of size 16 at 0x10190): unreachable
+  block at 0x10220 (object of size 16 at 0x10240): unreachable
+  block at 0x101f0 (object of size 16 at 0x10210): unreachable
+  block at 0x101c0 (object of size 16 at 0x101e0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x101e0 (block at 0x101c8): 2 pointers, unreachable
-        0. 0x101e0(+0) -> 0x10190
-        object at 0x10190 (block at 0x10178): 0 pointers, unreachable
-        1. 0x101e8(+8) -> 0x101b8
-        object at 0x101b8 (block at 0x101a0): 0 pointers, unreachable
+      object at 0x10240 (block at 0x10220): 2 pointers, unreachable
+        0. 0x10240(+0) -> 0x101e0
+        object at 0x101e0 (block at 0x101c0): 0 pointers, unreachable
+        1. 0x10248(+8) -> 0x10210
+        object at 0x10210 (block at 0x101f0): 0 pointers, unreachable
     root 1:
-      object at 0x101b8 (block at 0x101a0): 0 pointers, reachable
+      object at 0x10210 (block at 0x101f0): 0 pointers, reachable
     root 2:
-      object at 0x10190 (block at 0x10178): 0 pointers, reachable
+      object at 0x101e0 (block at 0x101c0): 0 pointers, reachable
 Phase: sweep
-  block at 0x101c8 (object of size 16 at 0x101e0): reachable
-  block at 0x101a0 (object of size 16 at 0x101b8): reachable
-  block at 0x10178 (object of size 16 at 0x10190): reachable
+  block at 0x10220 (object of size 16 at 0x10240): reachable
+  block at 0x101f0 (object of size 16 at 0x10210): reachable
+  block at 0x101c0 (object of size 16 at 0x101e0): reachable
 
 Start GC
 Phase: init.
-  block at 0x101c8 (object of size 16 at 0x101e0): unreachable
-  block at 0x101a0 (object of size 16 at 0x101b8): unreachable
-  block at 0x10178 (object of size 16 at 0x10190): unreachable
+  block at 0x10220 (object of size 16 at 0x10240): unreachable
+  block at 0x101f0 (object of size 16 at 0x10210): unreachable
+  block at 0x101c0 (object of size 16 at 0x101e0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x101e0 (block at 0x101c8): 2 pointers, unreachable
-        0. 0x101e0(+0) -> 0x10190
-        object at 0x10190 (block at 0x10178): 0 pointers, unreachable
-        1. 0x101e8(+8) -> 0x101b8
-        object at 0x101b8 (block at 0x101a0): 0 pointers, unreachable
+      object at 0x10240 (block at 0x10220): 2 pointers, unreachable
+        0. 0x10240(+0) -> 0x101e0
+        object at 0x101e0 (block at 0x101c0): 0 pointers, unreachable
+        1. 0x10248(+8) -> 0x10210
+        object at 0x10210 (block at 0x101f0): 0 pointers, unreachable
     root 1:
-      object at 0x101b8 (block at 0x101a0): 0 pointers, reachable
+      object at 0x10210 (block at 0x101f0): 0 pointers, reachable
     root 2:
-      object at 0x10190 (block at 0x10178): 0 pointers, reachable
+      object at 0x101e0 (block at 0x101c0): 0 pointers, reachable
 Phase: sweep
-  block at 0x101c8 (object of size 16 at 0x101e0): reachable
-  block at 0x101a0 (object of size 16 at 0x101b8): reachable
-  block at 0x10178 (object of size 16 at 0x10190): reachable
+  block at 0x10220 (object of size 16 at 0x10240): reachable
+  block at 0x101f0 (object of size 16 at 0x10210): reachable
+  block at 0x101c0 (object of size 16 at 0x101e0): reachable
 main(3) = 12
 
 Start GC
 Phase: init.
-  block at 0x101c8 (object of size 16 at 0x101e0): unreachable
-  block at 0x101a0 (object of size 16 at 0x101b8): unreachable
-  block at 0x10178 (object of size 16 at 0x10190): unreachable
+  block at 0x10220 (object of size 16 at 0x10240): unreachable
+  block at 0x101f0 (object of size 16 at 0x10210): unreachable
+  block at 0x101c0 (object of size 16 at 0x101e0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2: skipped (nil)
 Phase: sweep
-  block at 0x101c8 (object of size 16 at 0x101e0): unreachable
-freeing block at 0x101c8 (object size: 16)
-  block at 0x101a0 (object of size 16 at 0x101b8): unreachable
-freeing block at 0x101a0 (object size: 16)
-  block at 0x10178 (object of size 16 at 0x10190): unreachable
-freeing block at 0x10178 (object size: 16)
-allocated block of size 40 at 0x101f0, returning object of size 16 at 0x10208(+24)
+  block at 0x10220 (object of size 16 at 0x10240): unreachable
+freeing block at 0x10220 (object size: 16)
+  block at 0x101f0 (object of size 16 at 0x10210): unreachable
+freeing block at 0x101f0 (object size: 16)
+  block at 0x101c0 (object of size 16 at 0x101e0): unreachable
+freeing block at 0x101c0 (object size: 16)
+allocated collectable block of size 48 at 0x10250, returning object of size 16:8 at 0x10270(+32)
 
 Start GC
 Phase: init.
-  block at 0x101f0 (object of size 16 at 0x10208): unreachable
+  block at 0x10250 (object of size 16 at 0x10270): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2:
-      object at 0x10208 (block at 0x101f0): 0 pointers, unreachable
+      object at 0x10270 (block at 0x10250): 0 pointers, unreachable
 Phase: sweep
-  block at 0x101f0 (object of size 16 at 0x10208): reachable
-allocated block of size 40 at 0x10218, returning object of size 16 at 0x10230(+24)
+  block at 0x10250 (object of size 16 at 0x10270): reachable
+allocated collectable block of size 48 at 0x10280, returning object of size 16:8 at 0x102a0(+32)
 
 Start GC
 Phase: init.
-  block at 0x10218 (object of size 16 at 0x10230): unreachable
-  block at 0x101f0 (object of size 16 at 0x10208): unreachable
+  block at 0x10280 (object of size 16 at 0x102a0): unreachable
+  block at 0x10250 (object of size 16 at 0x10270): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1:
-      object at 0x10230 (block at 0x10218): 0 pointers, unreachable
+      object at 0x102a0 (block at 0x10280): 0 pointers, unreachable
     root 2:
-      object at 0x10208 (block at 0x101f0): 0 pointers, unreachable
+      object at 0x10270 (block at 0x10250): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10218 (object of size 16 at 0x10230): reachable
-  block at 0x101f0 (object of size 16 at 0x10208): reachable
-allocated block of size 40 at 0x10240, returning object of size 16 at 0x10258(+24)
+  block at 0x10280 (object of size 16 at 0x102a0): reachable
+  block at 0x10250 (object of size 16 at 0x10270): reachable
+allocated collectable block of size 48 at 0x102b0, returning object of size 16:8 at 0x102d0(+32)
 
 Start GC
 Phase: init.
-  block at 0x10240 (object of size 16 at 0x10258): unreachable
-  block at 0x10218 (object of size 16 at 0x10230): unreachable
-  block at 0x101f0 (object of size 16 at 0x10208): unreachable
+  block at 0x102b0 (object of size 16 at 0x102d0): unreachable
+  block at 0x10280 (object of size 16 at 0x102a0): unreachable
+  block at 0x10250 (object of size 16 at 0x10270): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x10258 (block at 0x10240): 2 pointers, unreachable
-        0. 0x10258(+0) -> 0x10208
-        object at 0x10208 (block at 0x101f0): 0 pointers, unreachable
-        1. 0x10260(+8) -> 0x10230
-        object at 0x10230 (block at 0x10218): 0 pointers, unreachable
+      object at 0x102d0 (block at 0x102b0): 2 pointers, unreachable
+        0. 0x102d0(+0) -> 0x10270
+        object at 0x10270 (block at 0x10250): 0 pointers, unreachable
+        1. 0x102d8(+8) -> 0x102a0
+        object at 0x102a0 (block at 0x10280): 0 pointers, unreachable
     root 1:
-      object at 0x10230 (block at 0x10218): 0 pointers, reachable
+      object at 0x102a0 (block at 0x10280): 0 pointers, reachable
     root 2:
-      object at 0x10208 (block at 0x101f0): 0 pointers, reachable
+      object at 0x10270 (block at 0x10250): 0 pointers, reachable
 Phase: sweep
-  block at 0x10240 (object of size 16 at 0x10258): reachable
-  block at 0x10218 (object of size 16 at 0x10230): reachable
-  block at 0x101f0 (object of size 16 at 0x10208): reachable
+  block at 0x102b0 (object of size 16 at 0x102d0): reachable
+  block at 0x10280 (object of size 16 at 0x102a0): reachable
+  block at 0x10250 (object of size 16 at 0x10270): reachable
 
 Start GC
 Phase: init.
-  block at 0x10240 (object of size 16 at 0x10258): unreachable
-  block at 0x10218 (object of size 16 at 0x10230): unreachable
-  block at 0x101f0 (object of size 16 at 0x10208): unreachable
+  block at 0x102b0 (object of size 16 at 0x102d0): unreachable
+  block at 0x10280 (object of size 16 at 0x102a0): unreachable
+  block at 0x10250 (object of size 16 at 0x10270): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x10258 (block at 0x10240): 2 pointers, unreachable
-        0. 0x10258(+0) -> 0x10208
-        object at 0x10208 (block at 0x101f0): 0 pointers, unreachable
-        1. 0x10260(+8) -> 0x10230
-        object at 0x10230 (block at 0x10218): 0 pointers, unreachable
+      object at 0x102d0 (block at 0x102b0): 2 pointers, unreachable
+        0. 0x102d0(+0) -> 0x10270
+        object at 0x10270 (block at 0x10250): 0 pointers, unreachable
+        1. 0x102d8(+8) -> 0x102a0
+        object at 0x102a0 (block at 0x10280): 0 pointers, unreachable
     root 1:
-      object at 0x10230 (block at 0x10218): 0 pointers, reachable
+      object at 0x102a0 (block at 0x10280): 0 pointers, reachable
     root 2:
-      object at 0x10208 (block at 0x101f0): 0 pointers, reachable
+      object at 0x10270 (block at 0x10250): 0 pointers, reachable
 Phase: sweep
-  block at 0x10240 (object of size 16 at 0x10258): reachable
-  block at 0x10218 (object of size 16 at 0x10230): reachable
-  block at 0x101f0 (object of size 16 at 0x10208): reachable
+  block at 0x102b0 (object of size 16 at 0x102d0): reachable
+  block at 0x10280 (object of size 16 at 0x102a0): reachable
+  block at 0x10250 (object of size 16 at 0x10270): reachable
 main(4) = 16
 
 Start GC
 Phase: init.
-  block at 0x10240 (object of size 16 at 0x10258): unreachable
-  block at 0x10218 (object of size 16 at 0x10230): unreachable
-  block at 0x101f0 (object of size 16 at 0x10208): unreachable
+  block at 0x102b0 (object of size 16 at 0x102d0): unreachable
+  block at 0x10280 (object of size 16 at 0x102a0): unreachable
+  block at 0x10250 (object of size 16 at 0x10270): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2: skipped (nil)
 Phase: sweep
-  block at 0x10240 (object of size 16 at 0x10258): unreachable
-freeing block at 0x10240 (object size: 16)
-  block at 0x10218 (object of size 16 at 0x10230): unreachable
-freeing block at 0x10218 (object size: 16)
-  block at 0x101f0 (object of size 16 at 0x10208): unreachable
-freeing block at 0x101f0 (object size: 16)
-allocated block of size 40 at 0x10268, returning object of size 16 at 0x10280(+24)
+  block at 0x102b0 (object of size 16 at 0x102d0): unreachable
+freeing block at 0x102b0 (object size: 16)
+  block at 0x10280 (object of size 16 at 0x102a0): unreachable
+freeing block at 0x10280 (object size: 16)
+  block at 0x10250 (object of size 16 at 0x10270): unreachable
+freeing block at 0x10250 (object size: 16)
+allocated collectable block of size 48 at 0x102e0, returning object of size 16:8 at 0x10300(+32)
 
 Start GC
 Phase: init.
-  block at 0x10268 (object of size 16 at 0x10280): unreachable
+  block at 0x102e0 (object of size 16 at 0x10300): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2:
-      object at 0x10280 (block at 0x10268): 0 pointers, unreachable
+      object at 0x10300 (block at 0x102e0): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10268 (object of size 16 at 0x10280): reachable
-allocated block of size 40 at 0x10290, returning object of size 16 at 0x102a8(+24)
+  block at 0x102e0 (object of size 16 at 0x10300): reachable
+allocated collectable block of size 48 at 0x10310, returning object of size 16:8 at 0x10330(+32)
 
 Start GC
 Phase: init.
-  block at 0x10290 (object of size 16 at 0x102a8): unreachable
-  block at 0x10268 (object of size 16 at 0x10280): unreachable
+  block at 0x10310 (object of size 16 at 0x10330): unreachable
+  block at 0x102e0 (object of size 16 at 0x10300): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1:
-      object at 0x102a8 (block at 0x10290): 0 pointers, unreachable
+      object at 0x10330 (block at 0x10310): 0 pointers, unreachable
     root 2:
-      object at 0x10280 (block at 0x10268): 0 pointers, unreachable
+      object at 0x10300 (block at 0x102e0): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10290 (object of size 16 at 0x102a8): reachable
-  block at 0x10268 (object of size 16 at 0x10280): reachable
-allocated block of size 40 at 0x102b8, returning object of size 16 at 0x102d0(+24)
+  block at 0x10310 (object of size 16 at 0x10330): reachable
+  block at 0x102e0 (object of size 16 at 0x10300): reachable
+allocated collectable block of size 48 at 0x10340, returning object of size 16:8 at 0x10360(+32)
 
 Start GC
 Phase: init.
-  block at 0x102b8 (object of size 16 at 0x102d0): unreachable
-  block at 0x10290 (object of size 16 at 0x102a8): unreachable
-  block at 0x10268 (object of size 16 at 0x10280): unreachable
+  block at 0x10340 (object of size 16 at 0x10360): unreachable
+  block at 0x10310 (object of size 16 at 0x10330): unreachable
+  block at 0x102e0 (object of size 16 at 0x10300): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x102d0 (block at 0x102b8): 2 pointers, unreachable
-        0. 0x102d0(+0) -> 0x10280
-        object at 0x10280 (block at 0x10268): 0 pointers, unreachable
-        1. 0x102d8(+8) -> 0x102a8
-        object at 0x102a8 (block at 0x10290): 0 pointers, unreachable
+      object at 0x10360 (block at 0x10340): 2 pointers, unreachable
+        0. 0x10360(+0) -> 0x10300
+        object at 0x10300 (block at 0x102e0): 0 pointers, unreachable
+        1. 0x10368(+8) -> 0x10330
+        object at 0x10330 (block at 0x10310): 0 pointers, unreachable
     root 1:
-      object at 0x102a8 (block at 0x10290): 0 pointers, reachable
+      object at 0x10330 (block at 0x10310): 0 pointers, reachable
     root 2:
-      object at 0x10280 (block at 0x10268): 0 pointers, reachable
+      object at 0x10300 (block at 0x102e0): 0 pointers, reachable
 Phase: sweep
-  block at 0x102b8 (object of size 16 at 0x102d0): reachable
-  block at 0x10290 (object of size 16 at 0x102a8): reachable
-  block at 0x10268 (object of size 16 at 0x10280): reachable
+  block at 0x10340 (object of size 16 at 0x10360): reachable
+  block at 0x10310 (object of size 16 at 0x10330): reachable
+  block at 0x102e0 (object of size 16 at 0x10300): reachable
 
 Start GC
 Phase: init.
-  block at 0x102b8 (object of size 16 at 0x102d0): unreachable
-  block at 0x10290 (object of size 16 at 0x102a8): unreachable
-  block at 0x10268 (object of size 16 at 0x10280): unreachable
+  block at 0x10340 (object of size 16 at 0x10360): unreachable
+  block at 0x10310 (object of size 16 at 0x10330): unreachable
+  block at 0x102e0 (object of size 16 at 0x10300): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x102d0 (block at 0x102b8): 2 pointers, unreachable
-        0. 0x102d0(+0) -> 0x10280
-        object at 0x10280 (block at 0x10268): 0 pointers, unreachable
-        1. 0x102d8(+8) -> 0x102a8
-        object at 0x102a8 (block at 0x10290): 0 pointers, unreachable
+      object at 0x10360 (block at 0x10340): 2 pointers, unreachable
+        0. 0x10360(+0) -> 0x10300
+        object at 0x10300 (block at 0x102e0): 0 pointers, unreachable
+        1. 0x10368(+8) -> 0x10330
+        object at 0x10330 (block at 0x10310): 0 pointers, unreachable
     root 1:
-      object at 0x102a8 (block at 0x10290): 0 pointers, reachable
+      object at 0x10330 (block at 0x10310): 0 pointers, reachable
     root 2:
-      object at 0x10280 (block at 0x10268): 0 pointers, reachable
+      object at 0x10300 (block at 0x102e0): 0 pointers, reachable
 Phase: sweep
-  block at 0x102b8 (object of size 16 at 0x102d0): reachable
-  block at 0x10290 (object of size 16 at 0x102a8): reachable
-  block at 0x10268 (object of size 16 at 0x10280): reachable
+  block at 0x10340 (object of size 16 at 0x10360): reachable
+  block at 0x10310 (object of size 16 at 0x10330): reachable
+  block at 0x102e0 (object of size 16 at 0x10300): reachable
 main(5) = 20
 
 Start GC
 Phase: init.
-  block at 0x102b8 (object of size 16 at 0x102d0): unreachable
-  block at 0x10290 (object of size 16 at 0x102a8): unreachable
-  block at 0x10268 (object of size 16 at 0x10280): unreachable
+  block at 0x10340 (object of size 16 at 0x10360): unreachable
+  block at 0x10310 (object of size 16 at 0x10330): unreachable
+  block at 0x102e0 (object of size 16 at 0x10300): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2: skipped (nil)
 Phase: sweep
-  block at 0x102b8 (object of size 16 at 0x102d0): unreachable
-freeing block at 0x102b8 (object size: 16)
-  block at 0x10290 (object of size 16 at 0x102a8): unreachable
-freeing block at 0x10290 (object size: 16)
-  block at 0x10268 (object of size 16 at 0x10280): unreachable
-freeing block at 0x10268 (object size: 16)
-allocated block of size 40 at 0x102e0, returning object of size 16 at 0x102f8(+24)
+  block at 0x10340 (object of size 16 at 0x10360): unreachable
+freeing block at 0x10340 (object size: 16)
+  block at 0x10310 (object of size 16 at 0x10330): unreachable
+freeing block at 0x10310 (object size: 16)
+  block at 0x102e0 (object of size 16 at 0x10300): unreachable
+freeing block at 0x102e0 (object size: 16)
+allocated collectable block of size 48 at 0x10370, returning object of size 16:8 at 0x10390(+32)
 
 Start GC
 Phase: init.
-  block at 0x102e0 (object of size 16 at 0x102f8): unreachable
+  block at 0x10370 (object of size 16 at 0x10390): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2:
-      object at 0x102f8 (block at 0x102e0): 0 pointers, unreachable
+      object at 0x10390 (block at 0x10370): 0 pointers, unreachable
 Phase: sweep
-  block at 0x102e0 (object of size 16 at 0x102f8): reachable
-allocated block of size 40 at 0x10308, returning object of size 16 at 0x10320(+24)
+  block at 0x10370 (object of size 16 at 0x10390): reachable
+allocated collectable block of size 48 at 0x103a0, returning object of size 16:8 at 0x103c0(+32)
 
 Start GC
 Phase: init.
-  block at 0x10308 (object of size 16 at 0x10320): unreachable
-  block at 0x102e0 (object of size 16 at 0x102f8): unreachable
+  block at 0x103a0 (object of size 16 at 0x103c0): unreachable
+  block at 0x10370 (object of size 16 at 0x10390): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1:
-      object at 0x10320 (block at 0x10308): 0 pointers, unreachable
+      object at 0x103c0 (block at 0x103a0): 0 pointers, unreachable
     root 2:
-      object at 0x102f8 (block at 0x102e0): 0 pointers, unreachable
+      object at 0x10390 (block at 0x10370): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10308 (object of size 16 at 0x10320): reachable
-  block at 0x102e0 (object of size 16 at 0x102f8): reachable
-allocated block of size 40 at 0x10330, returning object of size 16 at 0x10348(+24)
+  block at 0x103a0 (object of size 16 at 0x103c0): reachable
+  block at 0x10370 (object of size 16 at 0x10390): reachable
+allocated collectable block of size 48 at 0x103d0, returning object of size 16:8 at 0x103f0(+32)
 
 Start GC
 Phase: init.
-  block at 0x10330 (object of size 16 at 0x10348): unreachable
-  block at 0x10308 (object of size 16 at 0x10320): unreachable
-  block at 0x102e0 (object of size 16 at 0x102f8): unreachable
+  block at 0x103d0 (object of size 16 at 0x103f0): unreachable
+  block at 0x103a0 (object of size 16 at 0x103c0): unreachable
+  block at 0x10370 (object of size 16 at 0x10390): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x10348 (block at 0x10330): 2 pointers, unreachable
-        0. 0x10348(+0) -> 0x102f8
-        object at 0x102f8 (block at 0x102e0): 0 pointers, unreachable
-        1. 0x10350(+8) -> 0x10320
-        object at 0x10320 (block at 0x10308): 0 pointers, unreachable
+      object at 0x103f0 (block at 0x103d0): 2 pointers, unreachable
+        0. 0x103f0(+0) -> 0x10390
+        object at 0x10390 (block at 0x10370): 0 pointers, unreachable
+        1. 0x103f8(+8) -> 0x103c0
+        object at 0x103c0 (block at 0x103a0): 0 pointers, unreachable
     root 1:
-      object at 0x10320 (block at 0x10308): 0 pointers, reachable
+      object at 0x103c0 (block at 0x103a0): 0 pointers, reachable
     root 2:
-      object at 0x102f8 (block at 0x102e0): 0 pointers, reachable
+      object at 0x10390 (block at 0x10370): 0 pointers, reachable
 Phase: sweep
-  block at 0x10330 (object of size 16 at 0x10348): reachable
-  block at 0x10308 (object of size 16 at 0x10320): reachable
-  block at 0x102e0 (object of size 16 at 0x102f8): reachable
+  block at 0x103d0 (object of size 16 at 0x103f0): reachable
+  block at 0x103a0 (object of size 16 at 0x103c0): reachable
+  block at 0x10370 (object of size 16 at 0x10390): reachable
 
 Start GC
 Phase: init.
-  block at 0x10330 (object of size 16 at 0x10348): unreachable
-  block at 0x10308 (object of size 16 at 0x10320): unreachable
-  block at 0x102e0 (object of size 16 at 0x102f8): unreachable
+  block at 0x103d0 (object of size 16 at 0x103f0): unreachable
+  block at 0x103a0 (object of size 16 at 0x103c0): unreachable
+  block at 0x10370 (object of size 16 at 0x10390): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x10348 (block at 0x10330): 2 pointers, unreachable
-        0. 0x10348(+0) -> 0x102f8
-        object at 0x102f8 (block at 0x102e0): 0 pointers, unreachable
-        1. 0x10350(+8) -> 0x10320
-        object at 0x10320 (block at 0x10308): 0 pointers, unreachable
+      object at 0x103f0 (block at 0x103d0): 2 pointers, unreachable
+        0. 0x103f0(+0) -> 0x10390
+        object at 0x10390 (block at 0x10370): 0 pointers, unreachable
+        1. 0x103f8(+8) -> 0x103c0
+        object at 0x103c0 (block at 0x103a0): 0 pointers, unreachable
     root 1:
-      object at 0x10320 (block at 0x10308): 0 pointers, reachable
+      object at 0x103c0 (block at 0x103a0): 0 pointers, reachable
     root 2:
-      object at 0x102f8 (block at 0x102e0): 0 pointers, reachable
+      object at 0x10390 (block at 0x10370): 0 pointers, reachable
 Phase: sweep
-  block at 0x10330 (object of size 16 at 0x10348): reachable
-  block at 0x10308 (object of size 16 at 0x10320): reachable
-  block at 0x102e0 (object of size 16 at 0x102f8): reachable
+  block at 0x103d0 (object of size 16 at 0x103f0): reachable
+  block at 0x103a0 (object of size 16 at 0x103c0): reachable
+  block at 0x10370 (object of size 16 at 0x10390): reachable
 main(6) = 24
 
 Start GC
 Phase: init.
-  block at 0x10330 (object of size 16 at 0x10348): unreachable
-  block at 0x10308 (object of size 16 at 0x10320): unreachable
-  block at 0x102e0 (object of size 16 at 0x102f8): unreachable
+  block at 0x103d0 (object of size 16 at 0x103f0): unreachable
+  block at 0x103a0 (object of size 16 at 0x103c0): unreachable
+  block at 0x10370 (object of size 16 at 0x10390): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2: skipped (nil)
 Phase: sweep
-  block at 0x10330 (object of size 16 at 0x10348): unreachable
-freeing block at 0x10330 (object size: 16)
-  block at 0x10308 (object of size 16 at 0x10320): unreachable
-freeing block at 0x10308 (object size: 16)
-  block at 0x102e0 (object of size 16 at 0x102f8): unreachable
-freeing block at 0x102e0 (object size: 16)
-allocated block of size 40 at 0x10358, returning object of size 16 at 0x10370(+24)
+  block at 0x103d0 (object of size 16 at 0x103f0): unreachable
+freeing block at 0x103d0 (object size: 16)
+  block at 0x103a0 (object of size 16 at 0x103c0): unreachable
+freeing block at 0x103a0 (object size: 16)
+  block at 0x10370 (object of size 16 at 0x10390): unreachable
+freeing block at 0x10370 (object size: 16)
+allocated collectable block of size 48 at 0x10400, returning object of size 16:8 at 0x10420(+32)
 
 Start GC
 Phase: init.
-  block at 0x10358 (object of size 16 at 0x10370): unreachable
+  block at 0x10400 (object of size 16 at 0x10420): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2:
-      object at 0x10370 (block at 0x10358): 0 pointers, unreachable
+      object at 0x10420 (block at 0x10400): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10358 (object of size 16 at 0x10370): reachable
-allocated block of size 40 at 0x10380, returning object of size 16 at 0x10398(+24)
+  block at 0x10400 (object of size 16 at 0x10420): reachable
+allocated collectable block of size 48 at 0x10430, returning object of size 16:8 at 0x10450(+32)
 
 Start GC
 Phase: init.
-  block at 0x10380 (object of size 16 at 0x10398): unreachable
-  block at 0x10358 (object of size 16 at 0x10370): unreachable
+  block at 0x10430 (object of size 16 at 0x10450): unreachable
+  block at 0x10400 (object of size 16 at 0x10420): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1:
-      object at 0x10398 (block at 0x10380): 0 pointers, unreachable
+      object at 0x10450 (block at 0x10430): 0 pointers, unreachable
     root 2:
-      object at 0x10370 (block at 0x10358): 0 pointers, unreachable
+      object at 0x10420 (block at 0x10400): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10380 (object of size 16 at 0x10398): reachable
-  block at 0x10358 (object of size 16 at 0x10370): reachable
-allocated block of size 40 at 0x103a8, returning object of size 16 at 0x103c0(+24)
+  block at 0x10430 (object of size 16 at 0x10450): reachable
+  block at 0x10400 (object of size 16 at 0x10420): reachable
+allocated collectable block of size 48 at 0x10460, returning object of size 16:8 at 0x10480(+32)
 
 Start GC
 Phase: init.
-  block at 0x103a8 (object of size 16 at 0x103c0): unreachable
-  block at 0x10380 (object of size 16 at 0x10398): unreachable
-  block at 0x10358 (object of size 16 at 0x10370): unreachable
+  block at 0x10460 (object of size 16 at 0x10480): unreachable
+  block at 0x10430 (object of size 16 at 0x10450): unreachable
+  block at 0x10400 (object of size 16 at 0x10420): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x103c0 (block at 0x103a8): 2 pointers, unreachable
-        0. 0x103c0(+0) -> 0x10370
-        object at 0x10370 (block at 0x10358): 0 pointers, unreachable
-        1. 0x103c8(+8) -> 0x10398
-        object at 0x10398 (block at 0x10380): 0 pointers, unreachable
+      object at 0x10480 (block at 0x10460): 2 pointers, unreachable
+        0. 0x10480(+0) -> 0x10420
+        object at 0x10420 (block at 0x10400): 0 pointers, unreachable
+        1. 0x10488(+8) -> 0x10450
+        object at 0x10450 (block at 0x10430): 0 pointers, unreachable
     root 1:
-      object at 0x10398 (block at 0x10380): 0 pointers, reachable
+      object at 0x10450 (block at 0x10430): 0 pointers, reachable
     root 2:
-      object at 0x10370 (block at 0x10358): 0 pointers, reachable
+      object at 0x10420 (block at 0x10400): 0 pointers, reachable
 Phase: sweep
-  block at 0x103a8 (object of size 16 at 0x103c0): reachable
-  block at 0x10380 (object of size 16 at 0x10398): reachable
-  block at 0x10358 (object of size 16 at 0x10370): reachable
+  block at 0x10460 (object of size 16 at 0x10480): reachable
+  block at 0x10430 (object of size 16 at 0x10450): reachable
+  block at 0x10400 (object of size 16 at 0x10420): reachable
 
 Start GC
 Phase: init.
-  block at 0x103a8 (object of size 16 at 0x103c0): unreachable
-  block at 0x10380 (object of size 16 at 0x10398): unreachable
-  block at 0x10358 (object of size 16 at 0x10370): unreachable
+  block at 0x10460 (object of size 16 at 0x10480): unreachable
+  block at 0x10430 (object of size 16 at 0x10450): unreachable
+  block at 0x10400 (object of size 16 at 0x10420): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x103c0 (block at 0x103a8): 2 pointers, unreachable
-        0. 0x103c0(+0) -> 0x10370
-        object at 0x10370 (block at 0x10358): 0 pointers, unreachable
-        1. 0x103c8(+8) -> 0x10398
-        object at 0x10398 (block at 0x10380): 0 pointers, unreachable
+      object at 0x10480 (block at 0x10460): 2 pointers, unreachable
+        0. 0x10480(+0) -> 0x10420
+        object at 0x10420 (block at 0x10400): 0 pointers, unreachable
+        1. 0x10488(+8) -> 0x10450
+        object at 0x10450 (block at 0x10430): 0 pointers, unreachable
     root 1:
-      object at 0x10398 (block at 0x10380): 0 pointers, reachable
+      object at 0x10450 (block at 0x10430): 0 pointers, reachable
     root 2:
-      object at 0x10370 (block at 0x10358): 0 pointers, reachable
+      object at 0x10420 (block at 0x10400): 0 pointers, reachable
 Phase: sweep
-  block at 0x103a8 (object of size 16 at 0x103c0): reachable
-  block at 0x10380 (object of size 16 at 0x10398): reachable
-  block at 0x10358 (object of size 16 at 0x10370): reachable
+  block at 0x10460 (object of size 16 at 0x10480): reachable
+  block at 0x10430 (object of size 16 at 0x10450): reachable
+  block at 0x10400 (object of size 16 at 0x10420): reachable
 main(7) = 28
 
 Start GC
 Phase: init.
-  block at 0x103a8 (object of size 16 at 0x103c0): unreachable
-  block at 0x10380 (object of size 16 at 0x10398): unreachable
-  block at 0x10358 (object of size 16 at 0x10370): unreachable
+  block at 0x10460 (object of size 16 at 0x10480): unreachable
+  block at 0x10430 (object of size 16 at 0x10450): unreachable
+  block at 0x10400 (object of size 16 at 0x10420): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2: skipped (nil)
 Phase: sweep
-  block at 0x103a8 (object of size 16 at 0x103c0): unreachable
-freeing block at 0x103a8 (object size: 16)
-  block at 0x10380 (object of size 16 at 0x10398): unreachable
-freeing block at 0x10380 (object size: 16)
-  block at 0x10358 (object of size 16 at 0x10370): unreachable
-freeing block at 0x10358 (object size: 16)
-allocated block of size 40 at 0x103d0, returning object of size 16 at 0x103e8(+24)
+  block at 0x10460 (object of size 16 at 0x10480): unreachable
+freeing block at 0x10460 (object size: 16)
+  block at 0x10430 (object of size 16 at 0x10450): unreachable
+freeing block at 0x10430 (object size: 16)
+  block at 0x10400 (object of size 16 at 0x10420): unreachable
+freeing block at 0x10400 (object size: 16)
+allocated collectable block of size 48 at 0x10490, returning object of size 16:8 at 0x104b0(+32)
 
 Start GC
 Phase: init.
-  block at 0x103d0 (object of size 16 at 0x103e8): unreachable
+  block at 0x10490 (object of size 16 at 0x104b0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2:
-      object at 0x103e8 (block at 0x103d0): 0 pointers, unreachable
+      object at 0x104b0 (block at 0x10490): 0 pointers, unreachable
 Phase: sweep
-  block at 0x103d0 (object of size 16 at 0x103e8): reachable
-allocated block of size 40 at 0x103f8, returning object of size 16 at 0x10410(+24)
+  block at 0x10490 (object of size 16 at 0x104b0): reachable
+allocated collectable block of size 48 at 0x104c0, returning object of size 16:8 at 0x104e0(+32)
 
 Start GC
 Phase: init.
-  block at 0x103f8 (object of size 16 at 0x10410): unreachable
-  block at 0x103d0 (object of size 16 at 0x103e8): unreachable
+  block at 0x104c0 (object of size 16 at 0x104e0): unreachable
+  block at 0x10490 (object of size 16 at 0x104b0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1:
-      object at 0x10410 (block at 0x103f8): 0 pointers, unreachable
+      object at 0x104e0 (block at 0x104c0): 0 pointers, unreachable
     root 2:
-      object at 0x103e8 (block at 0x103d0): 0 pointers, unreachable
+      object at 0x104b0 (block at 0x10490): 0 pointers, unreachable
 Phase: sweep
-  block at 0x103f8 (object of size 16 at 0x10410): reachable
-  block at 0x103d0 (object of size 16 at 0x103e8): reachable
-allocated block of size 40 at 0x10420, returning object of size 16 at 0x10438(+24)
+  block at 0x104c0 (object of size 16 at 0x104e0): reachable
+  block at 0x10490 (object of size 16 at 0x104b0): reachable
+allocated collectable block of size 48 at 0x104f0, returning object of size 16:8 at 0x10510(+32)
 
 Start GC
 Phase: init.
-  block at 0x10420 (object of size 16 at 0x10438): unreachable
-  block at 0x103f8 (object of size 16 at 0x10410): unreachable
-  block at 0x103d0 (object of size 16 at 0x103e8): unreachable
+  block at 0x104f0 (object of size 16 at 0x10510): unreachable
+  block at 0x104c0 (object of size 16 at 0x104e0): unreachable
+  block at 0x10490 (object of size 16 at 0x104b0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x10438 (block at 0x10420): 2 pointers, unreachable
-        0. 0x10438(+0) -> 0x103e8
-        object at 0x103e8 (block at 0x103d0): 0 pointers, unreachable
-        1. 0x10440(+8) -> 0x10410
-        object at 0x10410 (block at 0x103f8): 0 pointers, unreachable
+      object at 0x10510 (block at 0x104f0): 2 pointers, unreachable
+        0. 0x10510(+0) -> 0x104b0
+        object at 0x104b0 (block at 0x10490): 0 pointers, unreachable
+        1. 0x10518(+8) -> 0x104e0
+        object at 0x104e0 (block at 0x104c0): 0 pointers, unreachable
     root 1:
-      object at 0x10410 (block at 0x103f8): 0 pointers, reachable
+      object at 0x104e0 (block at 0x104c0): 0 pointers, reachable
     root 2:
-      object at 0x103e8 (block at 0x103d0): 0 pointers, reachable
+      object at 0x104b0 (block at 0x10490): 0 pointers, reachable
 Phase: sweep
-  block at 0x10420 (object of size 16 at 0x10438): reachable
-  block at 0x103f8 (object of size 16 at 0x10410): reachable
-  block at 0x103d0 (object of size 16 at 0x103e8): reachable
+  block at 0x104f0 (object of size 16 at 0x10510): reachable
+  block at 0x104c0 (object of size 16 at 0x104e0): reachable
+  block at 0x10490 (object of size 16 at 0x104b0): reachable
 
 Start GC
 Phase: init.
-  block at 0x10420 (object of size 16 at 0x10438): unreachable
-  block at 0x103f8 (object of size 16 at 0x10410): unreachable
-  block at 0x103d0 (object of size 16 at 0x103e8): unreachable
+  block at 0x104f0 (object of size 16 at 0x10510): unreachable
+  block at 0x104c0 (object of size 16 at 0x104e0): unreachable
+  block at 0x10490 (object of size 16 at 0x104b0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x10438 (block at 0x10420): 2 pointers, unreachable
-        0. 0x10438(+0) -> 0x103e8
-        object at 0x103e8 (block at 0x103d0): 0 pointers, unreachable
-        1. 0x10440(+8) -> 0x10410
-        object at 0x10410 (block at 0x103f8): 0 pointers, unreachable
+      object at 0x10510 (block at 0x104f0): 2 pointers, unreachable
+        0. 0x10510(+0) -> 0x104b0
+        object at 0x104b0 (block at 0x10490): 0 pointers, unreachable
+        1. 0x10518(+8) -> 0x104e0
+        object at 0x104e0 (block at 0x104c0): 0 pointers, unreachable
     root 1:
-      object at 0x10410 (block at 0x103f8): 0 pointers, reachable
+      object at 0x104e0 (block at 0x104c0): 0 pointers, reachable
     root 2:
-      object at 0x103e8 (block at 0x103d0): 0 pointers, reachable
+      object at 0x104b0 (block at 0x10490): 0 pointers, reachable
 Phase: sweep
-  block at 0x10420 (object of size 16 at 0x10438): reachable
-  block at 0x103f8 (object of size 16 at 0x10410): reachable
-  block at 0x103d0 (object of size 16 at 0x103e8): reachable
+  block at 0x104f0 (object of size 16 at 0x10510): reachable
+  block at 0x104c0 (object of size 16 at 0x104e0): reachable
+  block at 0x10490 (object of size 16 at 0x104b0): reachable
 main(8) = 32
 
 Start GC
 Phase: init.
-  block at 0x10420 (object of size 16 at 0x10438): unreachable
-  block at 0x103f8 (object of size 16 at 0x10410): unreachable
-  block at 0x103d0 (object of size 16 at 0x103e8): unreachable
+  block at 0x104f0 (object of size 16 at 0x10510): unreachable
+  block at 0x104c0 (object of size 16 at 0x104e0): unreachable
+  block at 0x10490 (object of size 16 at 0x104b0): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2: skipped (nil)
 Phase: sweep
-  block at 0x10420 (object of size 16 at 0x10438): unreachable
-freeing block at 0x10420 (object size: 16)
-  block at 0x103f8 (object of size 16 at 0x10410): unreachable
-freeing block at 0x103f8 (object size: 16)
-  block at 0x103d0 (object of size 16 at 0x103e8): unreachable
-freeing block at 0x103d0 (object size: 16)
-allocated block of size 40 at 0x10448, returning object of size 16 at 0x10460(+24)
+  block at 0x104f0 (object of size 16 at 0x10510): unreachable
+freeing block at 0x104f0 (object size: 16)
+  block at 0x104c0 (object of size 16 at 0x104e0): unreachable
+freeing block at 0x104c0 (object size: 16)
+  block at 0x10490 (object of size 16 at 0x104b0): unreachable
+freeing block at 0x10490 (object size: 16)
+allocated collectable block of size 48 at 0x10520, returning object of size 16:8 at 0x10540(+32)
 
 Start GC
 Phase: init.
-  block at 0x10448 (object of size 16 at 0x10460): unreachable
+  block at 0x10520 (object of size 16 at 0x10540): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
     root 2:
-      object at 0x10460 (block at 0x10448): 0 pointers, unreachable
+      object at 0x10540 (block at 0x10520): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10448 (object of size 16 at 0x10460): reachable
-allocated block of size 40 at 0x10470, returning object of size 16 at 0x10488(+24)
+  block at 0x10520 (object of size 16 at 0x10540): reachable
+allocated collectable block of size 48 at 0x10550, returning object of size 16:8 at 0x10570(+32)
 
 Start GC
 Phase: init.
-  block at 0x10470 (object of size 16 at 0x10488): unreachable
-  block at 0x10448 (object of size 16 at 0x10460): unreachable
+  block at 0x10550 (object of size 16 at 0x10570): unreachable
+  block at 0x10520 (object of size 16 at 0x10540): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0: skipped (nil)
     root 1:
-      object at 0x10488 (block at 0x10470): 0 pointers, unreachable
+      object at 0x10570 (block at 0x10550): 0 pointers, unreachable
     root 2:
-      object at 0x10460 (block at 0x10448): 0 pointers, unreachable
+      object at 0x10540 (block at 0x10520): 0 pointers, unreachable
 Phase: sweep
-  block at 0x10470 (object of size 16 at 0x10488): reachable
-  block at 0x10448 (object of size 16 at 0x10460): reachable
-allocated block of size 40 at 0x10498, returning object of size 16 at 0x104b0(+24)
+  block at 0x10550 (object of size 16 at 0x10570): reachable
+  block at 0x10520 (object of size 16 at 0x10540): reachable
+allocated collectable block of size 48 at 0x10580, returning object of size 16:8 at 0x105a0(+32)
 
 Start GC
 Phase: init.
-  block at 0x10498 (object of size 16 at 0x104b0): unreachable
-  block at 0x10470 (object of size 16 at 0x10488): unreachable
-  block at 0x10448 (object of size 16 at 0x10460): unreachable
+  block at 0x10580 (object of size 16 at 0x105a0): unreachable
+  block at 0x10550 (object of size 16 at 0x10570): unreachable
+  block at 0x10520 (object of size 16 at 0x10540): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x104b0 (block at 0x10498): 2 pointers, unreachable
-        0. 0x104b0(+0) -> 0x10460
-        object at 0x10460 (block at 0x10448): 0 pointers, unreachable
-        1. 0x104b8(+8) -> 0x10488
-        object at 0x10488 (block at 0x10470): 0 pointers, unreachable
+      object at 0x105a0 (block at 0x10580): 2 pointers, unreachable
+        0. 0x105a0(+0) -> 0x10540
+        object at 0x10540 (block at 0x10520): 0 pointers, unreachable
+        1. 0x105a8(+8) -> 0x10570
+        object at 0x10570 (block at 0x10550): 0 pointers, unreachable
     root 1:
-      object at 0x10488 (block at 0x10470): 0 pointers, reachable
+      object at 0x10570 (block at 0x10550): 0 pointers, reachable
     root 2:
-      object at 0x10460 (block at 0x10448): 0 pointers, reachable
+      object at 0x10540 (block at 0x10520): 0 pointers, reachable
 Phase: sweep
-  block at 0x10498 (object of size 16 at 0x104b0): reachable
-  block at 0x10470 (object of size 16 at 0x10488): reachable
-  block at 0x10448 (object of size 16 at 0x10460): reachable
+  block at 0x10580 (object of size 16 at 0x105a0): reachable
+  block at 0x10550 (object of size 16 at 0x10570): reachable
+  block at 0x10520 (object of size 16 at 0x10540): reachable
 
 Start GC
 Phase: init.
-  block at 0x10498 (object of size 16 at 0x104b0): unreachable
-  block at 0x10470 (object of size 16 at 0x10488): unreachable
-  block at 0x10448 (object of size 16 at 0x10460): unreachable
+  block at 0x10580 (object of size 16 at 0x105a0): unreachable
+  block at 0x10550 (object of size 16 at 0x10570): unreachable
+  block at 0x10520 (object of size 16 at 0x10540): unreachable
 Phase: mark
   frame 0 (3 roots):
     root 0:
-      object at 0x104b0 (block at 0x10498): 2 pointers, unreachable
-        0. 0x104b0(+0) -> 0x10460
-        object at 0x10460 (block at 0x10448): 0 pointers, unreachable
-        1. 0x104b8(+8) -> 0x10488
-        object at 0x10488 (block at 0x10470): 0 pointers, unreachable
+      object at 0x105a0 (block at 0x10580): 2 pointers, unreachable
+        0. 0x105a0(+0) -> 0x10540
+        object at 0x10540 (block at 0x10520): 0 pointers, unreachable
+        1. 0x105a8(+8) -> 0x10570
+        object at 0x10570 (block at 0x10550): 0 pointers, unreachable
     root 1:
-      object at 0x10488 (block at 0x10470): 0 pointers, reachable
+      object at 0x10570 (block at 0x10550): 0 pointers, reachable
     root 2:
-      object at 0x10460 (block at 0x10448): 0 pointers, reachable
+      object at 0x10540 (block at 0x10520): 0 pointers, reachable
 Phase: sweep
-  block at 0x10498 (object of size 16 at 0x104b0): reachable
-  block at 0x10470 (object of size 16 at 0x10488): reachable
-  block at 0x10448 (object of size 16 at 0x10460): reachable
+  block at 0x10580 (object of size 16 at 0x105a0): reachable
+  block at 0x10550 (object of size 16 at 0x10570): reachable
+  block at 0x10520 (object of size 16 at 0x10540): reachable
 main(9) = 36
 
 GC Teardown
 
 Start GC
 Phase: init.
-  block at 0x10498 (object of size 16 at 0x104b0): unreachable
-  block at 0x10470 (object of size 16 at 0x10488): unreachable
-  block at 0x10448 (object of size 16 at 0x10460): unreachable
+  block at 0x10580 (object of size 16 at 0x105a0): unreachable
+  block at 0x10550 (object of size 16 at 0x10570): unreachable
+  block at 0x10520 (object of size 16 at 0x10540): unreachable
 Phase: mark
 Phase: sweep
-  block at 0x10498 (object of size 16 at 0x104b0): unreachable
-freeing block at 0x10498 (object size: 16)
-  block at 0x10470 (object of size 16 at 0x10488): unreachable
-freeing block at 0x10470 (object size: 16)
-  block at 0x10448 (object of size 16 at 0x10460): unreachable
-freeing block at 0x10448 (object size: 16)
+  block at 0x10580 (object of size 16 at 0x105a0): unreachable
+freeing block at 0x10580 (object size: 16)
+  block at 0x10550 (object of size 16 at 0x10570): unreachable
+freeing block at 0x10550 (object size: 16)
+  block at 0x10520 (object of size 16 at 0x10540): unreachable
+freeing block at 0x10520 (object size: 16)
 
 Statistics:
 
@@ -950,17 +950,17 @@ Statistics:
   Allocated .......  30 blocks
     Total
       objects       480 bytes
-      blocks       1200 bytes
+      blocks       1440 bytes
     Max
       objects        48 bytes
-      blocks        120 bytes
+      blocks        144 bytes
     End
       objects         0 bytes
       blocks          0 bytes
   Freed ...........  30 blocks
     Total
       objects       480 bytes
-      blocks       1200 bytes
+      blocks       1440 bytes
 
 
 

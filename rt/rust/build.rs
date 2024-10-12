@@ -6,7 +6,6 @@ fn main() {
     std::fs::remove_dir_all("./bindings").ok();
     std::fs::create_dir_all("./bindings").unwrap();
 
-    // Invoke cbindgen
     cbindgen::Builder::new()
         .with_crate(crate_dir)
         .with_language(cbindgen::Language::C)

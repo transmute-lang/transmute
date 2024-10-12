@@ -14,135 +14,135 @@ Phase: mark
     root 0: skipped (nil)
     root 1: skipped (nil)
 Phase: sweep
-allocated block of size 104 at 0x10010, returning object of size 80 at 0x10028(+24)
+allocated collectable block of size 112 at 0x10010, returning object of size 80:8 at 0x10030(+32)
 main(0) = 0
 
 Start GC
 Phase: init.
-  block at 0x10010 (object of size 80 at 0x10028): unreachable
+  block at 0x10010 (object of size 80 at 0x10030): unreachable
 Phase: mark
   frame 0 (2 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
 Phase: sweep
-  block at 0x10010 (object of size 80 at 0x10028): unreachable
+  block at 0x10010 (object of size 80 at 0x10030): unreachable
 freeing block at 0x10010 (object size: 80)
-allocated block of size 104 at 0x10078, returning object of size 80 at 0x10090(+24)
+allocated collectable block of size 112 at 0x10080, returning object of size 80:8 at 0x100a0(+32)
 main(1) = 2
 
 Start GC
 Phase: init.
-  block at 0x10078 (object of size 80 at 0x10090): unreachable
+  block at 0x10080 (object of size 80 at 0x100a0): unreachable
 Phase: mark
   frame 0 (2 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
 Phase: sweep
-  block at 0x10078 (object of size 80 at 0x10090): unreachable
-freeing block at 0x10078 (object size: 80)
-allocated block of size 104 at 0x100e0, returning object of size 80 at 0x100f8(+24)
+  block at 0x10080 (object of size 80 at 0x100a0): unreachable
+freeing block at 0x10080 (object size: 80)
+allocated collectable block of size 112 at 0x100f0, returning object of size 80:8 at 0x10110(+32)
 main(2) = 4
 
 Start GC
 Phase: init.
-  block at 0x100e0 (object of size 80 at 0x100f8): unreachable
+  block at 0x100f0 (object of size 80 at 0x10110): unreachable
 Phase: mark
   frame 0 (2 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
 Phase: sweep
-  block at 0x100e0 (object of size 80 at 0x100f8): unreachable
-freeing block at 0x100e0 (object size: 80)
-allocated block of size 104 at 0x10148, returning object of size 80 at 0x10160(+24)
+  block at 0x100f0 (object of size 80 at 0x10110): unreachable
+freeing block at 0x100f0 (object size: 80)
+allocated collectable block of size 112 at 0x10160, returning object of size 80:8 at 0x10180(+32)
 main(3) = 6
 
 Start GC
 Phase: init.
-  block at 0x10148 (object of size 80 at 0x10160): unreachable
+  block at 0x10160 (object of size 80 at 0x10180): unreachable
 Phase: mark
   frame 0 (2 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
 Phase: sweep
-  block at 0x10148 (object of size 80 at 0x10160): unreachable
-freeing block at 0x10148 (object size: 80)
-allocated block of size 104 at 0x101b0, returning object of size 80 at 0x101c8(+24)
+  block at 0x10160 (object of size 80 at 0x10180): unreachable
+freeing block at 0x10160 (object size: 80)
+allocated collectable block of size 112 at 0x101d0, returning object of size 80:8 at 0x101f0(+32)
 main(4) = 8
 
 Start GC
 Phase: init.
-  block at 0x101b0 (object of size 80 at 0x101c8): unreachable
+  block at 0x101d0 (object of size 80 at 0x101f0): unreachable
 Phase: mark
   frame 0 (2 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
 Phase: sweep
-  block at 0x101b0 (object of size 80 at 0x101c8): unreachable
-freeing block at 0x101b0 (object size: 80)
-allocated block of size 104 at 0x10218, returning object of size 80 at 0x10230(+24)
+  block at 0x101d0 (object of size 80 at 0x101f0): unreachable
+freeing block at 0x101d0 (object size: 80)
+allocated collectable block of size 112 at 0x10240, returning object of size 80:8 at 0x10260(+32)
 main(5) = 10
 
 Start GC
 Phase: init.
-  block at 0x10218 (object of size 80 at 0x10230): unreachable
+  block at 0x10240 (object of size 80 at 0x10260): unreachable
 Phase: mark
   frame 0 (2 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
 Phase: sweep
-  block at 0x10218 (object of size 80 at 0x10230): unreachable
-freeing block at 0x10218 (object size: 80)
-allocated block of size 104 at 0x10280, returning object of size 80 at 0x10298(+24)
+  block at 0x10240 (object of size 80 at 0x10260): unreachable
+freeing block at 0x10240 (object size: 80)
+allocated collectable block of size 112 at 0x102b0, returning object of size 80:8 at 0x102d0(+32)
 main(6) = 12
 
 Start GC
 Phase: init.
-  block at 0x10280 (object of size 80 at 0x10298): unreachable
+  block at 0x102b0 (object of size 80 at 0x102d0): unreachable
 Phase: mark
   frame 0 (2 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
 Phase: sweep
-  block at 0x10280 (object of size 80 at 0x10298): unreachable
-freeing block at 0x10280 (object size: 80)
-allocated block of size 104 at 0x102e8, returning object of size 80 at 0x10300(+24)
+  block at 0x102b0 (object of size 80 at 0x102d0): unreachable
+freeing block at 0x102b0 (object size: 80)
+allocated collectable block of size 112 at 0x10320, returning object of size 80:8 at 0x10340(+32)
 main(7) = 14
 
 Start GC
 Phase: init.
-  block at 0x102e8 (object of size 80 at 0x10300): unreachable
+  block at 0x10320 (object of size 80 at 0x10340): unreachable
 Phase: mark
   frame 0 (2 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
 Phase: sweep
-  block at 0x102e8 (object of size 80 at 0x10300): unreachable
-freeing block at 0x102e8 (object size: 80)
-allocated block of size 104 at 0x10350, returning object of size 80 at 0x10368(+24)
+  block at 0x10320 (object of size 80 at 0x10340): unreachable
+freeing block at 0x10320 (object size: 80)
+allocated collectable block of size 112 at 0x10390, returning object of size 80:8 at 0x103b0(+32)
 main(8) = 16
 
 Start GC
 Phase: init.
-  block at 0x10350 (object of size 80 at 0x10368): unreachable
+  block at 0x10390 (object of size 80 at 0x103b0): unreachable
 Phase: mark
   frame 0 (2 roots):
     root 0: skipped (nil)
     root 1: skipped (nil)
 Phase: sweep
-  block at 0x10350 (object of size 80 at 0x10368): unreachable
-freeing block at 0x10350 (object size: 80)
-allocated block of size 104 at 0x103b8, returning object of size 80 at 0x103d0(+24)
+  block at 0x10390 (object of size 80 at 0x103b0): unreachable
+freeing block at 0x10390 (object size: 80)
+allocated collectable block of size 112 at 0x10400, returning object of size 80:8 at 0x10420(+32)
 main(9) = 18
 
 GC Teardown
 
 Start GC
 Phase: init.
-  block at 0x103b8 (object of size 80 at 0x103d0): unreachable
+  block at 0x10400 (object of size 80 at 0x10420): unreachable
 Phase: mark
 Phase: sweep
-  block at 0x103b8 (object of size 80 at 0x103d0): unreachable
-freeing block at 0x103b8 (object size: 80)
+  block at 0x10400 (object of size 80 at 0x10420): unreachable
+freeing block at 0x10400 (object size: 80)
 
 Statistics:
 
@@ -150,17 +150,17 @@ Statistics:
   Allocated .......  10 blocks
     Total
       objects       800 bytes
-      blocks       1040 bytes
+      blocks       1120 bytes
     Max
       objects        80 bytes
-      blocks        104 bytes
+      blocks        112 bytes
     End
       objects         0 bytes
       blocks          0 bytes
   Freed ...........  10 blocks
     Total
       objects       800 bytes
-      blocks       1040 bytes
+      blocks       1120 bytes
 
 
 

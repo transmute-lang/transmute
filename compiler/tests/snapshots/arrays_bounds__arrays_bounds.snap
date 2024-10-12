@@ -13,17 +13,17 @@ Phase: mark
   frame 0 (1 roots):
     root 0: skipped (nil)
 Phase: sweep
-allocated block of size 32 at 0x10010, returning object of size 8 at 0x10028(+24)
+allocated collectable block of size 40 at 0x10010, returning object of size 8:8 at 0x10030(+32)
 
 Start GC
 Phase: init.
-  block at 0x10010 (object of size 8 at 0x10028): unreachable
+  block at 0x10010 (object of size 8 at 0x10030): unreachable
 Phase: mark
   frame 0 (1 roots):
     root 0:
-      object at 0x10028 (block at 0x10010): 1 pointers, unreachable
+      object at 0x10030 (block at 0x10010): 1 pointers, unreachable
 Phase: sweep
-  block at 0x10010 (object of size 8 at 0x10028): reachable
+  block at 0x10010 (object of size 8 at 0x10030): reachable
 
 
 stderr:
