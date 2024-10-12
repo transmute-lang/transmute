@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
 
-declare ptr @gc_malloc(i64)
+declare ptr @gc_malloc(i64, i64)
 
 declare void @gc_run()
 

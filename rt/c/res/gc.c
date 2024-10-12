@@ -180,7 +180,7 @@ Gc gc = {
 };
 
 void gc_run();
-void* gc_malloc(int64_t data_size);
+void* gc_malloc(size_t data_size, size_t align);
 void gc_free(GcBlock *block);
 void gc_mark(int depth, void *object, const GcPointeeLayout *layout);
 
@@ -481,12 +481,16 @@ void gc_mark(int depth, void *object, const GcPointeeLayout *layout) {
     }
 }
 
-void* gc_malloc(int64_t data_size) {
+void* gc_malloc(size_t data_size, size_t align) {
     gc_run();
 
     size_t alloc_size = sizeof(GcBlock) + data_size;
 
 #ifdef GC_TEST
+    // fixme this works for as long as the header is a multiple of align
+    // fixme we need to implement the same feature for malloc, when the header is not a multiple of align
+    gc.pool_free = (uint8_t *)(((uintptr_t)gc.pool_free + (align - 1)) & -align);
+
     if (gc.pool_free + alloc_size >= gc.pool + gc.pool_size + BOUNDARY_SIZE) {
         fprintf(stderr, "\nERROR: Cannot allocate %li bytes: missing %li bytes\n",
             alloc_size,

@@ -8,7 +8,7 @@ source_filename = "main"
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
 
-declare ptr @gc_malloc(i64)
+declare ptr @gc_malloc(i64, i64)
 
 declare void @gc_run()
 

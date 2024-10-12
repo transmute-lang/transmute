@@ -12,7 +12,7 @@ source_filename = "main"
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
 
-declare ptr @gc_malloc(i64)
+declare ptr @gc_malloc(i64, i64)
 
 declare void @gc_run()
 
@@ -33,7 +33,7 @@ entry:
   store ptr null, ptr %"s#local#sym24#", align 8
   call void @llvm.gcroot(ptr %"s#local#sym24#", ptr @layout_s6Struct)
   %"add#" = add i64 %"n#param#sym23#", 1
-  %"heap#struct#Struct#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"Struct#id0", ptr null, i32 1) to i64))
+  %"heap#struct#Struct#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"Struct#id0", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"Struct#id0" }, ptr null, i64 0, i32 1) to i64))
   %"heap#struct#Struct#id0#.field1#idx0#sym21" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
   store i64 0, ptr %"heap#struct#Struct#id0#.field1#idx0#sym21", align 4
   %"heap#struct#Struct#id0#.field2#idx1#sym22" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 1

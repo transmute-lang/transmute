@@ -200,7 +200,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 module.add_function("llvm.gcroot", llvm_gcroot_fn_type, None)
             },
             malloc: {
-                let malloc_fn_type = ptr_type.fn_type(&[size_type.into()], false);
+                let malloc_fn_type = ptr_type.fn_type(&[size_type.into(), size_type.into()], false);
                 module.add_function("gc_malloc", malloc_fn_type, None)
             },
             #[cfg(any(test, feature = "gc-aggressive"))]
@@ -209,12 +209,15 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 module.add_function("gc_run", gc_fn_type, None)
             },
             tmc_check_array_index: {
-                let fn_type = void_type.fn_type(&[
-                    size_type.into(),
-                    size_type.into(),
-                    size_type.into(),
-                    size_type.into(),
-                ], false);
+                let fn_type = void_type.fn_type(
+                    &[
+                        size_type.into(),
+                        size_type.into(),
+                        size_type.into(),
+                        size_type.into(),
+                    ],
+                    false,
+                );
                 module.add_function("tmc_check_array_index", fn_type, None)
             },
             struct_types: Default::default(),
@@ -1182,7 +1185,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .builder
             .build_call(
                 self.malloc,
-                &[struct_type.size_of().unwrap().as_basic_value_enum().into()],
+                &[
+                    struct_type.size_of().unwrap().as_basic_value_enum().into(),
+                    struct_type.get_alignment().into(),
+                ],
                 &name,
             )
             .unwrap()
@@ -1249,7 +1255,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .builder
             .build_call(
                 self.malloc,
-                &[array_type.size_of().unwrap().as_basic_value_enum().into()],
+                &[
+                    array_type.size_of().unwrap().as_basic_value_enum().into(),
+                    array_type.into_array_type().get_alignment().into(),
+                ],
                 &name,
             )
             .unwrap()
@@ -1311,9 +1320,15 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                         self.tmc_check_array_index,
                         &[
                             index.into(),
-                            self.size_type.const_int(elements_count as u64, false).into(),
-                            self.size_type.const_int(mir.expressions[index_expr_id].span.line as u64, false).into(),
-                            self.size_type.const_int(mir.expressions[index_expr_id].span.column as u64, false).into(),
+                            self.size_type
+                                .const_int(elements_count as u64, false)
+                                .into(),
+                            self.size_type
+                                .const_int(mir.expressions[index_expr_id].span.line as u64, false)
+                                .into(),
+                            self.size_type
+                                .const_int(mir.expressions[index_expr_id].span.column as u64, false)
+                                .into(),
                         ],
                         "",
                     )

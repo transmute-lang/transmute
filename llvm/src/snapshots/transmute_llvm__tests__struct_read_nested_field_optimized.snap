@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
 
-declare ptr @gc_malloc(i64)
+declare ptr @gc_malloc(i64, i64)
 
 declare void @gc_run()
 
@@ -36,10 +36,10 @@ entry:
   %"outer#local#sym24#" = alloca ptr, align 8
   store ptr null, ptr %"outer#local#sym24#", align 8
   call void @llvm.gcroot(ptr nonnull %"outer#local#sym24#", ptr nonnull @layout_s5Outer)
-  %"heap#struct#Inner#id0#" = call ptr @gc_malloc(i64 8)
+  %"heap#struct#Inner#id0#" = call ptr @gc_malloc(i64 8, i64 8)
   store ptr %"heap#struct#Inner#id0#", ptr %"gcroot#heap#struct#Inner#id0#", align 8
   store i64 1, ptr %"heap#struct#Inner#id0#", align 4
-  %"heap#struct#Outer#id1#" = call ptr @gc_malloc(i64 8)
+  %"heap#struct#Outer#id1#" = call ptr @gc_malloc(i64 8, i64 8)
   store ptr %"heap#struct#Inner#id0#", ptr %"heap#struct#Outer#id1#", align 8
   store ptr %"heap#struct#Outer#id1#", ptr %"outer#local#sym24#", align 8
   call void @gc_run()
