@@ -13,11 +13,11 @@ clang main.c \
   -lpthread -lm -ldl \
   -o main || exit 1
 
+export GC_ENABLE=1
 export GC_LOG_LEVEL=3
 export GC_PRINT_STATS=0
 export GC_TEST_DUMP=0
 export GC_TEST_DUMP_COLOR=0
 export GC_TEST_FINAL_RUN=1
-export GC_ENABLE=1
 export GC_TEST_POOL_SIZE=2048
 ./main

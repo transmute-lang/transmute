@@ -215,7 +215,7 @@ static inline void gc_log(int level, int depth, const char *fmt, ...) {
 }
 
 void gc_block_print(GcBlock *block) {
-    gc_log(2, 0, "  block at %p (object of size %li at %p): %s\n",
+    gc_log(2, 0, "  block %p (object of size %li at %p): %s\n",
         block,
         block->data_size,
         &block->data,
@@ -348,7 +348,7 @@ LOG(1, 0, "Initialize GC with log level: %i\n", gc.log_level);
     );
     assert(errno == 0);
 
-    LOG(3, 0, "memset %#02x at %p for %i bytes\n", FREE, gc.pool, gc.pool_size);
+    LOG(4, 0, "memset %#02x at %p for %i bytes\n", FREE, gc.pool, gc.pool_size);
     memset(gc.pool, BOUNDARY, BOUNDARY_SIZE);
     memset(gc.pool + BOUNDARY_SIZE, FREE, gc.pool_size);
     memset(gc.pool + gc.pool_size + BOUNDARY_SIZE, BOUNDARY, BOUNDARY_SIZE);
@@ -366,7 +366,7 @@ void gc_teardown() {
     if (gc.test_final_run) {
         // no blocks are reachable anymore
         llvm_gc_root_chain = NULL;
-        gc_run(); // we don't run the gc in non test mode as the OS will free all remaining memory for us anyway
+        gc_run();
     }
 
     gc_pool_dump();
@@ -385,60 +385,68 @@ void gc_run() {
         return;
     }
 
-    gc.execution_count++;
+    int freed = -1;
+    while (freed != gc.free_count) {
+        freed = gc.free_count;
 
-    LOG(2, 0, "\nStart GC\n");
+        gc.execution_count++;
 
-    LOG(2, 0, "Phase: init.\n");
-    GcBlock *block = gc.blocks_chain;
-    while (block) {
-        if (block->state == Reachable) {
-            block->state = Unreachable;
-        }
-        LOG_BLOCK(block);
-        block = block->next;
-    }
+        LOG(2, 0, "\nStart GC %i\n", gc.execution_count);
 
-    LOG(2, 0, "Phase: mark\n");
-    LlvmStackFrame *frame = llvm_gc_root_chain;
-    for (int frame_idx = 0; frame; frame_idx++) {
-        // all roots have a meta associated
-        assert(frame->map->num_roots == frame->map->num_meta);
-
-        LOG(2, 0, "  frame %i (%i roots)", frame_idx, frame->map->num_roots);
-        LOG(3, 0, " at %p", frame);
-        LOG(2, 0, ":\n");
-
-        for (int32_t root_idx = 0; root_idx < frame->map->num_roots; root_idx++) {
-            if (frame->roots[root_idx]) {
-                LOG(2, 0, "    root %i:\n", root_idx);
-                gc_mark(0, frame->roots[root_idx], frame->map->meta[root_idx]);
-            } else {
-                LOG(2, 0, "    root %i: skipped (nil)\n", root_idx);
+        LOG(2, 0, "Phase: init.\n");
+        GcBlock *block = gc.blocks_chain;
+        while (block) {
+            if (block->state == Reachable) {
+                block->state = Unreachable;
             }
-        }
-
-        frame = frame->next;
-    }
-
-    LOG(2, 0, "Phase: sweep\n");
-    GcBlock *prev = NULL;
-    block = gc.blocks_chain;
-    while (block) {
-        LOG_BLOCK(block);
-        if (block->state == Unreachable || block->state == ToCollect) {
-            if (block == gc.blocks_chain) {
-                gc.blocks_chain = block->next;
-            } else {
-                assert(prev != NULL);
-                prev->next = block->next;
-            }
-            GcBlock *next = block->next;
-            gc_free(block);
-            block = next;
-        } else {
-            prev = block;
+            LOG_BLOCK(block);
             block = block->next;
+        }
+
+        LOG(2, 0, "Phase: mark\n");
+        LlvmStackFrame *frame = llvm_gc_root_chain;
+        for (int frame_idx = 0; frame; frame_idx++) {
+            // all roots have a meta associated
+            assert(frame->map->num_roots == frame->map->num_meta);
+
+            LOG(2, 0, "  frame %i (%i roots)", frame_idx, frame->map->num_roots);
+            LOG(3, 0, " at %p", frame);
+            LOG(2, 0, ":\n");
+
+            for (int32_t root_idx = 0; root_idx < frame->map->num_roots; root_idx++) {
+                if (frame->roots[root_idx]) {
+                    LOG(2, 0, "    root %i:\n", root_idx);
+                    gc_mark(0, frame->roots[root_idx], frame->map->meta[root_idx]);
+                } else {
+                    LOG(2, 0, "    root %i: skipped (nil)\n", root_idx);
+                }
+            }
+
+            frame = frame->next;
+        }
+
+        LOG(2, 0, "Phase: sweep\n");
+        GcBlock *prev = NULL;
+        block = gc.blocks_chain;
+        while (block) {
+            LOG_BLOCK(block);
+            if (block->state == Unreachable || block->state == ToCollect) {
+                GcBlock *next = block->next;
+
+                gc_free(block);
+
+                if (block == gc.blocks_chain) {
+                    gc.blocks_chain = next;
+                } else {
+                    assert(prev != NULL);
+                    prev->next = next;
+                }
+
+                block = next;
+            } else {
+                prev = block;
+                block = block->next;
+            }
         }
     }
 }
@@ -448,23 +456,23 @@ void gc_mark(int depth, void *object, const GcPointeeLayout *layout) {
 
 #ifdef GC_LOGS
     if (layout->tag == Opaque) {
-        LOG(2, depth, "      object at %p (block at %p): opaque layout, %s\n",
-            object,
+        LOG(2, depth, "      block %p (object %p): opaque layout, %s\n",
             block,
+            object,
             state_to_char(block->state)
         );
     } else if (gc.log_level >= 3) {
-        LOG(3, depth, "      object at %p (block at %p): %li pointers (layout %p), %s\n",
-            object,
+        LOG(3, depth, "      block %p (object %p): %li pointers (layout %p), %s\n",
             block,
+            object,
             layout->count,
             layout,
             state_to_char(block->state)
         );
     } else {
-        LOG(2, depth, "      object at %p (block at %p): %li pointers, %s\n",
-            object,
+        LOG(2, depth, "      block %p (object %p): %li pointers, %s\n",
             block,
+            object,
             layout->count,
             state_to_char(block->state)
         );
@@ -536,7 +544,7 @@ void* gc_malloc(size_t data_size, size_t align, bool collectable) {
 
     GcBlock *block = (void *)gc.pool_free;
     gc.pool_free += alloc_size;
-    LOG(3, 0, "memset %#02x at %p for %li bytes\n", ALLOCATED, block, alloc_size);
+    LOG(4, 0, "memset %#02x at %p for %li bytes\n", ALLOCATED, block, alloc_size);
     memset(block, ALLOCATED, alloc_size);
 #else
     GcBlock *block = malloc(alloc_size);
@@ -580,10 +588,11 @@ void* gc_malloc(size_t data_size, size_t align, bool collectable) {
 
 void gc_free(GcBlock *block) {
     if (block->collect_fn) {
-        LOG(2, 0, "call collect fn %p for block %p to free\n", block->collect_fn, block);
+        LOG(3, 0, "    call collect function %p before freeing block %p\n", block->collect_fn, block);
         block->collect_fn(block->data);
+        LOG(3, 0, "    end call collect function for block %p\n", block);
     }
-    LOG(1, 0, "freeing block at %p (object size: %li)\n", block, block->data_size);
+    LOG(1, 0, "    freeing block %p\n", block);
 
     gc.free_count++;
     gc.total_free_sz += sizeof(GcBlock) + block->data_size;
@@ -596,7 +605,7 @@ void gc_free(GcBlock *block) {
         block->next = gc.freed_blocks_chain;
         gc.freed_blocks_chain = block;
     } else {
-        LOG(3, 0, "memset %#02x at %p for %li bytes\n", FREED, block, sizeof(GcBlock) + block->data_size);
+        LOG(4, 0, "memset %#02x at %p for %li bytes\n", FREED, block, sizeof(GcBlock) + block->data_size);
         memset((void *)block, FREED, sizeof(GcBlock) + block->data_size);
     }
 #else
@@ -604,21 +613,46 @@ void gc_free(GcBlock *block) {
 #endif // GC_TEST
 }
 
-void gc_collect(void *object) {
-    LOG(2, 0, "force collect object at %p\n", object);
-    GcBlock *block = OBJECT_TO_BLOCK(object);
-    block->state = ToCollect;
-    LOG_BLOCK(block);
-}
+//void gc_collect(void *object) {
+//    GcBlock *block = OBJECT_TO_BLOCK(object);
+//
+//    GcBlock *current_block = gc.blocks_chain;
+//    while (current_block) {
+//        if (current_block == block) {
+//            LOG(3, 0, "    force collect block %p (object %p)\n", block, object);
+//            current_block->state = ToCollect;
+//            // LOG_BLOCK(current_block);
+//            return;
+//        }
+//        current_block = current_block->next;
+//    }
+//    LOG(3, 0, "    no valid block found for object %p\n", object);
+//}
 
 void gc_set_collectable(void *object, bool collectable, void (*collect_fn)(void *)) {
-    if (collectable) {
-        LOG(2, 0, "marked %p as collectable\n", object);
-    } else {
-        LOG(2, 0, "marked %p as not collectable\n", object);
-    }
     GcBlock *block = OBJECT_TO_BLOCK(object);
-    block->state = Unreachable;
-    block->collect_fn = collect_fn;
+
+    GcBlock *current_block = gc.blocks_chain;
+    while (current_block) {
+        if (current_block == block) {
+            break;
+        }
+        current_block = current_block->next;
+    }
+    if (!current_block) {
+        fprintf(stderr, "PANIC: Block %p not found\n", block);
+        exit(1);
+    }
+
+    if (collectable) {
+        LOG(3, 0, "mark %p as collectable (object %p)\n", block, object);
+        block->state = Unreachable;
+        if (collect_fn) {
+            block->collect_fn = collect_fn;
+        }
+    } else {
+        LOG(3, 0, "mark %p as not collectable (object %p)\n", block, object);
+        block->state = NotCollectable;
+    }
     LOG_BLOCK(block);
 }
