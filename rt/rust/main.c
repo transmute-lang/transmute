@@ -2,10 +2,6 @@
 #include <stdio.h>
 #include "bindings/rustrt.h"
 
-void println(const char *str) {
-    printf("%s\n", str);
-}
-
 int main() {
 //    gc_init();
 
@@ -43,8 +39,8 @@ int main() {
     }
     printf("'; len=%lu; cap=%lu\n", str->len, str->cap);
 
-    println("free_str_as_box(str)");
-    free_str_as_box(str);
+    println("free_str_as_box_if_managed(str)");
+    free_str_as_box_if_managed(str);
 
     println("free_struct_with_str_as_box(s3)");
     free_struct_with_str_as_box(s3);
