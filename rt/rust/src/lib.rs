@@ -52,11 +52,25 @@ impl Drop for Str {
 }
 
 #[no_mangle]
-pub extern "C" fn free_str_as_box_if_managed(b: Box<Str>) {
-    let (header, b) = GcHeader::from_box(b);
-    if !header.state.is_managed() {
-        Box::leak(b);
-    }
+pub extern "C" fn is_managed_str_as_box(b: Box<Str>) -> bool {
+    let header = GcHeader::from_box(&b);
+    Box::leak(b);
+    header.state.is_managed()
+}
+
+#[no_mangle]
+pub extern "C" fn is_managed_str_as_ref(b: &mut Str) -> bool {
+    GcHeader::from_ref(&b).state.is_managed()
+}
+
+#[no_mangle]
+pub extern "C" fn is_managed_str_as_ptr(b: *mut Str) -> bool {
+    GcHeader::from_ptr(b).state.is_managed()
+}
+
+#[no_mangle]
+pub extern "C" fn is_managed_str_as_void_ptr(b: *mut ()) -> bool {
+    GcHeader::from_ptr(b).state.is_managed()
 }
 
 #[repr(C)]
@@ -90,8 +104,8 @@ pub extern "C" fn free_struct_with_str_as_box(_: Box<MyStructWithStr>) {
 }
 
 #[no_mangle]
-pub extern "C" fn get_str_from_struct_with_str_as_ref(s: &MyStructWithStr) -> *const Str {
-    &s.s as *const Str
+pub extern "C" fn get_str_from_struct_with_str_as_ref(s: &mut MyStructWithStr) -> *mut Str {
+    &mut s.s
 }
 
 // #[repr(C)] avoid it to have opaque type on C side
@@ -122,7 +136,13 @@ pub extern "C" fn new_struct_with_string_as_box() -> Box<MyStructWithString> {
 }
 
 #[no_mangle]
-pub extern "C" fn new_struct_with_string_as_ptr() -> *mut () {
+pub extern "C" fn new_struct_with_string_as_void_ptr() -> *mut () {
+    let b = Box::new(MyStructWithString::new());
+    Box::into_raw(b).cast()
+}
+
+#[no_mangle]
+pub extern "C" fn new_struct_with_string_as_ptr() -> *mut MyStructWithString {
     let b = Box::new(MyStructWithString::new());
     Box::into_raw(b).cast()
 }
@@ -144,7 +164,7 @@ pub extern "C" fn print_struct_with_string_as_box(b: Box<MyStructWithString>) {
 }
 
 #[no_mangle]
-pub extern "C" fn print_struct_with_string_as_ref(_s: &MyStructWithString) {
+pub extern "C" fn print_struct_with_string_as_ref(_s: &mut MyStructWithString) {
     //println!("{}", s.i);
 }
 
@@ -171,14 +191,16 @@ impl GcHeader {
         Layout::from_size_align(layout.size() + Self::rounded_size(), 16).expect("Layout is valid")
     }
 
-    fn from_ptr<'a, T>(ptr: *const T) -> &'a mut GcHeader {
-        Box::leak(unsafe { Box::from_raw(ptr.byte_sub(Self::rounded_size()) as *mut GcHeader) })
+    fn from_box<'a, T>(b: &Box<T>) -> &'a mut GcHeader {
+        Self::from_ptr(&**b)
     }
 
-    fn from_box<'a, T>(b: Box<T>) -> (&'a mut GcHeader, Box<T>) {
-        let ptr = Box::into_raw(b);
-        let header = Self::from_ptr(ptr);
-        (header, unsafe { Box::from_raw(ptr) })
+    fn from_ref<T>(r: &T) -> &mut GcHeader {
+        Self::from_ptr(&r)
+    }
+
+    fn from_ptr<'a, T>(ptr: *const T) -> &'a mut GcHeader {
+        Box::leak(unsafe { Box::from_raw(ptr.byte_sub(Self::rounded_size()) as *mut GcHeader) })
     }
 }
 

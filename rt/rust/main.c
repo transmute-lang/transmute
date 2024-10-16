@@ -31,7 +31,7 @@ int main() {
     MyStructWithStr *s3 = new_struct_with_str_as_box();
 
     println("get_str_from_struct_with_str_as_ref(s3)");
-    const Str *str = get_str_from_struct_with_str_as_ref(s3);
+    Str *str = get_str_from_struct_with_str_as_ref(s3);
 
     printf("str = '");
     for (int i = 0; i < str->len; i++) {
@@ -39,8 +39,17 @@ int main() {
     }
     printf("'; len=%lu; cap=%lu\n", str->len, str->cap);
 
-    println("free_str_as_box_if_managed(str)");
-    free_str_as_box_if_managed(str);
+    println("is_managed_str_as_box(str)");
+    is_managed_str_as_box(str);
+
+    println("is_managed_str_as_ref(str)");
+    is_managed_str_as_ref(str);
+
+    println("is_managed_str_as_ptr(str)");
+    is_managed_str_as_ptr(str);
+
+    println("is_managed_str_as_void_ptr(str)");
+    is_managed_str_as_void_ptr(str);
 
     println("free_struct_with_str_as_box(s3)");
     free_struct_with_str_as_box(s3);
