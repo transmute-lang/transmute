@@ -13,6 +13,6 @@ fn main() {
         .unwrap()
         .write_to_file("bindings/rustrt.h");
 
-    println!("cargo::rustc-link-lib=println");
+    println!("cargo::rustc-link-lib=print");
     println!("cargo::rustc-link-search=rt/rust");
 }
