@@ -3,12 +3,15 @@
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::ffi::CStr;
-use std::ptr;
+use std::ops::DerefMut;
+use std::sync::RwLock;
+use std::{mem, ptr};
 
 extern "C" {
     fn println(c_char: *const std::ffi::c_char);
     fn print_alloc(size: usize, align: usize);
     fn print_dealloc(size: usize, align: usize);
+    fn print_ptr(ptr: *const ());
 }
 
 fn rp<S: AsRef<CStr>>(s: S) {
@@ -186,11 +189,12 @@ pub extern "C" fn print_struct_with_string_as_ptr(s: *mut ()) {
 #[repr(align(16))]
 struct GcHeader {
     state: State,
-    next: *const GcHeader,
+    layout: Layout,
+    next: GcHeaderPtr,
 }
 
 impl GcHeader {
-    fn rounded_size() -> usize {
+    const fn rounded_size() -> usize {
         ((size_of::<Self>() - 1) | 15) + 1
     }
 
@@ -202,15 +206,18 @@ impl GcHeader {
         .expect("Layout is valid")
     }
 
+    /// Build a `GcHeader` from a reference to its boxed corresponding payload.
     fn from_box<T>(b: &Box<T>) -> &mut GcHeader {
         let b = Box::as_ref(b);
         Self::from_ref(b)
     }
 
+    /// Build a `GcHeader` from a reference to its corresponding payload.
     fn from_ref<T>(r: &T) -> &mut GcHeader {
         Self::from_ptr(*&r)
     }
 
+    /// Build a `GcHeader` from a pointer to its corresponding payload.
     fn from_ptr<'a, T>(ptr: *const T) -> &'a mut GcHeader {
         let head_ptr = unsafe { ptr.byte_sub(Self::rounded_size()) } as *mut GcHeader;
         let head_ref = unsafe { &mut *head_ptr };
@@ -224,7 +231,10 @@ impl GcHeader {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum State {
-    Unmanaged,
+    /// The block is under rust de-allocation rules
+    Alloc,
+    /// The block was dealloc-ed by rust
+    Dealloc,
     Unreachable(fn(*const GcHeader)),
     Reachable(fn(*const GcHeader)),
 }
@@ -232,7 +242,7 @@ enum State {
 impl State {
     fn is_managed(&self) -> bool {
         match self {
-            State::Unmanaged => false,
+            State::Alloc => false,
             _ => true,
         }
     }
@@ -241,12 +251,110 @@ impl State {
 #[global_allocator]
 static ALLOCATOR: GcAlloc = GcAlloc::new();
 
-pub struct GcAlloc {}
+#[derive(Debug, Clone)]
+struct GcHeaderPtr(*const GcHeader);
+
+impl GcHeaderPtr {
+    const fn new(ptr: *const GcHeader) -> Self {
+        Self(ptr)
+    }
+
+    const fn null() -> Self {
+        Self::new(ptr::null())
+    }
+
+    fn unwrap(&self) -> *const GcHeader {
+        self.0
+    }
+
+    fn as_gc_header_mut(&self) -> Option<&mut GcHeader> {
+        if self.is_null() {
+            None
+        } else {
+            Some(unsafe { &mut *self.0.cast_mut() })
+        }
+    }
+
+    fn is_null(&self) -> bool {
+        self.0.is_null()
+    }
+}
+
+impl From<&GcHeader> for GcHeaderPtr {
+    fn from(value: &GcHeader) -> Self {
+        GcHeaderPtr(value as *const GcHeader)
+    }
+}
+
+unsafe impl Sync for GcHeaderPtr {}
+unsafe impl Send for GcHeaderPtr {}
+
+pub struct GcAlloc {
+    blocks: RwLock<GcHeaderPtr>,
+}
 
 impl GcAlloc {
     pub const fn new() -> Self {
-        Self {}
+        Self {
+            blocks: RwLock::new(GcHeaderPtr::null()),
+        }
     }
+
+    fn print_blocks(&self) {
+        let blocks_guard = self.blocks.read().unwrap();
+
+        let mut gc_header_ptr = blocks_guard.0;
+        while !gc_header_ptr.is_null() {
+            unsafe { print_ptr(gc_header_ptr.cast()) }
+            gc_header_ptr = unsafe { &*gc_header_ptr }.next.0;
+        }
+    }
+
+    fn collect(&self) {
+        #[cfg(not(test))]
+        unsafe {
+            println(c"collect".as_ptr())
+        };
+        let mut blocks_guard = self.blocks.write().unwrap();
+
+        let mut prev_gc_header_ptr = GcHeaderPtr::null();
+        let mut gc_header_ptr = blocks_guard.deref_mut().clone();
+
+        while !gc_header_ptr.is_null() {
+            let gc_header = unsafe { &mut *gc_header_ptr.0.cast_mut() };
+
+            if gc_header.state == State::Dealloc {
+                #[cfg(not(test))]
+                unsafe {
+                    println(c"free".as_ptr())
+                };
+
+                if prev_gc_header_ptr.is_null() {
+                    let _ = mem::replace(blocks_guard.deref_mut(), gc_header.next.clone());
+                } else {
+                    let mut prev_gc_header = prev_gc_header_ptr.as_gc_header_mut().unwrap();
+                    prev_gc_header.next = gc_header.next.clone()
+                }
+
+                prev_gc_header_ptr = GcHeaderPtr::new(gc_header_ptr.0.cast_mut());
+                gc_header_ptr = gc_header.next.clone();
+
+                unsafe { System.dealloc(gc_header as *mut _ as *mut u8, gc_header.layout.clone()) };
+            } else {
+                prev_gc_header_ptr = GcHeaderPtr::new(gc_header_ptr.0.cast_mut());
+                gc_header_ptr = gc_header.next.clone();
+            }
+        }
+        #[cfg(not(test))]
+        unsafe {
+            println(c"end collect".as_ptr())
+        };
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn gc_list_blocks() {
+    ALLOCATOR.print_blocks()
 }
 
 unsafe impl GlobalAlloc for GcAlloc {
@@ -259,19 +367,45 @@ unsafe impl GlobalAlloc for GcAlloc {
         let ptr = header_ptr.byte_add(GcHeader::rounded_size());
 
         let header = GcHeader::from_ptr(ptr);
-        header.state = State::Unmanaged;
-        header.next = ptr::null();
+        header.state = State::Alloc;
+        {
+            let mut guard = self.blocks.write().unwrap();
+            let block_headers_ptr = guard.deref_mut();
+
+            // println(c"before".as_ptr());
+            // print_ptr(blocks_head_ptr.0 as *const _);
+
+            header.next = block_headers_ptr.clone();
+            header.layout = layout.clone();
+            let new_head_ptr = GcHeaderPtr::from(&*header);
+
+            let _ = mem::replace(block_headers_ptr, new_head_ptr);
+
+            // println(c"after".as_ptr());
+            // print_ptr(blocks_head_ptr.0 as *const _);
+            // print_ptr(header.next.0 as *const _);
+        }
 
         ptr
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        let layout = GcHeader::layout_for(layout);
+    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
+        let header = GcHeader::from_ptr(ptr);
+
         #[cfg(not(test))]
-        print_dealloc(layout.size(), layout.align());
-        System.dealloc(ptr.byte_sub(GcHeader::rounded_size()), layout)
+        print_dealloc(header.layout.size(), header.layout.align());
+
+        header.state = State::Dealloc;
+
+        self.collect();
+        //System.dealloc(ptr.byte_sub(GcHeader::rounded_size()), layout)
     }
 }
+
+// #[no_mangle]
+// pub extern "C" fn gc_alloc(size: usize, align: usize) -> *mut () {
+//     unsafe { alloc::alloc(Layout::from_size_align(size, align).unwrap()) }.cast()
+// }
 
 #[cfg(test)]
 mod tests {
@@ -284,7 +418,7 @@ mod tests {
 
     #[test]
     fn gc_header_size() {
-        assert_eq!(GcHeader::rounded_size(), 32);
+        assert_eq!(GcHeader::rounded_size(), 48);
     }
 
     #[test]
@@ -388,16 +522,41 @@ mod tests {
         let string_ptr = string_ref as *const String;
 
         let gc_header = GcHeader::from_box(&string_box);
-        assert_eq!(gc_header.state, State::Unmanaged);
-        assert_eq!(gc_header.next, ptr::null());
+        assert_eq!(gc_header.state, State::Alloc);
 
         let gc_header = GcHeader::from_ref(string_ref);
-        assert_eq!(gc_header.state, State::Unmanaged);
-        assert_eq!(gc_header.next, ptr::null());
+        assert_eq!(gc_header.state, State::Alloc);
 
         let gc_header = GcHeader::from_ptr(string_ptr);
-        assert_eq!(gc_header.state, State::Unmanaged);
-        assert_eq!(gc_header.next, ptr::null());
+        assert_eq!(gc_header.state, State::Alloc);
+    }
+
+    #[test]
+    fn gc_alloc_keeps_list_of_gc_headers() {
+        let gc_alloc = GcAlloc::new();
+
+        assert_eq!(gc_alloc.blocks.read().unwrap().0, ptr::null());
+
+        let data = unsafe { gc_alloc.alloc(Layout::from_size_align_unchecked(1, 1)) };
+        let block1_ref = GcHeader::from_ptr(data);
+        let block1_ptr = block1_ref as *const GcHeader;
+        assert_eq!(gc_alloc.blocks.read().unwrap().0, block1_ptr);
+        assert_eq!(block1_ref.next.0, ptr::null());
+
+        let data = unsafe { gc_alloc.alloc(Layout::from_size_align_unchecked(1, 1)) };
+        let block2_ref = GcHeader::from_ptr(data);
+        let block2_ptr = block2_ref as *const GcHeader;
+        assert_eq!(gc_alloc.blocks.read().unwrap().0, block2_ptr);
+        assert_eq!(block2_ref.next.0, block1_ptr);
+        assert_eq!(block1_ref.next.0, ptr::null());
+
+        let data = unsafe { gc_alloc.alloc(Layout::from_size_align_unchecked(1, 1)) };
+        let block3_ref = GcHeader::from_ptr(data);
+        let block3_ptr = block3_ref as *const GcHeader;
+        assert_eq!(gc_alloc.blocks.read().unwrap().0, block3_ptr);
+        assert_eq!(block3_ref.next.0, block2_ptr);
+        assert_eq!(block2_ref.next.0, block1_ptr);
+        assert_eq!(block1_ref.next.0, ptr::null());
     }
 
     #[test]
@@ -405,7 +564,7 @@ mod tests {
         let layout = Layout::from_size_align(1, 1).unwrap();
         let memory = unsafe { GcAlloc::new().alloc(layout) };
         let gc_header = GcHeader::from_ptr(memory);
-        assert_eq!(gc_header.state, State::Unmanaged);
-        assert_eq!(gc_header.next, ptr::null());
+        assert_eq!(gc_header.state, State::Alloc);
+        assert_eq!(gc_header.next.unwrap(), ptr::null());
     }
 }

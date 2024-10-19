@@ -5,8 +5,14 @@
 int main() {
 //    gc_init();
 
+    printf("gc_list_blocks() - 1\n");
+    gc_list_blocks();
+
     println("new_struct_with_string_as_box()");
     MyStructWithString *s1 = new_struct_with_string_as_box();
+
+    printf("gc_list_blocks() - 2\n");
+    gc_list_blocks();
 
     println("print_struct_with_string_as_box(s1)");
     print_struct_with_string_as_box(s1);
@@ -16,8 +22,14 @@ int main() {
     println("free_struct_with_string_as_box(s1)");
     free_struct_with_string_as_box(s1);
 
+    printf("gc_list_blocks() - 3\n");
+    gc_list_blocks();
+
     println("new_struct_with_string_as_ptr()");
     void *s2 = new_struct_with_string_as_ptr();
+
+    printf("gc_list_blocks() - 4\n");
+    gc_list_blocks();
 
     println("print_struct_with_string_as_ptr(s1)");
     print_struct_with_string_as_ptr(s2);
@@ -53,4 +65,11 @@ int main() {
 
     println("free_struct_with_str_as_box(s3)");
     free_struct_with_str_as_box(s3);
+
+    printf("gc_list_blocks() - end\n");
+    gc_list_blocks();
+
+//
+//    println("gc_alloc(1, 1)");
+//    gc_alloc(1, 1);
 }

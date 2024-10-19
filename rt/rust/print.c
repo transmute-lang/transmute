@@ -13,3 +13,7 @@ void print_alloc(uintptr_t size, uintptr_t align) {
 void print_dealloc(uintptr_t size, uintptr_t align) {
     printf("dealloc: %lu, %lu\n", size, align);
 }
+
+void print_ptr(const void *ptr) {
+    printf("ptr: %p\n", ptr);
+}
