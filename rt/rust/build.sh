@@ -14,4 +14,6 @@ clang main.c \
   -lpthread -lm -ldl \
   -o main || exit 1
 
+export RUST_BACKTRACE=1
+
 ./main
