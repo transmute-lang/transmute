@@ -9,7 +9,7 @@ int main() {
     gc_list_blocks();
     printf("\n");
 
-    println("new_struct_with_string_as_box()");
+    printf("new_struct_with_string_as_box()\n");
     MyStructWithString *s1 = new_struct_with_string_as_box();
     printf("\n");
 
@@ -17,14 +17,14 @@ int main() {
     gc_list_blocks();
     printf("\n");
 
-    println("print_struct_with_string_as_box(s1)");
+    printf("print_struct_with_string_as_box(s1)\n");
     print_struct_with_string_as_box(s1);
     printf("\n");
-    println("print_struct_with_string_as_ref(s1)");
+    printf("print_struct_with_string_as_ref(s1)\n");
     print_struct_with_string_as_ref(s1);
     printf("\n");
 
-    println("free_struct_with_string_as_box(s1)");
+    printf("free_struct_with_string_as_box(s1)\n");
     free_struct_with_string_as_box(s1);
     printf("\n");
 
@@ -32,7 +32,7 @@ int main() {
     gc_list_blocks();
     printf("\n");
 
-    println("new_struct_with_string_as_ptr()");
+    printf("new_struct_with_string_as_ptr()\n");
     void *s2 = new_struct_with_string_as_ptr();
     printf("\n");
 
@@ -40,19 +40,19 @@ int main() {
     gc_list_blocks();
     printf("\n");
 
-    println("print_struct_with_string_as_ptr(s1)");
+    printf("print_struct_with_string_as_ptr(s1)\n");
     print_struct_with_string_as_ptr(s2);
     printf("\n");
 
-    println("free_struct_with_string_as_ptr(s2)");
+    printf("free_struct_with_string_as_ptr(s2)\n");
     free_struct_with_string_as_ptr(s2);
     printf("\n");
 
-    println("new_struct_with_str_as_box()");
+    printf("new_struct_with_str_as_box()\n");
     MyStructWithStr *s3 = new_struct_with_str_as_box();
     printf("\n");
 
-    println("get_str_from_struct_with_str_as_ref(s3)");
+    printf("get_str_from_struct_with_str_as_ref(s3)\n");
     Str *str = get_str_from_struct_with_str_as_ref(s3);
     printf("\n");
 
@@ -63,23 +63,23 @@ int main() {
     printf("'; len=%lu; cap=%lu\n", str->len, str->cap);
     printf("\n");
 
-    println("is_managed_str_as_box(str)");
+    printf("is_managed_str_as_box(str)\n");
     is_managed_str_as_box(str);
     printf("\n");
 
-    println("is_managed_str_as_ref(str)");
+    printf("is_managed_str_as_ref(str)\n");
     is_managed_str_as_ref(str);
     printf("\n");
 
-    println("is_managed_str_as_ptr(str)");
+    printf("is_managed_str_as_ptr(str)\n");
     is_managed_str_as_ptr(str);
     printf("\n");
 
-    println("is_managed_str_as_void_ptr(str)");
+    printf("is_managed_str_as_void_ptr(str)\n");
     is_managed_str_as_void_ptr(str);
     printf("\n");
 
-    println("free_struct_with_str_as_box(s3)");
+    printf("free_struct_with_str_as_box(s3)\n");
     free_struct_with_str_as_box(s3);
     printf("\n");
 

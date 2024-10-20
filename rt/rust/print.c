@@ -1,27 +1,17 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-void println(const char *str) {
-    printf("%s\n", str);
+void stdout_write(const void *buf, uintptr_t count) {
+    char *string = malloc(count + 1);
+    memcpy(string, buf, count);
+    string[count] = 0;
+    fputs(string, stdout);
+    free(string);
 }
 
-void print_alloc(uintptr_t size, uintptr_t align) {
-    printf("alloc: %lu, %lu\n", size, align);
-}
-
-void print_dealloc(uintptr_t size, uintptr_t align) {
-    printf("dealloc: %lu, %lu\n", size, align);
-}
-
-void print_ptr(const void *ptr) {
-    printf("ptr: %p\n", ptr);
-}
-
-void print_update_next_pointer(const void *base, const void *to) {
-    printf("%p -> %p\n", base, to);
-}
-
-void print_update_root( const void *to) {
-    printf("root -> %p\n", to);
+void stdout_flush(void) {
+    fflush(stdout);
 }

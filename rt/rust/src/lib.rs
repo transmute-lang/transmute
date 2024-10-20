@@ -2,21 +2,42 @@
 #![allow(dead_code)]
 
 use std::alloc::{GlobalAlloc, Layout, System};
-use std::ffi::CStr;
+use std::fmt::{Display, Formatter};
+#[cfg(not(test))]
+use std::io;
+#[cfg(not(test))]
+use std::io::Write;
+#[cfg(not(test))]
+use std::ptr;
 use std::ptr::NonNull;
 use std::sync::Mutex;
 
-extern "C" {
-    fn println(c_char: *const std::ffi::c_char);
-    fn print_alloc(size: usize, align: usize);
-    fn print_dealloc(size: usize, align: usize);
-    fn print_ptr(ptr: *const ());
-    fn print_update_next_pointer(base: *const (), to: *const ());
-    fn print_update_root(to: *const ());
+#[cfg(not(test))]
+struct RawStdioWrite {}
+
+#[cfg(not(test))]
+impl Write for RawStdioWrite {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        unsafe { stdout_write(buf as *const _ as _, buf.len()) };
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        unsafe { stdout_flush() };
+        Ok(())
+    }
 }
 
-fn rp<S: AsRef<CStr>>(s: S) {
-    unsafe { println(s.as_ref().as_ptr()) }
+#[cfg(not(test))]
+macro_rules! write_stdout {
+    ($($arg:tt)*) => {
+        let _ = write!(RawStdioWrite {}, $($arg)*);
+    };
+}
+
+extern "C" {
+    fn stdout_write(buf: *const (), count: usize);
+    fn stdout_flush();
 }
 
 #[repr(C)]
@@ -28,7 +49,8 @@ pub struct Str {
 
 impl From<String> for Str {
     fn from(value: String) -> Self {
-        rp(c"  Str::new()");
+        #[cfg(not(test))]
+        write_stdout!("  Str::new()\n");
         Str {
             len: value.len(),
             cap: value.capacity(),
@@ -54,7 +76,8 @@ impl Drop for Str {
         unsafe {
             String::from_raw_parts(self.ptr as *mut u8, self.len, self.cap);
         }
-        rp(c"  Str::drop()");
+        #[cfg(not(test))]
+        write_stdout!("  Str::drop()\n");
     }
 }
 
@@ -90,7 +113,8 @@ pub struct MyStructWithStr {
 
 impl MyStructWithStr {
     fn new() -> Self {
-        rp(c"  MyStructWithStr::new()");
+        #[cfg(not(test))]
+        write_stdout!("  MyStructWithStr::new()\n");
         MyStructWithStr {
             s: Str::from("MyString"),
         }
@@ -99,7 +123,8 @@ impl MyStructWithStr {
 
 impl Drop for MyStructWithStr {
     fn drop(&mut self) {
-        rp(c"  MyStructWithStr::drop()");
+        #[cfg(not(test))]
+        write_stdout!("  MyStructWithStr::drop()\n");
     }
 }
 
@@ -126,7 +151,8 @@ pub struct MyStructWithString {
 
 impl MyStructWithString {
     fn new() -> Self {
-        rp(c"  MyStructWithString::new()");
+        #[cfg(not(test))]
+        write_stdout!("  MyStructWithString::new()\n");
         Self {
             i: 0,
             s: "s".to_string(),
@@ -136,7 +162,8 @@ impl MyStructWithString {
 
 impl Drop for MyStructWithString {
     fn drop(&mut self) {
-        rp(c"  MyStructWithString::drop()");
+        #[cfg(not(test))]
+        write_stdout!("  MyStructWithString::drop()\n");
     }
 }
 
@@ -275,6 +302,12 @@ impl From<&GcHeader> for GcHeaderPtr {
     }
 }
 
+impl Display for GcHeaderPtr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.0.as_ptr())
+    }
+}
+
 unsafe impl Send for GcHeaderPtr {}
 
 struct GcAllocState {
@@ -302,7 +335,8 @@ impl GcAlloc {
     fn print_blocks(&self) {
         let mut gc_header_ptr_opt = self.state.lock().unwrap().blocks;
         while let Some(gc_header_ptr) = gc_header_ptr_opt {
-            unsafe { print_ptr(gc_header_ptr.raw_ptr() as _) }
+            #[cfg(not(test))]
+            write_stdout!("ptr: {}\n", gc_header_ptr);
             gc_header_ptr_opt = GcHeader::from_pointer(gc_header_ptr).next;
         }
     }
@@ -322,9 +356,22 @@ impl GcAlloc {
             let header = GcHeader::from_pointer(gc_header_ptr);
 
             if header.state == State::Dealloc {
+                #[cfg(not(test))]
+                write_stdout!("  free {}\n", gc_header_ptr);
                 if let Some(prev_gc_header_ptr) = prev_gc_header_ptr {
+                    #[cfg(not(test))]
+                    write_stdout!(
+                        "  {} -> {:?}\n",
+                        prev_gc_header_ptr,
+                        header.next.map(|p| p.raw_ptr()).unwrap_or(ptr::null())
+                    );
                     GcHeader::from_pointer(prev_gc_header_ptr).next = header.next;
                 } else {
+                    #[cfg(not(test))]
+                    write_stdout!(
+                        "  root -> {:?}\n",
+                        header.next.map(|p| p.raw_ptr()).unwrap_or(ptr::null())
+                    );
                     state.blocks = header.next;
                 }
 
@@ -363,6 +410,9 @@ pub extern "C" fn gc_list_blocks() {
 
 unsafe impl GlobalAlloc for GcAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        #[cfg(not(test))]
+        write_stdout!("alloc({}, {})\n", layout.size(), layout.align());
+
         let layout = GcHeader::layout_for(layout);
         let header_ptr = System.alloc(layout);
 
@@ -376,6 +426,8 @@ unsafe impl GlobalAlloc for GcAlloc {
         header.next = state.blocks;
         header.layout = layout;
 
+        #[cfg(not(test))]
+        write_stdout!("  root -> {}\n", header.to_pointer());
         state.blocks = Some(header.to_pointer());
 
         ptr
@@ -384,6 +436,8 @@ unsafe impl GlobalAlloc for GcAlloc {
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
         let header = GcHeader::from_object_ptr(ptr);
 
+        #[cfg(not(test))]
+        write_stdout!("dealloc({})\n", header.layout.size());
         {
             let _lock = self.state.lock().unwrap();
             header.state = State::Dealloc;
