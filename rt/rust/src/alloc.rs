@@ -1,4 +1,4 @@
-use crate::gc::GcHeaderPtr;
+use crate::gc::BlockHeaderPtr;
 use crate::llvm::gc_roots;
 use crate::stdout::write_stdout;
 use crate::{BlockHeader, State, ALLOCATOR};
@@ -8,7 +8,7 @@ use std::ptr;
 use std::sync::Mutex;
 
 struct GcAllocState {
-    blocks: Option<GcHeaderPtr>,
+    blocks: Option<BlockHeaderPtr>,
     enabled: bool,
 }
 
@@ -62,7 +62,7 @@ impl GcAlloc {
     fn print_blocks(&self) {
         let mut gc_header_ptr_opt = self.state.lock().unwrap().blocks;
         while let Some(gc_header_ptr) = gc_header_ptr_opt {
-            let gc_header = BlockHeader::from_gc_header_ptr(gc_header_ptr);
+            let gc_header = gc_header_ptr.block();
             #[cfg(not(test))]
             {
                 write_stdout!("address: {}\n", gc_header_ptr);
@@ -91,20 +91,20 @@ impl GcAlloc {
         write_stdout!("collect()\n");
 
         for root in gc_roots() {
-            BlockHeader::from_gc_header_ptr_mut(root).mark();
+            root.block_mut().mark();
         }
 
-        let mut prev_gc_header_ptr: Option<GcHeaderPtr> = None;
+        let mut prev_gc_header_ptr: Option<BlockHeaderPtr> = None;
         let mut gc_header_ptr_opt = state.blocks;
 
         while let Some(gc_header_ptr) = gc_header_ptr_opt {
-            let header = BlockHeader::from_gc_header_ptr_mut(gc_header_ptr);
+            let header = gc_header_ptr.block_mut();
 
             match header.state {
                 State::Dealloc | State::Unreachable(..) => {
                     #[cfg(not(test))]
                     write_stdout!(
-                        "  free:{} (obj:{:?})   (cause: {:?})\n",
+                        "  free:{} (obj:{:?})   {:?}\n",
                         gc_header_ptr,
                         header.object_ptr::<()>(),
                         header.state,
@@ -112,18 +112,11 @@ impl GcAlloc {
 
                     if let Some(prev_gc_header_ptr) = prev_gc_header_ptr {
                         #[cfg(not(test))]
-                        write_stdout!(
-                            "    {}.next = {:?}\n",
-                            prev_gc_header_ptr,
-                            header.next.map(|p| p.raw_ptr()).unwrap_or(ptr::null())
-                        );
-                        BlockHeader::from_gc_header_ptr_mut(prev_gc_header_ptr).next = header.next;
+                        write_stdout!("    {}.next = {:?}\n", prev_gc_header_ptr, header.next);
+                        prev_gc_header_ptr.block_mut().next = header.next;
                     } else {
                         #[cfg(not(test))]
-                        write_stdout!(
-                            "    root.next = {:?}\n",
-                            header.next.map(|p| p.raw_ptr()).unwrap_or(ptr::null())
-                        );
+                        write_stdout!("    root.next = {:?}\n", header.next);
                         state.blocks = header.next;
                     }
 
@@ -136,7 +129,7 @@ impl GcAlloc {
                 State::Alloc | State::Reachable(..) => {
                     #[cfg(not(test))]
                     write_stdout!(
-                        "  keep:{} (obj:{:?})   (cause: {:?})\n",
+                        "  keep:{} (obj:{:?})   {:?}\n",
                         gc_header_ptr,
                         header.object_ptr::<()>(),
                         header.state,
@@ -177,8 +170,8 @@ unsafe impl GlobalAlloc for GcAlloc {
             header.layout = layout_with_header;
 
             #[cfg(not(test))]
-            write_stdout!("  root.next = {}\n", header.to_gc_header_ptr());
-            state.blocks = Some(header.to_gc_header_ptr());
+            write_stdout!("  root.next = {}\n", BlockHeaderPtr::from(&*header));
+            state.blocks = Some(BlockHeaderPtr::from(&*header));
         }
 
         header.object_ptr::<u8>() as *mut u8
@@ -195,7 +188,7 @@ unsafe impl GlobalAlloc for GcAlloc {
             header.state
         );
         {
-            let _lock = self.state.lock().unwrap();
+            // let _lock = self.state.lock().unwrap();
             if header.state == State::Alloc {
                 header.state = State::Dealloc;
             }
@@ -243,8 +236,8 @@ pub extern "C" fn gc_next_object_ptr(last: *const ()) -> *const () {
         state.blocks
     } else {
         let mut block_ptr = state.blocks;
-        while let Some(current_block) = block_ptr {
-            let header = BlockHeader::from_gc_header_ptr(current_block);
+        while let Some(current_block_ptr) = block_ptr {
+            let header = current_block_ptr.block();
             let found = header.object_ptr() == last;
             block_ptr = header.next;
             if found {
@@ -253,7 +246,7 @@ pub extern "C" fn gc_next_object_ptr(last: *const ()) -> *const () {
         }
         block_ptr
     }
-    .map(|header| BlockHeader::from_gc_header_ptr(header).object_ptr())
+    .map(|header| header.block().object_ptr())
     .unwrap_or(ptr::null())
 }
 

@@ -1,5 +1,5 @@
 #![deny(improper_ctypes_definitions)]
-#![allow(dead_code)]
+//#![allow(dead_code)]
 
 mod alloc;
 mod gc;

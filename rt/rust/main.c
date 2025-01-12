@@ -7,13 +7,15 @@ extern LlvmStackFrame *gc_root;
 int main() {
     Str *str1 = stdlib_string_new();
     Str *str2 = stdlib_string_new();
+    Str *str3 = stdlib_string_new();
     List *list = stdlib_list_new();
 
-    gc_root = malloc(sizeof(LlvmStackFrame));
+    gc_root = malloc(sizeof(LlvmStackFrame) + 2 * sizeof(void *));
     gc_root->map = malloc(sizeof(LlvmFrameMap));
-    gc_root->map->num_roots = 1;
+    gc_root->map->num_roots = 2;
     gc_root->next = 0;
-    gc_root->roots = list;
+    gc_root->roots[0] = list;
+    gc_root->roots[1] = str2;
 
     gc_disable();
     for (int i = 0; i < 16; i++) {
@@ -26,6 +28,8 @@ int main() {
     printf("test:expect-live:%p\n", (void *)list->ptr);
     printf("test:expect-live:%p\n", (void *)str1);
     printf("test:expect-live:%p\n", (void *)str1->ptr);
+    printf("test:expect-live:%p\n", (void *)str2);
+    printf("test:expect-live:%p\n", (void *)str2->ptr);
 
     printf("\ngc_collect()\n");
     gc_collect();

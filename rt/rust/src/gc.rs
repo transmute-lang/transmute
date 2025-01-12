@@ -67,7 +67,7 @@ impl<T> DerefMut for Gc<T> {
 pub(crate) struct BlockHeader {
     pub state: State,
     pub layout: Layout,
-    pub next: Option<GcHeaderPtr>,
+    pub next: Option<BlockHeaderPtr>,
 }
 
 impl BlockHeader {
@@ -109,17 +109,17 @@ impl BlockHeader {
         unsafe { &mut *ptr }
     }
 
-    pub(crate) fn to_gc_header_ptr(&self) -> GcHeaderPtr {
-        GcHeaderPtr::from(self)
-    }
+    // pub(crate) fn to_gc_header_ptr(&self) -> BlockHeaderPtr {
+    //     BlockHeaderPtr::from(self)
+    // }
 
-    pub(crate) fn from_gc_header_ptr<'a>(pointer: GcHeaderPtr) -> &'a Self {
-        Self::from_raw_ptr(pointer.raw_ptr() as _)
-    }
+    // pub(crate) fn from_gc_header_ptr<'a>(pointer: BlockHeaderPtr) -> &'a Self {
+    //     Self::from_raw_ptr(pointer.raw_ptr() as _)
+    // }
 
-    pub(crate) fn from_gc_header_ptr_mut<'a>(pointer: GcHeaderPtr) -> &'a mut Self {
-        Self::from_raw_ptr(pointer.raw_ptr() as _)
-    }
+    // pub(crate) fn from_gc_header_ptr_mut<'a>(pointer: BlockHeaderPtr) -> &'a mut Self {
+    //     Self::from_raw_ptr(pointer.raw_ptr() as _)
+    // }
 
     /// Returns a ref to the object
     pub(crate) fn object_ref<T>(&self) -> &T {
@@ -156,7 +156,7 @@ impl BlockHeader {
         #[cfg(not(test))]
         write_stdout!(
             "  mark:{} (obj:{:?})\n",
-            self.to_gc_header_ptr(),
+            BlockHeaderPtr::from(&*self),
             self.object_ptr::<()>()
         );
         self.state = match self.state {
@@ -202,36 +202,43 @@ pub(crate) enum State {
 // }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub(crate) struct GcHeaderPtr(NonNull<BlockHeader>);
+pub(crate) struct BlockHeaderPtr(NonNull<BlockHeader>);
 
-impl GcHeaderPtr {
+impl BlockHeaderPtr {
+    pub(crate) fn block_mut<'a>(mut self) -> &'a mut BlockHeader {
+        unsafe { self.0.as_mut() }
+    }
+
+    pub(crate) fn block<'a>(self) -> &'a BlockHeader {
+        unsafe { self.0.as_ref() }
+    }
     // #[deprecated]
     // pub(crate) fn to_header<'a>(self) -> &'a BlockHeader {
     //     BlockHeader::from_gc_header_ptr(self)
     // }
 
-    pub(crate) fn raw_ptr(&self) -> *const BlockHeader {
-        self.0.as_ptr() as *const BlockHeader
-    }
+    // pub(crate) fn raw_ptr(&self) -> *const BlockHeader {
+    //     self.0.as_ptr() as *const BlockHeader
+    // }
 
     // pub(crate) fn from_ptr(ptr: *mut BlockHeader) -> Self {
     //     BlockHeader::from_raw_ptr(ptr).to_gc_header_ptr()
     // }
 }
 
-impl From<&BlockHeader> for GcHeaderPtr {
+impl From<&BlockHeader> for BlockHeaderPtr {
     fn from(value: &BlockHeader) -> Self {
         Self(unsafe { NonNull::new_unchecked(value as *const _ as _) })
     }
 }
 
-impl Display for GcHeaderPtr {
+impl Display for BlockHeaderPtr {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.0.as_ptr())
     }
 }
 
-unsafe impl Send for GcHeaderPtr {}
+unsafe impl Send for BlockHeaderPtr {}
 
 #[cfg(test)]
 mod tests {

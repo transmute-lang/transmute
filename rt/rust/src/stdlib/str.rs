@@ -1,3 +1,5 @@
+#[cfg(not(test))]
+use crate::gc::BlockHeaderPtr;
 use crate::gc::{BlockHeader, Collectable, Gc, State};
 #[cfg(not(test))]
 use crate::stdout::write_stdout;
@@ -27,7 +29,10 @@ impl Collectable for Str {
 
     fn mark_recursive(header: &BlockHeader) {
         #[cfg(not(test))]
-        write_stdout!("    Str::mark_recursive({})\n", header.to_gc_header_ptr());
+        write_stdout!(
+            "    Str::mark_recursive({})\n",
+            BlockHeaderPtr::from(header)
+        );
         BlockHeader::from_object_ptr(header.object_ref::<Self>().ptr).mark()
     }
 

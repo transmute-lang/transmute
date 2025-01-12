@@ -1,3 +1,5 @@
+#[cfg(not(test))]
+use crate::gc::BlockHeaderPtr;
 use crate::gc::{BlockHeader, Collectable, Gc, State};
 #[cfg(not(test))]
 use crate::stdout::write_stdout;
@@ -49,16 +51,22 @@ impl Collectable for List {
 
     fn mark_recursive(header: &BlockHeader) {
         #[cfg(not(test))]
-        write_stdout!("    List::mark_recursive({})\n", header.to_gc_header_ptr());
-        BlockHeader::from_object_ptr(header.object_ref::<Self>().ptr).mark();
+        write_stdout!(
+            "    List::mark_recursive({})\n",
+            BlockHeaderPtr::from(header)
+        );
 
-        let vec = Vec::from_extern(header.object_ptr_mut::<List>());
+        let obj = header.object_ref::<Self>();
+        if !obj.ptr.is_null() && obj.ptr != ptr::dangling::<ListItem>() && obj.cap > 0 {
+            BlockHeader::from_object_ptr(header.object_ref::<Self>().ptr).mark();
+            let vec = Vec::from_extern(header.object_ptr_mut::<List>());
 
-        vec.iter().for_each(|item| {
-            BlockHeader::from_object_ptr(*item).mark();
-        });
+            vec.iter().for_each(|item| {
+                BlockHeader::from_object_ptr(*item).mark();
+            });
 
-        vec.leak();
+            vec.leak();
+        }
     }
 
     // fn disable_collection(&self) {
