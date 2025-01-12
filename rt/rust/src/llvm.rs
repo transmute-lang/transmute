@@ -1,4 +1,4 @@
-use crate::gc::{BlockHeader, BlockHeaderPtr};
+use crate::gc::{BlockHeader, BlockHeaderPtr, ObjectPtr};
 use std::ptr::NonNull;
 use std::slice;
 
@@ -32,8 +32,8 @@ impl Iterator for GcRootsIter<'_> {
                 }
                 Some(root) => {
                     self.index += 1;
-                    return Some(BlockHeaderPtr::from(&*BlockHeader::from_object_ptr(
-                        root.as_ptr(),
+                    return Some(BlockHeaderPtr::from(&*Into::<&mut BlockHeader>::into(
+                        ObjectPtr::<()>::new(root.as_ptr()).unwrap(),
                     )));
                 }
             }

@@ -1,6 +1,6 @@
 #[cfg(not(test))]
 use crate::gc::BlockHeaderPtr;
-use crate::gc::{BlockHeader, Collectable, Gc, State};
+use crate::gc::{BlockHeader, Collectable, ObjectPtr, State};
 #[cfg(not(test))]
 use crate::stdout::write_stdout;
 #[cfg(not(test))]
@@ -13,33 +13,25 @@ pub struct Str {
     cap: usize,
 }
 
-impl Str {
-    // fn to_string(self) -> String {
-    //     self.disable_collection();
-    //     unsafe { String::from_raw_parts(self.ptr as *mut u8, self.len, self.cap) }
-    // }
-}
-
 impl Collectable for Str {
     fn enable_collection(&self) {
-        BlockHeader::from_object_ptr(self).state =
+        Into::<&mut BlockHeader>::into(ObjectPtr::<Str>::from_ref(self)).state =
             State::Unreachable("str", Some(Str::mark_recursive));
-        BlockHeader::from_object_ptr(self.ptr).state = State::Unreachable("str.ptr", None);
+
+        Into::<&mut BlockHeader>::into(ObjectPtr::<u8>::new(self.ptr as *mut _).unwrap()).state =
+            State::Unreachable("str.ptr", None);
     }
 
-    fn mark_recursive(header: &BlockHeader) {
+    fn mark_recursive(ptr: ObjectPtr<()>) {
         #[cfg(not(test))]
         write_stdout!(
             "    Str::mark_recursive({})\n",
-            BlockHeaderPtr::from(header)
+            BlockHeaderPtr::from(&*Into::<&mut BlockHeader>::into(ptr))
         );
-        BlockHeader::from_object_ptr(header.object_ref::<Self>().ptr).mark()
-    }
 
-    // fn disable_collection(&self) {
-    //     GcHeader::from_object_ptr(self).state = State::Alloc;
-    //     GcHeader::from_object_ptr(self.ptr).state = State::Alloc;
-    // }
+        let ptr = ObjectPtr::<u8>::new(ptr.cast::<Str>().as_ref().ptr as *mut _).unwrap();
+        Into::<&mut BlockHeader>::into(ptr).mark();
+    }
 }
 
 impl<S: Into<String>> From<S> for Str {
@@ -55,19 +47,8 @@ impl<S: Into<String>> From<S> for Str {
     }
 }
 
-// impl Drop for Str {
-//     fn drop(&mut self) {
-//         if !self.is_collectable() {
-//             #[cfg(not(test))]
-//             write_stdout!("Str::drop()\n");
-//             unsafe {
-//                 String::from_raw_parts(self.ptr as *mut u8, self.len, self.cap);
-//             }
-//         }
-//     }
-// }
-
 #[no_mangle]
 pub extern "C" fn stdlib_string_new() -> *mut Str {
-    Gc::new(Str::from("hello, world")).leak()
+    let str = Str::from("hello, world");
+    ObjectPtr::leak(Box::new(str)).as_ref_mut()
 }

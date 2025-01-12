@@ -4,63 +4,25 @@ use std::alloc::Layout;
 use std::fmt::{Display, Formatter};
 #[cfg(not(test))]
 use std::io::Write;
-use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
 
 pub(crate) trait Collectable {
-    // fn is_collectable(&self) -> bool {
-    //     BlockHeader::from_object_ptr(self).is_collectable()
-    // }
-
     fn enable_collection(&self);
 
-    // fn disable_collection(&self);
-
-    fn mark_recursive(header: &BlockHeader);
+    fn mark_recursive(ptr: ObjectPtr<()>);
 }
 
-/// Like `Box`, but for GC-ed objects
-pub(crate) struct Gc<T: ?Sized> {
-    object: Box<T>,
-}
+// todo add easier way to convert from/to `BlockHeader` and `BlockHeaderPtr`
+// todo add easier way to convert from/to `BlockHeader` and `ObjectPtr`
+// todo add easier way to convert from/to `BlockHeaderPtr` and `ObjectPtr`
+// todo stuff such as the following should be simpler!
+//    return Some(BlockHeaderPtr::from(&*Into::<&mut BlockHeader>::into(
+//       ObjectPtr::<()>::new(root.as_ptr()).unwrap(),
+//    )));
+// todo does it makse sense to go straight from object ptr to block header ?
+//    Into::<&mut BlockHeader>::into(ObjectPtr::new(data1_ptr).unwrap())
 
-impl<T> Gc<T>
-where
-    T: Collectable,
-{
-    pub fn new(object: T) -> Gc<T> {
-        Self {
-            object: Box::new(object),
-        }
-    }
-
-    pub unsafe fn from_raw(ptr: *mut T) -> Gc<T> {
-        Self {
-            object: Box::from_raw(ptr),
-        }
-    }
-
-    pub fn leak(self) -> *mut T {
-        self.object.enable_collection();
-        Box::leak(self.object)
-    }
-}
-
-impl<T> Deref for Gc<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.object
-    }
-}
-
-impl<T> DerefMut for Gc<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.object
-    }
-}
-
-// todo move GcHeader to alloc.rs as it makes more sense to be there
+// todo move BlockHeader to alloc.rs as it makes more sense to be there
 /// Holds the metadata associated with an allocated block of memory.
 #[repr(C)]
 #[repr(align(16))]
@@ -83,87 +45,18 @@ impl BlockHeader {
         .expect("Layout is valid")
     }
 
-    // /// Build a `GcHeader` from a GC-ed object.
-    // pub(crate) fn from_gc<T>(gc: &Gc<T>) -> &mut BlockHeader {
-    //     Self::from_object_box(&gc.object)
-    // }
-
-    // /// Build a `GcHeader` from a reference to its boxed corresponding payload.
-    // pub(crate) fn from_object_box<T: ?Sized>(b: &Box<T>) -> &mut BlockHeader {
-    //     let b = Box::as_ref(b);
-    //     Self::from_object_ref(b)
-    // }
-
-    // /// Build a `GcHeader` from a reference to its corresponding payload.
-    // pub(crate) fn from_object_ref<T: ?Sized>(r: &T) -> &mut BlockHeader {
-    //     Self::from_object_ptr(r)
-    // }
-
-    /// Build a `GcHeader` from a pointer to its corresponding payload.
-    pub(crate) fn from_object_ptr<'a, T: ?Sized>(ptr: *const T) -> &'a mut BlockHeader {
-        let head_ptr = unsafe { ptr.byte_sub(Self::rounded_size()) } as *mut BlockHeader;
-        unsafe { &mut *head_ptr }
-    }
-
-    pub(crate) fn from_raw_ptr<'a>(ptr: *mut BlockHeader) -> &'a mut BlockHeader {
-        unsafe { &mut *ptr }
-    }
-
-    // pub(crate) fn to_gc_header_ptr(&self) -> BlockHeaderPtr {
-    //     BlockHeaderPtr::from(self)
-    // }
-
-    // pub(crate) fn from_gc_header_ptr<'a>(pointer: BlockHeaderPtr) -> &'a Self {
-    //     Self::from_raw_ptr(pointer.raw_ptr() as _)
-    // }
-
-    // pub(crate) fn from_gc_header_ptr_mut<'a>(pointer: BlockHeaderPtr) -> &'a mut Self {
-    //     Self::from_raw_ptr(pointer.raw_ptr() as _)
-    // }
-
-    /// Returns a ref to the object
-    pub(crate) fn object_ref<T>(&self) -> &T {
-        let ptr = self.object_ptr::<T>();
-        unsafe { &*ptr }
-    }
-
-    // pub(crate) fn object_ref_mut<T>(&self) -> &mut T {
-    //     let ptr = self.object_ptr_mut::<T>();
-    //     unsafe { &mut *ptr }
-    // }
-
-    pub(crate) fn object_ptr<T>(&self) -> *const T {
-        let ptr = self as *const BlockHeader;
-        let ptr = unsafe { ptr.byte_add(Self::rounded_size()) };
-        ptr as *const T
-    }
-
-    pub(crate) fn object_ptr_mut<T>(&self) -> *mut T {
-        let ptr = self as *const BlockHeader;
-        let ptr = unsafe { ptr.byte_add(Self::rounded_size()) };
-        ptr as *mut T
-    }
-
-    // pub(crate) fn ptr(&self) -> *const Self {
-    //     self as *const Self
-    // }
-
-    // pub(crate) fn is_collectable(&self) -> bool {
-    //     self.state.is_collectable()
-    // }
-
     pub(crate) fn mark(&mut self) {
         #[cfg(not(test))]
         write_stdout!(
-            "  mark:{} (obj:{:?})\n",
+            "  mark:{} ({})\n",
             BlockHeaderPtr::from(&*self),
-            self.object_ptr::<()>()
+            ObjectPtr::<()>::from(&*self)
         );
         self.state = match self.state {
             State::Reachable(..) => self.state,
             State::Unreachable(s, f) => {
                 if let Some(f) = f {
-                    f(self)
+                    f(ObjectPtr::<()>::from(&*self))
                 };
                 State::Reachable(s, f)
             }
@@ -180,50 +73,39 @@ impl BlockHeader {
     }
 }
 
+impl<T> From<ObjectPtr<T>> for &mut BlockHeader {
+    fn from(value: ObjectPtr<T>) -> Self {
+        let head_ptr =
+            unsafe { value.as_ptr().byte_sub(BlockHeader::rounded_size()) } as *mut BlockHeader;
+        unsafe { &mut *head_ptr }
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub(crate) enum State {
     /// The block is under rust de-allocation rules
     Alloc,
     /// The block was dealloc-ed by rust
     Dealloc,
-    Reachable(&'static str, Option<fn(&BlockHeader)>),
-    Unreachable(&'static str, Option<fn(&BlockHeader)>),
+    Reachable(&'static str, Option<fn(ObjectPtr<()>)>),
+    Unreachable(&'static str, Option<fn(ObjectPtr<()>)>),
 }
-
-// impl State {
-//     fn is_collectable(&self) -> bool {
-//         match self {
-//             State::Alloc => false,
-//             State::Dealloc => false,
-//             State::Reachable(..) => false,
-//             State::Unreachable(..) => true,
-//         }
-//     }
-// }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub(crate) struct BlockHeaderPtr(NonNull<BlockHeader>);
 
 impl BlockHeaderPtr {
-    pub(crate) fn block_mut<'a>(mut self) -> &'a mut BlockHeader {
-        unsafe { self.0.as_mut() }
+    pub(crate) fn new(ptr: *mut BlockHeader) -> Option<Self> {
+        NonNull::new(ptr).map(Self)
     }
 
     pub(crate) fn block<'a>(self) -> &'a BlockHeader {
         unsafe { self.0.as_ref() }
     }
-    // #[deprecated]
-    // pub(crate) fn to_header<'a>(self) -> &'a BlockHeader {
-    //     BlockHeader::from_gc_header_ptr(self)
-    // }
 
-    // pub(crate) fn raw_ptr(&self) -> *const BlockHeader {
-    //     self.0.as_ptr() as *const BlockHeader
-    // }
-
-    // pub(crate) fn from_ptr(ptr: *mut BlockHeader) -> Self {
-    //     BlockHeader::from_raw_ptr(ptr).to_gc_header_ptr()
-    // }
+    pub(crate) fn block_mut<'a>(mut self) -> &'a mut BlockHeader {
+        unsafe { self.0.as_mut() }
+    }
 }
 
 impl From<&BlockHeader> for BlockHeaderPtr {
@@ -239,6 +121,68 @@ impl Display for BlockHeaderPtr {
 }
 
 unsafe impl Send for BlockHeaderPtr {}
+
+#[derive(Debug, Eq, PartialEq)]
+pub(crate) struct ObjectPtr<T>(NonNull<T>);
+
+impl<T> ObjectPtr<T> {
+    // todo: create `new_unchecked()`? (same as `NonNull::new_unchecked()`)
+    pub(crate) fn new(ptr: *mut T) -> Option<Self> {
+        NonNull::new(ptr).map(Self)
+    }
+
+    pub(crate) fn from_ref(r: &T) -> Self {
+        Self::new(r as *const T as *mut T).unwrap()
+    }
+
+    pub(crate) fn as_ptr(&self) -> *mut T {
+        self.0.as_ptr()
+    }
+
+    pub(crate) fn as_ref(&self) -> &T {
+        unsafe { self.0.as_ref() }
+    }
+
+    pub(crate) fn as_ref_mut(&mut self) -> &mut T {
+        unsafe { self.0.as_mut() }
+    }
+}
+
+impl ObjectPtr<()> {
+    pub(crate) fn cast<T>(self) -> ObjectPtr<T> {
+        ObjectPtr::<T>::new(self.as_ptr() as *mut T).unwrap()
+    }
+}
+
+impl<T: Collectable> ObjectPtr<T> {
+    pub(crate) fn leak(t: Box<T>) -> Self {
+        t.enable_collection();
+        Self(unsafe { NonNull::new_unchecked(Box::leak(t)) })
+    }
+}
+
+impl<T> From<&BlockHeader> for ObjectPtr<T> {
+    fn from(value: &BlockHeader) -> Self {
+        let ptr = value as *const BlockHeader;
+        let ptr = unsafe { ptr.byte_add(BlockHeader::rounded_size()) };
+        let ptr = ptr as *mut T;
+        Self(unsafe { NonNull::new_unchecked(ptr) })
+    }
+}
+
+impl<T> Display for ObjectPtr<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "obj:{:?}", self.0.as_ptr())
+    }
+}
+
+impl<T> Copy for ObjectPtr<T> {}
+
+impl<T> Clone for ObjectPtr<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -266,7 +210,7 @@ mod tests {
             data_ptr.byte_sub(BlockHeader::rounded_size())
         });
 
-        let header = BlockHeader::from_object_ptr(data_ptr);
+        let header = Into::<&mut BlockHeader>::into(ObjectPtr::new(data_ptr).unwrap());
 
         assert_eq!(header as *mut BlockHeader as *mut u8, header_ptr);
     }
@@ -285,7 +229,8 @@ mod tests {
         let string = Box::leak(string);
         let string_ptr = string as *const String;
 
-        let gc_header_from_ptr = BlockHeader::from_object_ptr(string_ptr);
+        let gc_header_from_ptr =
+            Into::<&mut BlockHeader>::into(ObjectPtr::new(string_ptr as *mut String).unwrap());
         let gc_header_from_ptr_ptr = gc_header_from_ptr as *const BlockHeader;
 
         assert_eq!(
@@ -297,70 +242,4 @@ mod tests {
             unsafe { string_ptr.byte_sub(BlockHeader::rounded_size()) }.cast()
         );
     }
-
-    // #[test]
-    // fn gc_header_from_ref() {
-    //     let string = Box::new("Hello".to_string());
-    //     let string = Box::leak(string);
-    //     let string_ptr = string as *const String;
-    //
-    //     let gc_header_from_ref = BlockHeader::from_object_ref(string) as *mut BlockHeader;
-    //     let gc_header_from_ref_ptr = gc_header_from_ref as *const BlockHeader;
-    //
-    //     assert_eq!(
-    //         string_ptr,
-    //         unsafe { gc_header_from_ref_ptr.byte_add(BlockHeader::rounded_size()) }.cast()
-    //     );
-    //     assert_eq!(gc_header_from_ref_ptr, unsafe {
-    //         string_ptr.byte_sub(BlockHeader::rounded_size())
-    //     } as *mut BlockHeader);
-    // }
-
-    // #[test]
-    // fn gc_header_from_box() {
-    //     let string = Box::new("Hello".to_string());
-    //     let string_ptr = Box::as_ref(&string) as *const String;
-    //
-    //     let gc_header_from_box = BlockHeader::from_object_box(&string);
-    //     let gc_header_from_box_ptr = gc_header_from_box as *const BlockHeader;
-    //
-    //     assert_eq!(
-    //         string_ptr,
-    //         unsafe { gc_header_from_box_ptr.byte_add(BlockHeader::rounded_size()) }.cast()
-    //     );
-    //     assert_eq!(
-    //         gc_header_from_box_ptr,
-    //         unsafe { string_ptr.byte_sub(BlockHeader::rounded_size()) }.cast()
-    //     );
-    // }
-
-    // #[test]
-    // fn gc_header_from_ref_and_ptr_and_box_are_equal() {
-    //     let string_box = Box::new("Hello".to_string());
-    //     let string_ref = Box::as_ref(&string_box);
-    //     let string_ptr = string_ref as *const String;
-    //
-    //     let gc_header_from_box = BlockHeader::from_object_box(&string_box) as *mut BlockHeader;
-    //     let gc_header_from_ref = BlockHeader::from_object_ref(string_ref) as *mut BlockHeader;
-    //     let gc_header_from_ptr = BlockHeader::from_object_ptr(string_ptr) as *mut BlockHeader;
-    //
-    //     assert_eq!(gc_header_from_box, gc_header_from_ref);
-    //     assert_eq!(gc_header_from_box, gc_header_from_ptr);
-    // }
-
-    // #[test]
-    // fn gc_header_from_ref_and_ptr_and_box_has_unmanaged_state() {
-    //     let string_box = Box::new("Hello".to_string());
-    //     let string_ref = Box::as_ref(&string_box);
-    //     let string_ptr = string_ref as *const String;
-    //
-    //     let gc_header = BlockHeader::from_object_box(&string_box);
-    //     assert_eq!(gc_header.state, State::Alloc);
-    //
-    //     let gc_header = BlockHeader::from_object_ref(string_ref);
-    //     assert_eq!(gc_header.state, State::Alloc);
-    //
-    //     let gc_header = BlockHeader::from_object_ptr(string_ptr);
-    //     assert_eq!(gc_header.state, State::Alloc);
-    // }
 }
