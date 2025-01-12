@@ -1,4 +1,4 @@
-use crate::gc::{Collectable, Gc, GcHeader, State};
+use crate::gc::{BlockHeader, Collectable, Gc, State};
 #[cfg(not(test))]
 use crate::stdout::write_stdout;
 #[cfg(not(test))]
@@ -12,34 +12,35 @@ pub struct Str {
 }
 
 impl Str {
-    fn to_string(self) -> String {
-        self.disable_collection();
-        unsafe { String::from_raw_parts(self.ptr as *mut u8, self.len, self.cap) }
-    }
-
-    fn mark_recursive(header: &GcHeader) {
-        #[cfg(not(test))]
-        write_stdout!("    Str::mark_recursive({})\n", header.to_gc_header_ptr());
-        GcHeader::from_object_ptr(header.object_ref::<Self>().ptr).mark()
-    }
+    // fn to_string(self) -> String {
+    //     self.disable_collection();
+    //     unsafe { String::from_raw_parts(self.ptr as *mut u8, self.len, self.cap) }
+    // }
 }
 
 impl Collectable for Str {
     fn enable_collection(&self) {
-        GcHeader::from_object_ptr(self).state = State::Unreachable(Some(Str::mark_recursive));
-        GcHeader::from_object_ptr(self.ptr).state = State::Unreachable(None);
+        BlockHeader::from_object_ptr(self).state =
+            State::Unreachable("str", Some(Str::mark_recursive));
+        BlockHeader::from_object_ptr(self.ptr).state = State::Unreachable("str.ptr", None);
     }
 
-    fn disable_collection(&self) {
-        GcHeader::from_object_ptr(self).state = State::Alloc;
-        GcHeader::from_object_ptr(self.ptr).state = State::Alloc;
+    fn mark_recursive(header: &BlockHeader) {
+        #[cfg(not(test))]
+        write_stdout!("    Str::mark_recursive({})\n", header.to_gc_header_ptr());
+        BlockHeader::from_object_ptr(header.object_ref::<Self>().ptr).mark()
     }
+
+    // fn disable_collection(&self) {
+    //     GcHeader::from_object_ptr(self).state = State::Alloc;
+    //     GcHeader::from_object_ptr(self.ptr).state = State::Alloc;
+    // }
 }
 
 impl<S: Into<String>> From<S> for Str {
     fn from(value: S) -> Self {
         #[cfg(not(test))]
-        write_stdout!("Str::from(..)\n");
+        write_stdout!("Str::from(Into<String>)\n");
         let string = value.into();
         Str {
             len: string.len(),
@@ -49,20 +50,19 @@ impl<S: Into<String>> From<S> for Str {
     }
 }
 
-impl Drop for Str {
-    fn drop(&mut self) {
-        if !self.is_collectable() {
-            #[cfg(not(test))]
-            write_stdout!("Str::drop()\n");
-            unsafe {
-                String::from_raw_parts(self.ptr as *mut u8, self.len, self.cap);
-            }
-        }
-    }
-}
+// impl Drop for Str {
+//     fn drop(&mut self) {
+//         if !self.is_collectable() {
+//             #[cfg(not(test))]
+//             write_stdout!("Str::drop()\n");
+//             unsafe {
+//                 String::from_raw_parts(self.ptr as *mut u8, self.len, self.cap);
+//             }
+//         }
+//     }
+// }
 
 #[no_mangle]
-pub extern "C" fn new_string() -> *mut Str {
-    let str = Str::from("hello, world");
-    Gc::new(str).into_ptr().cast()
+pub extern "C" fn stdlib_string_new() -> *mut Str {
+    Gc::new(Str::from("hello, world")).leak()
 }

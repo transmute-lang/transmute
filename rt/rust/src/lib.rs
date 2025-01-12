@@ -8,7 +8,7 @@ mod stdlib;
 mod stdout;
 
 use crate::alloc::GcAlloc;
-use crate::gc::{GcHeader, State};
+use crate::gc::{BlockHeader, State};
 
 #[global_allocator]
 static ALLOCATOR: GcAlloc = GcAlloc::new();

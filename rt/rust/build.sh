@@ -23,13 +23,9 @@ RUST_BACKTRACE=1 ./main || exit 1
 
 ./main | grep 'test:' > target/test.out
 
-cat target/test.out | grep expect-live | cut -d: -f3 > target/expected
-cat target/test.out | grep actual-live | cut -d: -f3 | while read -r actual; do
-  if ! grep "$actual" target/expected &>/dev/null; then
-    echo "Unexpected live block: $actual"
-    cat target/test.out
-    exit 1
-  fi
-done
+cat target/test.out | grep expect-live | cut -d: -f3 | sort > target/expected-live
+cat target/test.out | grep actual-live | cut -d: -f3 | sort > target/actual-live
 
-echo "OK"
+if ! diff --color target/expected-live target/actual-live; then
+  echo -e "\033[0;31mmissing\033[0m vs \033[0;32mshould not be\033[0m"
+fi

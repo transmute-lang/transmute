@@ -1,4 +1,4 @@
-use crate::gc::{GcHeader, GcHeaderPtr};
+use crate::gc::{BlockHeader, GcHeaderPtr};
 use std::ptr::NonNull;
 
 extern "C" {
@@ -31,7 +31,7 @@ impl Iterator for GcRootsIter {
                 }
                 Some(root) => {
                     self.index += 1;
-                    return Some(GcHeader::from_object_ptr(root).to_gc_header_ptr());
+                    return Some(BlockHeader::from_object_ptr(root).to_gc_header_ptr());
                 }
             }
         }
@@ -61,7 +61,10 @@ impl LlvmStackFrame {
         if index >= self.num_roots() {
             return None;
         }
-        Some(unsafe { self.roots.add(index) })
+        Some(unsafe {
+            #[allow(clippy::zst_offset)]
+            self.roots.add(index)
+        })
     }
 
     fn next(&self) -> Option<LlvmStackFrame> {
