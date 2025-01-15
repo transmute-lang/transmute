@@ -190,7 +190,6 @@ unsafe impl GlobalAlloc for GcAlloc {
             header.state
         );
         {
-            // let _lock = self.state.lock().unwrap();
             if header.state == State::Alloc {
                 header.state = State::Dealloc;
             }
@@ -211,13 +210,13 @@ pub extern "C" fn gc_enable() {
 }
 
 #[no_mangle]
-pub extern "C" fn gc_alloc(size: usize, align: usize) -> *mut u8 {
-    unsafe { ALLOCATOR.alloc(Layout::from_size_align_unchecked(size, align)) }
-}
+pub extern "C" fn gc_alloc(size: usize, align: usize) -> *mut () {
+    let object_ptr = unsafe { ALLOCATOR.alloc(Layout::from_size_align_unchecked(size, align)) };
+    let object_ptr = ObjectPtr::new(object_ptr as _).unwrap();
 
-#[no_mangle]
-pub extern "C" fn gc_free(ptr: *mut ()) {
-    unsafe { ALLOCATOR.dealloc(ptr as *mut u8, Layout::new::<()>()) }
+    Into::<&mut BlockHeader>::into(object_ptr).state = State::Unreachable("*", None);
+
+    object_ptr.as_ptr()
 }
 
 #[no_mangle]

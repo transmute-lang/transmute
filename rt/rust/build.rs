@@ -16,7 +16,6 @@ fn main() {
         .unwrap()
         .write_to_file("bindings/rustrt.h");
 
-    println!("cargo::rustc-link-lib=print");
-    println!("cargo::rustc-link-lib=llvm");
-    println!("cargo::rustc-link-search=rt/rust");
+    println!("cargo::rustc-link-lib=support");
+    println!("cargo::rustc-link-search=rt/rust/target");
 }

@@ -53,22 +53,20 @@ impl BlockHeader {
             ObjectPtr::<()>::from(&*self)
         );
         self.state = match self.state {
-            State::Reachable(..) => self.state,
             State::Unreachable(s, f) => {
                 if let Some(f) = f {
                     f(ObjectPtr::<()>::from(&*self))
                 };
                 State::Reachable(s, f)
             }
-            _ => panic!("cannot transition {:?} to reachable", self.state),
+            s => s,
         };
     }
 
     pub(crate) fn unmark(&mut self) {
         self.state = match self.state {
-            State::Unreachable(..) => self.state,
             State::Reachable(s, f) => State::Unreachable(s, f),
-            _ => panic!("cannot transition {:?} to unreachable", self.state),
+            s => s,
         }
     }
 }
