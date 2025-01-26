@@ -37,13 +37,24 @@ impl From<Vec<ListItem>> for List {
 
 impl Collectable for List {
     fn enable_collection(&self) {
-        Into::<&mut BlockHeader>::into(ObjectPtr::from_ref(self)).state =
-            State::Unreachable("list", Some(List::mark_recursive));
+        Into::<&mut BlockHeader>::into(ObjectPtr::from_ref(self)).state = State::Unreachable {
+            label: "list",
+            mark_recursive: Some(List::mark_recursive),
+            collect_opaque: None,
+        };
 
         if !self.ptr.is_null() && self.ptr != ptr::dangling::<ListItem>() && self.cap > 0 {
             Into::<&mut BlockHeader>::into(ObjectPtr::new(self.ptr as *mut ListItem).unwrap())
-                .state = State::Unreachable("list.ptr", None);
+                .state = State::Unreachable {
+                label: "list.ptr",
+                mark_recursive: None,
+                collect_opaque: None,
+            };
         }
+    }
+
+    fn collect_opaque(_ptr: ObjectPtr<()>) {
+        // nothing
     }
 
     fn mark_recursive(ptr: ObjectPtr<()>) {

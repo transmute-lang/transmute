@@ -80,7 +80,7 @@ pub struct LlvmIr<'ctx> {
 
 impl<'ctx> LlvmIr<'ctx> {
     // todo:ux error handling
-    pub fn build_bin<P: Into<PathBuf>>(&self, crt: &[u8], path: P) -> Result<(), Diagnostics> {
+    pub fn build_bin<P: Into<PathBuf>>(&self, _crt: &[u8], path: P) -> Result<(), Diagnostics> {
         let path = path.into();
 
         let tm_object_path = path.clone().with_extension("o");
@@ -88,21 +88,29 @@ impl<'ctx> LlvmIr<'ctx> {
             .write_to_file(&self.module, FileType::Object, &tm_object_path)
             .unwrap();
 
-        let crt_object_path = path.with_file_name("crt.o");
-        let crt_module = self
-            .module
-            .get_context()
-            .create_module_from_ir(MemoryBuffer::create_from_memory_range(crt, "crt"))
-            .unwrap();
-        self.target_machine
-            .write_to_file(&crt_module, FileType::Object, &crt_object_path)
-            .unwrap();
+        // todo:rt think about static vs dynamic vs .ll/.bc linkage
+        // let crt_object_path = path.with_file_name("crt.o");
+        // let crt_module = self
+        //     .module
+        //     .get_context()
+        //     .create_module_from_ir(MemoryBuffer::create_from_memory_range(crt, "crt"))
+        //     .unwrap();
+        // self.target_machine
+        //     .write_to_file(&crt_module, FileType::Object, &crt_object_path)
+        //     .unwrap();
 
         // todo:ux parameterize cc
         // todo:ux check linked libraries
         match Command::new("cc")
             .arg(&tm_object_path)
-            .arg(&crt_object_path)
+            // .arg(&crt_object_path)
+            .arg("-L/home/cpollet/Development/transmute-lang/transmute/rt/rust/target")
+            .arg("-ltmrt")
+            .arg("-lpthread")
+            .arg("-lm")
+            .arg("-ldl")
+            .arg("-lssl")
+            .arg("-lcrypto")
             .arg("-o")
             .arg(&path)
             .output()
@@ -118,7 +126,7 @@ impl<'ctx> LlvmIr<'ctx> {
             }
         }
 
-        fs::remove_file(crt_object_path).unwrap();
+        // fs::remove_file(crt_object_path).unwrap();
         fs::remove_file(tm_object_path).unwrap();
 
         Ok(())

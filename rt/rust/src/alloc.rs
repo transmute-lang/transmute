@@ -74,75 +74,93 @@ impl GcAlloc {
     }
 
     fn collect(&self) {
-        let mut state = match self.state.try_lock() {
-            Ok(guard) => guard,
-            Err(_) => {
-                write_stdout!("  could not acquire lock\n");
+        let mut freed = true;
+        while freed {
+            freed = false;
+            let mut state = match self.state.try_lock() {
+                Ok(guard) => guard,
+                Err(_) => {
+                    #[cfg(not(test))]
+                    write_stdout!("  could not acquire lock, skip collect\n");
+                    return;
+                }
+            };
+            if !state.enabled {
+                #[cfg(not(test))]
+                write_stdout!("collect() disabled\n");
                 return;
             }
-        };
-        if !state.enabled {
+
             #[cfg(not(test))]
-            write_stdout!("collect() disabled\n");
-            return;
-        }
+            write_stdout!("collect()\n");
 
-        #[cfg(not(test))]
-        write_stdout!("collect()\n");
+            for root in gc_roots() {
+                root.block_mut().mark();
+            }
 
-        for root in gc_roots() {
-            root.block_mut().mark();
-        }
+            let mut blocks = state.blocks.take();
+            drop(state);
 
-        let mut prev_gc_header_ptr: Option<BlockHeaderPtr> = None;
-        let mut gc_header_ptr_opt = state.blocks;
+            let mut prev_gc_header_ptr: Option<BlockHeaderPtr> = None;
+            let mut gc_header_ptr_opt = blocks;
 
-        while let Some(gc_header_ptr) = gc_header_ptr_opt {
-            let header = gc_header_ptr.block_mut();
+            while let Some(gc_header_ptr) = gc_header_ptr_opt {
+                let header = gc_header_ptr.block_mut();
 
-            match header.state {
-                State::Dealloc | State::Unreachable(..) => {
-                    #[cfg(not(test))]
-                    write_stdout!(
-                        "  free:{} ({})   {:?}\n",
-                        gc_header_ptr,
-                        ObjectPtr::<()>::from(&*header),
-                        header.state,
-                    );
-
-                    if let Some(prev_gc_header_ptr) = prev_gc_header_ptr {
+                match header.state {
+                    State::Dealloc | State::Unreachable { .. } => {
                         #[cfg(not(test))]
-                        write_stdout!("    {}.next = {:?}\n", prev_gc_header_ptr, header.next);
-                        prev_gc_header_ptr.block_mut().next = header.next;
-                    } else {
+                        write_stdout!(
+                            "  free:{} ({})   {:?}\n",
+                            gc_header_ptr,
+                            ObjectPtr::<()>::from(&*header),
+                            header.state,
+                        );
+
+                        if let Some(prev_gc_header_ptr) = prev_gc_header_ptr {
+                            #[cfg(not(test))]
+                            write_stdout!("    {}.next = {:?}\n", prev_gc_header_ptr, header.next);
+                            prev_gc_header_ptr.block_mut().next = header.next;
+                        } else {
+                            #[cfg(not(test))]
+                            write_stdout!("    root.next = {:?}\n", header.next);
+                            blocks = header.next;
+                        }
+
+                        gc_header_ptr_opt = header.next;
+
+                        header.collect_opaque();
+
+                        unsafe {
+                            System.dealloc(header as *mut _ as _, header.layout);
+                        };
+                        freed = true;
+                    }
+                    State::Alloc | State::Reachable { .. } => {
                         #[cfg(not(test))]
-                        write_stdout!("    root.next = {:?}\n", header.next);
-                        state.blocks = header.next;
+                        write_stdout!(
+                            "  keep:{} ({})   {:?}\n",
+                            gc_header_ptr,
+                            ObjectPtr::<()>::from(&*header),
+                            header.state,
+                        );
+
+                        if matches!(header.state, State::Reachable { .. }) {
+                            header.unmark();
+                        }
+
+                        prev_gc_header_ptr = Some(gc_header_ptr);
+                        gc_header_ptr_opt = header.next;
                     }
-
-                    gc_header_ptr_opt = header.next;
-
-                    unsafe {
-                        System.dealloc(header as *mut _ as _, header.layout);
-                    };
-                }
-                State::Alloc | State::Reachable(..) => {
-                    #[cfg(not(test))]
-                    write_stdout!(
-                        "  keep:{} ({})   {:?}\n",
-                        gc_header_ptr,
-                        ObjectPtr::<()>::from(&*header),
-                        header.state,
-                    );
-
-                    if matches!(header.state, State::Reachable(..)) {
-                        header.unmark();
-                    }
-
-                    prev_gc_header_ptr = Some(gc_header_ptr);
-                    gc_header_ptr_opt = header.next;
                 }
             }
+
+            let mut state = self.state.lock().unwrap();
+            if let Some(prev_gc_header_ptr) = prev_gc_header_ptr {
+                prev_gc_header_ptr.block_mut().next = state.blocks;
+            }
+
+            state.blocks = blocks;
         }
     }
 }
@@ -182,6 +200,12 @@ unsafe impl GlobalAlloc for GcAlloc {
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
         let header = Into::<&mut BlockHeader>::into(ObjectPtr::new(ptr).unwrap());
 
+        if matches!(header.state, State::Dealloc)
+            || matches!(header.state, State::Unreachable { .. })
+        {
+            return;
+        }
+
         #[cfg(not(test))]
         write_stdout!(
             "dealloc {:?} ({} bytes) state: {:?}\n",
@@ -210,17 +234,21 @@ pub extern "C" fn gc_enable() {
 }
 
 #[no_mangle]
-pub extern "C" fn gc_alloc(size: usize, align: usize) -> *mut () {
+pub extern "C" fn gc_malloc(size: usize, align: usize) -> *mut () {
     let object_ptr = unsafe { ALLOCATOR.alloc(Layout::from_size_align_unchecked(size, align)) };
     let object_ptr = ObjectPtr::new(object_ptr as _).unwrap();
 
-    Into::<&mut BlockHeader>::into(object_ptr).state = State::Unreachable("*", None);
+    Into::<&mut BlockHeader>::into(object_ptr).state = State::Unreachable {
+        label: "*",
+        mark_recursive: None,
+        collect_opaque: None,
+    };
 
     object_ptr.as_ptr()
 }
 
 #[no_mangle]
-pub extern "C" fn gc_collect() {
+pub extern "C" fn gc_run() {
     ALLOCATOR.collect();
 }
 

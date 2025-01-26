@@ -1,2 +1,3 @@
+mod http;
 mod list;
-pub mod str;
+mod str;

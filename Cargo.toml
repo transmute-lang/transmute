@@ -6,10 +6,12 @@ members = [
     "hir",
     "mir",
     "interpreter",
-    "rt/rust",
+    #"rt/rust",
     "rt/c",
     "llvm",
     "compiler"]
 
+exclude = [
+    "rt/rust"]
 
 default-members = ["compiler", "interpreter"]

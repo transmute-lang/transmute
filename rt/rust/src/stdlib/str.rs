@@ -16,10 +16,22 @@ pub struct Str {
 impl Collectable for Str {
     fn enable_collection(&self) {
         Into::<&mut BlockHeader>::into(ObjectPtr::<Str>::from_ref(self)).state =
-            State::Unreachable("str", Some(Str::mark_recursive));
+            State::Unreachable {
+                label: "str",
+                mark_recursive: Some(Str::mark_recursive),
+                collect_opaque: None,
+            };
 
         Into::<&mut BlockHeader>::into(ObjectPtr::<u8>::new(self.ptr as *mut _).unwrap()).state =
-            State::Unreachable("str.ptr", None);
+            State::Unreachable {
+                label: "str.ptr",
+                mark_recursive: None,
+                collect_opaque: None,
+            };
+    }
+
+    fn collect_opaque(_ptr: ObjectPtr<()>) {
+        // nothing
     }
 
     fn mark_recursive(ptr: ObjectPtr<()>) {
@@ -50,5 +62,5 @@ impl<S: Into<String>> From<S> for Str {
 #[no_mangle]
 pub extern "C" fn stdlib_string_new() -> *mut Str {
     let str = Str::from("hello, world");
-    ObjectPtr::leak(Box::new(str)).as_ref_mut()
+    ObjectPtr::leak(Box::new(str)).as_ptr()
 }

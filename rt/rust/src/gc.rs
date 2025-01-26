@@ -1,14 +1,20 @@
 #[cfg(not(test))]
 use crate::stdout::write_stdout;
 use std::alloc::Layout;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 #[cfg(not(test))]
 use std::io::Write;
 use std::ptr::NonNull;
 
 pub(crate) trait Collectable {
+    /// Enables the collection of the `Collectable` and its "nested" non-opaque allocations.
     fn enable_collection(&self);
 
+    /// Triggers collection on "nested" opaque allocations performed behind the scenes by the
+    /// `Collectable`.
+    fn collect_opaque(ptr: ObjectPtr<()>);
+
+    /// Marks the "nested" non-opaque allocations as reachable
     fn mark_recursive(ptr: ObjectPtr<()>);
 }
 
@@ -53,11 +59,19 @@ impl BlockHeader {
             ObjectPtr::<()>::from(&*self)
         );
         self.state = match self.state {
-            State::Unreachable(s, f) => {
-                if let Some(f) = f {
-                    f(ObjectPtr::<()>::from(&*self))
+            State::Unreachable {
+                label,
+                mark_recursive,
+                collect_opaque,
+            } => {
+                if let Some(mark_recursive) = mark_recursive {
+                    mark_recursive(ObjectPtr::<()>::from(&*self))
                 };
-                State::Reachable(s, f)
+                State::Reachable {
+                    label,
+                    mark_recursive,
+                    collect_opaque,
+                }
             }
             s => s,
         };
@@ -65,8 +79,27 @@ impl BlockHeader {
 
     pub(crate) fn unmark(&mut self) {
         self.state = match self.state {
-            State::Reachable(s, f) => State::Unreachable(s, f),
+            State::Reachable {
+                label,
+                mark_recursive,
+                collect_opaque,
+            } => State::Unreachable {
+                label,
+                mark_recursive,
+                collect_opaque,
+            },
             s => s,
+        }
+    }
+
+    pub(crate) fn collect_opaque(&mut self) {
+        match self.state {
+            State::Unreachable { collect_opaque, .. } => {
+                if let Some(collect_opaque) = collect_opaque {
+                    collect_opaque(ObjectPtr::<()>::from(&*self));
+                }
+            }
+            _ => {}
         }
     }
 }
@@ -79,14 +112,33 @@ impl<T> From<ObjectPtr<T>> for &mut BlockHeader {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub(crate) enum State {
     /// The block is under rust de-allocation rules
     Alloc,
     /// The block was dealloc-ed by rust
     Dealloc,
-    Reachable(&'static str, Option<fn(ObjectPtr<()>)>),
-    Unreachable(&'static str, Option<fn(ObjectPtr<()>)>),
+    Reachable {
+        label: &'static str,
+        mark_recursive: Option<fn(ObjectPtr<()>)>,
+        collect_opaque: Option<fn(ObjectPtr<()>)>,
+    },
+    Unreachable {
+        label: &'static str,
+        mark_recursive: Option<fn(ObjectPtr<()>)>,
+        collect_opaque: Option<fn(ObjectPtr<()>)>,
+    },
+}
+
+impl Debug for State {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            State::Alloc => write!(f, "Alloc"),
+            State::Dealloc => write!(f, "Dealloc"),
+            State::Reachable { label, .. } => write!(f, "Reachable({label})"),
+            State::Unreachable { label, .. } => write!(f, "Unreachable({label})"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -127,6 +179,10 @@ impl<T> ObjectPtr<T> {
     // todo: create `new_unchecked()`? (same as `NonNull::new_unchecked()`)
     pub(crate) fn new(ptr: *mut T) -> Option<Self> {
         NonNull::new(ptr).map(Self)
+    }
+
+    pub(crate) fn as_box(self) -> Box<T> {
+        unsafe { Box::from_raw(self.0.as_ptr()) }
     }
 
     pub(crate) fn from_ref(r: &T) -> Self {
