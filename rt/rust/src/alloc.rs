@@ -66,8 +66,8 @@ impl GcAlloc {
             #[cfg(not(test))]
             {
                 write_stdout!("address: {}\n", gc_header_ptr);
-                write_stdout!("  size: {} bytes\n", gc_header.layout.size());
-                write_stdout!("  state: {:?}\n", gc_header.state);
+                write_stdout!("  size:  {} bytes\n", gc_header.layout.size());
+                write_stdout!("  state: {:?}({:?})\n", gc_header.state, gc_header.label);
             }
             gc_header_ptr_opt = gc_header.next;
         }
@@ -139,10 +139,11 @@ impl GcAlloc {
                     State::Alloc | State::Reachable { .. } => {
                         #[cfg(not(test))]
                         write_stdout!(
-                            "  keep:{} ({})   {:?}\n",
+                            "  keep:{} ({})   {:?}({:?})\n",
                             gc_header_ptr,
                             ObjectPtr::<()>::from(&*header),
                             header.state,
+                            header.label
                         );
 
                         if matches!(header.state, State::Reachable { .. }) {
@@ -208,10 +209,11 @@ unsafe impl GlobalAlloc for GcAlloc {
 
         #[cfg(not(test))]
         write_stdout!(
-            "dealloc {:?} ({} bytes) state: {:?}\n",
+            "dealloc {:?} ({} bytes) state: {:?}({:?})\n",
             ptr,
             header.layout.size(),
-            header.state
+            header.state,
+            header.label
         );
         {
             if header.state == State::Alloc {
@@ -238,8 +240,9 @@ pub extern "C" fn gc_malloc(size: usize, align: usize) -> *mut () {
     let object_ptr = unsafe { ALLOCATOR.alloc(Layout::from_size_align_unchecked(size, align)) };
     let object_ptr = ObjectPtr::new(object_ptr as _).unwrap();
 
-    Into::<&mut BlockHeader>::into(object_ptr).state = State::Unreachable {
-        label: "*",
+    let header = Into::<&mut BlockHeader>::into(object_ptr);
+    header.label = "*";
+    header.state = State::Unreachable {
         mark_recursive: None,
         collect_opaque: None,
     };

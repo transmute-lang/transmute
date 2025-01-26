@@ -4,12 +4,12 @@ use reqwest::blocking::Client;
 
 impl Collectable for Client {
     fn enable_collection(&self) {
-        Into::<&mut BlockHeader>::into(ObjectPtr::<Client>::from_ref(self)).state =
-            State::Unreachable {
-                label: "http_client",
-                mark_recursive: None,
-                collect_opaque: Some(Client::collect_opaque),
-            };
+        let header = Into::<&mut BlockHeader>::into(ObjectPtr::<Client>::from_ref(self));
+        header.label = "http_client";
+        header.state = State::Unreachable {
+            mark_recursive: None,
+            collect_opaque: Some(Client::collect_opaque),
+        };
     }
 
     fn collect_opaque(ptr: ObjectPtr<()>) {

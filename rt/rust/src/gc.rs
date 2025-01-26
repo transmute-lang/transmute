@@ -25,15 +25,14 @@ pub(crate) trait Collectable {
 //    return Some(BlockHeaderPtr::from(&*Into::<&mut BlockHeader>::into(
 //       ObjectPtr::<()>::new(root.as_ptr()).unwrap(),
 //    )));
-// todo does it makse sense to go straight from object ptr to block header ?
+// todo does it make sense to go straight from object ptr to block header ?
 //    Into::<&mut BlockHeader>::into(ObjectPtr::new(data1_ptr).unwrap())
 
 // todo move BlockHeader to alloc.rs as it makes more sense to be there
 /// Holds the metadata associated with an allocated block of memory.
-#[repr(C)]
-#[repr(align(16))]
 pub(crate) struct BlockHeader {
     pub state: State,
+    pub label: &'static str,
     pub layout: Layout,
     pub next: Option<BlockHeaderPtr>,
 }
@@ -60,7 +59,6 @@ impl BlockHeader {
         );
         self.state = match self.state {
             State::Unreachable {
-                label,
                 mark_recursive,
                 collect_opaque,
             } => {
@@ -68,7 +66,6 @@ impl BlockHeader {
                     mark_recursive(ObjectPtr::<()>::from(&*self))
                 };
                 State::Reachable {
-                    label,
                     mark_recursive,
                     collect_opaque,
                 }
@@ -80,11 +77,9 @@ impl BlockHeader {
     pub(crate) fn unmark(&mut self) {
         self.state = match self.state {
             State::Reachable {
-                label,
                 mark_recursive,
                 collect_opaque,
             } => State::Unreachable {
-                label,
                 mark_recursive,
                 collect_opaque,
             },
@@ -113,18 +108,17 @@ impl<T> From<ObjectPtr<T>> for &mut BlockHeader {
 }
 
 #[derive(Copy, Clone, PartialEq)]
+#[repr(C)]
 pub(crate) enum State {
     /// The block is under rust de-allocation rules
     Alloc,
     /// The block was dealloc-ed by rust
     Dealloc,
     Reachable {
-        label: &'static str,
         mark_recursive: Option<fn(ObjectPtr<()>)>,
         collect_opaque: Option<fn(ObjectPtr<()>)>,
     },
     Unreachable {
-        label: &'static str,
         mark_recursive: Option<fn(ObjectPtr<()>)>,
         collect_opaque: Option<fn(ObjectPtr<()>)>,
     },
@@ -135,8 +129,8 @@ impl Debug for State {
         match self {
             State::Alloc => write!(f, "Alloc"),
             State::Dealloc => write!(f, "Dealloc"),
-            State::Reachable { label, .. } => write!(f, "Reachable({label})"),
-            State::Unreachable { label, .. } => write!(f, "Unreachable({label})"),
+            State::Reachable { .. } => write!(f, "Reachable"),
+            State::Unreachable { .. } => write!(f, "Unreachable"),
         }
     }
 }

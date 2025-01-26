@@ -4,13 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-//#include "gc.h"
+#include "gc.h"
 
 // main(number) -> _TM0_4main1n
 int64_t _TM0_4main1n(int64_t n);
 
 int main(int argc, char **argv) {
-//    gc_init();
+    gc_init();
 
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <N>\n", argv[0]);
@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
         printf("main(%li) = %li\n", i, _TM0_4main1n(i));
     }
 
-//    gc_teardown();
+    gc_teardown();
 
     return 0;
 }

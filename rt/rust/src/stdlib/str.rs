@@ -15,19 +15,20 @@ pub struct Str {
 
 impl Collectable for Str {
     fn enable_collection(&self) {
-        Into::<&mut BlockHeader>::into(ObjectPtr::<Str>::from_ref(self)).state =
-            State::Unreachable {
-                label: "str",
-                mark_recursive: Some(Str::mark_recursive),
-                collect_opaque: None,
-            };
+        let header = Into::<&mut BlockHeader>::into(ObjectPtr::<Str>::from_ref(self));
+        header.label = "str";
+        header.state = State::Unreachable {
+            mark_recursive: Some(Str::mark_recursive),
+            collect_opaque: None,
+        };
 
-        Into::<&mut BlockHeader>::into(ObjectPtr::<u8>::new(self.ptr as *mut _).unwrap()).state =
-            State::Unreachable {
-                label: "str.ptr",
-                mark_recursive: None,
-                collect_opaque: None,
-            };
+        let header =
+            Into::<&mut BlockHeader>::into(ObjectPtr::<u8>::new(self.ptr as *mut _).unwrap());
+        header.label = "str.ptr";
+        header.state = State::Unreachable {
+            mark_recursive: None,
+            collect_opaque: None,
+        };
     }
 
     fn collect_opaque(_ptr: ObjectPtr<()>) {
