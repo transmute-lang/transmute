@@ -25,9 +25,24 @@
 
 #include "llvm.h"
 #include "gc.h"
+#include "bindings/rust.h"
+
+extern LlvmStackFrame *llvm_gc_root_chain;
 
 // todo:feature trigger actual GC only if some conditions hold
 // todo:feature keep track of freed blocks to return them instead of a full cycle of free/malloc syscalls
+
+#define PANIC(msg)                                                 \
+do {                                                               \
+    fprintf(stderr, "\nGC PANIC: "msg" (%s:%i)\n", __FILE__, __LINE__);  \
+    exit(1);                                                       \
+} while (0)
+
+#define PANIC_ARGS(msg, ...)                                                    \
+do {                                                                            \
+    fprintf(stderr, "\nGC PANIC: "msg" (%s:%i)\n", __VA_ARGS__, __FILE__, __LINE__);  \
+    exit(1);                                                                    \
+} while (0)
 
 #ifdef GC_TEST
 #include <sys/mman.h>
@@ -54,7 +69,7 @@
 
 #ifdef GC_LOGS
 #define LOG(level, depth, ...) \
-    gc_log(level, depth, __VA_ARGS__)
+    gc_log(level, depth, __func__, __LINE__, __VA_ARGS__)
 #define LOG_BLOCK(block) \
     gc_block_print(block)
 #else
@@ -62,52 +77,30 @@
 #define LOG_BLOCK(block)
 #endif
 
-typedef struct GcStructField {
-    size_t                  offset;
-    struct GcPointeeLayout *layout;
-} GcStructField;
-
-typedef struct GcArrayElement {
-    struct GcPointeeLayout  *layout;
-} GcArrayElement;
-
-typedef union GcPointeeKind {
-    GcArrayElement          array_element;
-    GcStructField           struct_fields[0];
-} GcPointeeKind;
-
-typedef enum GcPointeeKindTag {
-    Struct = 0,
-    Array  = 1
-} GcPointeeKindTag;
-
-typedef struct GcPointeeLayout {
-    GcPointeeKindTag        tag;
-    size_t                  count;
-    GcPointeeKind           pointee;
-} GcPointeeLayout;
+#define GC_BLOCK(object) ((GcBlock *)((char *)object - sizeof(GcBlock)))
 
 typedef enum GcBlockState {
     Unreachable = 0,
-    Reachable   = 1
+    Reachable   = 1,
+    Owned       = 2,
 } GcBlockState;
 
 static inline char* state_to_char(GcBlockState state) {
     switch (state) {
         case Unreachable: return "unreachable";
         case Reachable: return "reachable";
+        case Owned: return "owned";
         default: {
-            fprintf(stderr, "PANIC: Invalid state: %i\n", (int)state);
-            exit(1);
+            PANIC_ARGS("Invalid state: %i", (int)state);
         };
     }
 }
 
-typedef struct GcBlock {
-    GcBlockState     state;
-    struct GcBlock  *next;
-    size_t           data_size;
-    uint8_t          data[];
+typedef struct GcBlock {        // 24 bytes
+    GcBlockState     state;     //  8 (4 + 4)
+    struct GcBlock  *next;      //  8
+    size_t           data_size; //  8
+    uint8_t          data[];    //  0
 } GcBlock;
 
 typedef struct Gc {
@@ -180,17 +173,16 @@ Gc gc = {
 #endif // GC_TEST
 };
 
-void gc_run();
-void* gc_malloc(size_t data_size, size_t align);
 void gc_free(GcBlock *block);
 void gc_mark(int depth, void *object, const GcPointeeLayout *layout);
 
 #ifdef GC_LOGS
-static inline void gc_log(int level, int depth, const char *fmt, ...) {
+static inline void gc_log(int level, int depth, const char* func, int line, const char *fmt, ...) {
     if (gc.log_level >= level) {
         for (int i = 0; i < depth; i++) {
             printf("  ");
         }
+        printf("[%i] %-22s %i | ", level, func, line);
         va_list args;
         va_start(args, fmt);
         vprintf(fmt, args);
@@ -199,10 +191,9 @@ static inline void gc_log(int level, int depth, const char *fmt, ...) {
 }
 
 void gc_block_print(GcBlock *block) {
-    gc_log(2, 0, "  block at %p (object of size %li at %p): %s\n",
+    gc_log(2, 0, "gc_block_print", __LINE__, "  block at %p (object at %p): %s\n",
         block,
-        block->data_size,
-        (void *)block + sizeof(GcBlock),
+        (char *)block + sizeof(GcBlock),
         state_to_char(block->state)
     );
 }
@@ -217,9 +208,9 @@ void gc_pool_dump() {
     printf("\nMemory dump:\n\n");
     for (size_t i = 0; i < gc.pool_size + 2*BOUNDARY_SIZE; i++) {
         if (i == 0) {
-            printf("    %p    ", &gc.pool[i]);
+            printf("    %p    ", (void*)&gc.pool[i]);
         } else if (i % 16 == 0) {
-           printf("\n    %p    ", &gc.pool[i]);
+           printf("\n    %p    ", (void*)&gc.pool[i]);
         } else if (i % 4 == 0) {
             printf("  ");
         }
@@ -231,10 +222,10 @@ void gc_pool_dump() {
                 printf("\033[34m%02x\033[0m ", gc.pool[i]);
             } else {
                 int freed = 0;
-                void *byte_addr = &gc.pool[i];
+                char *byte_addr = (char *)&gc.pool[i];
                 GcBlock *block = gc.freed_blocks_chain;
                 while (block) {
-                    if (byte_addr >= (void *)block && byte_addr < (void *)(block + 1) + block->data_size) {
+                    if (byte_addr >= (char *)block && byte_addr < (char *)(block + 1) + block->data_size) {
                         printf("\033[32m%02x\033[0m ", gc.pool[i]);
                         freed = 1;
                         break;
@@ -337,7 +328,7 @@ LOG(1, 0, "Initialize GC with log level: %i\n", gc.log_level);
 }
 
 void gc_teardown() {
-    LOG(2, 0, "\nGC Teardown\n");
+    LOG(2, 0, "GC Teardown\n");
 
 #ifdef GC_TEST
     if (gc.test_final_run) {
@@ -364,12 +355,18 @@ void gc_run() {
 
     gc.execution_count++;
 
-    LOG(2, 0, "\nStart GC\n");
+    LOG(2, 0, "Start GC\n");
+    if (gc.blocks_chain == NULL) {
+        LOG(2, 0, "no allocated blocks\n");
+        return;
+    }
 
     LOG(2, 0, "Phase: init.\n");
     GcBlock *block = gc.blocks_chain;
     while (block) {
-        block->state = Unreachable;
+        if (block->state != Owned) {
+            block->state = Unreachable;
+        }
         LOG_BLOCK(block);
         block = block->next;
     }
@@ -380,16 +377,14 @@ void gc_run() {
         // all roots have a meta associated
         assert(frame->map->num_roots == frame->map->num_meta);
 
-        LOG(2, 0, "  frame %i (%i roots)", frame_idx, frame->map->num_roots);
-        LOG(3, 0, " at %p", frame);
-        LOG(2, 0, ":\n");
+        LOG(2, 0, "  frame %i (%i roots) at frame %p:\n", frame_idx, frame->map->num_roots, frame);
 
         for (int32_t root_idx = 0; root_idx < frame->map->num_roots; root_idx++) {
             if (frame->roots[root_idx]) {
                 LOG(2, 0, "    root %i:\n", root_idx);
                 gc_mark(0, frame->roots[root_idx], frame->map->meta[root_idx]);
             } else {
-                LOG(2, 0, "    root %i: skipped (nil)\n", root_idx);
+                LOG(2, 0, "    root %i: skipped (null)\n", root_idx);
             }
         }
 
@@ -413,6 +408,8 @@ void gc_run() {
             gc_free(block);
             block = next;
         } else {
+            LOG(1, 0, "keeping block at %p (object size: %li): %s\n",
+                block, block->data_size, state_to_char(block->state));
             prev = block;
             block = block->next;
         }
@@ -420,23 +417,23 @@ void gc_run() {
 }
 
 void gc_mark(int depth, void *object, const GcPointeeLayout *layout) {
-    GcBlock *block = object - sizeof(GcBlock);
+    GcBlock *block = GC_BLOCK(object);
 
 #ifdef GC_LOGS
     if (gc.log_level >= 3) {
-        LOG(3, depth, "      object at %p (block at %p): %li pointers (layout %p), %s\n",
-            object,
+        LOG(3, depth, "      %s block at %p (object at %p): %li pointers (layout %p)\n",
+            state_to_char(block->state),
             block,
+            object,
             layout->count,
-            layout,
-            state_to_char(block->state)
+            layout
         );
     } else {
-        LOG(2, depth, "      object at %p (block at %p): %li pointers, %s\n",
-            object,
+        LOG(2, depth, "      %s block at %p (object at %p): %li pointers\n",
+            state_to_char(block->state),
             block,
-            layout->count,
-            state_to_char(block->state)
+            object,
+            layout->count
         );
     }
 #endif // GC_LOGS
@@ -457,7 +454,7 @@ void gc_mark(int depth, void *object, const GcPointeeLayout *layout) {
                 LOG(3, depth, "      -fields[%li] offset: %li\n", i, offset);
                 LOG(3, depth, "      -fields[%li] layout: %p\n", i, (void *)child_layout);
 
-                void *child_offset = object + offset;
+                void *child_offset = (char *)object + offset;
                 void *child = (void *)*(size_t *)child_offset;
                 LOG(2, depth, "        %li. %p(+%li) -> %p\n", i, child_offset, offset, child);
 
@@ -474,10 +471,13 @@ void gc_mark(int depth, void *object, const GcPointeeLayout *layout) {
             if (child_layout) {
                 void **array = (void **)object;
                 for (size_t i = 0; i < layout->count; i++) {
-//                    void *element = (void *)*(size_t *)array[i];
                     LOG(2, depth, "        %li. %p(+%li) -> %p\n", i, &array[i], i * sizeof(void *), array[i]);
                 }
             }
+        }
+        case Managed: {
+            LOG(2, depth, "        %p: mark(%p) @ %p\n", (void *)block, block->data, (*(Metadata*)block->data).mark);
+            (*(Metadata*)block->data).mark(block->data);
         }
     }
 }
@@ -493,12 +493,12 @@ void* gc_malloc(size_t data_size, size_t align) {
     gc.pool_free = (uint8_t *)(((uintptr_t)gc.pool_free + (align - 1)) & -align);
 
     if (gc.pool_free + alloc_size >= gc.pool + gc.pool_size + BOUNDARY_SIZE) {
-        fprintf(stderr, "\nERROR: Cannot allocate %li bytes: missing %li bytes\n",
+        gc_pool_dump();
+        gc_print_statistics();
+        PANIC_ARGS("Cannot allocate %li bytes: missing %li bytes",
             alloc_size,
             gc.pool_free + alloc_size - (gc.pool + gc.pool_size + BOUNDARY_SIZE)
         );
-        gc_pool_dump();
-        gc_print_statistics();
         exit(1);
     }
 
@@ -557,4 +557,22 @@ void gc_free(GcBlock *block) {
 #else
     free(block);
 #endif // GC_TEST
+}
+
+void gc_take_ownership(void *object) {
+    GcBlock *block = GC_BLOCK(object);
+    LOG(2, 0, "mark block at %p (object at %p) as owned\n", block, object);
+    block->state = Owned;
+}
+
+void gc_release_ownership(void *object) {
+    GcBlock *block = GC_BLOCK(object);
+    LOG(2, 0, "mark owned block at %p (object at %p) as unreachable\n", block, object);
+    block->state = Unreachable;
+}
+
+void gc_mark_managed(void * object) {
+    GcBlock *block = GC_BLOCK(object);
+//    LOG(2, 0, "mark managed block at %p (object at %p) as reachable\n", block, object);
+    block->state = Reachable;
 }
