@@ -92,6 +92,10 @@ impl<T> ObjectPtr<T> {
         unsafe { self.0.as_ref() }
     }
 
+    pub(crate) fn as_ref_mut(&mut self) -> &mut T {
+        unsafe { self.0.as_mut() }
+    }
+
     pub(crate) fn as_raw(&self) -> *mut T {
         self.0.as_ptr()
     }

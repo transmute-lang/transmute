@@ -478,6 +478,7 @@ void gc_mark(int depth, void *object, const GcPointeeLayout *layout) {
                     LOG(2, depth, "        %li. %p(+%li) -> %p\n", i, &array[i], i * sizeof(void *), array[i]);
                 }
             }
+            break;
         }
     }
 }

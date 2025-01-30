@@ -32,16 +32,16 @@ extern LlvmStackFrame *llvm_gc_root_chain;
 // todo:feature trigger actual GC only if some conditions hold
 // todo:feature keep track of freed blocks to return them instead of a full cycle of free/malloc syscalls
 
-#define PANIC(msg)                                                 \
-do {                                                               \
+#define PANIC(msg)                                                       \
+do {                                                                     \
     fprintf(stderr, "\nGC PANIC: "msg" (%s:%i)\n", __FILE__, __LINE__);  \
-    exit(1);                                                       \
+    exit(1);                                                             \
 } while (0)
 
-#define PANIC_ARGS(msg, ...)                                                    \
-do {                                                                            \
+#define PANIC_ARGS(msg, ...)                                                          \
+do {                                                                                  \
     fprintf(stderr, "\nGC PANIC: "msg" (%s:%i)\n", __VA_ARGS__, __FILE__, __LINE__);  \
-    exit(1);                                                                    \
+    exit(1);                                                                          \
 } while (0)
 
 #ifdef GC_TEST
@@ -92,6 +92,17 @@ static inline char* state_to_char(GcBlockState state) {
         case Owned: return "owned";
         default: {
             PANIC_ARGS("Invalid state: %i", (int)state);
+        };
+    }
+}
+
+static inline char* gc_pointee_kind_tag_to_char(GcPointeeKindTag tag) {
+    switch (tag) {
+        case Struct: return "struct";
+        case Array: return "array";
+        case Managed: return "managed";
+        default: {
+            PANIC_ARGS("Invalid pointee kind: %i", (int)tag);
         };
     }
 }
@@ -200,44 +211,78 @@ void gc_block_print(GcBlock *block) {
 #endif // GC_LOGS
 
 #ifdef GC_TEST
-void gc_pool_dump() {
-    if (!gc.test_dump) {
-        return;
-    }
+#define COLOR_WHITE 0
+#define COLOR_GREEN 32
+#define COLOR_RED   31
+#define COLOR_BLUE  34
 
+static inline void print_byte(uint8_t byte, bool print_char, int color) {
+    if (print_char) {
+        if (byte > 31 && byte < 127) {
+            printf("\033[%im%c\033[0m", color, byte);
+        }
+        else {
+            printf("\033[%im.\033[0m", color);
+        }
+    }
+    else {
+        printf("\033[%im%02x\033[0m ", color, byte);
+    }
+}
+
+void gc_pool_dump() {
     printf("\nMemory dump:\n\n");
-    for (size_t i = 0; i < gc.pool_size + 2*BOUNDARY_SIZE; i++) {
+    bool print_chars = false;
+    for (size_t i = 0; /* nothing */; i++) {
+        if (print_chars && i == gc.pool_size + 2 * BOUNDARY_SIZE) {
+            break;
+        }
         if (i == 0) {
-            printf("    %p    ", (void*)&gc.pool[i]);
-        } else if (i % 16 == 0) {
-           printf("\n    %p    ", (void*)&gc.pool[i]);
-        } else if (i % 4 == 0) {
+            if (!print_chars) {
+                printf("    %p    ", (void *)&gc.pool[i]);
+            }
+        }
+        else if (i % 16 == 0) {
+            if (print_chars) {
+                print_chars = false;
+                printf("\n    %p    ", (void *)&gc.pool[i]);
+            }
+            else {
+                printf("   ");
+                print_chars = true;
+                i -= 16;
+            }
+        }
+        else if (i % 4 == 0) {
             printf("  ");
         }
 
         if (gc.test_dump_color) {
             if (i < BOUNDARY_SIZE || i >= gc.pool_size + BOUNDARY_SIZE) {
-                printf("\033[31m%02x\033[0m ", gc.pool[i]);
-            } else if (i >= gc.pool_free - gc.pool) {
-                printf("\033[34m%02x\033[0m ", gc.pool[i]);
-            } else {
+                print_byte(gc.pool[i], print_chars, COLOR_RED);
+            }
+            else if (i >= gc.pool_free - gc.pool) {
+                print_byte(gc.pool[i], print_chars, COLOR_BLUE);
+            }
+            else {
                 int freed = 0;
                 char *byte_addr = (char *)&gc.pool[i];
                 GcBlock *block = gc.freed_blocks_chain;
                 while (block) {
                     if (byte_addr >= (char *)block && byte_addr < (char *)(block + 1) + block->data_size) {
-                        printf("\033[32m%02x\033[0m ", gc.pool[i]);
+                        print_byte(gc.pool[i], print_chars, COLOR_GREEN);
                         freed = 1;
                         break;
                     }
                     block = block->next;
                 }
                 if (!freed) {
-                    printf("%02x ", gc.pool[i]);
+                    print_byte(gc.pool[i], print_chars, COLOR_WHITE);
                 }
             }
-        } else {
-            printf("%02x ", gc.pool[i]);
+        }
+        else {
+            print_byte(gc.pool[i], print_chars, COLOR_WHITE);
         }
     }
     printf("\n\n");
@@ -292,7 +337,6 @@ LOG(1, 0, "Initialize GC with log level: %i\n", gc.log_level);
 
     char *gc_test_dump_color_env = getenv("GC_TEST_DUMP_COLOR");
     if (gc_test_dump_color_env && strcmp(gc_test_dump_color_env, "1") == 0) {
-        gc.test_dump = 1;
         gc.test_dump_color = 1;
     }
 
@@ -323,7 +367,9 @@ LOG(1, 0, "Initialize GC with log level: %i\n", gc.log_level);
 
     gc.pool_free = gc.pool + BOUNDARY_SIZE;
 
-    gc_pool_dump();
+    if (gc.test_dump) {
+        gc_pool_dump();
+    }
 #endif // GC_TEST
 }
 
@@ -337,7 +383,9 @@ void gc_teardown() {
         gc_run(); // we don't run the gc in non test mode as the OS will free all remaining memory for us anyway
     }
 
-    gc_pool_dump();
+    if (gc.test_dump) {
+        gc_pool_dump();
+    }
     gc_print_statistics();
     assert(munmap((void *)gc.pool, gc.pool_size + 2 * BOUNDARY_SIZE) == 0);
 #else
@@ -383,7 +431,8 @@ void gc_run() {
             if (frame->roots[root_idx]) {
                 LOG(2, 0, "    root %i:\n", root_idx);
                 gc_mark(0, frame->roots[root_idx], frame->map->meta[root_idx]);
-            } else {
+            }
+            else {
                 LOG(2, 0, "    root %i: skipped (null)\n", root_idx);
             }
         }
@@ -399,7 +448,8 @@ void gc_run() {
         if (block->state == Unreachable) {
             if (block == gc.blocks_chain) {
                 gc.blocks_chain = block->next;
-            } else {
+            }
+            else {
                 assert(prev != NULL);
                 prev->next = block->next;
             }
@@ -407,7 +457,8 @@ void gc_run() {
             LOG(1, 0, "freeing block at %p (object size: %li)\n", block, block->data_size);
             gc_free(block);
             block = next;
-        } else {
+        }
+        else {
             LOG(1, 0, "keeping block at %p (object size: %li): %s\n",
                 block, block->data_size, state_to_char(block->state));
             prev = block;
@@ -421,16 +472,19 @@ void gc_mark(int depth, void *object, const GcPointeeLayout *layout) {
 
 #ifdef GC_LOGS
     if (gc.log_level >= 3) {
-        LOG(3, depth, "      %s block at %p (object at %p): %li pointers (layout %p)\n",
+        LOG(3, depth, "      %s %s block at %p (object at %p): %li pointers (layout %p)\n",
             state_to_char(block->state),
+            gc_pointee_kind_tag_to_char(layout->tag),
             block,
             object,
             layout->count,
             layout
         );
-    } else {
-        LOG(2, depth, "      %s block at %p (object at %p): %li pointers\n",
+    }
+    else {
+        LOG(2, depth, "      %s %s block at %p (object at %p): %li pointers\n",
             state_to_char(block->state),
+            gc_pointee_kind_tag_to_char(layout->tag),
             block,
             object,
             layout->count
@@ -474,6 +528,7 @@ void gc_mark(int depth, void *object, const GcPointeeLayout *layout) {
                     LOG(2, depth, "        %li. %p(+%li) -> %p\n", i, &array[i], i * sizeof(void *), array[i]);
                 }
             }
+            break;
         }
         case Managed: {
             LOG(2, depth, "        %p: mark(%p) @ %p\n", (void *)block, block->data, (*(Metadata*)block->data).mark);
@@ -483,23 +538,26 @@ void gc_mark(int depth, void *object, const GcPointeeLayout *layout) {
 }
 
 void* gc_malloc(size_t data_size, size_t align) {
+    LOG(2, 0, "alloc %li bytes, align: %li (header: %li bytes)\n", data_size, align);
     gc_run();
 
     size_t alloc_size = sizeof(GcBlock) + data_size;
 
 #ifdef GC_TEST
+    // assert(sizeof(GcBlock) % align == 0);
     // fixme this works for as long as the header is a multiple of align
     // fixme we need to implement the same feature for malloc, when the header is not a multiple of align
     gc.pool_free = (uint8_t *)(((uintptr_t)gc.pool_free + (align - 1)) & -align);
 
     if (gc.pool_free + alloc_size >= gc.pool + gc.pool_size + BOUNDARY_SIZE) {
-        gc_pool_dump();
+        if (gc.test_dump) {
+            gc_pool_dump();
+        }
         gc_print_statistics();
         PANIC_ARGS("Cannot allocate %li bytes: missing %li bytes",
             alloc_size,
             gc.pool_free + alloc_size - (gc.pool + gc.pool_size + BOUNDARY_SIZE)
         );
-        exit(1);
     }
 
     GcBlock *block = (void *)gc.pool_free;
@@ -550,7 +608,8 @@ void gc_free(GcBlock *block) {
     if (gc.test_dump_color) {
         block->next = gc.freed_blocks_chain;
         gc.freed_blocks_chain = block;
-    } else {
+    }
+    else {
         LOG(3, 0, "memset %#02x at %p for %li bytes\n", FREED, block, sizeof(GcBlock) + block->data_size);
         memset((void *)block, FREED, sizeof(GcBlock) + block->data_size);
     }

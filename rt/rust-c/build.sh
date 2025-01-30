@@ -13,6 +13,7 @@ clang $CFLAGS -c -fPIC -ggdb gc.c -D GC_TEST -D GC_LOGS -o target/gc.o || exit 1
 clang $CFLAGS -c -fPIC -ggdb  llvm-support.c -o target/llvm-support.o || exit 1
 
 clang $CFLAGS \
+      -D GC_TEST \
       target/llvm-support.o \
       target/gc.o \
       test.c \
@@ -29,6 +30,6 @@ else
   GC_TEST_POOL_SIZE=512 \
   GC_LOG_LEVEL=2 \
   GC_TEST_DUMP=0 \
-  GC_TEST_DUMP_COLOR=0 \
+  GC_TEST_DUMP_COLOR=1 \
   target/test
 fi

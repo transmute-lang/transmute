@@ -9,7 +9,7 @@ pub struct Str {
 
 impl Collectable for Str {
     fn enable_collection(&self) {
-        let object_ptr = ObjectPtr::<Str>::from_ref(self);
+        let object_ptr = ObjectPtr::from_ref(self);
         object_ptr.set_unreachable();
 
         ObjectPtr::<u8>::from_raw(self.ptr as _)

@@ -6,17 +6,8 @@
 
 extern LlvmStackFrame *llvm_gc_root_chain;
 
-//typedef enum GcBlockState {
-//    Unreachable = 0,
-//    Reachable   = 1,
-//    Owned       = 2,
-//} GcBlockState;
-//typedef struct GcBlock {        // 24 bytes
-//    GcBlockState     state;     //  8 (4 + 4)
-//    struct GcBlock  *next;      //  8
-//    size_t           data_size; //  8
-//    uint8_t          data[];    //  0
-//} GcBlock;
+// see GcAlloc::alloc()
+#define OBJECT(object) (*(void **)( (char *)object - sizeof(void *)))
 
 int main() {
 //    printf("sizeof(GcBlockState) = %li\n", sizeof(GcBlockState));               // 4
@@ -29,6 +20,14 @@ int main() {
 //    printf("sizeof(GcPointeeKindTag) = %li\n", sizeof(GcPointeeKindTag));       // 4
 //    printf("sizeof(GcPointeeLayout) = %li\n", sizeof(GcPointeeLayout));         // 24
 
+    GcPointeeLayout *managed_meta = malloc(sizeof(GcPointeeLayout));
+    managed_meta->tag = Managed;
+    managed_meta->count = 0;
+
+    GcPointeeLayout *array_meta = malloc(sizeof(GcPointeeLayout));
+    array_meta->tag = Array;
+    array_meta->count = 0;
+
     #define NUM_ROOTS 4
     llvm_gc_root_chain = malloc(sizeof(LlvmStackFrame) + NUM_ROOTS * sizeof(void *));
     llvm_gc_root_chain->map = malloc(sizeof(LlvmFrameMap) + NUM_ROOTS * sizeof(void *));
@@ -36,23 +35,49 @@ int main() {
     llvm_gc_root_chain->map->num_meta = NUM_ROOTS;
     llvm_gc_root_chain->next = 0;
 
+    printf("\n--- gc_init -------------------+\n");
     gc_init();
 
+    printf("\n--- stdlib_string_new ----------+\n");
     Str *str = stdlib_string_new();
-    printf("str1 = %p\n", (void *)str);
+    llvm_gc_root_chain->map->meta[2] = managed_meta;
+    llvm_gc_root_chain->roots[2] = OBJECT(str);
 
-    GcPointeeLayout *meta = malloc(sizeof(GcPointeeLayout));
-    meta->tag = Managed;
-    meta->count = 1;
+    printf("str = %p\n", (void *)str);
 
-    llvm_gc_root_chain->map->meta[0] = meta;
+    printf("\n--- stdlib_list_new -----------+\n");
+    List *list = stdlib_list_new();
+    llvm_gc_root_chain->map->meta[0] = managed_meta;
+    llvm_gc_root_chain->roots[0] = OBJECT(list);
 
-    // see GcAlloc::alloc()
-    void *object = *(void **)( (char *)str - sizeof(void *));
+    printf("list at %p has len=%li, cap=%li\n", (void *)list, list->len, list->cap);
 
-    llvm_gc_root_chain->roots[0] = object;
+    printf("\n--- gc_malloc(69, 1)-----------+\n");
+    void *element = gc_malloc(69, 1);
+    llvm_gc_root_chain->map->meta[1] = array_meta;
+    llvm_gc_root_chain->roots[1] = element;
 
+    printf("\n--- stdlib_list_push(str) -----+\n");
+    stdlib_list_push(list, str);
+
+    printf("\n--- stdlib_list_push(element) -+\n");
+    stdlib_list_push(list, element);
+
+    llvm_gc_root_chain->map->meta[1] = 0;
+    llvm_gc_root_chain->roots[1] = 0;
+    llvm_gc_root_chain->map->meta[2] = 0;
+    llvm_gc_root_chain->roots[2] = 0;
+
+    printf("\n--- gc_malloc(2, 1)------------+\n");
+    char *ptr = gc_malloc(2, 1);
+    ptr[0] = 'B';
+    ptr[1] = 'B';
+
+    printf("\n--- gc_run --------------------+\n");
     gc_run();
 
+    gc_pool_dump();
+
+    printf("\n--- gc_teardown ---------------+\n");
     gc_teardown();
 }
