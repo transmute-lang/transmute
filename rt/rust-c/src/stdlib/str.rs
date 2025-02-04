@@ -1,4 +1,4 @@
-use crate::gc::{mark_recursive, Collectable, MetadataPtr, ObjectPtr};
+use crate::gc::{free_recursive, mark_recursive, Collectable, GcCallbacks, ObjectPtr};
 
 #[repr(C)]
 pub struct Str {
@@ -7,23 +7,31 @@ pub struct Str {
     cap: usize,
 }
 
+// todo create a macro to generate it
+static CALLBACKS: GcCallbacks = GcCallbacks {
+    mark: Some(mark_recursive::<Str>),
+    free: Some(free_recursive::<Str>),
+};
+
 impl Collectable for Str {
     fn enable_collection(&self) {
         let object_ptr = ObjectPtr::from_ref(self);
+        object_ptr.set_callbacks(&CALLBACKS);
         object_ptr.set_unreachable();
 
         ObjectPtr::<u8>::from_raw(self.ptr as _)
             .unwrap()
             .set_unreachable();
-
-        let mut metadata_ptr = MetadataPtr::from_object_ptr(&object_ptr);
-        metadata_ptr.as_ref_mut().mark = Some(mark_recursive::<Self>);
     }
 
     fn mark_recursive(ptr: ObjectPtr<Str>) {
         ObjectPtr::<u8>::from_raw(ptr.as_ref().ptr as _)
             .unwrap()
             .mark();
+    }
+
+    fn free_recursive(_ptr: ObjectPtr<Self>) {
+        // nothing
     }
 }
 

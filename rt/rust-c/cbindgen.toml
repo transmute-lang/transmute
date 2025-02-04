@@ -41,14 +41,14 @@ usize_is_size_t = true
 # "feature = serde" = "DEFINE_SERDE"
 
 [export]
-include = [
-    "Metadata"
-]
+include = []
 exclude = [
     "gc_malloc",
     "gc_mark_managed",
     "gc_release_ownership",
+    "gc_set_callbacks",
     "gc_take_ownership",
+    "GcCallbacks",
 ]
 # prefix = "CAPI_"
 item_types = []

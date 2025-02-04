@@ -1,4 +1,4 @@
-use crate::gc::{mark_recursive, Collectable, MetadataPtr, ObjectPtr};
+use crate::gc::{free_recursive, mark_recursive, Collectable, GcCallbacks, ObjectPtr};
 use std::ptr;
 
 type ListElement = *const ();
@@ -29,34 +29,22 @@ impl From<Vec<ListElement>> for List {
     }
 }
 
+static CALLBACKS: GcCallbacks = GcCallbacks {
+    mark: Some(mark_recursive::<List>),
+    free: Some(free_recursive::<List>),
+};
+
 impl Collectable for List {
     fn enable_collection(&self) {
         let object_ptr = ObjectPtr::from_ref(self);
+        object_ptr.set_callbacks(&CALLBACKS);
         object_ptr.set_unreachable();
-
-        // let header = Into::<&mut BlockHeader>::into(ObjectPtr::from_ref(self));
-        // header.label = "list";
-        // header.state = State::Unreachable {
-        //     mark_recursive: Some(List::mark_recursive),
-        //     collect_opaque: None,
-        // };
 
         if !self.ptr.is_null() && self.ptr != ptr::dangling::<ListElement>() && self.cap > 0 {
             ObjectPtr::<u8>::from_raw(self.ptr as _)
                 .unwrap()
                 .set_unreachable();
-
-            // let header =
-            //     Into::<&mut BlockHeader>::into(ObjectPtr::new(self.ptr as *mut ListItem).unwrap());
-            // header.label = "list.ptr";
-            // header.state = State::Unreachable {
-            //     mark_recursive: None,
-            //     collect_opaque: None,
-            // };
         }
-
-        let mut metadata_ptr = MetadataPtr::from_object_ptr(&object_ptr);
-        metadata_ptr.as_ref_mut().mark = Some(mark_recursive::<Self>);
     }
 
     fn mark_recursive(ptr: ObjectPtr<List>) {
@@ -74,6 +62,10 @@ impl Collectable for List {
 
             vec.leak();
         }
+    }
+
+    fn free_recursive(_ptr: ObjectPtr<Self>) {
+        // nothing
     }
 }
 

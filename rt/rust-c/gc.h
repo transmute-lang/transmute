@@ -25,8 +25,12 @@ typedef struct GcPointeeLayout {
     GcPointeeKind           pointee;
 } GcPointeeLayout;
 
+typedef struct GcCallbacks {
+    void (*mark)(void *);
+    void (*free)(void *);
+} GcCallbacks;
 
-void* gc_malloc(size_t data_size, size_t align);
+void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks);
 
 void gc_init();
 void gc_run();

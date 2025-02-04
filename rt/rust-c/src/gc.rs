@@ -2,25 +2,11 @@ use std::alloc::{GlobalAlloc, Layout};
 use std::ptr;
 use std::ptr::NonNull;
 
+/// Rust version of the struct defined in `gc.h`.
 #[repr(C)]
-pub(crate) struct Metadata {
+pub struct GcCallbacks {
     pub mark: Option<extern "C" fn(*mut ())>,
-    pub dealloc: Option<extern "C" fn(*mut ())>,
-}
-
-impl Metadata {
-    pub(crate) const fn rounded_size() -> usize {
-        // we want at least size_of(Metadata) + size_of(*Metadata), rounded to the next 16 bytes
-        ((size_of::<Self>() + size_of::<*mut Metadata>() - 1) | 15) + 1
-    }
-
-    pub(crate) fn layout_for(layout: Layout) -> Layout {
-        Layout::from_size_align(
-            layout.size() + Metadata::rounded_size(),
-            layout.align().max(16),
-        )
-        .expect("Layout is valid")
-    }
+    pub free: Option<extern "C" fn(*mut ())>,
 }
 
 pub(crate) struct GcAlloc;
@@ -33,38 +19,13 @@ impl GcAlloc {
 
 unsafe impl GlobalAlloc for GcAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let layout = Metadata::layout_for(layout);
-
-        let block_ptr = gc_malloc(layout.size(), layout.align());
-        gc_take_ownership(block_ptr);
-
-        if let Some(mut metadata_ptr) = MetadataPtr::from_raw(block_ptr as _) {
-            let metadata = metadata_ptr.as_ref_mut();
-            metadata.mark = None;
-            metadata.dealloc = None;
-
-            {
-                // ok, so... the idea is that the last size_of::<*mut u8>() bytes of the metadata
-                // block (which is rounded up to the next multiple of 16, see
-                // Metadata::rounded_size()) contain a pointer to the beginning of the said metadata
-                // block. in order ot ensure we have these last size_of::<*mut u8>() bytes free, we
-                // have a field _block_ptr of type *mut u8 inside the Metadata struct.
-                let ptr = metadata_ptr.as_raw() as *mut *mut u8;
-                let ptr = ptr.byte_add(Metadata::rounded_size()).sub(1);
-                *ptr = block_ptr;
-            }
-
-            let object_ptr = metadata_ptr.object_ptr().as_raw();
-            object_ptr
-        } else {
-            ptr::null_mut()
-        }
+        let ptr = gc_malloc(layout.size(), layout.align(), ptr::null());
+        gc_take_ownership(ptr);
+        ptr
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
-        let object_ptr = ObjectPtr::from_raw(ptr).unwrap();
-        let metadata_ptr = MetadataPtr::from_object_ptr(&object_ptr);
-        gc_release_ownership(metadata_ptr.as_raw() as _);
+        gc_release_ownership(ptr as _);
     }
 }
 
@@ -74,6 +35,9 @@ pub(crate) trait Collectable {
 
     /// Marks the "nested" non-opaque allocations as reachable
     fn mark_recursive(ptr: ObjectPtr<Self>);
+
+    /// Frees the "nested" opaque allocations
+    fn free_recursive(ptr: ObjectPtr<Self>);
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -101,11 +65,21 @@ impl<T> ObjectPtr<T> {
     }
 
     pub(crate) fn mark(&self) {
-        unsafe { gc_mark_managed(MetadataPtr::from_object_ptr(self).as_raw() as _) };
+        unsafe {
+            gc_mark_managed(self.as_raw() as _);
+        }
+    }
+
+    pub(crate) fn set_callbacks(&self, callbacks: &GcCallbacks) {
+        unsafe {
+            gc_set_callbacks(self.as_raw() as _, callbacks);
+        }
     }
 
     pub(crate) fn set_unreachable(&self) {
-        unsafe { gc_release_ownership(MetadataPtr::from_object_ptr(self).as_raw() as _) };
+        unsafe {
+            gc_release_ownership(self.as_raw() as _);
+        }
     }
 }
 
@@ -116,47 +90,20 @@ impl<T: Collectable> ObjectPtr<T> {
     }
 }
 
-// impl ObjectPtr<()> {
-//     pub(crate) fn cast<T>(self) -> ObjectPtr<T> {
-//         ObjectPtr::<T>::from_raw(self.as_raw() as _).unwrap()
-//     }
-// }
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) struct MetadataPtr(NonNull<Metadata>);
-
-impl MetadataPtr {
-    pub(crate) fn from_raw(ptr: *mut Metadata) -> Option<Self> {
-        NonNull::new(ptr as _).map(Self)
-    }
-
-    pub(crate) fn from_object_ptr<T>(ptr: &ObjectPtr<T>) -> Self {
-        let ptr = unsafe { ptr.as_raw().byte_sub(Metadata::rounded_size()) };
-        Self::from_raw(ptr as _).unwrap()
-    }
-
-    fn as_raw(self) -> *mut Metadata {
-        self.0.as_ptr()
-    }
-
-    pub(crate) fn as_ref_mut(&mut self) -> &mut Metadata {
-        unsafe { self.0.as_mut() }
-    }
-
-    pub(crate) fn object_ptr<T>(&self) -> ObjectPtr<T> {
-        let ptr = unsafe { self.as_raw().byte_add(Metadata::rounded_size()) };
-        ObjectPtr::from_raw(ptr as _).unwrap()
-    }
+pub extern "C" fn mark_recursive<T: Collectable>(ptr: *mut ()) {
+    T::mark_recursive(ObjectPtr::<T>::from_raw(ptr as _).unwrap());
 }
 
-pub extern "C" fn mark_recursive<T: Collectable>(ptr: *mut ()) {
-    T::mark_recursive(MetadataPtr::from_raw(ptr as _).unwrap().object_ptr::<T>());
+pub extern "C" fn free_recursive<T: Collectable>(ptr: *mut ()) {
+    T::free_recursive(ObjectPtr::<T>::from_raw(ptr as _).unwrap());
 }
 
 extern "C" {
-    fn gc_malloc(data_size: usize, align: usize) -> *mut u8;
+    fn gc_malloc(data_size: usize, align: usize, callbacks: *const GcCallbacks) -> *mut u8;
 
     fn gc_take_ownership(ptr: *mut u8);
+
+    fn gc_set_callbacks(ptr: *mut u8, callbacks: *const GcCallbacks);
 
     fn gc_release_ownership(ptr: *mut u8);
 

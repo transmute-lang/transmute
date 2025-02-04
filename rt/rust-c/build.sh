@@ -27,7 +27,7 @@ if [ "$GC_DEBUG" == 1 ]; then
   GC_LOG_LEVEL=0 \
   gdb --command=gdb.in target/test
 else
-  GC_TEST_POOL_SIZE=512 \
+  GC_TEST_POOL_SIZE=608 \
   GC_LOG_LEVEL=2 \
   GC_TEST_DUMP=0 \
   GC_TEST_DUMP_COLOR=1 \
