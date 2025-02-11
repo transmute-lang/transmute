@@ -1,9 +1,11 @@
-use crate::gc::{free_recursive, mark_recursive, Collectable, GcCallbacks, ObjectPtr};
+use crate::gc::{Collectable, GcCallbacks, ObjectPtr};
 use std::collections::HashMap;
+use transmute_rustcrt_macros::GcCallbacks;
 
 type MapKey = *const ();
 type MapValue = *const ();
 
+#[derive(GcCallbacks)]
 pub struct Map(HashMap<MapKey, MapValue>);
 
 impl Map {
@@ -11,11 +13,6 @@ impl Map {
         Self(map)
     }
 }
-
-static CALLBACKS: GcCallbacks = GcCallbacks {
-    mark: Some(mark_recursive::<Map>),
-    free: Some(free_recursive::<Map>),
-};
 
 impl Collectable for Map {
     fn enable_collection(&self) {

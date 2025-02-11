@@ -1,9 +1,11 @@
-use crate::gc::{free_recursive, mark_recursive, Collectable, GcCallbacks, ObjectPtr};
+use crate::gc::{Collectable, GcCallbacks, ObjectPtr};
 use std::ptr;
+use transmute_rustcrt_macros::GcCallbacks;
 
 type ListElement = *const ();
 
 #[repr(C)]
+#[derive(GcCallbacks)]
 pub struct List {
     ptr: *const ListElement,
     len: usize,
@@ -28,11 +30,6 @@ impl From<Vec<ListElement>> for List {
         }
     }
 }
-
-static CALLBACKS: GcCallbacks = GcCallbacks {
-    mark: Some(mark_recursive::<List>),
-    free: Some(free_recursive::<List>),
-};
 
 impl Collectable for List {
     fn enable_collection(&self) {
@@ -63,17 +60,7 @@ impl Collectable for List {
             vec.leak();
         }
     }
-
-    fn free_recursive(_ptr: ObjectPtr<Self>) {
-        // nothing
-    }
 }
-
-// impl From<ObjectPtr<List>> for Vec<ListItem> {
-//     fn from(ptr: ObjectPtr<List>) -> Self {
-//         Vec::from(ptr.as_ref())
-//     }
-// }
 
 impl From<&List> for Vec<ListElement> {
     fn from(list: &List) -> Self {

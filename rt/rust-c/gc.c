@@ -612,8 +612,7 @@ void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
 }
 
 void gc_free(GcBlock *block) {
-    if (block->callbacks) {
-        assert(block->callbacks->free);
+    if (block->callbacks && block->callbacks->free) {
         LOG(2, "    %p: recursive free(object at %p) @ %p\n", (void *)block, block->data, block->callbacks->free);
         block->callbacks->free(block->data);
     }

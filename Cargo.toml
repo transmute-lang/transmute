@@ -12,6 +12,7 @@ members = [
 
 exclude = [
     "rt/rust",
-    "rt/rust-c"]
+    "rt/rust-c",
+    "rt/rust-c-macros"]
 
 default-members = ["compiler", "interpreter"]

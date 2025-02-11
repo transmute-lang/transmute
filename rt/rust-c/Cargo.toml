@@ -6,7 +6,9 @@ edition = "2021"
 [lib]
 crate-type = ["staticlib", "cdylib"]
 
-#[dependencies]
+[dependencies]
+transmute-rustcrt-macros = { path = "../rust-c-macros" }
+
 #reqwest = { version = "0.12.12", features = ["blocking"] }
 
 #[build-dependencies]

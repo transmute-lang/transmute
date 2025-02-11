@@ -16,13 +16,9 @@ void array3_mark(void *object) {
     }
 }
 
-void array3_free(void *object) {
-    // nothing
-}
-
 GcCallbacks array3_callbacks = {
     .mark = array3_mark,
-    .free = array3_free
+    .free = NULL
 };
 
 int main() {

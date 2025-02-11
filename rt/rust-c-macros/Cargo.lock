@@ -32,14 +32,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "transmute-rustcrt"
-version = "0.1.0"
-dependencies = [
- "transmute-rustcrt-macros",
-]
-
-[[package]]
-name = "transmute-rustcrt-macros"
+name = "transmute-rustcrt-procmacro"
 version = "0.1.0"
 dependencies = [
  "quote",

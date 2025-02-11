@@ -1,17 +1,13 @@
-use crate::gc::{free_recursive, mark_recursive, Collectable, GcCallbacks, ObjectPtr};
+use crate::gc::{Collectable, GcCallbacks, ObjectPtr};
+use transmute_rustcrt_macros::GcCallbacks;
 
 #[repr(C)]
+#[derive(GcCallbacks)]
 pub struct Str {
     ptr: *const u8,
     len: usize,
     cap: usize,
 }
-
-// todo create a macro to generate it
-static CALLBACKS: GcCallbacks = GcCallbacks {
-    mark: Some(mark_recursive::<Str>),
-    free: Some(free_recursive::<Str>),
-};
 
 impl Collectable for Str {
     fn enable_collection(&self) {
@@ -28,10 +24,6 @@ impl Collectable for Str {
         ObjectPtr::<u8>::from_raw(ptr.as_ref().ptr as _)
             .unwrap()
             .mark();
-    }
-
-    fn free_recursive(_ptr: ObjectPtr<Self>) {
-        // nothing
     }
 }
 

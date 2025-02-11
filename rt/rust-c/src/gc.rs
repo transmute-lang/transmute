@@ -34,10 +34,16 @@ pub(crate) trait Collectable {
     fn enable_collection(&self);
 
     /// Marks the "nested" non-opaque allocations as reachable
-    fn mark_recursive(ptr: ObjectPtr<Self>);
+    #[allow(unused_variables)]
+    fn mark_recursive(ptr: ObjectPtr<Self>) {
+        // nothing
+    }
 
     /// Frees the "nested" opaque allocations
-    fn free_recursive(ptr: ObjectPtr<Self>);
+    #[allow(unused_variables)]
+    fn free_recursive(ptr: ObjectPtr<Self>) {
+        // nothing
+    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -88,14 +94,6 @@ impl<T: Collectable> ObjectPtr<T> {
         t.enable_collection();
         Self(unsafe { NonNull::new_unchecked(Box::leak(t)) })
     }
-}
-
-pub extern "C" fn mark_recursive<T: Collectable>(ptr: *mut ()) {
-    T::mark_recursive(ObjectPtr::<T>::from_raw(ptr as _).unwrap());
-}
-
-pub extern "C" fn free_recursive<T: Collectable>(ptr: *mut ()) {
-    T::free_recursive(ObjectPtr::<T>::from_raw(ptr as _).unwrap());
 }
 
 extern "C" {
