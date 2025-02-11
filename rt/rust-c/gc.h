@@ -37,6 +37,11 @@ void gc_run();
 void gc_teardown();
 void gc_print_statistics();
 
+void gc_mark(void *object/*, const GcPointeeLayout *layout*/);
+
+void gc_set_callbacks(void *object, GcCallbacks *callbacks);
+
 #ifdef GC_TEST
+void gc_set_object_name(void *object, char *name);
 void gc_pool_dump();
 #endif // #ifdef GC_TEST

@@ -12,14 +12,6 @@ impl Map {
     }
 }
 
-// impl<K,V> From<HashMap<K,V>> for Map {
-//     fn from(map: HashMap<K,V>) -> Self {
-//         Map {
-//             ptr: Box::leak(Box::new(map)) as *const () ,
-//         }
-//     }
-// }
-
 static CALLBACKS: GcCallbacks = GcCallbacks {
     mark: Some(mark_recursive::<Map>),
     free: Some(free_recursive::<Map>),
@@ -27,15 +19,11 @@ static CALLBACKS: GcCallbacks = GcCallbacks {
 
 impl Collectable for Map {
     fn enable_collection(&self) {
+        // the inner map iof the HashMap stays owned, it's destroyed when the `free_recursive`
+        // function is called
         let object_ptr = ObjectPtr::from_ref(self);
         object_ptr.set_callbacks(&CALLBACKS);
         object_ptr.set_unreachable();
-        //
-        // if !self.ptr.is_null() && self.ptr != ptr::dangling::<ListElement>() && self.cap > 0 {
-        //     ObjectPtr::<u8>::from_raw(self.ptr as _)
-        //         .unwrap()
-        //         .set_unreachable();
-        // }
     }
 
     fn mark_recursive(ptr: ObjectPtr<Map>) {
@@ -63,13 +51,13 @@ pub extern "C" fn stdlib_map_new() -> *mut Map {
 }
 
 #[no_mangle]
-pub extern "C" fn stdlib_map_push(map: *mut Map, key: *const (), val: *const ()) {
+pub extern "C" fn stdlib_map_insert(map: *mut Map, key: *const (), val: *const ()) {
     let mut map_ptr = ObjectPtr::from_raw(map).unwrap();
-
     map_ptr.as_ref_mut().0.insert(key, val);
-    // todo!();
+}
 
-    // let mut vec = Vec::from(map_ptr.as_ref());
-    // vec.push(element);
-    // map_ptr.as_ref_mut().update(vec);
+#[no_mangle]
+pub extern "C" fn stdlib_map_remove(map: *mut Map, key: *const ()) {
+    let mut map_ptr = ObjectPtr::from_raw(map).unwrap();
+    map_ptr.as_ref_mut().0.remove(&key);
 }

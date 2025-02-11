@@ -102,23 +102,16 @@ static inline char* state_to_char(GcBlockState state) {
     }
 }
 
-static inline char* gc_pointee_kind_tag_to_char(GcPointeeKindTag tag) {
-    switch (tag) {
-        case Struct: return "struct";
-        case Array: return "array";
-        case Managed: return "managed";
-        default: {
-            PANIC_ARGS("Invalid pointee kind: %i", (int)tag);
-        };
-    }
-}
-
-typedef struct GcBlock {        // 32 bytes
-    GcBlockState     state;     //  8 (4 + 4)
-    struct GcBlock  *next;      //  8
-    size_t           data_size; //  8
-    GcCallbacks     *callbacks; //  8
-    uint8_t          data[];    //  0
+typedef struct GcBlock {         // 32 or 48 bytes
+    GcBlockState     state;      //  8 (4 + 4)
+    struct GcBlock  *next;       //  8
+    size_t           data_size;  //  8
+    GcCallbacks     *callbacks;  //  8
+#ifdef GC_TEST
+    char            *name;       //  8
+    uint8_t          padding[8]; //  8 - this is to ensure sizeof(GcBlock) % 16 == 0
+#endif // GC_TEST
+    uint8_t          data[];     //  0
 } GcBlock;
 
 typedef struct Gc {
@@ -192,7 +185,6 @@ Gc gc = {
 };
 
 void gc_free(GcBlock *block);
-void gc_mark(void *object, const GcPointeeLayout *layout);
 
 #ifdef GC_LOGS
 static inline void gc_log(int level, const char* func, int line, const char *fmt, ...) {
@@ -206,11 +198,20 @@ static inline void gc_log(int level, const char* func, int line, const char *fmt
 }
 
 void gc_block_print(GcBlock *block) {
+#ifdef GC_TEST
+    gc_log(2, "gc_block_print", __LINE__, "  block at %p (object at %p: '%s'): %s\n",
+        block,
+        (char *)block + sizeof(GcBlock),
+        block->name,
+        state_to_char(block->state)
+    );
+#else // GC_TEST
     gc_log(2, "gc_block_print", __LINE__, "  block at %p (object at %p): %s\n",
         block,
         (char *)block + sizeof(GcBlock),
         state_to_char(block->state)
     );
+#endif // GC_TEST
 }
 #endif // GC_LOGS
 
@@ -297,6 +298,10 @@ void gc_pool_dump() {
     printf("\n\n  \033[%imboundary\033[0m \033[%imused\033[0m \033[%imfreed\033[0m \033[%imleft\033[0m\n\n",
           COLOR_RED, COLOR_WHITE, COLOR_GREEN, COLOR_BLUE);
 }
+
+void gc_set_object_name(void *object, char *name) {
+    GC_BLOCK(object)->name = name;
+}
 #endif // GC_TEST
 
 void gc_print_statistics() {
@@ -320,6 +325,8 @@ void gc_print_statistics() {
 }
 
 void gc_init() {
+    assert(sizeof(GcBlock) % 16 == 0);
+
     char *gc_enable_env = getenv("GC_ENABLE");
     if (gc_enable_env && strcmp(gc_enable_env, "0") == 0) {
         gc.enable = 0;
@@ -398,7 +405,7 @@ void gc_teardown() {
     }
     gc_print_statistics();
     assert(munmap((void *)gc.pool, gc.pool_size + 2 * BOUNDARY_SIZE) == 0);
-#else
+#else // GC_TEST
     char *gc_print_stats_env = getenv("GC_PRINT_STATS");
     if (gc_print_stats_env && strcmp(gc_print_stats_env, "1") == 0) {
         gc_print_statistics();
@@ -432,15 +439,12 @@ void gc_run() {
     LOG(2, "Phase: mark\n");
     LlvmStackFrame *frame = llvm_gc_root_chain;
     for (int frame_idx = 0; frame; frame_idx++) {
-        // all roots have a meta associated
-        assert(frame->map->num_roots == frame->map->num_meta);
-
         LOG(2, "  frame %i (%i roots) at frame %p:\n", frame_idx, frame->map->num_roots, frame);
 
         for (int32_t root_idx = 0; root_idx < frame->map->num_roots; root_idx++) {
             if (frame->roots[root_idx]) {
                 LOG(2, "    root %i:\n", root_idx);
-                gc_mark(frame->roots[root_idx], frame->map->meta[root_idx]);
+                gc_mark(frame->roots[root_idx]);
             }
             else {
                 LOG(2, "    root %i: skipped (null)\n", root_idx);
@@ -466,14 +470,23 @@ void gc_run() {
                     prev->next = block->next;
                 }
                 GcBlock *next = block->next;
+#ifdef GC_TEST
+                LOG(1,  "  freeing block at %p (object size: %li: '%s')\n", block, block->data_size, block->name);
+#else
                 LOG(1,  "  freeing block at %p (object size: %li)\n", block, block->data_size);
+#endif
                 gc_free(block);
                 block = next;
                 freed++;
             }
             else {
+#ifdef GC_TEST
+                LOG(1,  "  keeping block at %p (object size: %li: '%s'): %s\n",
+                    block, block->data_size, block->name, state_to_char(block->state));
+#else // GC_TEST
                 LOG(1,  "  keeping block at %p (object size: %li): %s\n",
                     block, block->data_size, state_to_char(block->state));
+#endif // GC_TEST
                 prev = block;
                 block = block->next;
             }
@@ -486,18 +499,24 @@ void gc_run() {
     }
 }
 
-void gc_mark(void *object, const GcPointeeLayout *layout) {
+void gc_mark(void *object) {
     GcBlock *block = GC_BLOCK(object);
 
 #ifdef GC_LOGS
-    LOG(2, "      mark %s %s block at %p (object at %p): %li pointers (layout %p)\n",
+#ifdef GC_TEST
+    LOG(2, "      mark %s block at %p (object at %p: '%s')\n",
         state_to_char(block->state),
-        gc_pointee_kind_tag_to_char(layout->tag),
         block,
         object,
-        layout->count,
-        layout
+        block->name
     );
+#else // GC_TEST
+    LOG(2, "      mark %s block at %p (object at %p)\n",
+        state_to_char(block->state),
+        block,
+        object
+    );
+#endif // GC_TEST
 #endif // GC_LOGS
 
     if (block->state == Reachable) {
@@ -505,64 +524,38 @@ void gc_mark(void *object, const GcPointeeLayout *layout) {
     }
     block->state = Reachable;
 
-    switch (layout->tag) {
-        case Struct: {
-            LOG(3,  "      -fields count: %li\n", layout->count);
-            for (size_t i = 0; i < layout->count; i++) {
-                GcStructField field = layout->pointee.struct_fields[i];
-                int64_t offset = field.offset;
-                const GcPointeeLayout *child_layout = field.layout;
-
-                LOG(3,  "      -fields[%li] offset: %li\n", i, offset);
-                LOG(3,  "      -fields[%li] layout: %p\n", i, (void *)child_layout);
-
-                void *child_offset = (char *)object + offset;
-                void *child = (void *)*(size_t *)child_offset;
-                LOG(2, "        %li. %p(+%li) -> %p\n", i, child_offset, offset, child);
-
-                gc_mark(child, child_layout);
-            }
-            break;
-        }
-        case Array: {
-            GcPointeeLayout *child_layout = layout->pointee.array_element.layout;
-
-            LOG(3,  "      -elements count: %li\n", layout->count);
-            LOG(3,  "      -elements layout: %p\n", (void *)child_layout);
-
-            if (child_layout) {
-                void **array = (void **)object;
-                for (size_t i = 0; i < layout->count; i++) {
-                    LOG(2, "        %li. %p(+%li) -> %p\n", i, &array[i], i * sizeof(void *), array[i]);
-                }
-            }
-            break;
-        }
-        case Managed: {
-            if (block->callbacks) {
-                assert(block->callbacks->mark);
-                LOG(2, "        %p: recursive mark(object at %p) @ %p\n", (void *)block, block->data, block->callbacks->mark);
-                block->callbacks->mark(block->data);
-            }
-#ifdef GC_LOGS
-            else {
-                LOG(2, "        %p: skip recursive mark(object at %p): no mark callback\n", (void *)block, block->data);
-            }
-#endif
-        }
+    if (block->callbacks) {
+        assert(block->callbacks->mark);
+#ifdef GC_TEST
+        LOG(2, "        %p: recursive mark(object at %p: '%s') @ %p\n",
+            (void *)block,
+            block->data,
+            block->name,
+            block->callbacks->mark
+        );
+#else // GC_TEST
+        LOG(2, "        %p: recursive mark(object at %p) @ %p\n",
+            (void *)block,
+            block->data,
+            block->callbacks->mark
+        );
+#endif // GC_TEST
+        block->callbacks->mark(block->data);
     }
+#ifdef GC_LOGS
+    else {
+        LOG(2, "        %p: skip recursive mark(object at %p): no mark callback\n", (void *)block, block->data);
+    }
+#endif // GC_LOGS
 }
 
 void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
-    LOG(2, "alloc %li bytes, align: %li\n", data_size, align);
+    LOG(2, "alloc %li bytes, align %li\n", data_size, align);
     gc_run();
 
     size_t alloc_size = sizeof(GcBlock) + data_size;
 
 #ifdef GC_TEST
-    // assert(sizeof(GcBlock) % align == 0);
-    // fixme this works for as long as the header is a multiple of align
-    // fixme we need to implement the same feature for malloc, when the header is not a multiple of align
     gc.pool_free = (uint8_t *)(((uintptr_t)gc.pool_free + (align - 1)) & -align);
 
     if (gc.pool_free + alloc_size >= gc.pool + gc.pool_size + BOUNDARY_SIZE) {
@@ -580,15 +573,19 @@ void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
     gc.pool_free += alloc_size;
     LOG(3,  "memset %#02x at %p for %li bytes\n", ALLOCATED, block, alloc_size);
     memset(block, ALLOCATED, alloc_size);
-#else
+
+    block->name = "";
+#else // GC_TEST
     GcBlock *block = malloc(alloc_size);
     assert(block != NULL);
 #endif // GC_TEST
 
+    assert((uintptr_t) block->data % align == 0);
+
     block->state = Unreachable;
     block->data_size = data_size;
     block->next = gc.blocks_chain;
-    block->callbacks = NULL;
+    block->callbacks = callbacks;
     gc.blocks_chain = block;
 
     gc.alloc_count++;
@@ -636,20 +633,25 @@ void gc_free(GcBlock *block) {
         LOG(3,  "      memset %#02x at %p for %li bytes\n", FREED, block, sizeof(GcBlock) + block->data_size);
         memset((void *)block, FREED, sizeof(GcBlock) + block->data_size);
     }
-#else
+#else // GC_TEST
     free(block);
 #endif // GC_TEST
 }
 
 void gc_take_ownership(void *object) {
     GcBlock *block = GC_BLOCK(object);
-    LOG(2, "mark block at %p (object at %p) as owned\n", block, object);
+    LOG(2, "mark block at %p (object at %p: '%s') as owned\n", block, object, block->name);
     block->state = Owned;
 }
 
 void gc_set_callbacks(void *object, GcCallbacks *callbacks) {
     GcBlock *block = GC_BLOCK(object);
+
+#ifdef GC_TEST
+    LOG(2, "set callback of block at %p (object at %p: '%s') to %p\n", block, object, block->name, callbacks);
+#else // GC_TEST
     LOG(2, "set callback of block at %p (object at %p) to %p\n", block, object, callbacks);
+#endif // GC_TEST
 
     assert(callbacks != NULL);
 
@@ -658,25 +660,69 @@ void gc_set_callbacks(void *object, GcCallbacks *callbacks) {
 
 void gc_release_ownership(void *object, GcCallbacks *callbacks) {
     GcBlock *block = GC_BLOCK(object);
+
+#ifdef GC_TEST
+    LOG(2, "mark block at %p (object at %p: '%s') as unreachable\n", block, object, block->name);
+#else // GC_TEST
     LOG(2, "mark block at %p (object at %p) as unreachable\n", block, object);
+#endif // GC_TEST
+
     block->state = Unreachable;
 }
 
 void gc_mark_managed(void *object) {
     GcBlock *block = GC_BLOCK(object);
-    LOG(2, "      mark %s block at %p (object at %p) as reachable\n", state_to_char(block->state), block, object);
+
+#ifdef GC_TEST
+    LOG(2, "      mark %s block at %p (object at %p: '%s') as reachable\n",
+        state_to_char(block->state),
+        block,
+        object,
+        block->name
+    );
+#else // GC_TEST
+    LOG(2, "      mark %s block at %p (object at %p) as reachable\n",
+        state_to_char(block->state),
+        block,
+        object
+    );
+#endif // GC_TEST
 
     block->state = Reachable;
 
     if (block->callbacks && block->callbacks->mark) {
-        LOG(2, "        %p: recursive mark(object at %p) @ %p\n", (void *)block, block->data, block->callbacks->mark);
+#if GC_TEST
+        LOG(2, "        %p: recursive mark(object at %p: '%s') @ %p\n",
+            (void *)block,
+            block->data,
+            block->name,
+            block->callbacks->mark
+        );
+#else // GC_TEST
+        LOG(2, "        %p: recursive mark(object at %p) @ %p\n",
+            (void *)block,
+            block->data,
+            block->callbacks->mark
+        );
+#endif // GC_TEST
         block->callbacks->mark(block->data);
     }
 #ifdef GC_LOGS
     else {
-        LOG(2, "        %p: skip recursive mark(object at %p): no mark callback\n", (void *)block, block->data);
+#if GC_TEST
+        LOG(2, "        %p: skip recursive mark(object at %p: '%s'): no mark callback\n",
+            (void *)block,
+            block->data,
+            block->name
+        );
+#else // GC_TEST
+        LOG(2, "        %p: skip recursive mark(object at %p): no mark callback\n",
+            (void *)block,
+            block->data
+        );
+#endif // GC_TEST
     }
-#endif
+#endif // GC_LOGS
 
     // todo need to recursively mark...
     //   - llvm must generate such functions for structs and arrays (could be written in C, and have a parameter that

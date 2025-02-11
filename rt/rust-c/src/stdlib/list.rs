@@ -95,3 +95,12 @@ pub extern "C" fn stdlib_list_push(list: *mut List, element: ListElement) {
     vec.push(element);
     list_ptr.as_ref_mut().update(vec);
 }
+
+#[no_mangle]
+pub extern "C" fn stdlib_list_pop(list: *mut List) -> ListElement {
+    let mut list_ptr = ObjectPtr::from_raw(list).unwrap();
+    let mut vec = Vec::from(list_ptr.as_ref());
+    let element = vec.pop();
+    list_ptr.as_ref_mut().update(vec);
+    element.unwrap_or(ptr::null())
+}
