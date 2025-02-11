@@ -9,8 +9,8 @@ cargo build || exit 1
 
 CFLAGS="-Wall -Werror -Wpedantic -Wno-zero-length-array"
 
-clang $CFLAGS -c -fPIC -ggdb gc.c -D GC_TEST -D GC_LOGS -o target/gc.o || exit 1
-clang $CFLAGS -c -fPIC -ggdb  llvm-support.c -o target/llvm-support.o || exit 1
+clang $CFLAGS -c -fPIC -ggdb gc/gc.c -D GC_TEST -D GC_LOGS -o target/gc.o || exit 1
+clang $CFLAGS -c -fPIC -ggdb llvm/support.c -o target/llvm-support.o || exit 1
 
 clang $CFLAGS \
       -D GC_TEST \

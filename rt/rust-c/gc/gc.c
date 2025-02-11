@@ -23,9 +23,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "llvm.h"
+#include "../llvm/llvm.h"
+#include "../bindings/rust.h"
 #include "gc.h"
-#include "bindings/rust.h"
 
 extern LlvmStackFrame *llvm_gc_root_chain;
 
@@ -83,14 +83,13 @@ do {                                                                            
 #define LOG_BLOCK(block)
 #endif
 
-#define GC_BLOCK(object) ((GcBlock *)((uint8_t *)object - sizeof(GcBlock)))
-
 typedef enum GcBlockState {
     Unreachable = 0,
     Reachable   = 1,
     Owned       = 2,
 } GcBlockState;
 
+#if defined(GC_LOGS) || defined(GC_TEST)
 static inline char* state_to_char(GcBlockState state) {
     switch (state) {
         case Unreachable: return "unreachable";
@@ -101,6 +100,7 @@ static inline char* state_to_char(GcBlockState state) {
         };
     }
 }
+#endif // defined(GC_LOGS) || defined(GC_TEST)
 
 typedef struct GcBlock {         // 32 or 48 bytes
     GcBlockState     state;      //  8 (4 + 4)
@@ -109,10 +109,14 @@ typedef struct GcBlock {         // 32 or 48 bytes
     GcCallbacks     *callbacks;  //  8
 #ifdef GC_TEST
     char            *name;       //  8
-    uint8_t          padding[8]; //  8 - this is to ensure sizeof(GcBlock) % 16 == 0
 #endif // GC_TEST
-    uint8_t          data[];     //  0
 } GcBlock;
+
+#define GC_BLOCK_DIVISIBILITY 16
+// rounds sizeof(GcBlock) to the nearest upper (including itself) multiple of GC_BLOCK_DIVISIBILITY
+#define GC_BLOCK_SIZE         ((sizeof(GcBlock) + (GC_BLOCK_DIVISIBILITY - 1)) & (~(GC_BLOCK_DIVISIBILITY - 1)))
+#define GC_BLOCK(object)      ((GcBlock *)((uintptr_t)object - GC_BLOCK_SIZE))
+#define GC_OBJECT(block)      ((void *)((uintptr_t)block + GC_BLOCK_SIZE))
 
 typedef struct Gc {
     int enable;
@@ -201,14 +205,14 @@ void gc_block_print(GcBlock *block) {
 #ifdef GC_TEST
     gc_log(2, "gc_block_print", __LINE__, "  block at %p (object at %p: '%s'): %s\n",
         block,
-        (char *)block + sizeof(GcBlock),
+        (char *)block + GC_BLOCK_SIZE,
         block->name,
         state_to_char(block->state)
     );
 #else // GC_TEST
     gc_log(2, "gc_block_print", __LINE__, "  block at %p (object at %p): %s\n",
         block,
-        (char *)block + sizeof(GcBlock),
+        (char *)block + GC_BLOCK_SIZE,
         state_to_char(block->state)
     );
 #endif // GC_TEST
@@ -235,6 +239,12 @@ static inline void print_byte(uint8_t byte, bool print_char, int color) {
     }
 }
 
+static inline bool inside_block(uintptr_t addr, GcBlock *block) {
+    bool after_block_begin = addr >= (uintptr_t)block;
+    bool before_block_end = addr < (uintptr_t)block + GC_BLOCK_SIZE + block->data_size;
+    return after_block_begin && before_block_end;
+}
+
 void gc_pool_dump() {
     printf("\nMemory dump:\n\n");
 
@@ -246,6 +256,7 @@ void gc_pool_dump() {
         if (print_chars && i == gc.pool_size + 2 * BOUNDARY_SIZE) {
             break;
         }
+
         if (i == 0) {
             if (!print_chars) {
                 printf("    %p    ", (void *)&gc.pool[i]);
@@ -275,10 +286,10 @@ void gc_pool_dump() {
             }
             else {
                 int freed = 0;
-                char *byte_addr = (char *)&gc.pool[i];
+                uintptr_t byte_addr = (uintptr_t)&gc.pool[i];
                 GcBlock *block = gc.freed_blocks_chain;
                 while (block) {
-                    if (byte_addr >= (char *)block && byte_addr < (char *)(block + 1) + block->data_size) {
+                    if (inside_block(byte_addr, block)) {
                         print_byte(gc.pool[i], print_chars, COLOR_GREEN);
                         freed = 1;
                         break;
@@ -325,7 +336,15 @@ void gc_print_statistics() {
 }
 
 void gc_init() {
-    assert(sizeof(GcBlock) % 16 == 0);
+//    GcBlock *b = NULL;
+//    printf("(void*)b->data = %p\n", (void*)b->data);
+//    printf("GC_OBJECT(b) = %p\n", GC_OBJECT(b));
+//    exit(1);
+//    printf("GC_BLOCK_SIZE=%lu\n", GC_BLOCK_SIZE);
+//    printf("sizeof(GcBlock)=%lu\n", sizeof(GcBlock));
+//    exit(1);
+    assert(GC_BLOCK_SIZE % 16 == 0);
+//    assert(sizeof(GcBlock) % 16 == 0);
 
     char *gc_enable_env = getenv("GC_ENABLE");
     if (gc_enable_env && strcmp(gc_enable_env, "0") == 0) {
@@ -529,22 +548,22 @@ void gc_mark(void *object) {
 #ifdef GC_TEST
         LOG(2, "        %p: recursive mark(object at %p: '%s') @ %p\n",
             (void *)block,
-            block->data,
+            object,
             block->name,
             block->callbacks->mark
         );
 #else // GC_TEST
         LOG(2, "        %p: recursive mark(object at %p) @ %p\n",
             (void *)block,
-            block->data,
+            object,
             block->callbacks->mark
         );
 #endif // GC_TEST
-        block->callbacks->mark(block->data);
+        block->callbacks->mark(object);
     }
 #ifdef GC_LOGS
     else {
-        LOG(2, "        %p: skip recursive mark(object at %p): no mark callback\n", (void *)block, block->data);
+        LOG(2, "        %p: skip recursive mark(object at %p): no mark callback\n", (void *)block, object);
     }
 #endif // GC_LOGS
 }
@@ -553,7 +572,7 @@ void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
     LOG(2, "alloc %li bytes, align %li\n", data_size, align);
     gc_run();
 
-    size_t alloc_size = sizeof(GcBlock) + data_size;
+    size_t alloc_size = GC_BLOCK_SIZE + data_size;
 
 #ifdef GC_TEST
     gc.pool_free = (uint8_t *)(((uintptr_t)gc.pool_free + (align - 1)) & -align);
@@ -580,7 +599,8 @@ void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
     assert(block != NULL);
 #endif // GC_TEST
 
-    assert((uintptr_t) block->data % align == 0);
+    void *object = GC_OBJECT(block);
+    assert((uintptr_t)object % align == 0);
 
     block->state = Unreachable;
     block->data_size = data_size;
@@ -604,22 +624,24 @@ void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
         alloc_size,
         block,
         data_size,
-        &block->data,
-        (uint8_t *)block->data - (uint8_t *)block
+        object,
+        (uint8_t *)object - (uint8_t *)block
     );
 
-    return &block->data;
+    return object;
 }
 
 void gc_free(GcBlock *block) {
+    void *object = GC_OBJECT(block);
+
     if (block->callbacks && block->callbacks->free) {
-        LOG(2, "    %p: recursive free(object at %p) @ %p\n", (void *)block, block->data, block->callbacks->free);
-        block->callbacks->free(block->data);
+        LOG(2, "    %p: recursive free(object at %p) @ %p\n", (void *)block, object, block->callbacks->free);
+        block->callbacks->free(object);
     }
 
     gc.free_count++;
-    gc.total_free_sz += sizeof(GcBlock) + block->data_size;
-    gc.current_alloc_sz -= sizeof(GcBlock) + block->data_size;
+    gc.total_free_sz += GC_BLOCK_SIZE + block->data_size;
+    gc.current_alloc_sz -= GC_BLOCK_SIZE + block->data_size;
     gc.object_free_sz += block->data_size;
     gc.current_object_alloc_sz -= block->data_size;
 
@@ -629,8 +651,8 @@ void gc_free(GcBlock *block) {
         gc.freed_blocks_chain = block;
     }
     else {
-        LOG(3,  "      memset %#02x at %p for %li bytes\n", FREED, block, sizeof(GcBlock) + block->data_size);
-        memset((void *)block, FREED, sizeof(GcBlock) + block->data_size);
+        LOG(3,  "      memset %#02x at %p for %li bytes\n", FREED, block, GC_BLOCK_SIZE + block->data_size);
+        memset((void *)block, FREED, GC_BLOCK_SIZE + block->data_size);
     }
 #else // GC_TEST
     free(block);
@@ -693,31 +715,31 @@ void gc_mark_managed(void *object) {
 #if GC_TEST
         LOG(2, "        %p: recursive mark(object at %p: '%s') @ %p\n",
             (void *)block,
-            block->data,
+            object,
             block->name,
             block->callbacks->mark
         );
 #else // GC_TEST
         LOG(2, "        %p: recursive mark(object at %p) @ %p\n",
             (void *)block,
-            block->data,
+            object,
             block->callbacks->mark
         );
 #endif // GC_TEST
-        block->callbacks->mark(block->data);
+        block->callbacks->mark(object);
     }
 #ifdef GC_LOGS
     else {
 #if GC_TEST
         LOG(2, "        %p: skip recursive mark(object at %p: '%s'): no mark callback\n",
             (void *)block,
-            block->data,
+            object,
             block->name
         );
 #else // GC_TEST
         LOG(2, "        %p: skip recursive mark(object at %p): no mark callback\n",
             (void *)block,
-            block->data
+            object
         );
 #endif // GC_TEST
     }

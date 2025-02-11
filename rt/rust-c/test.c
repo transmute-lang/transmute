@@ -1,8 +1,8 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "gc.h"
-#include "llvm.h"
+#include "gc/gc.h"
+#include "llvm/llvm.h"
 #include "bindings/rust.h"
 
 extern LlvmStackFrame *llvm_gc_root_chain;
