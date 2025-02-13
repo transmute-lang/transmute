@@ -117,7 +117,7 @@ clean = false
 extra_bindings = []
 
 [parse.expand]
-crates = []
+crates = ["transmute-stdlib"]
 all_features = false
 default_features = true
 features = []

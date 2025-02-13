@@ -85,8 +85,12 @@ int main() {
     llvm_gc_root_chain->roots[IDX_ARRAY2] = ptr;
 
     printf("\n--- stdlib_map_insert() -------+\n");
-//    fprintf(stderr, "handle hashing\n"); return 1;
-    stdlib_map_insert(map, str, ptr);
+    MapKey map_key = {
+        .value = str,
+        .vtable = &STDLIB_STR_MAPKEY_VTABLE,
+    };
+
+    stdlib_map_insert(map, map_key, ptr);
     llvm_gc_root_chain->roots[IDX_ARRAY2] = 0;
 
     printf("\n--- gc_run() ------------------+\n");
@@ -100,7 +104,7 @@ int main() {
     gc_pool_dump();
 
     printf("\n--- stdlib_map_remove() -------+\n");
-    stdlib_map_remove(map, str);
+    stdlib_map_remove(map, map_key);
     printf("\n--- gc_run() ------------------+\n");
     gc_run();
     gc_pool_dump();

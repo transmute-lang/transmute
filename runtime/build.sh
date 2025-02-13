@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-pushd ..
+pushd ../stdlib
 cargo build
+./cbindgen.sh
 popd
 
 mkdir -p target/

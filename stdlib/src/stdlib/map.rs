@@ -1,9 +1,36 @@
 use crate::gc::{Collectable, GcCallbacks, ObjectPtr};
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher, RandomState};
+use std::ptr;
 use transmute_stdlib_macros::GcCallbacks;
 
-type MapKey = *const ();
 type MapValue = *const ();
+
+#[repr(C)]
+pub struct MapKey {
+    value: *const (),
+    vtable: &'static MapKeyVTable,
+}
+
+impl Hash for MapKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (self.vtable.hash)(self.value, state as *mut H as *mut ());
+    }
+}
+
+impl PartialEq for MapKey {
+    fn eq(&self, other: &Self) -> bool {
+        (self.vtable.equals)(self.value, other.value)
+    }
+}
+
+impl Eq for MapKey {}
+
+#[repr(C)]
+pub struct MapKeyVTable {
+    pub hash: extern "C" fn(*const (), *mut ()),
+    pub equals: extern "C" fn(*const (), *const ()) -> bool,
+}
 
 #[derive(GcCallbacks)]
 pub struct Map(HashMap<MapKey, MapValue>);
@@ -25,7 +52,7 @@ impl Collectable for Map {
 
     fn mark_recursive(ptr: ObjectPtr<Map>) {
         for (k, v) in ptr.as_ref().0.iter() {
-            ObjectPtr::<()>::from_raw(*k as _).unwrap().mark();
+            ObjectPtr::<()>::from_raw(k.value as _).unwrap().mark();
             ObjectPtr::<()>::from_raw(*v as _).unwrap().mark();
         }
     }
@@ -43,18 +70,19 @@ impl From<ObjectPtr<Map>> for Map {
 
 #[no_mangle]
 pub extern "C" fn stdlib_map_new() -> *mut Map {
-    let map = Box::new(Map::new(HashMap::new()));
+    let hasher = RandomState::new();
+    let map = Box::new(Map::new(HashMap::with_hasher(hasher)));
     ObjectPtr::leak(map).as_raw()
 }
 
 #[no_mangle]
-pub extern "C" fn stdlib_map_insert(map: *mut Map, key: *const (), val: *const ()) {
+pub extern "C" fn stdlib_map_insert(map: *mut Map, key: MapKey, val: MapValue) {
     let mut map_ptr = ObjectPtr::from_raw(map).unwrap();
     map_ptr.as_ref_mut().0.insert(key, val);
 }
 
 #[no_mangle]
-pub extern "C" fn stdlib_map_remove(map: *mut Map, key: *const ()) {
+pub extern "C" fn stdlib_map_remove(map: *mut Map, key: MapKey) {
     let mut map_ptr = ObjectPtr::from_raw(map).unwrap();
     map_ptr.as_ref_mut().0.remove(&key);
 }
