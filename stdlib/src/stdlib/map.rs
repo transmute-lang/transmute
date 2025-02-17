@@ -76,13 +76,36 @@ pub extern "C" fn stdlib_map_new() -> *mut Map {
 }
 
 #[no_mangle]
-pub extern "C" fn stdlib_map_insert(map: *mut Map, key: MapKey, val: MapValue) {
+pub extern "C" fn stdlib_map_insert(map: *mut Map, key: MapKey, val: MapValue) -> MapValue {
     let mut map_ptr = ObjectPtr::from_raw(map).unwrap();
-    map_ptr.as_ref_mut().0.insert(key, val);
+    map_ptr
+        .as_ref_mut()
+        .0
+        .insert(key, val)
+        .map_or(ptr::null(), |val| val)
 }
 
 #[no_mangle]
-pub extern "C" fn stdlib_map_remove(map: *mut Map, key: MapKey) {
+pub extern "C" fn stdlib_map_get(map: *mut Map, key: MapKey) -> MapValue {
     let mut map_ptr = ObjectPtr::from_raw(map).unwrap();
-    map_ptr.as_ref_mut().0.remove(&key);
+    map_ptr
+        .as_ref_mut()
+        .0
+        .get(&key)
+        .map_or(ptr::null(), |val| *val)
+}
+
+#[no_mangle]
+pub extern "C" fn stdlib_map_len(map: *mut Map) -> usize {
+    ObjectPtr::from_raw(map).unwrap().as_ref_mut().0.len()
+}
+
+#[no_mangle]
+pub extern "C" fn stdlib_map_remove(map: *mut Map, key: MapKey) -> MapValue {
+    let mut map_ptr = ObjectPtr::from_raw(map).unwrap();
+    map_ptr
+        .as_ref_mut()
+        .0
+        .remove(&key)
+        .map_or(ptr::null(), |val| val)
 }
