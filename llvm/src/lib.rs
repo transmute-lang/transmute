@@ -569,9 +569,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     }
 
     fn gen_function_body(&mut self, mir: &Mir, function: &Function) -> Value<'ctx> {
-        // It is ok for now to get a function by name, but this might need to change when we start
-        // to mangle function names. When we do it, gen_function_signature() can return the function
-        // value that we can reuse here.
         let llvm_function = self.functions[&function.symbol_id];
 
         let entry = self.context.append_basic_block(llvm_function, "entry");
