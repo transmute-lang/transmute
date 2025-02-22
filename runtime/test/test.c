@@ -7,8 +7,6 @@
 #define __LLVM_DEFINE_ROOT
 #include "../src/llvm/llvm.h"
 
-// extern LlvmStackFrame *llvm_gc_root_chain;
-
 void array3_mark(void *object) {
     void **array3 = object;
     for (int i = 0; i < 3; i++) {
