@@ -7,15 +7,16 @@ source_filename = "main"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@layout_s1S = global [2 x i64] zeroinitializer
-@layout_a1s1S = global [3 x i64] [i64 1, i64 1, i64 ptrtoint (ptr @layout_s1S to i64)]
+@"gc_callbacks#a1s1S" = global { ptr, ptr } { ptr @"gc_callback#mark#a1s1S", ptr null }
 
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
 
-declare ptr @gc_malloc(i64, i64)
+declare ptr @gc_malloc(i64, i64, ptr)
 
 declare void @gc_run()
+
+declare void @gc_mark(ptr)
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
@@ -28,21 +29,41 @@ entry:
   unreachable
 }
 
+define void @"gc_callback#mark#a1s1S"(ptr %0) {
+entry:
+  br label %cond
+
+cond:                                             ; preds = %body, %entry
+  %"local#size1" = phi i64 [ %index, %body ], [ 1, %entry ]
+  %ne0.not = icmp eq i64 %"local#size1", 0
+  br i1 %ne0.not, label %end_while, label %body
+
+body:                                             ; preds = %cond
+  %index = add i64 %"local#size1", -1
+  %"array[index]_ptr" = getelementptr [1 x ptr], ptr %0, i64 0, i64 %index
+  %"array[index]" = load ptr, ptr %"array[index]_ptr", align 8
+  call void @gc_mark(ptr %"array[index]")
+  br label %cond
+
+end_while:                                        ; preds = %cond
+  ret void
+}
+
 define i64 @_TM0_1f0() gc "shadow-stack" {
 entry:
   %"gcroot#heap#struct#S#id0#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#struct#S#id0#", align 8
-  call void @llvm.gcroot(ptr nonnull %"gcroot#heap#struct#S#id0#", ptr nonnull @layout_s1S)
+  call void @llvm.gcroot(ptr nonnull %"gcroot#heap#struct#S#id0#", ptr null)
   %"b#local#sym23#" = alloca ptr, align 8
   %"a#local#sym22#" = alloca ptr, align 8
   store ptr null, ptr %"a#local#sym22#", align 8
-  call void @llvm.gcroot(ptr nonnull %"a#local#sym22#", ptr nonnull @layout_a1s1S)
+  call void @llvm.gcroot(ptr nonnull %"a#local#sym22#", ptr null)
   store ptr null, ptr %"b#local#sym23#", align 8
-  call void @llvm.gcroot(ptr nonnull %"b#local#sym23#", ptr nonnull @layout_s1S)
-  %"heap#struct#S#id0#" = call ptr @gc_malloc(i64 8, i64 8)
+  call void @llvm.gcroot(ptr nonnull %"b#local#sym23#", ptr null)
+  %"heap#struct#S#id0#" = call ptr @gc_malloc(i64 8, i64 8, ptr null)
   store ptr %"heap#struct#S#id0#", ptr %"gcroot#heap#struct#S#id0#", align 8
   store i64 0, ptr %"heap#struct#S#id0#", align 4
-  %"heap#array#" = call ptr @gc_malloc(i64 8, i64 8)
+  %"heap#array#" = call ptr @gc_malloc(i64 8, i64 8, ptr nonnull @"gc_callbacks#a1s1S")
   store ptr %"heap#struct#S#id0#", ptr %"heap#array#", align 8
   store ptr %"heap#array#", ptr %"a#local#sym22#", align 8
   call void @gc_run()

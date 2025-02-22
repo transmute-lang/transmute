@@ -30,8 +30,39 @@ macro_rules! exec {
     };
 }
 
+#[allow(unused_macros)]
+macro_rules! exec_test_example {
+    ($name:expr, $arg:expr) => {
+        paste::paste! {
+            #[test]
+            fn [< test_ $name >]() {
+                let test_dir = test_dir::DirBuilder::create(test_dir::TestDir::temp(), ".", test_dir::FileType::Dir);
+
+                let output = common::compile(
+                    include_str!(concat!("examples/", $name, ".tm")),
+                    &test_dir
+                )
+                .arg($arg)
+                .output()
+                .unwrap();
+
+                insta::assert_snapshot!(
+                    format!("success:{}\nstdout:\n{}\n\nstderr:\n{}",
+                        output.status.success(),
+                        String::from_utf8(output.stdout).unwrap(),
+                        String::from_utf8(output.stderr).unwrap()
+                    )
+                );
+            }
+        }
+    };
+}
+
 #[allow(unused_imports)]
 pub(crate) use exec;
+
+#[allow(unused_imports)]
+pub(crate) use exec_test_example;
 
 pub fn compile(src: &str, test_dir: &TestDir) -> Command {
     let bin_path = test_dir.path("a.out");

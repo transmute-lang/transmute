@@ -1,5 +1,9 @@
-/target
+target
 .idea
 *.iml
 
 *.o
+*.a
+main
+gdb.in
+bindings

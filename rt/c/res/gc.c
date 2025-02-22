@@ -14,6 +14,7 @@
 //  - GC_TEST_DUMP:       if set to 1, a memory dump is printed to stdout at the end of program execution
 //  - GC_TEST_DUMP_COLOR: if set to 1, the memory dump is colored (implied GC_TEST_DUMP=1)
 //  - GC_TEST_FINAL_RUN:  if set to 0, the GC is not run during the teardown phase
+//  - GC_PRINT_STATS:     has no effect, stats are displayed anyway at the end of execution
 
 #include <assert.h>
 #include <stdint.h>
@@ -477,6 +478,7 @@ void gc_mark(int depth, void *object, const GcPointeeLayout *layout) {
                     LOG(2, depth, "        %li. %p(+%li) -> %p\n", i, &array[i], i * sizeof(void *), array[i]);
                 }
             }
+            break;
         }
     }
 }

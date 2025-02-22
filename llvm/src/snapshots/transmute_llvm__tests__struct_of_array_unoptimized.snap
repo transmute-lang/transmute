@@ -7,15 +7,16 @@ source_filename = "main"
 
 %"S#id0" = type { ptr }
 
-@layout_s1S = global [4 x i64] [i64 0, i64 1, i64 0, i64 ptrtoint (ptr @layout_a2n to i64)]
-@layout_a2n = global [3 x i64] [i64 1, i64 2, i64 0]
+@"gc_callbacks#s1S" = global { ptr, ptr } { ptr @"gc_callback#mark#s1S", ptr null }
 
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
 
-declare ptr @gc_malloc(i64, i64)
+declare ptr @gc_malloc(i64, i64, ptr)
 
 declare void @gc_run()
+
+declare void @gc_mark(ptr)
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
@@ -28,21 +29,29 @@ entry:
   unreachable
 }
 
+define void @"gc_callback#mark#s1S"(ptr %0) {
+entry:
+  %"local#field0_ptr" = getelementptr inbounds %"S#id0", ptr %0, i32 0, i32 0
+  %"local#field0" = load ptr, ptr %"local#field0_ptr", align 8
+  call void @gc_mark(ptr %"local#field0")
+  ret void
+}
+
 define i64 @_TM0_1f0() gc "shadow-stack" {
 entry:
   %"gcroot#heap#array#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#array#", align 8
-  call void @llvm.gcroot(ptr %"gcroot#heap#array#", ptr @layout_a2n)
+  call void @llvm.gcroot(ptr %"gcroot#heap#array#", ptr null)
   %"a#local#sym22#" = alloca ptr, align 8
   store ptr null, ptr %"a#local#sym22#", align 8
-  call void @llvm.gcroot(ptr %"a#local#sym22#", ptr @layout_s1S)
-  %"heap#array#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr ([2 x i64], ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, [2 x i64] }, ptr null, i64 0, i32 1) to i64))
+  call void @llvm.gcroot(ptr %"a#local#sym22#", ptr null)
+  %"heap#array#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr ([2 x i64], ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, [2 x i64] }, ptr null, i64 0, i32 1) to i64), ptr null)
   store ptr %"heap#array#", ptr %"gcroot#heap#array#", align 8
   %"heap#array#1" = load [2 x i64], ptr %"heap#array#", align 4
   %"heap#array#[0]#" = insertvalue [2 x i64] %"heap#array#1", i64 0, 0
   %"heap#array#[1]#" = insertvalue [2 x i64] %"heap#array#[0]#", i64 1, 1
   store [2 x i64] %"heap#array#[1]#", ptr %"heap#array#", align 4
-  %"heap#struct#S#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"S#id0", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"S#id0" }, ptr null, i64 0, i32 1) to i64))
+  %"heap#struct#S#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"S#id0", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"S#id0" }, ptr null, i64 0, i32 1) to i64), ptr @"gc_callbacks#s1S")
   %"heap#struct#S#id0#.field#idx0#sym21" = getelementptr inbounds %"S#id0", ptr %"heap#struct#S#id0#", i32 0, i32 0
   store ptr %"heap#array#", ptr %"heap#struct#S#id0#.field#idx0#sym21", align 8
   store ptr %"heap#struct#S#id0#", ptr %"a#local#sym22#", align 8

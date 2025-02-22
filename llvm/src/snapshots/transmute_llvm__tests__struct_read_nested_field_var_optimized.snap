@@ -7,15 +7,16 @@ source_filename = "main"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@layout_s5Inner = global [2 x i64] zeroinitializer
-@layout_s5Outer = global [4 x i64] [i64 0, i64 1, i64 0, i64 ptrtoint (ptr @layout_s5Inner to i64)]
+@"gc_callbacks#s5Outer" = global { ptr, ptr } { ptr @"gc_callback#mark#s5Outer", ptr null }
 
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
 
-declare ptr @gc_malloc(i64, i64)
+declare ptr @gc_malloc(i64, i64, ptr)
 
 declare void @gc_run()
+
+declare void @gc_mark(ptr)
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
@@ -28,20 +29,27 @@ entry:
   unreachable
 }
 
+define void @"gc_callback#mark#s5Outer"(ptr %0) {
+entry:
+  %"local#field0" = load ptr, ptr %0, align 8
+  call void @gc_mark(ptr %"local#field0")
+  ret void
+}
+
 define i64 @_TM0_1f0() gc "shadow-stack" {
 entry:
   %"outer#local#sym25#" = alloca ptr, align 8
   %"inner#local#sym24#" = alloca ptr, align 8
   store ptr null, ptr %"inner#local#sym24#", align 8
-  call void @llvm.gcroot(ptr nonnull %"inner#local#sym24#", ptr nonnull @layout_s5Inner)
+  call void @llvm.gcroot(ptr nonnull %"inner#local#sym24#", ptr null)
   store ptr null, ptr %"outer#local#sym25#", align 8
-  call void @llvm.gcroot(ptr nonnull %"outer#local#sym25#", ptr nonnull @layout_s5Outer)
-  %"heap#struct#Inner#id0#" = call ptr @gc_malloc(i64 8, i64 8)
+  call void @llvm.gcroot(ptr nonnull %"outer#local#sym25#", ptr null)
+  %"heap#struct#Inner#id0#" = call ptr @gc_malloc(i64 8, i64 8, ptr null)
   store i64 1, ptr %"heap#struct#Inner#id0#", align 4
   store ptr %"heap#struct#Inner#id0#", ptr %"inner#local#sym24#", align 8
   call void @gc_run()
   %"inner#local#sym24#1" = load ptr, ptr %"inner#local#sym24#", align 8
-  %"heap#struct#Outer#id1#" = call ptr @gc_malloc(i64 8, i64 8)
+  %"heap#struct#Outer#id1#" = call ptr @gc_malloc(i64 8, i64 8, ptr nonnull @"gc_callbacks#s5Outer")
   store ptr %"inner#local#sym24#1", ptr %"heap#struct#Outer#id1#", align 8
   store ptr %"heap#struct#Outer#id1#", ptr %"outer#local#sym25#", align 8
   call void @gc_run()

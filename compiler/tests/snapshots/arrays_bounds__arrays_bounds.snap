@@ -1,29 +1,25 @@
 ---
 source: compiler/tests/arrays_bounds.rs
-expression: "format!(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(),\n    String :: from_utf8(output.stdout).unwrap(), String ::\n    from_utf8(output.stderr).unwrap())"
+expression: "format!\n(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(), String ::\nfrom_utf8(output.stdout).unwrap(), String ::\nfrom_utf8(output.stderr).unwrap())"
 ---
 success:false
 stdout:
-Initialize GC with log level: 2
-Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
-
-Start GC
-Phase: init.
-Phase: mark
-  frame 0 (1 roots):
-    root 0: skipped (nil)
-Phase: sweep
-allocated block of size 32 at 0x10010, returning object of size 8 at 0x10028(+24)
-
-Start GC
-Phase: init.
-  block at 0x10010 (object of size 8 at 0x10028): unreachable
-Phase: mark
-  frame 0 (1 roots):
-    root 0:
-      object at 0x10028 (block at 0x10010): 1 pointers, unreachable
-Phase: sweep
-  block at 0x10010 (object of size 8 at 0x10028): reachable
+[1] gc_init                | Initialize GC with log level: 2
+[2] gc_init                | Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
+[2] gc_malloc              | alloc 8 bytes, align 8
+[2] gc_run                 | Start GC [1]
+[2] gc_run                 | no allocated blocks
+[1] gc_malloc              | allocated block of size 56 at 0x10010, returning object of size 8 at 0x10040(+48)
+[2] gc_run                 | Start GC [2]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): unreachable
+[2] gc_run                 | Phase: mark
+[2] gc_run                 |   frame 0 (1 roots):
+[2] gc_run                 |     root 0:
+[2] gc_mark                |       mark unreachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |         0x10010: skip recursive mark(object at 0x10040): no mark callback
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block at 0x10010 (object at 0x10040, size: 8: ''): reachable
 
 
 stderr:

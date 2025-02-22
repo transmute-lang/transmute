@@ -1,0 +1,64 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+@layout_a2n = global [3 x i64] [i64 1, i64 2, i64 0]
+
+; Function Attrs: nounwind
+declare void @llvm.gcroot(ptr, ptr) #0
+
+declare ptr @gc_malloc(i64, i64)
+
+declare void @gc_run()
+
+declare void @tmc_check_array_index(i64, i64, i64, i64)
+
+declare void @_TM0_5print1n(i64)
+
+declare void @_TM0_5print1b(i1)
+
+define private void @_glob() {
+entry:
+  unreachable
+}
+
+define i64 @_TM0_1f0() gc "shadow-stack" {
+entry:
+  %"gcroot#heap#array#2" = alloca ptr, align 8
+  store ptr null, ptr %"gcroot#heap#array#2", align 8
+  call void @llvm.gcroot(ptr %"gcroot#heap#array#2", ptr @layout_a2n)
+  %"gcroot#heap#array#" = alloca ptr, align 8
+  store ptr null, ptr %"gcroot#heap#array#", align 8
+  call void @llvm.gcroot(ptr %"gcroot#heap#array#", ptr @layout_a2n)
+  br i1 true, label %true_branch, label %false_branch
+
+true_branch:                                      ; preds = %entry
+  %"heap#array#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr ([2 x i64], ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, [2 x i64] }, ptr null, i64 0, i32 1) to i64))
+  store ptr %"heap#array#", ptr %"gcroot#heap#array#", align 8
+  %"heap#array#1" = load [2 x i64], ptr %"heap#array#", align 4
+  %"heap#array#[0]#" = insertvalue [2 x i64] %"heap#array#1", i64 0, 0
+  %"heap#array#[1]#" = insertvalue [2 x i64] %"heap#array#[0]#", i64 1, 1
+  store [2 x i64] %"heap#array#[1]#", ptr %"heap#array#", align 4
+  br label %end_if
+
+false_branch:                                     ; preds = %entry
+  %"heap#array#3" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr ([2 x i64], ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, [2 x i64] }, ptr null, i64 0, i32 1) to i64))
+  store ptr %"heap#array#3", ptr %"gcroot#heap#array#2", align 8
+  %"heap#array#4" = load [2 x i64], ptr %"heap#array#3", align 4
+  %"heap#array#[0]#5" = insertvalue [2 x i64] %"heap#array#4", i64 2, 0
+  %"heap#array#[1]#6" = insertvalue [2 x i64] %"heap#array#[0]#5", i64 3, 1
+  store [2 x i64] %"heap#array#[1]#6", ptr %"heap#array#3", align 4
+  br label %end_if
+
+end_if:                                           ; preds = %false_branch, %true_branch
+  %if_result = phi ptr [ %"heap#array#", %true_branch ], [ %"heap#array#3", %false_branch ]
+  call void @tmc_check_array_index(i64 0, i64 2, i64 7, i64 15)
+  %"array[?]#" = getelementptr [2 x i64], ptr %if_result, i64 0, i64 0
+  %"array[?]#7" = load i64, ptr %"array[?]#", align 4
+  ret i64 %"array[?]#7"
+}
+
+attributes #0 = { nounwind }

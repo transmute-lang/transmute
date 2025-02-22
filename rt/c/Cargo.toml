@@ -3,11 +3,8 @@ name = "transmute-crt"
 version = "0.1.0"
 edition = "2021"
 
-[build-dependencies]
-cc = "1.1.13"
-
-[dependencies]
-
 [features]
+# compile GC with test mode support (see compiler flag GC_TEST in gc.c)
 gc-test = []
+# compile GC with logs support (see compiler flag GC_LOGS in gc.c)
 gc-logs = []

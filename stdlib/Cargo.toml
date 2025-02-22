@@ -1,0 +1,14 @@
+[package]
+name = "transmute-stdlib"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+transmute-stdlib-macros = { path = "../stdlib-macros" }
+
+[features]
+default = ["test-wrapper"]
+test-wrapper = []

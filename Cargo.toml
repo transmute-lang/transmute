@@ -6,10 +6,13 @@ members = [
     "hir",
     "mir",
     "interpreter",
-    "rt/rust",
     "rt/c",
+    "runtime",
     "llvm",
     "compiler"]
 
+exclude = [
+    "stdlib-macros",
+    "stdlib"]
 
 default-members = ["compiler", "interpreter"]
