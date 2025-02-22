@@ -98,6 +98,18 @@ impl Natives {
             ty: Type::Void,
         });
 
+        #[cfg(feature = "gc-functions")]
+        {
+            natives.insert_fn(NativeFn {
+                name: "gc_run",
+                kind: NativeFnKind::GcRun,
+            });
+            natives.insert_fn(NativeFn {
+                name: "gc_stats",
+                kind: NativeFnKind::GcStats,
+            });
+        }
+
         natives
     }
 
@@ -247,6 +259,10 @@ pub enum NativeFnKind {
     NeqBooleanBoolean,
     PrintNumber,  // todo:refactoring not actually a native, but part of some prelude
     PrintBoolean, // todo:refactoring not actually a native, but part of some prelude
+    #[cfg(feature = "gc-functions")]
+    GcRun,
+    #[cfg(feature = "gc-functions")]
+    GcStats,
 }
 
 impl NativeFnKind {
@@ -268,6 +284,8 @@ impl NativeFnKind {
             }
             NativeFnKind::PrintNumber => (&[Type::Number], Type::Void),
             NativeFnKind::PrintBoolean => (&[Type::Boolean], Type::Void),
+            #[cfg(feature = "gc-functions")]
+            NativeFnKind::GcRun | NativeFnKind::GcStats => (&[], Type::Void),
         }
     }
 }

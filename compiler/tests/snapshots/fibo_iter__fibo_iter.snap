@@ -1,868 +1,360 @@
 ---
 source: compiler/tests/fibo_iter.rs
-expression: "format!(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(),\n    String :: from_utf8(output.stdout).unwrap(), String ::\n    from_utf8(output.stderr).unwrap())"
+expression: "format!\n(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(), String ::\nfrom_utf8(output.stdout).unwrap(), String ::\nfrom_utf8(output.stderr).unwrap())"
 ---
 success:true
 stdout:
-Initialize GC with log level: 2
-Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
+[1] gc_init                | Initialize GC with log level: 2
+[2] gc_init                | Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
 main(0) = 0
 main(1) = 1
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
+[2] gc_run                 | Start GC [1]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [2]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [3]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [4]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [5]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [6]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [7]
+[2] gc_run                 | no allocated blocks
 main(2) = 1
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
+[2] gc_run                 | Start GC [8]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [9]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [10]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [11]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [12]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [13]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [14]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [15]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [16]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [17]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [18]
+[2] gc_run                 | no allocated blocks
 main(3) = 2
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
+[2] gc_run                 | Start GC [19]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [20]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [21]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [22]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [23]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [24]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [25]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [26]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [27]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [28]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [29]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [30]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [31]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [32]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [33]
+[2] gc_run                 | no allocated blocks
 main(4) = 3
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
+[2] gc_run                 | Start GC [34]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [35]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [36]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [37]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [38]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [39]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [40]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [41]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [42]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [43]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [44]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [45]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [46]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [47]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [48]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [49]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [50]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [51]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [52]
+[2] gc_run                 | no allocated blocks
 main(5) = 5
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
+[2] gc_run                 | Start GC [53]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [54]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [55]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [56]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [57]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [58]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [59]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [60]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [61]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [62]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [63]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [64]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [65]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [66]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [67]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [68]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [69]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [70]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [71]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [72]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [73]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [74]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [75]
+[2] gc_run                 | no allocated blocks
 main(6) = 8
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
+[2] gc_run                 | Start GC [76]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [77]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [78]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [79]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [80]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [81]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [82]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [83]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [84]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [85]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [86]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [87]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [88]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [89]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [90]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [91]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [92]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [93]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [94]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [95]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [96]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [97]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [98]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [99]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [100]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [101]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [102]
+[2] gc_run                 | no allocated blocks
 main(7) = 13
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
+[2] gc_run                 | Start GC [103]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [104]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [105]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [106]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [107]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [108]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [109]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [110]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [111]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [112]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [113]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [114]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [115]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [116]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [117]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [118]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [119]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [120]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [121]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [122]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [123]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [124]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [125]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [126]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [127]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [128]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [129]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [130]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [131]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [132]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [133]
+[2] gc_run                 | no allocated blocks
 main(8) = 21
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
+[2] gc_run                 | Start GC [134]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [135]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [136]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [137]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [138]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [139]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [140]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [141]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [142]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [143]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [144]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [145]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [146]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [147]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [148]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [149]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [150]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [151]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [152]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [153]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [154]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [155]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [156]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [157]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [158]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [159]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [160]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [161]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [162]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [163]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [164]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [165]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [166]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [167]
+[2] gc_run                 | no allocated blocks
+[2] gc_run                 | Start GC [168]
+[2] gc_run                 | no allocated blocks
 main(9) = 34
-
-GC Teardown
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
+[2] gc_teardown            | GC Teardown
+[2] gc_run                 | Start GC [169]
+[2] gc_run                 | no allocated blocks
 
 Statistics:
 

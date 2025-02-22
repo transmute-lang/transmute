@@ -12,3 +12,6 @@ xml-rs = "0.8.19"
 [dev-dependencies]
 insta = "1.34.0"
 transmute-ast = { path = "../ast", features = ["allow-any-root-kind"] }
+
+[features]
+gc-functions = []

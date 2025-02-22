@@ -5,18 +5,19 @@ expression: llvm_ir
 ; ModuleID = 'main'
 source_filename = "main"
 
-%"StructInner#id1" = type {}
 %"StructOuter#id0" = type { ptr }
+%"StructInner#id1" = type {}
 
-@layout_s11StructOuter = global [4 x i64] [i64 0, i64 1, i64 0, i64 ptrtoint (ptr @layout_s11StructInner to i64)]
-@layout_s11StructInner = global [2 x i64] zeroinitializer
+@"gc_callbacks#s11StructOuter" = global { ptr, ptr } { ptr @"gc_callback#mark#s11StructOuter", ptr null }
 
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
 
-declare ptr @gc_malloc(i64, i64)
+declare ptr @gc_malloc(i64, i64, ptr)
 
 declare void @gc_run()
+
+declare void @gc_mark(ptr)
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
@@ -29,17 +30,25 @@ entry:
   unreachable
 }
 
+define void @"gc_callback#mark#s11StructOuter"(ptr %0) {
+entry:
+  %"local#field0_ptr" = getelementptr inbounds %"StructOuter#id0", ptr %0, i32 0, i32 0
+  %"local#field0" = load ptr, ptr %"local#field0_ptr", align 8
+  call void @gc_mark(ptr %"local#field0")
+  ret void
+}
+
 define i64 @_TM0_1f0() gc "shadow-stack" {
 entry:
   %"gcroot#heap#struct#StructInner#id1#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#struct#StructInner#id1#", align 8
-  call void @llvm.gcroot(ptr %"gcroot#heap#struct#StructInner#id1#", ptr @layout_s11StructInner)
+  call void @llvm.gcroot(ptr %"gcroot#heap#struct#StructInner#id1#", ptr null)
   %"outer#local#sym23#" = alloca ptr, align 8
   store ptr null, ptr %"outer#local#sym23#", align 8
-  call void @llvm.gcroot(ptr %"outer#local#sym23#", ptr @layout_s11StructOuter)
-  %"heap#struct#StructInner#id1#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"StructInner#id1", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"StructInner#id1" }, ptr null, i64 0, i32 1) to i64))
+  call void @llvm.gcroot(ptr %"outer#local#sym23#", ptr null)
+  %"heap#struct#StructInner#id1#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"StructInner#id1", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"StructInner#id1" }, ptr null, i64 0, i32 1) to i64), ptr null)
   store ptr %"heap#struct#StructInner#id1#", ptr %"gcroot#heap#struct#StructInner#id1#", align 8
-  %"heap#struct#StructOuter#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"StructOuter#id0", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"StructOuter#id0" }, ptr null, i64 0, i32 1) to i64))
+  %"heap#struct#StructOuter#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"StructOuter#id0", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"StructOuter#id0" }, ptr null, i64 0, i32 1) to i64), ptr @"gc_callbacks#s11StructOuter")
   %"heap#struct#StructOuter#id0#.inner#idx0#sym22" = getelementptr inbounds %"StructOuter#id0", ptr %"heap#struct#StructOuter#id0#", i32 0, i32 0
   store ptr %"heap#struct#StructInner#id1#", ptr %"heap#struct#StructOuter#id0#.inner#idx0#sym22", align 8
   store ptr %"heap#struct#StructOuter#id0#", ptr %"outer#local#sym23#", align 8

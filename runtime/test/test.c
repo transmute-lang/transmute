@@ -1,12 +1,13 @@
-
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
 #include "../src/gc/gc.h"
-#include "../src/llvm/llvm.h"
 #include "../../stdlib/bindings/transmute-stdlib.h"
 
-extern LlvmStackFrame *llvm_gc_root_chain;
+#define __LLVM_DEFINE_ROOT
+#include "../src/llvm/llvm.h"
+
+// extern LlvmStackFrame *llvm_gc_root_chain;
 
 void array3_mark(void *object) {
     void **array3 = object;

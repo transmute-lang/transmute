@@ -56,8 +56,14 @@ pub fn compile_str<S: AsRef<str>, D: AsRef<Path>>(
 
     match options.output_format {
         OutputFormat::Object => {
+            #[cfg(feature = "rt-c")]
+            let runtime = transmute_crt::get_crt();
+
+            #[cfg(feature = "runtime")]
+            let runtime = transmute_runtime::get_runtime();
+
             llvm_ir
-                .build_bin(transmute_crt::get_crt(), dst.as_ref())
+                .build_bin(runtime, dst.as_ref())
                 .map_err(|d| d.to_string())?;
         }
         OutputFormat::LlvmIr => {

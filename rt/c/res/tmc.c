@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 void tmc_check_array_index(size_t i, size_t len, size_t line, size_t column) {
     if (i < 0 || i >= len) {

@@ -1,0 +1,10 @@
+[package]
+name = "transmute-runtime"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+gc-test = []
+gc-logs = []
+gc-stable-logs = ["gc-logs"]
+gc-functions = []

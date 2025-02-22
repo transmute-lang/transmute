@@ -7,6 +7,7 @@ members = [
     "mir",
     "interpreter",
     "rt/c",
+    "runtime",
     "llvm",
     "compiler"]
 

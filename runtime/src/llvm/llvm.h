@@ -11,3 +11,7 @@ typedef struct LlvmStackFrame {
     LlvmFrameMap          *map;
     void                  *roots[];
 } LlvmStackFrame;
+
+#ifdef __LLVM_DEFINE_ROOT
+LlvmStackFrame *llvm_gc_root_chain;
+#endif // __LLVM_DEFINE_ROOT

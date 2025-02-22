@@ -1,0 +1,40 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+; Function Attrs: nounwind
+declare void @llvm.gcroot(ptr, ptr) #0
+
+declare ptr @gc_malloc(i64, i64)
+
+declare void @gc_run()
+
+declare void @tmc_check_array_index(i64, i64, i64, i64)
+
+declare void @_TM0_5print1n(i64)
+
+declare void @_TM0_5print1b(i1)
+
+define private void @_glob() {
+entry:
+  unreachable
+}
+
+define void @_TM0_1f0() gc "shadow-stack" {
+entry:
+  br i1 true, label %true_branch, label %false_branch
+
+true_branch:                                      ; preds = %entry
+  br label %end_if
+
+false_branch:                                     ; preds = %entry
+  br label %end_if
+
+end_if:                                           ; preds = %false_branch, %true_branch
+  ret void
+}
+
+attributes #0 = { nounwind }

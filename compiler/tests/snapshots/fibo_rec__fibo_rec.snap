@@ -1,11 +1,11 @@
 ---
 source: compiler/tests/fibo_rec.rs
-expression: "format!(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(),\n    String :: from_utf8(output.stdout).unwrap(), String ::\n    from_utf8(output.stderr).unwrap())"
+expression: "format!\n(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(), String ::\nfrom_utf8(output.stdout).unwrap(), String ::\nfrom_utf8(output.stderr).unwrap())"
 ---
 success:true
 stdout:
-Initialize GC with log level: 2
-Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
+[1] gc_init                | Initialize GC with log level: 2
+[2] gc_init                | Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
 main(0) = 0
 main(1) = 1
 main(2) = 1
@@ -16,13 +16,9 @@ main(6) = 8
 main(7) = 13
 main(8) = 21
 main(9) = 34
-
-GC Teardown
-
-Start GC
-Phase: init.
-Phase: mark
-Phase: sweep
+[2] gc_teardown            | GC Teardown
+[2] gc_run                 | Start GC [1]
+[2] gc_run                 | no allocated blocks
 
 Statistics:
 

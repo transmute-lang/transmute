@@ -1,0 +1,141 @@
+---
+source: compiler/tests/gc_struct_of_arrays.rs
+expression: "format!\n(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(), String ::\nfrom_utf8(output.stdout).unwrap(), String ::\nfrom_utf8(output.stderr).unwrap())"
+---
+success:true
+stdout:
+[1] gc_init                | Initialize GC with log level: 2
+[2] gc_init                | Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
+[2] gc_malloc              | alloc 16 bytes, align 8
+[2] gc_run                 | Start GC [1]
+[2] gc_run                 | no allocated blocks
+[1] gc_malloc              | allocated block of size 64 at 0x10010, returning object of size 16 at 0x10040(+48)
+[2] gc_malloc              | alloc 16 bytes, align 8
+[2] gc_run                 | Start GC [2]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): unreachable
+[2] gc_run                 | Phase: mark
+[2] gc_run                 |   frame 0 (3 roots):
+[2] gc_run                 |     root 0: skipped (null)
+[2] gc_run                 |     root 1:
+[2] gc_mark                |       mark unreachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |         0x10010: skip recursive mark(object at 0x10040): no mark callback
+[2] gc_run                 |     root 2: skipped (null)
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block at 0x10010 (object at 0x10040, size: 16: ''): reachable
+[1] gc_malloc              | allocated block of size 64 at 0x10050, returning object of size 16 at 0x10080(+48)
+[2] gc_malloc              | alloc 16 bytes, align 8
+[2] gc_run                 | Start GC [3]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10050 (object at 0x10080: ''): unreachable
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): unreachable
+[2] gc_run                 | Phase: mark
+[2] gc_run                 |   frame 0 (3 roots):
+[2] gc_run                 |     root 0:
+[2] gc_mark                |       mark unreachable block at 0x10050 (object at 0x10080: '')
+[2] gc_mark                |         0x10050: skip recursive mark(object at 0x10080): no mark callback
+[2] gc_run                 |     root 1:
+[2] gc_mark                |       mark unreachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |         0x10010: skip recursive mark(object at 0x10040): no mark callback
+[2] gc_run                 |     root 2: skipped (null)
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block at 0x10050 (object at 0x10080, size: 16: ''): reachable
+[1] gc_run                 |   keeping block at 0x10010 (object at 0x10040, size: 16: ''): reachable
+[1] gc_malloc              | allocated block of size 64 at 0x10090, returning object of size 16 at 0x100c0(+48)
+[2] gc_run                 | Start GC [4]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10090 (object at 0x100c0: ''): unreachable
+[2] gc_run                 |   block at 0x10050 (object at 0x10080: ''): unreachable
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): unreachable
+[2] gc_run                 | Phase: mark
+[2] gc_run                 |   frame 0 (3 roots):
+[2] gc_run                 |     root 0:
+[2] gc_mark                |       mark unreachable block at 0x10050 (object at 0x10080: '')
+[2] gc_mark                |         0x10050: skip recursive mark(object at 0x10080): no mark callback
+[2] gc_run                 |     root 1:
+[2] gc_mark                |       mark unreachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |         0x10010: skip recursive mark(object at 0x10040): no mark callback
+[2] gc_run                 |     root 2:
+[2] gc_mark                |       mark unreachable block at 0x10090 (object at 0x100c0: '')
+[2] gc_mark                |         0x10090: recursive mark(object at 0x100c0: '')
+[2] gc_mark                |       mark reachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark reachable block at 0x10050 (object at 0x10080: '')
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block at 0x10090 (object at 0x100c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block at 0x10050 (object at 0x10080, size: 16: ''): reachable
+[1] gc_run                 |   keeping block at 0x10010 (object at 0x10040, size: 16: ''): reachable
+
+Statistics:
+
+  Executions ......   4
+  Allocated .......   3 blocks
+    Total
+      objects        48 bytes
+      blocks        192 bytes
+    Max
+      objects        48 bytes
+      blocks        192 bytes
+    End
+      objects        48 bytes
+      blocks        192 bytes
+  Freed ...........   0 blocks
+    Total
+      objects         0 bytes
+      blocks          0 bytes
+
+[2] gc_run                 | Start GC [5]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10090 (object at 0x100c0: ''): unreachable
+[2] gc_run                 |   block at 0x10050 (object at 0x10080: ''): unreachable
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): unreachable
+[2] gc_run                 | Phase: mark
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   freeing block at 0x10090 (object at 0x100c0, size: 16: '')
+[1] gc_run                 |   freeing block at 0x10050 (object at 0x10080, size: 16: '')
+[1] gc_run                 |   freeing block at 0x10010 (object at 0x10040, size: 16: '')
+[2] gc_run                 | Phase: sweep (1)
+
+Statistics:
+
+  Executions ......   5
+  Allocated .......   3 blocks
+    Total
+      objects        48 bytes
+      blocks        192 bytes
+    Max
+      objects        48 bytes
+      blocks        192 bytes
+    End
+      objects         0 bytes
+      blocks          0 bytes
+  Freed ...........   3 blocks
+    Total
+      objects        48 bytes
+      blocks        192 bytes
+
+main(0) = 0
+[2] gc_teardown            | GC Teardown
+[2] gc_run                 | Start GC [6]
+[2] gc_run                 | no allocated blocks
+
+Statistics:
+
+  Executions ......   6
+  Allocated .......   3 blocks
+    Total
+      objects        48 bytes
+      blocks        192 bytes
+    Max
+      objects        48 bytes
+      blocks        192 bytes
+    End
+      objects         0 bytes
+      blocks          0 bytes
+  Freed ...........   3 blocks
+    Total
+      objects        48 bytes
+      blocks        192 bytes
+
+
+
+stderr:

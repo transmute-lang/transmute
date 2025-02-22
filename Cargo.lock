@@ -456,11 +456,11 @@ dependencies = [
  "paste",
  "test_dir",
  "transmute-ast",
- "transmute-core",
  "transmute-crt",
  "transmute-hir",
  "transmute-llvm",
  "transmute-mir",
+ "transmute-runtime",
 ]
 
 [[package]]
@@ -490,9 +490,6 @@ version = "0.1.0"
 [[package]]
 name = "transmute-crt"
 version = "0.1.0"
-dependencies = [
- "cc",
-]
 
 [[package]]
 name = "transmute-hir"
@@ -527,6 +524,10 @@ dependencies = [
  "transmute-core",
  "transmute-hir",
 ]
+
+[[package]]
+name = "transmute-runtime"
+version = "0.1.0"
 
 [[package]]
 name = "unicode-ident"

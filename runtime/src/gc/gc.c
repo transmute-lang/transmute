@@ -1,6 +1,7 @@
 // defines:
 //  - GC_TEST:            compile with test mode support
 //  - GC_LOGS:            compile with logs support
+//  - GC_STABLE_LOGS:     compile with stable logs support
 //
 // standard env. variables
 //  - GC_ENABLE:          if set to 0, GC is not executed
@@ -25,7 +26,6 @@
 #include <string.h>
 
 #include "../llvm/llvm.h"
-//#include "../bindings/rust.h"
 #include "gc.h"
 
 extern LlvmStackFrame *llvm_gc_root_chain;
@@ -77,11 +77,8 @@ do {                                                                            
 #ifdef GC_LOGS
 #define LOG(level, ...) \
     gc_log(level, __func__, __LINE__, __VA_ARGS__)
-#define LOG_BLOCK(block) \
-    gc_block_print(block)
 #else
 #define LOG(level, ...)
-#define LOG_BLOCK(block)
 #endif
 
 typedef enum GcBlockState {
@@ -189,34 +186,19 @@ Gc gc = {
 #endif // GC_TEST
 };
 
-void gc_free(GcBlock *block);
-
 #ifdef GC_LOGS
 static inline void gc_log(int level, const char* func, int line, const char *fmt, ...) {
     if (gc.log_level >= level) {
+#ifdef GC_STABLE_LOGS
+        printf("[%i] %-22s | ", level, func);
+#else
         printf("[%i] %-22s %i | ", level, func, line);
+#endif // GC_STABLE_LOGS
         va_list args;
         va_start(args, fmt);
         vprintf(fmt, args);
         va_end(args);
     }
-}
-
-void gc_block_print(GcBlock *block) {
-#ifdef GC_TEST
-    gc_log(2, "gc_block_print", __LINE__, "  block at %p (object at %p: '%s'): %s\n",
-        block,
-        (char *)block + GC_BLOCK_SIZE,
-        block->name,
-        state_to_char(block->state)
-    );
-#else // GC_TEST
-    gc_log(2, "gc_block_print", __LINE__, "  block at %p (object at %p): %s\n",
-        block,
-        (char *)block + GC_BLOCK_SIZE,
-        state_to_char(block->state)
-    );
-#endif // GC_TEST
 }
 #endif // GC_LOGS
 
@@ -433,6 +415,34 @@ void gc_teardown() {
 #endif // GC_TEST
 }
 
+static inline void gc_free(GcBlock *block) {
+    void *object = GC_OBJECT(block);
+
+    if (block->callbacks && block->callbacks->free) {
+        LOG(2, "    %p: recursive free(object at %p) @ %p\n", (void *)block, object, block->callbacks->free);
+        block->callbacks->free(object);
+    }
+
+    gc.free_count++;
+    gc.total_free_sz += GC_BLOCK_SIZE + block->data_size;
+    gc.current_alloc_sz -= GC_BLOCK_SIZE + block->data_size;
+    gc.object_free_sz += block->data_size;
+    gc.current_object_alloc_sz -= block->data_size;
+
+#ifdef GC_TEST
+    if (gc.test_dump_color) {
+        block->next = gc.freed_blocks_chain;
+        gc.freed_blocks_chain = block;
+    }
+    else {
+        LOG(3,  "      memset %#02x at %p for %li bytes\n", FREED, block, GC_BLOCK_SIZE + block->data_size);
+        memset((void *)block, FREED, GC_BLOCK_SIZE + block->data_size);
+    }
+#else // GC_TEST
+    free(block);
+#endif // GC_TEST
+}
+
 void gc_run() {
     if (!gc.enable) {
         return;
@@ -440,7 +450,7 @@ void gc_run() {
 
     gc.execution_count++;
 
-    LOG(2, "Start GC\n");
+    LOG(2, "Start GC [%i]\n", gc.execution_count);
     if (gc.blocks_chain == NULL) {
         LOG(2, "no allocated blocks\n");
         return;
@@ -452,14 +462,21 @@ void gc_run() {
         if (block->state != Owned) {
             block->state = Unreachable;
         }
-        LOG_BLOCK(block);
+#ifdef GC_LOGS
+        gc_log(2, "gc_run", __LINE__, "  block at %p (object at %p: '%s'): %s\n",
+            block,
+            GC_OBJECT(block),
+            block->name,
+            state_to_char(block->state)
+        );
+#endif
         block = block->next;
     }
 
     LOG(2, "Phase: mark\n");
     LlvmStackFrame *frame = llvm_gc_root_chain;
     for (int frame_idx = 0; frame; frame_idx++) {
-        LOG(2, "  frame %i (%i roots) at frame %p:\n", frame_idx, frame->map->num_roots, frame);
+        LOG(2, "  frame %i (%i roots):\n", frame_idx, frame->map->num_roots);
 
         for (int32_t root_idx = 0; root_idx < frame->map->num_roots; root_idx++) {
             if (frame->roots[root_idx]) {
@@ -491,9 +508,9 @@ void gc_run() {
                 }
                 GcBlock *next = block->next;
 #ifdef GC_TEST
-                LOG(1,  "  freeing block at %p (object size: %li: '%s')\n", block, block->data_size, block->name);
+                LOG(1,  "  freeing block at %p (object at %p, size: %li: '%s')\n", block, GC_OBJECT(block), block->data_size, block->name);
 #else
-                LOG(1,  "  freeing block at %p (object size: %li)\n", block, block->data_size);
+                LOG(1,  "  freeing block at %p (object at %p, size: %li)\n", block, GC_OBJECT(block), block->data_size);
 #endif
                 gc_free(block);
                 block = next;
@@ -501,11 +518,11 @@ void gc_run() {
             }
             else {
 #ifdef GC_TEST
-                LOG(1,  "  keeping block at %p (object size: %li: '%s'): %s\n",
-                    block, block->data_size, block->name, state_to_char(block->state));
+                LOG(1,  "  keeping block at %p (object at %p, size: %li: '%s'): %s\n",
+                    block, GC_OBJECT(block), block->data_size, block->name, state_to_char(block->state));
 #else // GC_TEST
-                LOG(1,  "  keeping block at %p (object size: %li): %s\n",
-                    block, block->data_size, state_to_char(block->state));
+                LOG(1,  "  keeping block at %p (object at %p, size: %li): %s\n",
+                    block, GC_OBJECT(block), block->data_size, state_to_char(block->state));
 #endif // GC_TEST
                 prev = block;
                 block = block->next;
@@ -521,6 +538,18 @@ void gc_run() {
 
 void gc_mark(void *object) {
     GcBlock *block = GC_BLOCK(object);
+
+#ifdef GC_TEST
+    GcBlock *current_block = gc.blocks_chain;
+    while (current_block) {
+        if (current_block == block) {
+            goto found;
+        }
+        current_block = current_block->next;
+    }
+    PANIC_ARGS("unmanaged block %p (object at %p)", (void *)block, object);
+    found:
+#endif // GC_TEST
 
 #ifdef GC_LOGS
 #ifdef GC_TEST
@@ -544,20 +573,17 @@ void gc_mark(void *object) {
     }
     block->state = Reachable;
 
-    if (block->callbacks) {
-        assert(block->callbacks->mark);
+    if (block->callbacks && block->callbacks->mark) {
 #ifdef GC_TEST
-        LOG(2, "        %p: recursive mark(object at %p: '%s') @ %p\n",
+        LOG(2, "        %p: recursive mark(object at %p: '%s')\n",
             (void *)block,
             object,
-            block->name,
-            block->callbacks->mark
+            block->name
         );
 #else // GC_TEST
-        LOG(2, "        %p: recursive mark(object at %p) @ %p\n",
+        LOG(2, "        %p: recursive mark(object at %p)\n",
             (void *)block,
-            object,
-            block->callbacks->mark
+            object
         );
 #endif // GC_TEST
         block->callbacks->mark(object);
@@ -632,37 +658,13 @@ void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
     return object;
 }
 
-void gc_free(GcBlock *block) {
-    void *object = GC_OBJECT(block);
-
-    if (block->callbacks && block->callbacks->free) {
-        LOG(2, "    %p: recursive free(object at %p) @ %p\n", (void *)block, object, block->callbacks->free);
-        block->callbacks->free(object);
-    }
-
-    gc.free_count++;
-    gc.total_free_sz += GC_BLOCK_SIZE + block->data_size;
-    gc.current_alloc_sz -= GC_BLOCK_SIZE + block->data_size;
-    gc.object_free_sz += block->data_size;
-    gc.current_object_alloc_sz -= block->data_size;
-
-#ifdef GC_TEST
-    if (gc.test_dump_color) {
-        block->next = gc.freed_blocks_chain;
-        gc.freed_blocks_chain = block;
-    }
-    else {
-        LOG(3,  "      memset %#02x at %p for %li bytes\n", FREED, block, GC_BLOCK_SIZE + block->data_size);
-        memset((void *)block, FREED, GC_BLOCK_SIZE + block->data_size);
-    }
-#else // GC_TEST
-    free(block);
-#endif // GC_TEST
-}
-
 void gc_take_ownership(void *object) {
     GcBlock *block = GC_BLOCK(object);
+#ifdef GC_TEST
     LOG(2, "mark block at %p (object at %p: '%s') as owned\n", block, object, block->name);
+#else
+    LOG(2, "mark block at %p (object at %p) as owned\n", block, object);
+#endif // GC_TEST
     block->state = Owned;
 }
 

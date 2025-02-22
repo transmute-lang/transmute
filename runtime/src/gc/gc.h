@@ -1,29 +1,4 @@
-
-typedef struct GcArrayElement {
-    struct GcPointeeLayout  *layout;
-} GcArrayElement;
-
-typedef struct GcStructField {
-    size_t                  offset;
-    struct GcPointeeLayout *layout;
-} GcStructField;
-
-typedef union GcPointeeKind {
-    GcArrayElement          array_element;
-    GcStructField           struct_fields[0];
-} GcPointeeKind;
-
-typedef enum GcPointeeKindTag {
-    Struct  = 0,
-    Array   = 1,
-    Managed = 2,
-} GcPointeeKindTag;
-
-typedef struct GcPointeeLayout {
-    GcPointeeKindTag        tag;
-    size_t                  count;
-    GcPointeeKind           pointee;
-} GcPointeeLayout;
+#include <stdlib.h>
 
 typedef struct GcCallbacks {
     void (*mark)(void *);
@@ -37,7 +12,7 @@ void gc_run();
 void gc_teardown();
 void gc_print_statistics();
 
-void gc_mark(void *object/*, const GcPointeeLayout *layout*/);
+void gc_mark(void *object);
 
 void gc_set_callbacks(void *object, GcCallbacks *callbacks);
 

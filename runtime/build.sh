@@ -1,20 +1,18 @@
 #!/usr/bin/env bash
 
-pushd ../stdlib
+pushd ../stdlib || exit 1
 cargo build
 ./cbindgen.sh
-popd
+popd || exit 1
 
 mkdir -p target/
 
 CFLAGS="-Wall -Werror -Wpedantic -Wno-zero-length-array"
 
 clang $CFLAGS -c -fPIC -ggdb src/gc/gc.c -D GC_TEST -D GC_LOGS -o target/gc.o || exit 1
-clang $CFLAGS -c -fPIC -ggdb src/llvm/support.c -o target/llvm-support.o || exit 1
 
 clang $CFLAGS \
       -D GC_TEST \
-      target/llvm-support.o \
       target/gc.o \
       test/test.c \
       ../stdlib/target/debug/libtransmute_stdlib.a \

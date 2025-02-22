@@ -1,6 +1,10 @@
 mod mangling;
+#[cfg(feature = "runtime")]
+mod types;
 
 use crate::mangling::{mangle_array_name, mangle_function_name, mangle_struct_name};
+#[cfg(feature = "runtime")]
+use crate::types::Allocation;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::memory_buffer::MemoryBuffer;
@@ -28,6 +32,15 @@ use transmute_mir::{
 };
 use transmute_mir::{LiteralKind, SymbolKind, Target as AssignmentTarget};
 use transmute_mir::{NativeFnKind, Variable};
+
+// fixme this generates invalid IR:
+//  let main(n: number): number {f(); n;} let f() { [0]; }
+
+#[cfg(any(
+    all(feature = "runtime", feature = "rt-c"),
+    not(any(feature = "runtime", feature = "rt-c"))
+))]
+compile_error!("exactly one of 'runtime' and 'rt-c' is required");
 
 pub struct LlvmIrGen {
     context: Context,
@@ -78,25 +91,14 @@ pub struct LlvmIr<'ctx> {
     target_machine: TargetMachine,
 }
 
-impl<'ctx> LlvmIr<'ctx> {
+impl LlvmIr<'_> {
     // todo:ux error handling
-    pub fn build_bin<P: Into<PathBuf>>(&self, crt: &[u8], path: P) -> Result<(), Diagnostics> {
+    pub fn build_bin<P: Into<PathBuf>>(&self, runtime: &[u8], path: P) -> Result<(), Diagnostics> {
         let path = path.into();
 
         let tm_object_path = path.clone().with_extension("o");
         self.target_machine
             .write_to_file(&self.module, FileType::Object, &tm_object_path)
-            .unwrap();
-
-        // todo:rt think about static vs dynamic vs .ll/.bc linkage
-        let crt_object_path = path.with_file_name("crt.o");
-        let crt_module = self
-            .module
-            .get_context()
-            .create_module_from_ir(MemoryBuffer::create_from_memory_range(crt, "crt"))
-            .unwrap();
-        self.target_machine
-            .write_to_file(&crt_module, FileType::Object, &crt_object_path)
             .unwrap();
 
         // todo:ux parameterize cc
@@ -105,27 +107,23 @@ impl<'ctx> LlvmIr<'ctx> {
         let mut command = Command::new("cc");
         command.arg(&tm_object_path);
 
-        #[cfg(feature = "rt-c")]
-        {
-            command.arg(&crt_object_path);
-        }
-        #[cfg(feature = "rt-rust")]
-        {
-            command
-            .arg("-L/home/cpollet/Development/transmute-lang/transmute/rt/rust/target")
-            .arg("-ltmrt")
-            .arg("-lpthread")
-            .arg("-lm")
-            .arg("-ldl")
-            .arg("-lssl")
-            .arg("-lcrypto")
-        }
+        let runtime_object_path = {
+            // todo:rt think about static vs dynamic vs .ll/.bc linkage
+            let runtime_object_path = path.with_file_name("runtime.o");
+            let runtime_module = self
+                .module
+                .get_context()
+                .create_module_from_ir(MemoryBuffer::create_from_memory_range(runtime, "runtime"))
+                .unwrap();
+            self.target_machine
+                .write_to_file(&runtime_module, FileType::Object, &runtime_object_path)
+                .unwrap();
 
-        match command
-            .arg("-o")
-            .arg(&path)
-            .output()
-        {
+            command.arg(&runtime_object_path);
+            runtime_object_path
+        };
+
+        match command.arg("-o").arg(&path).output() {
             Ok(o) => {
                 if !o.status.success() {
                     println!("{:?}", o);
@@ -137,8 +135,7 @@ impl<'ctx> LlvmIr<'ctx> {
             }
         }
 
-        #[cfg(feature = "rt-c")]
-        fs::remove_file(crt_object_path).unwrap();
+        fs::remove_file(runtime_object_path).unwrap();
         fs::remove_file(tm_object_path).unwrap();
 
         Ok(())
@@ -167,12 +164,15 @@ struct Codegen<'ctx, 't> {
     void_type: VoidType<'ctx>,
     size_type: IntType<'ctx>,
     ptr_type: PointerType<'ctx>,
+    #[cfg(feature = "rt-c")]
     i64_array3_type: ArrayType<'ctx>,
 
     llvm_gcroot: FunctionValue<'ctx>,
     malloc: FunctionValue<'ctx>,
-    #[cfg(any(test, feature = "gc-aggressive"))]
+    #[cfg(any(test, feature = "gc-aggressive", feature = "gc-functions"))]
     gc_run: FunctionValue<'ctx>,
+    #[cfg(feature = "runtime")]
+    gc_mark: FunctionValue<'ctx>,
     tmc_check_array_index: FunctionValue<'ctx>,
 
     // todo:refactor could replace struct_types, array_types and all the *_types above with a unique
@@ -180,7 +180,10 @@ struct Codegen<'ctx, 't> {
     //   gen_array_access
     struct_types: HashMap<StructId, StructType<'ctx>>,
     array_types: HashMap<(TypeId, usize), ArrayType<'ctx>>,
+    #[cfg(feature = "rt-c")]
     type_layouts: HashMap<TypeId, PointerValue<'ctx>>,
+    #[cfg(feature = "runtime")]
+    gc_callbacks: HashMap<TypeId, PointerValue<'ctx>>,
     variables: HashMap<SymbolId, PointerValue<'ctx>>,
     functions: HashMap<SymbolId, FunctionValue<'ctx>>,
 
@@ -203,6 +206,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let void_type = context.void_type();
         let ptr_type = context.ptr_type(Default::default());
 
+        #[cfg(feature = "rt-c")]
         let i64_array3_type = i64_type.array_type(3);
 
         Self {
@@ -213,6 +217,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             void_type,
             size_type,
             ptr_type,
+            #[cfg(feature = "rt-c")]
             i64_array3_type,
             llvm_gcroot: {
                 let llvm_gcroot_fn_type =
@@ -220,13 +225,26 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 module.add_function("llvm.gcroot", llvm_gcroot_fn_type, None)
             },
             malloc: {
+                #[cfg(feature = "rt-c")]
                 let malloc_fn_type = ptr_type.fn_type(&[size_type.into(), size_type.into()], false);
+
+                #[cfg(feature = "runtime")]
+                let malloc_fn_type = ptr_type.fn_type(
+                    &[size_type.into(), size_type.into(), ptr_type.into()],
+                    false,
+                );
+
                 module.add_function("gc_malloc", malloc_fn_type, None)
             },
-            #[cfg(any(test, feature = "gc-aggressive"))]
+            #[cfg(any(test, feature = "gc-aggressive", feature = "gc-functions"))]
             gc_run: {
                 let gc_fn_type = void_type.fn_type(&[], false);
                 module.add_function("gc_run", gc_fn_type, None)
+            },
+            #[cfg(feature = "runtime")]
+            gc_mark: {
+                let gc_fn_type = void_type.fn_type(&[ptr_type.into()], false);
+                module.add_function("gc_mark", gc_fn_type, None)
             },
             tmc_check_array_index: {
                 let fn_type = void_type.fn_type(
@@ -242,7 +260,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             },
             struct_types: Default::default(),
             array_types: Default::default(),
+            #[cfg(feature = "rt-c")]
             type_layouts: Default::default(),
+            #[cfg(feature = "runtime")]
+            gc_callbacks: Default::default(),
             variables: Default::default(),
             functions: Default::default(),
             target_triple,
@@ -266,6 +287,17 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                         let print_fn = self.module.add_function(&fn_name, print_fn_type, None);
                         self.functions.insert(symbol_id, print_fn);
                     }
+                    #[cfg(feature = "gc-functions")]
+                    NativeFnKind::GcRun => {
+                        self.functions.insert(symbol_id, self.gc_run);
+                    }
+                    #[cfg(feature = "gc-functions")]
+                    NativeFnKind::GcStats => {
+                        let gc_stats_fn_type = self.void_type.fn_type(&[], false);
+                        let gc_stats_fn =
+                            self.module.add_function(&fn_name, gc_stats_fn_type, None);
+                        self.functions.insert(symbol_id, gc_stats_fn);
+                    }
                     _ => {
                         // nothing to do
                     }
@@ -287,9 +319,17 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         );
         let block = self.context.append_basic_block(f, "entry");
         self.builder.position_at_end(block);
+
+        #[cfg(feature = "rt-c")]
         for (struct_id, s) in mir.structs.iter() {
             self.gen_struct_layout(mir, struct_id, s.symbol_id);
         }
+
+        #[cfg(feature = "runtime")]
+        for (type_id, _) in &mir.types {
+            self.gen_gc_callbacks(mir, type_id);
+        }
+
         self.builder.build_unreachable().unwrap();
 
         for (_, function) in mir.functions.iter() {
@@ -377,31 +417,224 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
         struct_type.set_body(fields.as_slice(), false);
 
-        let offsets_count = struct_type
-            .get_field_types_iter()
-            .filter(|f| matches!(f, BasicTypeEnum::PointerType(_)))
-            .count();
+        #[cfg(feature = "rt-c")]
+        {
+            let offsets_count = struct_type
+                .get_field_types_iter()
+                .filter(|f| matches!(f, BasicTypeEnum::PointerType(_)))
+                .count();
 
-        // todo:refactoring find a way to make it using structs instead of a flat array of i64
-        let i64_array_type = self.i64_type.array_type(offsets_count as u32 * 2 + 2);
-        let global = self.module.add_global(
-            i64_array_type,
-            None,
-            &format!(
-                "layout_{}",
-                mangle_struct_name(mir, struct_id, struct_def.symbol_id),
-            ),
-        );
-        // global.set_constant(true);
-        // global.set_externally_initialized(false);
-        // global.set_linkage(Linkage::LinkerPrivate);
+            // todo:refactoring find a way to make it using structs instead of a flat array of i64
+            let i64_array_type = self.i64_type.array_type(offsets_count as u32 * 2 + 2);
+            let global = self.module.add_global(
+                i64_array_type,
+                None,
+                &format!(
+                    "layout_{}",
+                    mangle_struct_name(mir, struct_id, struct_def.symbol_id),
+                ),
+            );
+            // global.set_constant(true);
+            // global.set_externally_initialized(false);
+            // global.set_linkage(Linkage::LinkerPrivate);
 
-        self.type_layouts.insert(
-            mir.symbols[mir.structs[struct_id].symbol_id].type_id,
-            global.as_pointer_value(),
-        );
+            self.type_layouts.insert(
+                mir.symbols[mir.structs[struct_id].symbol_id].type_id,
+                global.as_pointer_value(),
+            );
+        }
     }
 
+    #[cfg(feature = "runtime")]
+    fn gen_gc_callbacks(&mut self, mir: &Mir, type_id: TypeId) {
+        match &mir.types[type_id] {
+            Type::Boolean => {}
+            Type::Number => {}
+            Type::Function(_, _) => {}
+            Type::Struct(symbol_id, struct_id) => {
+                let callbacks = self.gen_struct_gc_callbacks(mir, *symbol_id, *struct_id);
+                self.gc_callbacks.insert(type_id, callbacks);
+            }
+            Type::Array(element_type_id, len) => {
+                let callbacks = self.gen_array_gc_callbacks(mir, type_id, *element_type_id, *len);
+                self.gc_callbacks.insert(type_id, callbacks);
+            }
+            Type::Void => {}
+            Type::None => {}
+        }
+    }
+
+    #[cfg(feature = "runtime")]
+    fn gen_struct_gc_callbacks(
+        &mut self,
+        mir: &Mir,
+        symbol_id: SymbolId,
+        struct_id: StructId,
+    ) -> PointerValue<'ctx> {
+        if !mir.structs[struct_id]
+            .fields
+            .iter()
+            .map(|e| e.type_id)
+            .any(|type_id| mir.types[type_id].is_heap_allocated())
+        {
+            return self.ptr_type.const_null();
+        }
+
+        let mangled_struct_name = mangle_struct_name(mir, struct_id, symbol_id);
+        let mark_callback_ptr = {
+            let callback = self.module.add_function(
+                &format!("gc_callback#mark#{mangled_struct_name}"),
+                self.void_type.fn_type(&[self.ptr_type.into()], false),
+                None,
+            );
+            let builder = self.context.create_builder();
+            builder.position_at_end(self.context.append_basic_block(callback, "entry"));
+
+            for (index, field) in mir.structs[struct_id].fields.iter().enumerate() {
+                if mir.types[field.type_id].is_heap_allocated() {
+                    let field_ptr = builder
+                        .build_struct_gep(
+                            self.struct_types[&struct_id],
+                            callback.get_params().first().unwrap().into_pointer_value(),
+                            index as u32,
+                            &format!("local#field{index}_ptr"),
+                        )
+                        .unwrap();
+                    let field_val = builder
+                        .build_load(self.ptr_type, field_ptr, &format!("local#field{index}"))
+                        .unwrap();
+
+                    builder
+                        .build_call(self.gc_mark, &[field_val.into()], "gc_mark")
+                        .unwrap();
+                }
+            }
+
+            builder.build_return(None).unwrap();
+            callback.as_global_value().as_pointer_value()
+        };
+
+        let callbacks = self.context.const_struct(
+            &[
+                // mark
+                BasicValueEnum::PointerValue(mark_callback_ptr),
+                // free
+                BasicValueEnum::PointerValue(self.ptr_type.const_null()),
+            ],
+            false,
+        );
+
+        let callbacks_global = self.module.add_global(
+            callbacks.get_type(),
+            None,
+            &format!("gc_callbacks#{mangled_struct_name}"),
+        );
+        callbacks_global.set_initializer(&BasicValueEnum::StructValue(callbacks));
+
+        callbacks_global.as_pointer_value()
+    }
+
+    #[cfg(feature = "runtime")]
+    fn gen_array_gc_callbacks(
+        &mut self,
+        mir: &Mir,
+        array_type: TypeId,
+        element_type_id: TypeId,
+        len: usize,
+    ) -> PointerValue<'ctx> {
+        if !mir.types[element_type_id].is_heap_allocated() {
+            return self.ptr_type.const_null();
+        }
+
+        let mangled_array_name = mangle_array_name(mir, element_type_id, len);
+        let mark_callback_ptr = {
+            let callback = self.module.add_function(
+                &format!("gc_callback#mark#{mangled_array_name}"),
+                self.void_type.fn_type(&[self.ptr_type.into()], false),
+                None,
+            );
+            let builder = self.context.create_builder();
+            builder.position_at_end(self.context.append_basic_block(callback, "entry"));
+            let cond_block = self.context.append_basic_block(callback, "cond");
+            let body_block = self.context.append_basic_block(callback, "body");
+            let end_block = self.context.append_basic_block(callback, "end_while");
+
+            let i64_type = self.i64_type.as_basic_type_enum();
+            let size_ptr = builder.build_alloca(i64_type, "local#size").unwrap();
+            builder
+                .build_store(size_ptr, self.i64_type.const_int(len as u64, false))
+                .unwrap();
+            builder.build_unconditional_branch(cond_block).unwrap();
+
+            builder.position_at_end(cond_block);
+            let lhs = builder
+                .build_load(i64_type, size_ptr, "local#size")
+                .unwrap()
+                .into_int_value();
+            let rhs = self.i64_type.const_int(0, false);
+            let cond = builder
+                .build_int_compare(IntPredicate::NE, lhs, rhs, "ne0")
+                .unwrap();
+            builder
+                .build_conditional_branch(cond, body_block, end_block)
+                .unwrap();
+
+            builder.position_at_end(body_block);
+
+            let rhs = self.i64_type.const_int(1, false);
+            let index = builder.build_int_sub(lhs, rhs, "index").unwrap();
+            builder.build_store(size_ptr, index).unwrap();
+
+            let array_type = self.llvm_type(mir, array_type);
+
+            // todo:refactor remove the unsafe once inkewell provides a safe alternative
+            let element_ptr = unsafe {
+                // the first index is the array index, in a hypothetical array of arrays.
+                // the second index is the element's array
+                builder.build_gep(
+                    array_type.into_array_type(),
+                    callback.get_params().first().unwrap().into_pointer_value(),
+                    &[self.i64_type.const_int(0, false), index],
+                    "array[index]_ptr",
+                )
+            }
+            .unwrap();
+            let element = builder
+                .build_load(self.ptr_type, element_ptr, "array[index]")
+                .unwrap();
+
+            builder
+                .build_call(self.gc_mark, &[element.into()], "gc_mark")
+                .unwrap();
+
+            builder.build_unconditional_branch(cond_block).unwrap();
+
+            builder.position_at_end(end_block);
+            builder.build_return(None).unwrap();
+            callback.as_global_value().as_pointer_value()
+        };
+
+        let callbacks = self.context.const_struct(
+            &[
+                // mark
+                BasicValueEnum::PointerValue(mark_callback_ptr),
+                // free
+                BasicValueEnum::PointerValue(self.ptr_type.const_null()),
+            ],
+            false,
+        );
+
+        let callbacks_global = self.module.add_global(
+            callbacks.get_type(),
+            None,
+            &format!("gc_callbacks#{mangled_array_name}"),
+        );
+        callbacks_global.set_initializer(&BasicValueEnum::StructValue(callbacks));
+
+        callbacks_global.as_pointer_value()
+    }
+
+    #[cfg(feature = "rt-c")]
     /// the struct layout is an array of i64.
     /// the first one is set to 1
     /// the second one gives the count of pointer fields, n
@@ -458,6 +691,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         global.set_initializer(&self.i64_type.const_array(&offsets));
     }
 
+    #[cfg(feature = "rt-c")]
     fn gen_layout(&mut self, mir: &Mir, type_id: TypeId) -> Option<PointerValue<'ctx>> {
         match self.type_layouts.get(&type_id) {
             Some(layout) => Some(*layout),
@@ -646,6 +880,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             None,
         );
 
+        #[cfg(feature = "rt-c")]
         if let Some(layout) = self.gen_layout(mir, mir.symbols[variable.symbol_id].type_id) {
             self.builder
                 .build_store(ptr, self.ptr_type.const_zero())
@@ -653,6 +888,23 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
             self.builder
                 .build_call(self.llvm_gcroot, &[ptr.into(), layout.into()], "gcroot")
+                .unwrap();
+        }
+        #[cfg(feature = "runtime")]
+        if self
+            .gc_callbacks
+            .contains_key(&mir.symbols[variable.symbol_id].type_id)
+        {
+            self.builder
+                .build_store(ptr, self.ptr_type.const_zero())
+                .unwrap();
+
+            self.builder
+                .build_call(
+                    self.llvm_gcroot,
+                    &[ptr.into(), self.ptr_type.const_null().into()],
+                    "gcroot",
+                )
                 .unwrap();
         }
     }
@@ -808,7 +1060,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
                 match self.gen_expression(mir, &mir.expressions[*base_expr_id], false) {
                     Value::Array(array_ptr, array_type) => {
-                        // todo:refactor remove the unsafe once inkewell provides an safe alternative
+                        // todo:refactor remove the unsafe once inkewell provides a safe alternative
                         let element_ptr = unsafe {
                             // first index is the array index, in a hypothetical array of arrays. second
                             // index is the element's array
@@ -1100,7 +1352,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
         let function_name = &mir.identifiers[mir.symbols[symbol_id].ident_id];
 
-        let called_function = self.functions[&symbol_id];
+        let called_function = *self
+            .functions
+            .get(&symbol_id)
+            .unwrap_or_else(|| panic!("Function '{function_name}' not found"));
 
         self.builder
             .build_call(
@@ -1190,13 +1445,19 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             // todo:refactor the type_id can come from the expression, as we to in array
             //   instantiation
             Some(self.create_gcroot(
-                mir,
                 &name,
+                #[cfg(feature = "rt-c")]
+                mir,
+                #[cfg(feature = "rt-c")]
                 mir.symbols[mir.structs[struct_id].symbol_id].type_id,
             ))
         } else {
             None
         };
+
+        #[cfg(feature = "runtime")]
+        let gc_callbacks =
+            self.gc_callbacks[&mir.symbols[mir.structs[struct_id].symbol_id].type_id];
 
         let struct_ptr = self
             .builder
@@ -1205,6 +1466,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 &[
                     struct_type.size_of().unwrap().as_basic_value_enum().into(),
                     struct_type.get_alignment().into(),
+                    #[cfg(feature = "runtime")]
+                    gc_callbacks.into(),
                 ],
                 &name,
             )
@@ -1261,12 +1524,21 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let gcroot = if must_create_gcroot {
             // todo:feature these gc root don't live for the whole of the frame, we can set them
             //   to null when the value is assigned to something else
-            Some(self.create_gcroot(mir, &name, array_type_id))
+            Some(self.create_gcroot(
+                name,
+                #[cfg(feature = "rt-c")]
+                mir,
+                #[cfg(feature = "rt-c")]
+                array_type_id,
+            ))
         } else {
             None
         };
 
         let array_type = self.llvm_type(mir, array_type_id);
+
+        #[cfg(feature = "runtime")]
+        let gc_callbacks = self.gc_callbacks[&array_type_id];
 
         let array_ptr = self
             .builder
@@ -1275,8 +1547,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 &[
                     array_type.size_of().unwrap().as_basic_value_enum().into(),
                     array_type.into_array_type().get_alignment().into(),
+                    #[cfg(feature = "runtime")]
+                    gc_callbacks.into(),
                 ],
-                &name,
+                name,
             )
             .unwrap()
             .try_as_basic_value()
@@ -1306,7 +1580,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
         self.builder.build_store(array_ptr, array).unwrap();
 
-        Value::Array(array_ptr, array_type.into())
+        Value::Array(array_ptr, array_type)
     }
 
     fn gen_array_access(
@@ -1351,7 +1625,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     )
                     .unwrap();
 
-                // todo:refactor remove the unsafe once inkewell provides an safe alternative
+                // todo:refactor remove the unsafe once inkewell provides a safe alternative
                 let element_ptr = unsafe {
                     // the first index is the array index, in a hypothetical array of arrays.
                     // the second index is the element's array
@@ -1403,7 +1677,12 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         }
     }
 
-    fn create_gcroot(&mut self, mir: &Mir, for_name: &str, type_id: TypeId) -> PointerValue<'ctx> {
+    fn create_gcroot(
+        &mut self,
+        for_name: &str,
+        #[cfg(feature = "rt-c")] mir: &Mir,
+        #[cfg(feature = "rt-c")] type_id: TypeId,
+    ) -> PointerValue<'ctx> {
         let builder = self.context.create_builder();
         let first_basic_bloc = self.current_function().get_first_basic_block().unwrap();
 
@@ -1424,11 +1703,23 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .build_store(gcroot, self.ptr_type.const_zero())
             .unwrap();
 
-        let layout = self.gen_layout(mir, type_id).unwrap();
+        #[cfg(feature = "rt-c")]
+        {
+            let layout = self.gen_layout(mir, type_id).unwrap();
 
+            builder
+                .build_call(self.llvm_gcroot, &[gcroot.into(), layout.into()], "gcroot")
+                .unwrap();
+        }
+        #[cfg(feature = "runtime")]
         builder
-            .build_call(self.llvm_gcroot, &[gcroot.into(), layout.into()], "gcroot")
+            .build_call(
+                self.llvm_gcroot,
+                &[gcroot.into(), self.ptr_type.const_zero().into()],
+                "gcroot",
+            )
             .unwrap();
+
         gcroot
     }
 
@@ -1462,7 +1753,22 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     Some(array_type) => array_type.as_basic_type_enum(),
                 }
             }
-            Type::Void => unreachable!("void is not a basic type"),
+            Type::Void => {
+                // fixme we can reach this with
+                //  let main(n: number): number {
+                //      f();
+                //      n;
+                //  }
+                //  let f() {
+                //      let a = [
+                //          f1(),
+                //      ];
+                //  }
+                //  let f1() {
+                //      [0, 1];
+                //  }
+                unreachable!("void is not a basic type")
+            }
             Type::None => unreachable!("none is not a basic type"),
         }
     }
@@ -1591,6 +1897,10 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::NeqBooleanBoolean => true,
             NativeFnKind::PrintNumber => false,
             NativeFnKind::PrintBoolean => false,
+            #[cfg(feature = "gc-functions")]
+            NativeFnKind::GcRun => false,
+            #[cfg(feature = "gc-functions")]
+            NativeFnKind::GcStats => false,
         }
     }
 
@@ -1736,6 +2046,10 @@ impl LlvmImpl for NativeFnKind {
             }
             NativeFnKind::PrintNumber => Value::None,
             NativeFnKind::PrintBoolean => Value::None,
+            #[cfg(feature = "gc-functions")]
+            NativeFnKind::GcRun => Value::None,
+            #[cfg(feature = "gc-functions")]
+            NativeFnKind::GcStats => Value::None,
         }
     }
 }
@@ -1752,6 +2066,12 @@ mod tests {
     use transmute_hir::natives::Natives;
     use transmute_hir::UnresolvedHir;
     use transmute_mir::make_mir;
+
+    #[cfg(feature = "rt-c")]
+    const FLAVOR: &str = "__rtc";
+
+    #[cfg(feature = "runtime")]
+    const FLAVOR: &str = "";
 
     macro_rules! gen {
         ($name:ident, $src:expr) => {
@@ -1783,7 +2103,7 @@ mod tests {
                     .gen(&mir, false)
                     .unwrap()
                     .to_string();
-                    assert_snapshot!(llvm_ir);
+                    assert_snapshot!(format!("{}_unoptimized{}", stringify!($name), FLAVOR), llvm_ir);
                 }
 
                 #[test]
@@ -1813,7 +2133,7 @@ mod tests {
                     .gen(&mir, true)
                     .unwrap()
                     .to_string();
-                    assert_snapshot!(llvm_ir);
+                    assert_snapshot!(format!("{}_optimized{}", stringify!($name), FLAVOR), llvm_ir);
                 }
             }
         };
