@@ -319,15 +319,7 @@ void gc_print_statistics() {
 }
 
 void gc_init() {
-//    GcBlock *b = NULL;
-//    printf("(void*)b->data = %p\n", (void*)b->data);
-//    printf("GC_OBJECT(b) = %p\n", GC_OBJECT(b));
-//    exit(1);
-//    printf("GC_BLOCK_SIZE=%lu\n", GC_BLOCK_SIZE);
-//    printf("sizeof(GcBlock)=%lu\n", sizeof(GcBlock));
-//    exit(1);
     assert(GC_BLOCK_SIZE % 16 == 0);
-//    assert(sizeof(GcBlock) % 16 == 0);
 
     char *gc_enable_env = getenv("GC_ENABLE");
     if (gc_enable_env && strcmp(gc_enable_env, "0") == 0) {
@@ -463,13 +455,21 @@ void gc_run() {
             block->state = Unreachable;
         }
 #ifdef GC_LOGS
+#ifdef GC_TEST
         gc_log(2, "gc_run", __LINE__, "  block at %p (object at %p: '%s'): %s\n",
             block,
             GC_OBJECT(block),
             block->name,
             state_to_char(block->state)
         );
-#endif
+#else // GC_TEST
+        gc_log(2, "gc_run", __LINE__, "  block at %p (object at %p): %s\n",
+            block,
+            GC_OBJECT(block),
+            state_to_char(block->state)
+        );
+#endif // GC_TEST
+#endif // GC_LOGS
         block = block->next;
     }
 
