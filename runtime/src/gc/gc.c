@@ -53,6 +53,11 @@ do {                                                                            
      exit(1);                                                         \
  } while (0)
 
+#define COLOR_WHITE 0
+#define COLOR_GREEN 32
+#define COLOR_RED   31
+#define COLOR_BLUE  34
+
 #ifdef GC_TEST
 #include <sys/mman.h>
 #include <errno.h>
@@ -217,11 +222,6 @@ static inline void gc_log(int level, const char* func, int line, const char *fmt
 #endif // GC_LOGS
 
 #ifdef GC_TEST
-#define COLOR_WHITE 0
-#define COLOR_GREEN 32
-#define COLOR_RED   31
-#define COLOR_BLUE  34
-
 static inline void print_byte(uint8_t byte, bool print_char, int color) {
     if (print_char) {
         if (byte > 31 && byte < 127) {
@@ -460,7 +460,8 @@ static inline void gc_free(GcBlock *block) {
     void *object = GC_OBJECT(block);
 
     if (block->callbacks && block->callbacks->free) {
-        LOG(2, "    %p: recursive free(object at %p) @ %p\n", (void *)block, object, block->callbacks->free);
+        LOG(2, "    \033[%im%p\033[0m: recursive free(object at \033[%im%p\033[0m) @ %p\n",
+            COLOR_BLUE, (void *)block, COLOR_GREEN, object, block->callbacks->free);
         block->callbacks->free(object);
     }
 
@@ -518,15 +519,19 @@ void gc_run() {
         }
 #ifdef GC_LOGS
 #ifdef GC_TEST
-        gc_log(2, "gc_run", __LINE__, "  block at %p (object at %p: '%s'): %s\n",
+        gc_log(2, "gc_run", __LINE__, "  block at \033[%im%p\033[0m (object at \033[%im%p\033[0m: '%s'): %s\n",
+            COLOR_BLUE,
             block,
+            COLOR_GREEN,
             GC_OBJECT(block),
             block->name,
             state_to_char(block->state)
         );
 #else // GC_TEST
-        gc_log(2, "gc_run", __LINE__, "  block at %p (object at %p): %s\n",
+        gc_log(2, "gc_run", __LINE__, "  block at \033[%im%p\033[0m (object at \033[%im%p\033[0m): %s\n",
+            COLOR_BLUE,
             block,
+            COLOR_GREEN,
             GC_OBJECT(block),
             state_to_char(block->state)
         );
@@ -570,9 +575,11 @@ void gc_run() {
                 }
                 GcBlock *next = block->next;
 #ifdef GC_TEST
-                LOG(1,  "  freeing block at %p (object at %p, size: %li: '%s')\n", block, GC_OBJECT(block), block->data_size, block->name);
+                LOG(1,  "  freeing block at \033[%im%p\033[0m (object at \033[%im%p\033[0m, size: %li: '%s')\n",
+                    COLOR_BLUE, block, COLOR_GREEN, GC_OBJECT(block), block->data_size, block->name);
 #else
-                LOG(1,  "  freeing block at %p (object at %p, size: %li)\n", block, GC_OBJECT(block), block->data_size);
+                LOG(1,  "  freeing block at \033[%im%p\033[0m (object at \033[%im%p\033[0m, size: %li)\n",
+                    COLOR_BLUE, block, COLOR_GREEN, GC_OBJECT(block), block->data_size);
 #endif
                 gc_free(block);
                 block = next;
@@ -580,11 +587,24 @@ void gc_run() {
             }
             else {
 #ifdef GC_TEST
-                LOG(1,  "  keeping block at %p (object at %p, size: %li: '%s'): %s\n",
-                    block, GC_OBJECT(block), block->data_size, block->name, state_to_char(block->state));
+                LOG(1,  "  keeping block at \033[%im%p\033[0m (object at \033[%im%p\033[0m, size: %li: '%s'): %s\n",
+                    COLOR_BLUE,
+                    block,
+                    COLOR_GREEN,
+                    GC_OBJECT(block),
+                    block->data_size,
+                    block->name,
+                    state_to_char(block->state)
+                );
 #else // GC_TEST
-                LOG(1,  "  keeping block at %p (object at %p, size: %li): %s\n",
-                    block, GC_OBJECT(block), block->data_size, state_to_char(block->state));
+                LOG(1,  "  keeping block at \033[%im%p\033[0m (object at \033[%im%p\033[0m, size: %li): %s\n",
+                    COLOR_BLUE,
+                    block,
+                    COLOR_GREEN,
+                    GC_OBJECT(block),
+                    block->data_size,
+                    state_to_char(block->state)
+                );
 #endif // GC_TEST
                 prev = block;
                 block = block->next;
@@ -616,24 +636,18 @@ void gc_mark(void *object) {
         }
         current_block = current_block->next;
     }
-    PANIC_ARGS("unmanaged block %p (object at %p)", (void *)block, object);
+    PANIC_ARGS("unmanaged block \033[%im%p\033[0m (object at \033[%im%p\033[0m)",
+        COLOR_BLUE, (void *)block, COLOR_GREEN, object);
     found:
 #endif // GC_TEST
 
 #ifdef GC_LOGS
 #ifdef GC_TEST
-    LOG(2, "      mark %s block at %p (object at %p: '%s')\n",
-        state_to_char(block->state),
-        block,
-        object,
-        block->name
-    );
+    LOG(2, "      mark %s block \033[%im%p\033[0m (object at \033[%im%p\033[0m: '%s')\n",
+        state_to_char(block->state), COLOR_BLUE, block, COLOR_GREEN, object, block->name);
 #else // GC_TEST
-    LOG(2, "      mark %s block at %p (object at %p)\n",
-        state_to_char(block->state),
-        block,
-        object
-    );
+    LOG(2, "      mark %s block \033[%im%p\033[0m (object at \033[%im%p\033[0m)\n",
+        state_to_char(block->state), COLOR_BLUE, block, COLOR_GREEN, object );
 #endif // GC_TEST
 #endif // GC_LOGS
 
@@ -644,22 +658,18 @@ void gc_mark(void *object) {
 
     if (block->callbacks && block->callbacks->mark) {
 #ifdef GC_TEST
-        LOG(2, "        %p: recursive mark(object at %p: '%s')\n",
-            (void *)block,
-            object,
-            block->name
-        );
+        LOG(2, "        \033[%im%p\033[0m: recursive mark(object at \033[%im%p\033[0m: '%s')\n",
+            COLOR_BLUE, (void *)block, COLOR_GREEN, object, block->name);
 #else // GC_TEST
-        LOG(2, "        %p: recursive mark(object at %p)\n",
-            (void *)block,
-            object
-        );
+        LOG(2, "        \033[%im%p\033[0m: recursive mark(object at \033[%im%p\033[0m)\n",
+            COLOR_BLUE, (void *)block, COLOR_GREEN, object );
 #endif // GC_TEST
         block->callbacks->mark(object);
     }
 #ifdef GC_LOGS
     else {
-        LOG(2, "        %p: skip recursive mark(object at %p): no mark callback\n", (void *)block, object);
+        LOG(2, "        \033[%im%p\033[0m: skip recursive mark(object at \033[%im%p\033[0m): no mark callback\n",
+            COLOR_BLUE, (void *)block, COLOR_GREEN, object);
     }
 #endif // GC_LOGS
 }
@@ -725,10 +735,12 @@ void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
         gc.max_object_alloc_sz = gc.current_object_alloc_sz;
     }
 
-    LOG(1,  "allocated block of size %li at %p, returning object of size %li at %p(+%li)\n",
+    LOG(1,  "allocated block of size %li at \033[%im%p\033[0m, returning object of size %li at \033[%im%p\033[0m(+%li)\n",
         alloc_size,
+        COLOR_BLUE,
         block,
         data_size,
+        COLOR_GREEN,
         object,
         (uint8_t *)object - (uint8_t *)block
     );
@@ -746,9 +758,9 @@ void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
 void gc_take_ownership(void *object) {
     GcBlock *block = GC_BLOCK(object);
 #ifdef GC_TEST
-    LOG(2, "mark block at %p (object at %p: '%s') as owned\n", block, object, block->name);
+    LOG(2, "mark block at \033[%im%p\033[0m (object at \033[%im%p\033[0m: '%s') as owned\n", COLOR_BLUE, block, COLOR_GREEN, object, block->name);
 #else
-    LOG(2, "mark block at %p (object at %p) as owned\n", block, object);
+    LOG(2, "mark block at \033[%im%p\033[0m (object at \033[%im%p\033[0m) as owned\n", COLOR_BLUE, block, COLOR_GREEN, object);
 #endif // GC_TEST
     block->state = Owned;
 }
@@ -757,9 +769,9 @@ void gc_set_callbacks(void *object, GcCallbacks *callbacks) {
     GcBlock *block = GC_BLOCK(object);
 
 #ifdef GC_TEST
-    LOG(2, "set callback of block at %p (object at %p: '%s') to %p\n", block, object, block->name, callbacks);
+    LOG(2, "set callback of block at \033[%im%p\033[0m (object at \033[%im%p\033[0m: '%s') to %p\n", COLOR_BLUE, block, COLOR_GREEN, object, block->name, callbacks);
 #else // GC_TEST
-    LOG(2, "set callback of block at %p (object at %p) to %p\n", block, object, callbacks);
+    LOG(2, "set callback of block at \033[%im%p\033[0m (object at \033[%im%p\033[0m) to %p\n", COLOR_BLUE, block, COLOR_GREEN, object, callbacks);
 #endif // GC_TEST
 
     assert(callbacks != NULL);
@@ -771,9 +783,9 @@ void gc_release_ownership(void *object, GcCallbacks *callbacks) {
     GcBlock *block = GC_BLOCK(object);
 
 #ifdef GC_TEST
-    LOG(2, "mark block at %p (object at %p: '%s') as unreachable\n", block, object, block->name);
+    LOG(2, "mark block at \033[%im%p\033[0m (object at \033[%im%p\033[0m: '%s') as unreachable\n", COLOR_BLUE, block, COLOR_GREEN, object, block->name);
 #else // GC_TEST
-    LOG(2, "mark block at %p (object at %p) as unreachable\n", block, object);
+    LOG(2, "mark block at \033[%im%p\033[0m (object at \033[%im%p\033[0m) as unreachable\n", COLOR_BLUE, block, COLOR_GREEN, object);
 #endif // GC_TEST
 
     block->state = Unreachable;
@@ -783,16 +795,20 @@ void gc_mark_managed(void *object) {
     GcBlock *block = GC_BLOCK(object);
 
 #ifdef GC_TEST
-    LOG(2, "      mark %s block at %p (object at %p: '%s') as reachable\n",
+    LOG(2, "      mark %s block at \033[%im%p\033[0m (object at \033[%im%p\033[0m: '%s') as reachable\n",
         state_to_char(block->state),
+        COLOR_BLUE,
         block,
+        COLOR_GREEN,
         object,
         block->name
     );
 #else // GC_TEST
-    LOG(2, "      mark %s block at %p (object at %p) as reachable\n",
+    LOG(2, "      mark %s block at \033[%im%p\033[0m (object at \033[%im%p\033[0m) as reachable\n",
         state_to_char(block->state),
+        COLOR_BLUE,
         block,
+        COLOR_GREEN,
         object
     );
 #endif // GC_TEST
@@ -801,15 +817,19 @@ void gc_mark_managed(void *object) {
 
     if (block->callbacks && block->callbacks->mark) {
 #if GC_TEST
-        LOG(2, "        %p: recursive mark(object at %p: '%s') @ %p\n",
+        LOG(2, "        \033[%im%p\033[0m: recursive mark(object at \033[%im%p\033[0m: '%s') @ %p\n",
+            COLOR_BLUE,
             (void *)block,
+            COLOR_GREEN,
             object,
             block->name,
             block->callbacks->mark
         );
 #else // GC_TEST
-        LOG(2, "        %p: recursive mark(object at %p) @ %p\n",
+        LOG(2, "        \033[%im%p\033[0m: recursive mark(object at \033[%im%p\033[0m) @ %p\n",
+            COLOR_BLUE,
             (void *)block,
+            COLOR_GREEN,
             object,
             block->callbacks->mark
         );
@@ -819,14 +839,18 @@ void gc_mark_managed(void *object) {
 #ifdef GC_LOGS
     else {
 #if GC_TEST
-        LOG(2, "        %p: skip recursive mark(object at %p: '%s'): no mark callback\n",
+        LOG(2, "        \033[%im%p\033[0m: skip recursive mark(object at \033[%im%p\033[0m: '%s'): no mark callback\n",
+            COLOR_BLUE,
             (void *)block,
+            COLOR_GREEN,
             object,
             block->name
         );
 #else // GC_TEST
-        LOG(2, "        %p: skip recursive mark(object at %p): no mark callback\n",
+        LOG(2, "        \033[%im%p\033[0m: skip recursive mark(object at \033[%im%p\033[0m): no mark callback\n",
+            COLOR_BLUE,
             (void *)block,
+            COLOR_GREEN,
             object
         );
 #endif // GC_TEST
