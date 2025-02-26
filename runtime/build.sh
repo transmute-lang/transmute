@@ -9,7 +9,7 @@ mkdir -p target/
 
 CFLAGS="-Wall -Werror -Wpedantic -Wno-zero-length-array"
 
-clang $CFLAGS -c -fPIC -ggdb src/gc/gc.c -D GC_TEST -D GC_LOGS -o target/gc.o || exit 1
+clang $CFLAGS -c -fPIC -ggdb src/gc/gc.c -D GC_TEST -D GC_LOGS -D GC_PTHREAD -o target/gc.o || exit 1
 
 clang $CFLAGS \
       -D GC_TEST \

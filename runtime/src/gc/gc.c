@@ -2,6 +2,7 @@
 //  - GC_TEST:            compile with test mode support
 //  - GC_LOGS:            compile with logs support
 //  - GC_STABLE_LOGS:     compile with stable logs support
+//  - GC_PTHREAD          compile with multi-threading support using pthread
 //
 // standard env. variables
 //  - GC_ENABLE:          if set to 0, GC is not executed
@@ -18,6 +19,7 @@
 //  - GC_PRINT_STATS:     has no effect, stats are displayed anyway at the end of execution
 
 #include <assert.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -117,7 +119,11 @@ typedef struct GcBlock {         // 32 or 48 bytes
 #define GC_OBJECT(block)      ((void *)((uintptr_t)block + GC_BLOCK_SIZE))
 
 typedef struct Gc {
-    int enable;
+#ifdef GC_PTHREAD
+    pthread_mutex_t lock;
+#endif // GC_PTHREAD
+    bool initialized;
+    bool enable;
     GcBlock *blocks_chain;
 
     int execution_count;
@@ -151,8 +157,16 @@ typedef struct Gc {
 #endif // GC_TEST
 } Gc;
 
+#ifdef GC_PTHREAD
+static pthread_mutex_t gc_init_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif // GC_PTHREAD
+
 Gc gc = {
-    .enable = 1,
+#ifdef GC_PTHREAD
+    .lock = { 0 },
+#endif // GC_PTHREAD
+    .initialized = false,
+    .enable = true,
     .blocks_chain = NULL,
 
     .execution_count = 0,
@@ -319,11 +333,38 @@ void gc_print_statistics() {
 }
 
 void gc_init() {
+    if (gc.initialized) {
+        LOG(3, "already initialized\n");
+        return;
+    }
     assert(GC_BLOCK_SIZE % 16 == 0);
+
+#ifdef GC_PTHREAD
+    if (pthread_mutex_trylock(&gc_init_mutex) != 0) {
+        LOG(3, "being initialized\n");
+        return;
+    }
+
+    pthread_mutexattr_t mutex_attr;
+    if (pthread_mutexattr_init(&mutex_attr) != 0) {
+        PANIC("Could not initialize mutex attributes");
+    }
+    if (pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_RECURSIVE) != 0) {
+        PANIC("Could not initialize mutex kind");
+    }
+    if (pthread_mutex_init(&gc.lock, &mutex_attr) != 0) {
+        PANIC("Could not initialize mutex");
+    }
+    if (pthread_mutexattr_destroy(&mutex_attr) != 0) {
+#ifdef GC_TEST
+        PANIC("Could not destroy mutex attributes");
+#endif // GC_TEST
+    }
+#endif // GC_PTHREAD
 
     char *gc_enable_env = getenv("GC_ENABLE");
     if (gc_enable_env && strcmp(gc_enable_env, "0") == 0) {
-        gc.enable = 0;
+        gc.enable = false;
     }
 
 #ifdef GC_LOGS
@@ -382,6 +423,14 @@ LOG(1,  "Initialize GC with log level: %i\n", gc.log_level);
         gc_pool_dump();
     }
 #endif // GC_TEST
+
+    gc.initialized = true;
+
+#ifdef GC_PTHREAD
+    if (pthread_mutex_unlock(&gc_init_mutex) != 0) {
+        PANIC("Cannot unlock mutex");
+    }
+#endif // GC_PTHREAD
 }
 
 void gc_teardown() {
@@ -440,11 +489,24 @@ void gc_run() {
         return;
     }
 
+#ifdef GC_PTHREAD
+    if (pthread_mutex_lock(&gc.lock) != 0) {
+        PANIC("Cannot lock mutex");
+    }
+    LOG(3, "lock acquired\n");
+#endif // GC_PTHREAD
+
     gc.execution_count++;
 
     LOG(2, "Start GC [%i]\n", gc.execution_count);
     if (gc.blocks_chain == NULL) {
         LOG(2, "no allocated blocks\n");
+#ifdef GC_PTHREAD
+        if (pthread_mutex_unlock(&gc.lock) != 0) {
+            PANIC("Cannot unlock mutex");
+        }
+        LOG(3, "lock released\n");
+#endif // GC_PTHREAD
         return;
     }
 
@@ -534,6 +596,13 @@ void gc_run() {
         freed = 0;
         run_count++;
     }
+
+#ifdef GC_PTHREAD
+    if (pthread_mutex_unlock(&gc.lock) != 0) {
+        PANIC("Cannot unlock mutex");
+    }
+    LOG(3, "lock released\n");
+#endif // GC_PTHREAD
 }
 
 void gc_mark(void *object) {
@@ -596,6 +665,15 @@ void gc_mark(void *object) {
 }
 
 void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
+    assert(gc.initialized);
+
+#ifdef GC_PTHREAD
+    if (pthread_mutex_lock(&gc.lock) != 0) {
+        PANIC("Cannot lock mutex");
+    }
+    LOG(3, "lock acquired\n");
+#endif // GC_PTHREAD
+
     LOG(2, "alloc %li bytes, align %li\n", data_size, align);
     gc_run();
 
@@ -654,6 +732,13 @@ void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
         object,
         (uint8_t *)object - (uint8_t *)block
     );
+
+#ifdef GC_PTHREAD
+    if (pthread_mutex_unlock(&gc.lock) != 0) {
+        PANIC("Cannot unlock mutex");
+    }
+    LOG(3, "lock released\n");
+#endif // GC_PTHREAD
 
     return object;
 }

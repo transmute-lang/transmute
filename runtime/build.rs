@@ -89,6 +89,7 @@ fn compile_to_llvm_ir(src: &Path, dst: &Path) {
         .arg(GC_TEST)
         .arg(GC_LOGS)
         .arg(GC_STABLE_LOGS)
+        .arg("-D GC_PTHREAD")
         .arg("-emit-llvm")
         .arg("-o")
         .arg(dst.as_os_str())
