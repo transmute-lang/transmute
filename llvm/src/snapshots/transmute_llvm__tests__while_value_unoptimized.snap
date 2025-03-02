@@ -16,6 +16,10 @@ declare void @gc_mark(ptr)
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
+declare ptr @tmc_stdlib_string_new(ptr, i64)
+
+declare void @_TM0_5print1s(ptr)
+
 declare void @_TM0_5print1n(i64)
 
 declare void @_TM0_5print1b(i1)
@@ -25,27 +29,27 @@ entry:
   unreachable
 }
 
-define i64 @_TM0_1f1n(i64 %"n#param#sym20#") gc "shadow-stack" {
+define i64 @_TM0_1f1n(i64 %"n#param#sym22#") gc "shadow-stack" {
 entry:
-  %"n#local#sym20#" = alloca i64, align 8
-  store i64 %"n#param#sym20#", ptr %"n#local#sym20#", align 4
+  %"n#local#sym22#" = alloca i64, align 8
+  store i64 %"n#param#sym22#", ptr %"n#local#sym22#", align 4
   br label %cond
 
 cond:                                             ; preds = %body, %entry
-  %"n#local#sym20#1" = load i64, ptr %"n#local#sym20#", align 4
-  %"lt#" = icmp slt i64 %"n#local#sym20#1", 42
+  %"n#local#sym22#1" = load i64, ptr %"n#local#sym22#", align 4
+  %"lt#" = icmp slt i64 %"n#local#sym22#1", 42
   br i1 %"lt#", label %body, label %end_while
 
 body:                                             ; preds = %cond
-  %"n#local#sym20#2" = load i64, ptr %"n#local#sym20#", align 4
-  %"add#" = add i64 %"n#local#sym20#2", 1
-  store i64 %"add#", ptr %"n#local#sym20#", align 4
+  %"n#local#sym22#2" = load i64, ptr %"n#local#sym22#", align 4
+  %"add#" = add i64 %"n#local#sym22#2", 1
+  store i64 %"add#", ptr %"n#local#sym22#", align 4
   call void @gc_run()
   br label %cond
 
 end_while:                                        ; preds = %cond
-  %"n#local#sym20#3" = load i64, ptr %"n#local#sym20#", align 4
-  ret i64 %"n#local#sym20#3"
+  %"n#local#sym22#3" = load i64, ptr %"n#local#sym22#", align 4
+  ret i64 %"n#local#sym22#3"
 }
 
 attributes #0 = { nounwind }

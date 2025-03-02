@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::Chars;
+use transmute_core::error::{Diagnostic, Diagnostics, Level};
 use transmute_core::span::Span;
 
 // fixme comments dont move spans (they behave as if the do not exist at all)
@@ -13,6 +14,7 @@ pub struct Lexer<'s> {
     remaining: &'s str,
     pos: usize,
     location: Location,
+    diagnostics: Diagnostics,
 }
 
 impl<'s> Lexer<'s> {
@@ -22,6 +24,7 @@ impl<'s> Lexer<'s> {
             remaining: source,
             pos: 0,
             location: Location::new(1, 1),
+            diagnostics: Default::default(),
         }
     }
 
@@ -188,6 +191,7 @@ impl<'s> Lexer<'s> {
                 self.advance_consumed(span.len);
                 (TokenKind::Semicolon, span)
             }
+            '"' => self.string(),
             c if c.is_ascii_digit() => self.number(),
             c if c.is_ascii_alphabetic() || c == '_' => self.identifier(),
             c => {
@@ -211,6 +215,79 @@ impl<'s> Lexer<'s> {
     fn advance_consumed(&mut self, len: usize) {
         self.remaining = &self.remaining[len..];
         self.pos += len;
+    }
+
+    fn string(&mut self) -> (TokenKind, Span) {
+        let mut span = Span::new(self.location.line, self.location.column, self.pos, 1);
+        let mut string = String::new();
+
+        let mut chars = self.remaining[1..].chars();
+        let mut escaped = false;
+        loop {
+            match chars.next() {
+                None => {
+                    self.diagnostics.push(Diagnostic::new(
+                        "Missing \"",
+                        Span::new(
+                            self.location.line,
+                            self.location.column,
+                            self.pos + span.len,
+                            0,
+                        ),
+                        Level::Error,
+                        (file!(), line!()),
+                    ));
+
+                    self.advance_consumed(span.len);
+
+                    return (TokenKind::String(string), span);
+                }
+                Some(ch) => {
+                    if ch == '\n' {
+                        self.location.line += 1;
+                        self.location.column = 1;
+                    } else {
+                        self.location.column += 1;
+                    }
+
+                    span = span.extend(ch.len_utf8());
+                    match ch {
+                        '"' | '\\' if escaped => {
+                            escaped = false;
+                            string.push(ch);
+                        }
+                        'n' if escaped => {
+                            escaped = false;
+                            string.push('\n');
+                        }
+                        '\\' => escaped = true,
+                        ch if escaped => {
+                            escaped = false;
+                            self.diagnostics.push(Diagnostic::new(
+                                format!("Invalid escape char: {ch}"),
+                                Span::new(
+                                    self.location.line,
+                                    self.location.column,
+                                    self.pos + span.len,
+                                    1,
+                                ),
+                                Level::Error,
+                                (file!(), line!()),
+                            ));
+                            string.push(ch);
+                        }
+                        '"' => break,
+                        ch => {
+                            string.push(ch);
+                        }
+                    }
+                }
+            }
+        }
+
+        self.advance_consumed(span.len);
+
+        (TokenKind::String(string), span)
     }
 
     fn number(&mut self) -> (TokenKind, Span) {
@@ -395,6 +472,10 @@ impl<'s> Lexer<'s> {
     pub fn span(&self, span: &Span) -> &str {
         &self.source[span.start..span.end()]
     }
+
+    pub fn diagnostics(self) -> Diagnostics {
+        self.diagnostics
+    }
 }
 
 fn is_identifier(c: &char) -> bool {
@@ -448,6 +529,10 @@ impl<'s> PeekableLexer<'s> {
     pub fn span(&self, span: &Span) -> &str {
         self.lexer.span(span)
     }
+
+    pub fn diagnostics(self) -> Diagnostics {
+        self.lexer.diagnostics()
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -482,6 +567,7 @@ pub enum TokenKind {
     Let,
     Minus,
     Number(i64),
+    String(String),
     OpenBracket,
     OpenCurlyBracket,
     OpenParenthesis,
@@ -520,6 +606,7 @@ impl TokenKind {
             TokenKind::Let => Cow::from("`let`"),
             TokenKind::Minus => Cow::from("`-`"),
             TokenKind::Number(_) => Cow::from("number"),
+            TokenKind::String(_) => Cow::from("string"),
             TokenKind::OpenBracket => Cow::from("`[`"),
             TokenKind::OpenCurlyBracket => Cow::from("`{`"),
             TokenKind::OpenParenthesis => Cow::from("`(`"),
@@ -542,43 +629,44 @@ impl TokenKind {
         match self {
             TokenKind::Identifier => 0,
             TokenKind::Number(_) => 1,
-            TokenKind::True => 2,
-            TokenKind::False => 3,
+            TokenKind::String(_) => 2,
+            TokenKind::True => 3,
+            TokenKind::False => 4,
 
-            TokenKind::Let => 4,
-            TokenKind::Ret => 5,
-            TokenKind::If => 6,
-            TokenKind::Else => 7,
-            TokenKind::While => 8,
-            TokenKind::Struct => 9,
+            TokenKind::Let => 5,
+            TokenKind::Ret => 6,
+            TokenKind::If => 7,
+            TokenKind::Else => 8,
+            TokenKind::While => 9,
+            TokenKind::Struct => 10,
 
-            TokenKind::Comma => 10,
-            TokenKind::Semicolon => 11,
-            TokenKind::Colon => 12,
-            TokenKind::Dot => 13,
+            TokenKind::Comma => 11,
+            TokenKind::Semicolon => 12,
+            TokenKind::Colon => 13,
+            TokenKind::Dot => 14,
 
-            TokenKind::CloseCurlyBracket => 14,
-            TokenKind::CloseParenthesis => 15,
-            TokenKind::OpenCurlyBracket => 16,
-            TokenKind::OpenParenthesis => 17,
+            TokenKind::CloseCurlyBracket => 15,
+            TokenKind::CloseParenthesis => 16,
+            TokenKind::OpenCurlyBracket => 17,
+            TokenKind::OpenParenthesis => 18,
 
-            TokenKind::Equal => 18,
+            TokenKind::Equal => 19,
 
-            TokenKind::Star => 19,
-            TokenKind::Slash => 20,
+            TokenKind::Star => 20,
+            TokenKind::Slash => 21,
 
-            TokenKind::Minus => 21,
-            TokenKind::Plus => 22,
+            TokenKind::Minus => 22,
+            TokenKind::Plus => 23,
 
-            TokenKind::EqualEqual => 23,
-            TokenKind::ExclaimEqual => 24,
-            TokenKind::Greater => 25,
-            TokenKind::GreaterEqual => 26,
-            TokenKind::Smaller => 27,
-            TokenKind::SmallerEqual => 28,
+            TokenKind::EqualEqual => 24,
+            TokenKind::ExclaimEqual => 25,
+            TokenKind::Greater => 26,
+            TokenKind::GreaterEqual => 27,
+            TokenKind::Smaller => 28,
+            TokenKind::SmallerEqual => 29,
 
-            TokenKind::CloseBracket => 29,
-            TokenKind::OpenBracket => 30,
+            TokenKind::CloseBracket => 30,
+            TokenKind::OpenBracket => 31,
 
             TokenKind::Eof => 254,
             TokenKind::Bad(_) => 255,
@@ -654,6 +742,9 @@ impl Display for TokenKind {
             }
             TokenKind::Number(n) => {
                 write!(f, "number({n})")
+            }
+            TokenKind::String(s) => {
+                write!(f, "string({s})")
             }
             TokenKind::OpenBracket => {
                 write!(f, "`[`")
@@ -745,13 +836,25 @@ mod tests {
             #[test]
             fn $name() {
                 let mut lexer = Lexer::new($src);
-                // let expected = Token {
-                //     kind: TokenKind::from($expected),
-                //     span: Span::new($line, $column, $start, $len),
-                // };
                 let actual = lexer.next();
+
+                assert!(lexer.diagnostics.is_empty());
                 assert_debug_snapshot!(actual);
-                // assert_eq!(actual, expected)
+            }
+        };
+
+        ($name:ident, $src:expr, $diagnostic:expr) => {
+            #[test]
+            fn $name() {
+                let mut lexer = Lexer::new($src);
+                let actual = lexer.next();
+
+                assert!(!lexer.diagnostics.is_empty());
+                assert_eq!(
+                    lexer.diagnostics.iter().next().unwrap().message,
+                    $diagnostic
+                );
+                assert_debug_snapshot!(actual);
             }
         };
     }
@@ -759,6 +862,18 @@ mod tests {
     lexer_test_next!(next_number, "42");
     lexer_test_next!(next_neg_number, "-42");
     lexer_test_next!(next_number_suffix, "42a");
+    lexer_test_next!(next_string, "\"hello\"");
+    lexer_test_next!(next_string_empty, "\"\"");
+    lexer_test_next!(next_string_with_double_quotes, "\"\\\"hello\\\"\"");
+    lexer_test_next!(next_string_with_backslash, "\" \\\\ \"");
+    lexer_test_next!(next_string_newline_escaped, "\"line1\\nline2\"");
+    lexer_test_next!(next_string_newline, "\"line1\nline2\"");
+    lexer_test_next!(
+        next_string_invalid_escape,
+        "\"\\g\"",
+        "Invalid escape char: g"
+    );
+    lexer_test_next!(next_string_not_closed, "\"hello", "Missing \"");
     lexer_test_next!(next_plus, "+");
     lexer_test_next!(next_minus, "-");
     lexer_test_next!(next_star, "*");

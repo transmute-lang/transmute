@@ -20,6 +20,10 @@ declare void @gc_mark(ptr)
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
+declare ptr @tmc_stdlib_string_new(ptr, i64)
+
+declare void @_TM0_5print1s(ptr)
+
 declare void @_TM0_5print1n(i64)
 
 declare void @_TM0_5print1b(i1)
@@ -54,25 +58,25 @@ entry:
   %"gcroot#heap#struct#S#id0#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#struct#S#id0#", align 8
   call void @llvm.gcroot(ptr nonnull %"gcroot#heap#struct#S#id0#", ptr null)
-  %"a0#local#sym23#" = alloca ptr, align 8
-  %"a#local#sym22#" = alloca ptr, align 8
-  store ptr null, ptr %"a#local#sym22#", align 8
-  call void @llvm.gcroot(ptr nonnull %"a#local#sym22#", ptr null)
-  store ptr null, ptr %"a0#local#sym23#", align 8
-  call void @llvm.gcroot(ptr nonnull %"a0#local#sym23#", ptr null)
+  %"a0#local#sym25#" = alloca ptr, align 8
+  %"a#local#sym24#" = alloca ptr, align 8
+  store ptr null, ptr %"a#local#sym24#", align 8
+  call void @llvm.gcroot(ptr nonnull %"a#local#sym24#", ptr null)
+  store ptr null, ptr %"a0#local#sym25#", align 8
+  call void @llvm.gcroot(ptr nonnull %"a0#local#sym25#", ptr null)
   %"heap#struct#S#id0#" = call ptr @gc_malloc(i64 8, i64 8, ptr null)
   store ptr %"heap#struct#S#id0#", ptr %"gcroot#heap#struct#S#id0#", align 8
   store i64 0, ptr %"heap#struct#S#id0#", align 4
   %"heap#array#" = call ptr @gc_malloc(i64 8, i64 8, ptr nonnull @"gc_callbacks#a1s1S")
   store ptr %"heap#struct#S#id0#", ptr %"heap#array#", align 8
-  store ptr %"heap#array#", ptr %"a#local#sym22#", align 8
+  store ptr %"heap#array#", ptr %"a#local#sym24#", align 8
   call void @gc_run()
-  %"a#local#sym22#2" = load ptr, ptr %"a#local#sym22#", align 8
+  %"a#local#sym24#2" = load ptr, ptr %"a#local#sym24#", align 8
   call void @tmc_check_array_index(i64 0, i64 1, i64 7, i64 24)
-  %"array[?]#3" = load ptr, ptr %"a#local#sym22#2", align 8
-  store ptr %"array[?]#3", ptr %"a0#local#sym23#", align 8
+  %"array[?]#3" = load ptr, ptr %"a#local#sym24#2", align 8
+  store ptr %"array[?]#3", ptr %"a0#local#sym25#", align 8
   call void @gc_run()
-  %tmp = load ptr, ptr %"a0#local#sym23#", align 8
+  %tmp = load ptr, ptr %"a0#local#sym25#", align 8
   store i64 1, ptr %tmp, align 4
   call void @gc_run()
   ret i64 1

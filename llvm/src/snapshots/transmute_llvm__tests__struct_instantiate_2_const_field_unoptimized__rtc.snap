@@ -18,6 +18,10 @@ declare void @gc_run()
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
+declare ptr @tmc_stdlib_string_new(ptr, i64)
+
+declare void @_TM0_5print1s(ptr)
+
 declare void @_TM0_5print1n(i64)
 
 declare void @_TM0_5print1b(i1)
@@ -29,15 +33,15 @@ entry:
 
 define i64 @_TM0_1f0() gc "shadow-stack" {
 entry:
-  %"s#local#sym23#" = alloca ptr, align 8
-  store ptr null, ptr %"s#local#sym23#", align 8
-  call void @llvm.gcroot(ptr %"s#local#sym23#", ptr @layout_s6Struct)
+  %"s#local#sym25#" = alloca ptr, align 8
+  store ptr null, ptr %"s#local#sym25#", align 8
+  call void @llvm.gcroot(ptr %"s#local#sym25#", ptr @layout_s6Struct)
   %"heap#struct#Struct#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"Struct#id0", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"Struct#id0" }, ptr null, i64 0, i32 1) to i64))
-  %"heap#struct#Struct#id0#.field1#idx0#sym21" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
-  store i64 1, ptr %"heap#struct#Struct#id0#.field1#idx0#sym21", align 4
-  %"heap#struct#Struct#id0#.field2#idx1#sym22" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 1
-  store i1 true, ptr %"heap#struct#Struct#id0#.field2#idx1#sym22", align 1
-  store ptr %"heap#struct#Struct#id0#", ptr %"s#local#sym23#", align 8
+  %"heap#struct#Struct#id0#.field1#idx0#sym23" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
+  store i64 1, ptr %"heap#struct#Struct#id0#.field1#idx0#sym23", align 4
+  %"heap#struct#Struct#id0#.field2#idx1#sym24" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 1
+  store i1 true, ptr %"heap#struct#Struct#id0#.field2#idx1#sym24", align 1
+  store ptr %"heap#struct#Struct#id0#", ptr %"s#local#sym25#", align 8
   call void @gc_run()
   ret i64 1
 }

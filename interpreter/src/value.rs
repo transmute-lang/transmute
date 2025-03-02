@@ -4,6 +4,7 @@ use std::fmt::{Display, Formatter};
 pub enum Value {
     Boolean(bool),
     Number(i64),
+    String(String),
     Struct(Vec<Ref>),
     Array(Vec<Ref>),
     #[default]
@@ -22,6 +23,13 @@ impl Value {
         match self {
             Value::Boolean(b) => *b,
             _ => panic!("{} is not a bool", self),
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        match self {
+            Value::String(s) => s,
+            _ => panic!("{} is not a string", self),
         }
     }
 
@@ -58,12 +66,16 @@ impl Display for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Value::Boolean(b) => {
-                write!(f, "{}", b)
+                write!(f, "{b}")
             }
             Value::Number(n) => {
-                write!(f, "{}", n)
+                write!(f, "{n}")
+            }
+            Value::String(s) => {
+                write!(f, "{s}",)
             }
             Value::Void => {
+                // todo:feature add support for escapes
                 write!(f, "void")
             }
             Value::Struct(values) => {

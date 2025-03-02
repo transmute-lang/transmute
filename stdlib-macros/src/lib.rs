@@ -69,6 +69,4 @@ pub fn derive_gc_mapkey_vtable(item: TokenStream) -> TokenStream {
         Data::Enum(_) | Data::Union(_) => panic!("{name} is not a struct"),
     }
         .into()
-
 }
-

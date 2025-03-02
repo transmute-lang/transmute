@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 
-export LLVM_SYS_180_PREFIX=/usr/local/llvm-18.1
+source .env
+export LLVM_SYS_180_PREFIX
+export LIBTRANSMUTE_STDLIB_PATH
+
+cargo fmt                                                                                                     || exit 1
 
 pushd runtime                                                                                                 || exit 1
 ./build.sh                                                                                                    || exit 1
 popd                                                                                                          || exit 1
 
-cargo fmt                                                                                                     || exit 1
+#cargo test -p transmute-stdlib                                                                                || exit 1
+cargo build -p transmute-stdlib                                                                               || exit 1
 
 cargo test -p transmute-core                                                                                  || exit 1
 
@@ -29,6 +34,7 @@ cargo test -p transmute-llvm -F rt-c                                            
 cargo test -p tmc                                                                                             || exit 1
 #cargo test -p tmc -F rt-c --no-default-features                                                               || exit 1
 
+cargo build -p tmi                                                                                            || exit 1
 cargo test -p tmi                                                                                             || exit 1
 
 cargo build --bin tmi --release                                                                               || exit 1

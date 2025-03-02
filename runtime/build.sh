@@ -10,12 +10,14 @@ mkdir -p target/
 CFLAGS="-Wall -Werror -Wpedantic -Wno-zero-length-array"
 
 clang $CFLAGS -c -fPIC -ggdb src/gc/gc.c -D GC_TEST -D GC_LOGS -D GC_LOGS_COLOR -D GC_PTHREAD -o target/gc.o || exit 1
+clang $CFLAGS -c -fPIC -ggdb src/runtimelib/rtlib.c -o target/rtlib.o || exit 1
 
 clang $CFLAGS \
       -D GC_TEST \
       target/gc.o \
+      target/rtlib.o \
       test/test.c \
-      ../stdlib/target/debug/libtransmute_stdlib.a \
+      ../target/debug/libtransmute_stdlib.a \
       -lpthread -lm -ldl -lssl -lcrypto \
       -ggdb \
       -o target/test || exit 1

@@ -73,6 +73,10 @@ impl<'a> Interpreter<'a> {
             Value::Boolean(true) => 1,
             Value::Boolean(false) => 0,
             Value::Number(n) => n,
+            Value::String(_) => {
+                eprintln!("Cannot return a string");
+                0
+            }
             Value::Struct(_) => {
                 eprintln!("Cannot return a struct");
                 0
@@ -276,6 +280,10 @@ impl<'a> Interpreter<'a> {
             }
             LiteralKind::Boolean(b) => {
                 self.heap.push(Value::Boolean(*b));
+                Ref(self.heap.len() - 1)
+            }
+            LiteralKind::String(s) => {
+                self.heap.push(Value::String(s.clone()));
                 Ref(self.heap.len() - 1)
             }
         }
@@ -535,6 +543,11 @@ impl RuntimeImpl for NativeFnKind {
             NativeFnKind::PrintBoolean => {
                 let bool = parameters.pop().unwrap().as_bool();
                 println!("{bool}");
+                Value::Void
+            }
+            NativeFnKind::PrintString => {
+                let val = parameters.pop().unwrap();
+                println!("{}", val.as_str());
                 Value::Void
             }
         }

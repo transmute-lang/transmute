@@ -16,10 +16,10 @@ stdout:
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (1 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark unreachable block 0x10010 (object at 0x10040: '')
 [2] gc_mark                |         0x10010: skip recursive mark(object at 0x10040): no mark callback
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10010 (object at 0x10040, size: 8: ''): reachable
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 8: ''): reachable
 
 
 stderr:

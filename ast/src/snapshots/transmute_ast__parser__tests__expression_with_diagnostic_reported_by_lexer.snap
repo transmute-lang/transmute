@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser :: new(Lexer :: new(\"\\\"Hello\\\\gworld!\\\";\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Invalid escape char: g",
+                span: 1:8; [8, 9],
+                level: Error,
+                generated_at: (
+                    "ast/src/lexer.rs",
+                    275,
+                ),
+            },
+        ],
+    },
+)

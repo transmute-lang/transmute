@@ -14,6 +14,10 @@ declare void @gc_run()
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
+declare ptr @tmc_stdlib_string_new(ptr, i64)
+
+declare void @_TM0_5print1s(ptr)
+
 declare void @_TM0_5print1n(i64)
 
 declare void @_TM0_5print1b(i1)
@@ -23,24 +27,24 @@ entry:
   unreachable
 }
 
-define i1 @_TM0_1f1n(i64 %"n#param#sym20#") gc "shadow-stack" {
+define i1 @_TM0_1f1n(i64 %"n#param#sym22#") gc "shadow-stack" {
 entry:
-  %"m#local#sym21#" = alloca i64, align 8
-  %"eq#" = icmp eq i64 %"n#param#sym20#", 42
+  %"m#local#sym23#" = alloca i64, align 8
+  %"eq#" = icmp eq i64 %"n#param#sym22#", 42
   br i1 %"eq#", label %true_branch, label %false_branch
 
 true_branch:                                      ; preds = %entry
   ret i1 true
 
 false_branch:                                     ; preds = %entry
-  %"sub#" = sub i64 %"n#param#sym20#", 1
+  %"sub#" = sub i64 %"n#param#sym22#", 1
   br label %end_if
 
 end_if:                                           ; preds = %false_branch
-  store i64 %"sub#", ptr %"m#local#sym21#", align 4
+  store i64 %"sub#", ptr %"m#local#sym23#", align 4
   call void @gc_run()
-  %"m#local#sym21#1" = load i64, ptr %"m#local#sym21#", align 4
-  %"eq#2" = icmp eq i64 %"m#local#sym21#1", 42
+  %"m#local#sym23#1" = load i64, ptr %"m#local#sym23#", align 4
+  %"eq#2" = icmp eq i64 %"m#local#sym23#1", 42
   ret i1 %"eq#2"
 }
 

@@ -14,6 +14,10 @@ declare void @gc_run()
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
+declare ptr @tmc_stdlib_string_new(ptr, i64)
+
+declare void @_TM0_5print1s(ptr)
+
 declare void @_TM0_5print1n(i64)
 
 declare void @_TM0_5print1b(i1)
@@ -23,9 +27,9 @@ entry:
   unreachable
 }
 
-define i1 @_TM0_1f2nn(i64 %"l#param#sym20#", i64 %"r#param#sym21#") gc "shadow-stack" {
+define i1 @_TM0_1f2nn(i64 %"l#param#sym22#", i64 %"r#param#sym23#") gc "shadow-stack" {
 entry:
-  %"ge#" = icmp sge i64 %"l#param#sym20#", %"r#param#sym21#"
+  %"ge#" = icmp sge i64 %"l#param#sym22#", %"r#param#sym23#"
   ret i1 %"ge#"
 }
 

@@ -42,6 +42,10 @@ impl PrettyPrint for Literal {
             LiteralKind::Number(n) => {
                 write!(f, "{n}")
             }
+            LiteralKind::String(n) => {
+                // todo:feature handle escapes
+                write!(f, "\"{n}\"")
+            }
         }
     }
 }

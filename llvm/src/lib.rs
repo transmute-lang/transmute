@@ -22,9 +22,9 @@ use inkwell::values::{
 };
 use inkwell::{IntPredicate, OptimizationLevel};
 use std::collections::HashMap;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::{env, fs};
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, StructId, SymbolId, TypeId};
 use transmute_mir::{
@@ -102,7 +102,6 @@ impl LlvmIr<'_> {
             .unwrap();
 
         // todo:ux parameterize cc
-        // todo:ux check linked libraries
 
         let mut command = Command::new("cc");
         command.arg(&tm_object_path);
@@ -123,15 +122,36 @@ impl LlvmIr<'_> {
             runtime_object_path
         };
 
+        #[cfg(feature = "stdlib")]
+        {
+            // fixme:ux make it flexible
+            command.arg(
+                env::var("LIBTRANSMUTE_STDLIB_PATH").expect("LIBTRANSMUTE_STDLIB_PATH is defined"),
+            );
+            // todo:ux check linked libraries
+            command.arg("-lpthread");
+            command.arg("-lm");
+            command.arg("-ldl");
+            // command.arg("-lssl");
+            // command.arg("-lcrypto");
+        }
+
         match command.arg("-o").arg(&path).output() {
             Ok(o) => {
                 if !o.status.success() {
-                    println!("{:?}", o);
+                    println!(
+                        "{cwd}$ {command:?}: {o:?}",
+                        cwd = env::current_dir().unwrap().to_str().unwrap()
+                    );
+                } else {
+                    println!("Wrote executable to {}", path.display());
                 }
-                println!("Wrote executable to {}", path.display());
             }
             Err(err) => {
-                eprintln!("{err}");
+                eprintln!(
+                    "{cwd}$ {command:?}: {err}",
+                    cwd = env::current_dir().unwrap().to_str().unwrap()
+                );
             }
         }
 
@@ -174,14 +194,20 @@ struct Codegen<'ctx, 't> {
     #[cfg(feature = "runtime")]
     gc_mark: FunctionValue<'ctx>,
     tmc_check_array_index: FunctionValue<'ctx>,
+    tmc_stdlib_string_new: FunctionValue<'ctx>,
 
     // todo:refactor could replace struct_types, array_types and all the *_types above with a unique
     //   map from TypeId to LLVM type. Once done, things can be updated at least in gen_access and
     //   gen_array_access
+    // todo:refactor or... we can also use context.get_struct_type(name) to lookup the struct type
+    //   by name
     struct_types: HashMap<StructId, StructType<'ctx>>,
     array_types: HashMap<(TypeId, usize), ArrayType<'ctx>>,
     #[cfg(feature = "rt-c")]
     type_layouts: HashMap<TypeId, PointerValue<'ctx>>,
+    /// The callbacks used by the GC to trigger the marking and the freeing of nested/contained.
+    /// The pointers point to a struct with a layout corresponding to the layout of GcCallbacks (see
+    /// gc.h)
     #[cfg(feature = "runtime")]
     gc_callbacks: HashMap<TypeId, PointerValue<'ctx>>,
     variables: HashMap<SymbolId, PointerValue<'ctx>>,
@@ -258,6 +284,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 );
                 module.add_function("tmc_check_array_index", fn_type, None)
             },
+            tmc_stdlib_string_new: {
+                let fn_type = ptr_type.fn_type(&[ptr_type.into(), size_type.into()], false);
+                module.add_function("tmc_stdlib_string_new", fn_type, None)
+            },
             struct_types: Default::default(),
             array_types: Default::default(),
             #[cfg(feature = "rt-c")]
@@ -272,6 +302,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         }
     }
 
+    // todo:refactor only insert used functions
     pub fn gen(mut self, mir: &Mir, optimize: bool) -> Result<Module<'ctx>, Diagnostics> {
         for (symbol_id, symbol) in mir.symbols.iter() {
             if let SymbolKind::Native(ident_id, parameters, _, native_kind) = &symbol.kind {
@@ -284,6 +315,11 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     }
                     NativeFnKind::PrintBoolean => {
                         let print_fn_type = self.void_type.fn_type(&[self.bool_type.into()], false);
+                        let print_fn = self.module.add_function(&fn_name, print_fn_type, None);
+                        self.functions.insert(symbol_id, print_fn);
+                    }
+                    NativeFnKind::PrintString => {
+                        let print_fn_type = self.void_type.fn_type(&[self.ptr_type.into()], false);
                         let print_fn = self.module.add_function(&fn_name, print_fn_type, None);
                         self.functions.insert(symbol_id, print_fn);
                     }
@@ -448,8 +484,15 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     #[cfg(feature = "runtime")]
     fn gen_gc_callbacks(&mut self, mir: &Mir, type_id: TypeId) {
         match &mir.types[type_id] {
-            Type::Boolean => {}
-            Type::Number => {}
+            Type::Boolean => {
+                // no GC involved for booleans
+            }
+            Type::Number => {
+                // no GC involved for numbers
+            }
+            Type::String => {
+                // the callbacks are handled by the stdlib
+            }
             Type::Function(_, _) => {}
             Type::Struct(symbol_id, struct_id) => {
                 let callbacks = self.gen_struct_gc_callbacks(mir, *symbol_id, *struct_id);
@@ -764,6 +807,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let fn_type = match resolved_ret_type {
             Type::Boolean => self.bool_type.fn_type(&parameters_types, false),
             Type::Number => self.i64_type.fn_type(&parameters_types, false),
+            Type::String => self.ptr_type.fn_type(&parameters_types, false),
             Type::Function(_, _) => todo!(),
             Type::Struct(_, _) | Type::Array(_, _) => {
                 // are returned by ref
@@ -812,7 +856,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 Value::Number(val) => {
                     self.builder.build_return(Some(&val)).unwrap();
                 }
-                Value::Struct(val, _) | Value::Array(val, _) => {
+                Value::Struct(val, _) | Value::Array(val, _) | Value::String(val) => {
                     self.builder.build_return(Some(&val)).unwrap();
                 }
             };
@@ -891,10 +935,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 .unwrap();
         }
         #[cfg(feature = "runtime")]
-        if self
-            .gc_callbacks
-            .contains_key(&mir.symbols[variable.symbol_id].type_id)
-        {
+        if self.is_collected(mir, mir.symbols[variable.symbol_id].type_id) {
             self.builder
                 .build_store(ptr, self.ptr_type.const_zero())
                 .unwrap();
@@ -931,6 +972,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 LiteralKind::Number(number) => {
                     // todo:check check what happens for negative numbers
                     self.i64_type.const_int(*number as u64, false).into()
+                }
+                LiteralKind::String(string) => {
+                    self.gen_string_instantiation(string, must_create_gcroot)
                 }
             },
             ExpressionKind::Access(expr_id, symbol_id) => {
@@ -1017,6 +1061,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     let value_type = self.llvm_type(mir, mir.symbols[*symbol_id].type_id);
                     (value_ptr, value_type)
                 }
+                LiteralKind::String(_) => todo!("gen_pointer_expression"),
                 LiteralKind::Boolean(_) => panic!("a boolean is not a pointer"),
                 LiteralKind::Number(_) => panic!("a number is not a pointer"),
             },
@@ -1214,6 +1259,12 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                         .into_pointer_value(),
                     llvm_type,
                 ),
+                Type::String => Value::String(
+                    self.builder
+                        .build_load(self.ptr_type, *variable, &name)
+                        .unwrap()
+                        .into_pointer_value(),
+                ),
                 _ => Value::from(
                     self.builder
                         .build_load(llvm_type, *variable, &name)
@@ -1326,7 +1377,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             }
             SymbolKind::Native(_, _, return_type, _) | SymbolKind::LetFn(_, return_type) => {
                 match mir.types[*return_type] {
-                    Type::Boolean | Type::Number | Type::Struct(_, _) => {
+                    Type::Boolean | Type::Number | Type::Struct(_, _) | Type::String => {
                         Some(self.llvm_type(mir, *return_type))
                     }
                     Type::Array(_, _) => todo!(),
@@ -1343,7 +1394,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 |e| match self.gen_expression(mir, &mir.expressions[*e], true) {
                     Value::None | Value::Never => panic!(),
                     Value::Number(val) => BasicMetadataValueEnum::IntValue(val),
-                    Value::Struct(val, _) | Value::Array(val, _) => {
+                    Value::Struct(val, _) | Value::Array(val, _) | Value::String(val) => {
                         BasicMetadataValueEnum::PointerValue(val)
                     }
                 },
@@ -1414,6 +1465,40 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         value
     }
 
+    fn gen_string_instantiation(&mut self, string: &str, must_create_gcroot: bool) -> Value<'ctx> {
+        let global_string_ptr = unsafe { self.builder.build_global_string(string, "str") }
+            .unwrap()
+            .as_pointer_value();
+
+        let string_ptr = self
+            .builder
+            .build_call(
+                self.tmc_stdlib_string_new,
+                &[
+                    global_string_ptr.into(),
+                    self.size_type.const_int(string.len() as u64, false).into(),
+                ],
+                "new_str",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        if must_create_gcroot {
+            #[cfg(feature = "runtime")]
+            {
+                // todo:feature these gc root don't live for the whole of the frame, we can set them
+                //   to null when the value is assigned to something else
+                let gcroot = self.create_gcroot("new_str");
+                self.builder.build_store(gcroot, string_ptr).unwrap();
+            }
+        }
+
+        Value::String(string_ptr)
+    }
+
     fn gen_struct_instantiation(
         &mut self,
         mir: &Mir,
@@ -1429,6 +1514,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     Value::Number(val) => val.into(),
                     Value::Struct(pointer_value, _) => pointer_value.into(),
                     Value::Array(pointer_value, _) => pointer_value.into(),
+                    Value::String(pointer_value) => pointer_value.into(),
                     Value::Never | Value::None => panic!("value expected"),
                 },
             )
@@ -1735,6 +1821,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         match &mir.types[type_id] {
             Type::Number => self.i64_type.as_basic_type_enum(),
             Type::Boolean => self.bool_type.as_basic_type_enum(),
+            Type::String => self.ptr_type.as_basic_type_enum(),
             Type::Function(_, _) => todo!(),
             Type::Struct(_, struct_id) => {
                 BasicTypeEnum::StructType(*self.struct_types.get(struct_id).unwrap())
@@ -1773,6 +1860,20 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         }
     }
 
+    #[cfg(feature = "runtime")]
+    fn is_collected(&self, mir: &Mir, type_id: TypeId) -> bool {
+        match &mir.types[type_id] {
+            Type::Boolean => false,
+            Type::Number => false,
+            Type::String => true,
+            Type::Function(_, _) => todo!(),
+            Type::Struct(_, _) => true,
+            Type::Array(_, _) => true,
+            Type::Void => unreachable!(),
+            Type::None => unreachable!(),
+        }
+    }
+
     /// Generates an `alloca` instruction, optionally storing a value inside, if provided.
     fn gen_alloca(
         &mut self,
@@ -1804,13 +1905,14 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     /// represented as pointers to a heap allocated object.
     fn repr(&self, llvm_type: BasicTypeEnum<'ctx>) -> BasicTypeEnum<'ctx> {
         match llvm_type {
-            BasicTypeEnum::ArrayType(_) | BasicTypeEnum::StructType(_) => {
+            BasicTypeEnum::ArrayType(_)
+            | BasicTypeEnum::StructType(_)
+            | BasicTypeEnum::PointerType(_) => {
                 // todo:feature arrays and small structs may be inlined
                 self.ptr_type.into()
             }
             BasicTypeEnum::FloatType(_) => llvm_type,
             BasicTypeEnum::IntType(_) => llvm_type,
-            BasicTypeEnum::PointerType(_) => unimplemented!("pointers are not supported"),
             BasicTypeEnum::VectorType(_) => todo!(),
         }
     }
@@ -1821,6 +1923,7 @@ enum Value<'ctx> {
     Never,
     None,
     Number(IntValue<'ctx>),
+    String(PointerValue<'ctx>),
     Struct(PointerValue<'ctx>, BasicTypeEnum<'ctx>),
     Array(PointerValue<'ctx>, BasicTypeEnum<'ctx>),
 }
@@ -1851,7 +1954,7 @@ impl<'ctx> From<Value<'ctx>> for BasicValueEnum<'ctx> {
         match value {
             Value::Never | Value::None => panic!(),
             Value::Number(val) => val.into(),
-            Value::Struct(val, _) | Value::Array(val, _) => val.into(),
+            Value::Struct(val, _) | Value::Array(val, _) | Value::String(val) => val.into(),
         }
     }
 }
@@ -1862,6 +1965,7 @@ impl<'ctx> From<Value<'ctx>> for IntValue<'ctx> {
             Value::Never => panic!(),
             Value::None => panic!(),
             Value::Number(val) => val,
+            Value::String(_) => panic!(),
             Value::Struct(_, _) => panic!(),
             Value::Array(_, _) => panic!(),
         }
@@ -1897,6 +2001,7 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::NeqBooleanBoolean => true,
             NativeFnKind::PrintNumber => false,
             NativeFnKind::PrintBoolean => false,
+            NativeFnKind::PrintString => false,
             #[cfg(feature = "gc-functions")]
             NativeFnKind::GcRun => false,
             #[cfg(feature = "gc-functions")]
@@ -2046,6 +2151,7 @@ impl LlvmImpl for NativeFnKind {
             }
             NativeFnKind::PrintNumber => Value::None,
             NativeFnKind::PrintBoolean => Value::None,
+            NativeFnKind::PrintString => Value::None,
             #[cfg(feature = "gc-functions")]
             NativeFnKind::GcRun => Value::None,
             #[cfg(feature = "gc-functions")]
@@ -2779,7 +2885,27 @@ mod tests {
             f([0, 1]);
         }
         let f(p: [number; 2]): number {
-             1;
+            1;
+        }
+        "#
+    );
+    gen!(
+        print_string_direct,
+        r#"
+        let f() {
+            print("hello");
+            print("world");
+        }
+        "#
+    );
+    gen!(
+        print_string_indirect,
+        r#"
+        let f() {
+            let hello = "hello";
+            let world = "world";
+            print(hello);
+            print(world);
         }
         "#
     );

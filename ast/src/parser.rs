@@ -259,6 +259,8 @@ impl<'s> Parser<'s> {
             .map(|(ident, _)| ident)
             .collect::<Vec<String>>();
 
+        self.diagnostics.append(self.lexer.diagnostics());
+
         if self.diagnostics.is_empty() {
             Ok(Ast::new(
                 identifiers,
@@ -376,6 +378,7 @@ impl<'s> Parser<'s> {
             | TokenKind::Identifier
             | TokenKind::Minus
             | TokenKind::Number(_)
+            | TokenKind::String(_)
             | TokenKind::OpenParenthesis
             | TokenKind::OpenBracket
             | TokenKind::True => {
@@ -874,7 +877,7 @@ impl<'s> Parser<'s> {
     ) -> (&Expression, bool) {
         let token = self.lexer.next();
 
-        let mut expr_id = match &token.kind {
+        let mut expr_id = match token.kind {
             TokenKind::If => {
                 self.potential_tokens.clear();
                 self.parse_if_expression(token.span.clone()).id
@@ -920,7 +923,12 @@ impl<'s> Parser<'s> {
             }
             TokenKind::Number(n) => {
                 self.potential_tokens.clear();
-                let literal = Literal::new(LiteralKind::Number(*n), token.span.clone());
+                let literal = Literal::new(LiteralKind::Number(n), token.span.clone());
+                self.push_expression(ExpressionKind::Literal(literal), token.span.clone())
+            }
+            TokenKind::String(str) => {
+                self.potential_tokens.clear();
+                let literal = Literal::new(LiteralKind::String(str), token.span.clone());
                 self.push_expression(ExpressionKind::Literal(literal), token.span.clone())
             }
             TokenKind::Minus => {
@@ -999,6 +1007,7 @@ impl<'s> Parser<'s> {
                         expected_token!(TokenKind::While),
                         expected_token!(TokenKind::Identifier),
                         expected_token!(TokenKind::Number(0)),
+                        expected_token!(TokenKind::String("".to_string())),
                         expected_token!(TokenKind::Minus),
                         expected_token!(TokenKind::True),
                         expected_token!(TokenKind::False),
@@ -1914,6 +1923,7 @@ mod tests {
     test_syntax!(expression_literal_identifier => "forty_two;");
     test_syntax!(expression_literal_boolean => "true;");
     test_syntax!(expression => "2 + 20 * 2;");
+    test_syntax!(expression_with_diagnostic_reported_by_lexer => "\"Hello\\gworld!\";");
     test_syntax!(binary_operator_minus => "43 - 1;");
     test_syntax!(prefix_minus => "- 40 * 2;");
     test_syntax!(let_statement => "let forty_two = 42;");

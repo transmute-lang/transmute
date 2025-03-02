@@ -48,6 +48,7 @@ pub struct Resolver {
     none_type_id: TypeId,
     boolean_type_id: TypeId,
     number_type_id: TypeId,
+    string_type_id: TypeId,
     not_found_symbol_id: SymbolId,
 }
 
@@ -73,6 +74,7 @@ impl Resolver {
             none_type_id: Default::default(),
             boolean_type_id: Default::default(),
             number_type_id: Default::default(),
+            string_type_id: Default::default(),
             not_found_symbol_id: Default::default(),
         }
     }
@@ -119,6 +121,9 @@ impl Resolver {
 
         self.number_type_id = TypeId::from(self.types.len());
         self.types.insert(self.number_type_id, Type::Number);
+
+        self.string_type_id = TypeId::from(self.types.len());
+        self.types.insert(self.string_type_id, Type::String);
 
         // init. symbols
         debug_assert!(hir.symbols.is_empty());
@@ -263,6 +268,7 @@ impl Resolver {
                 match literal.kind {
                     LiteralKind::Boolean(_) => self.boolean_type_id,
                     LiteralKind::Number(_) => self.number_type_id,
+                    LiteralKind::String(_) => self.string_type_id,
                     LiteralKind::Identifier(ident_ref) => {
                         // todo:check to check:
                         //   - behaviour when target is let fn

@@ -9,9 +9,7 @@ members = [
     "rt/c",
     "runtime",
     "llvm",
-    "compiler"]
-
-exclude = [
+    "compiler",
     "stdlib-macros",
     "stdlib"]
 

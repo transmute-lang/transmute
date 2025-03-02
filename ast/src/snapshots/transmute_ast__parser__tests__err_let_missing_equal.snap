@@ -1,6 +1,6 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser::new(Lexer::new(\"let forty_two 42;\")).parse()"
+expression: "Parser :: new(Lexer :: new(\"let forty_two 42;\")).parse()"
 ---
 Err(
     Diagnostics {
@@ -11,7 +11,7 @@ Err(
                 level: Error,
                 generated_at: (
                     "ast/src/parser.rs",
-                    329,
+                    331,
                 ),
             },
         ],

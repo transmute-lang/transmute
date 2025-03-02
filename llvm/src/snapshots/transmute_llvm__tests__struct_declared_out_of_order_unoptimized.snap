@@ -21,6 +21,10 @@ declare void @gc_mark(ptr)
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
+declare ptr @tmc_stdlib_string_new(ptr, i64)
+
+declare void @_TM0_5print1s(ptr)
+
 declare void @_TM0_5print1n(i64)
 
 declare void @_TM0_5print1b(i1)
@@ -43,15 +47,15 @@ entry:
   %"gcroot#heap#struct#StructInner#id1#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#struct#StructInner#id1#", align 8
   call void @llvm.gcroot(ptr %"gcroot#heap#struct#StructInner#id1#", ptr null)
-  %"outer#local#sym23#" = alloca ptr, align 8
-  store ptr null, ptr %"outer#local#sym23#", align 8
-  call void @llvm.gcroot(ptr %"outer#local#sym23#", ptr null)
+  %"outer#local#sym25#" = alloca ptr, align 8
+  store ptr null, ptr %"outer#local#sym25#", align 8
+  call void @llvm.gcroot(ptr %"outer#local#sym25#", ptr null)
   %"heap#struct#StructInner#id1#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"StructInner#id1", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"StructInner#id1" }, ptr null, i64 0, i32 1) to i64), ptr null)
   store ptr %"heap#struct#StructInner#id1#", ptr %"gcroot#heap#struct#StructInner#id1#", align 8
   %"heap#struct#StructOuter#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"StructOuter#id0", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"StructOuter#id0" }, ptr null, i64 0, i32 1) to i64), ptr @"gc_callbacks#s11StructOuter")
-  %"heap#struct#StructOuter#id0#.inner#idx0#sym22" = getelementptr inbounds %"StructOuter#id0", ptr %"heap#struct#StructOuter#id0#", i32 0, i32 0
-  store ptr %"heap#struct#StructInner#id1#", ptr %"heap#struct#StructOuter#id0#.inner#idx0#sym22", align 8
-  store ptr %"heap#struct#StructOuter#id0#", ptr %"outer#local#sym23#", align 8
+  %"heap#struct#StructOuter#id0#.inner#idx0#sym24" = getelementptr inbounds %"StructOuter#id0", ptr %"heap#struct#StructOuter#id0#", i32 0, i32 0
+  store ptr %"heap#struct#StructInner#id1#", ptr %"heap#struct#StructOuter#id0#.inner#idx0#sym24", align 8
+  store ptr %"heap#struct#StructOuter#id0#", ptr %"outer#local#sym25#", align 8
   call void @gc_run()
   ret i64 1
 }

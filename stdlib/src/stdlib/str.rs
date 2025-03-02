@@ -1,9 +1,10 @@
 use crate::gc::{Collectable, GcCallbacks, ObjectPtr};
+use core::slice;
 use std::hash::{Hash, Hasher};
 use transmute_stdlib_macros::{GcCallbacks, MapKeyVTable};
 
 #[repr(C)]
-#[derive(GcCallbacks, MapKeyVTable, Eq)]
+#[derive(GcCallbacks, MapKeyVTable, Eq, Debug)]
 pub struct Str {
     ptr: *const u8,
     len: usize,
@@ -58,9 +59,27 @@ impl<S: Into<String>> From<S> for Str {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn stdlib_string_new() -> *mut Str {
-    let str = Str::from("hello, world");
-    let str = Box::new(str);
-    ObjectPtr::leak(str).as_raw()
+impl From<&Str> for &str {
+    fn from(value: &Str) -> Self {
+        let slice = unsafe { slice::from_raw_parts(value.ptr, value.len) };
+        unsafe { std::str::from_utf8_unchecked(slice) }
+    }
 }
+
+#[no_mangle]
+pub extern "C" fn tmc_stdlib_string_new(ptr: *const u8, len: usize) -> *mut Str {
+    ObjectPtr::leak(Box::new(Str::from(
+        String::from_utf8_lossy(unsafe { slice::from_raw_parts(ptr, len) }).to_string(),
+    )))
+    .as_raw()
+}
+
+// todo ideally we want to use this one but stdout between the GC and this function is interleaved.
+//   it should not. is it because of the way io::stdout() is initialized?
+// #[no_mangle]
+// pub extern "C" fn _TM0_5print1s(str: *mut Str) {
+//     println!(
+//         "{}",
+//         Into::<&str>::into(ObjectPtr::from_raw(str).unwrap().as_ref())
+//     );
+// }

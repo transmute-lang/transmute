@@ -18,6 +18,10 @@ declare void @gc_mark(ptr)
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
+declare ptr @tmc_stdlib_string_new(ptr, i64)
+
+declare void @_TM0_5print1s(ptr)
+
 declare void @_TM0_5print1n(i64)
 
 declare void @_TM0_5print1b(i1)
@@ -27,10 +31,10 @@ entry:
   unreachable
 }
 
-define i64 @_TM0_1f1s6Struct(ptr %"s#param#sym22#") gc "shadow-stack" {
+define i64 @_TM0_1f1s6Struct(ptr %"s#param#sym24#") gc "shadow-stack" {
 entry:
-  %"s#param#sym22#.field#idx0#sym21#1" = load i64, ptr %"s#param#sym22#", align 4
-  ret i64 %"s#param#sym22#.field#idx0#sym21#1"
+  %"s#param#sym24#.field#idx0#sym23#1" = load i64, ptr %"s#param#sym24#", align 4
+  ret i64 %"s#param#sym24#.field#idx0#sym23#1"
 }
 
 attributes #0 = { nounwind }

@@ -2,7 +2,7 @@
 #include <string.h>
 #include <assert.h>
 #include "../src/gc/gc.h"
-#include "../../stdlib/bindings/transmute-stdlib.h"
+#include "../src/runtimelib/rtlib.h"
 
 #define __LLVM_DEFINE_ROOT
 #include "../src/llvm/llvm.h"
@@ -54,15 +54,19 @@ int main() {
     gc_pool_dump();
     PAUSE();
 
-    printf("\n--- stdlib_string_new ----------+\n");
-    Str *str = stdlib_string_new();
+    printf("\n--- tmc_stdlib_string_new -----+\n");
+    Str *str = tmc_stdlib_string_new((uint8_t *)"hello, world", 12);
     gc_set_object_name(str, "str");
-    printf("str = %p\n", (void *)str);
+    printf("*str = %p\n", (void *)str);
     gc_pool_dump();
     PAUSE();
 
     printf("\n--- array3[0] = str -----------+\n");
     array3[0] = str;
+    PAUSE();
+
+    printf("\n--- _TM0_5print1s -------------+\n");
+    _TM0_5print1s(str);
     PAUSE();
 
     printf("\n--- stdlib_list_new() ---------+\n");

@@ -20,6 +20,10 @@ declare void @gc_mark(ptr)
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
+declare ptr @tmc_stdlib_string_new(ptr, i64)
+
+declare void @_TM0_5print1s(ptr)
+
 declare void @_TM0_5print1n(i64)
 
 declare void @_TM0_5print1b(i1)
@@ -41,9 +45,9 @@ entry:
   %"gcroot#heap#array#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#array#", align 8
   call void @llvm.gcroot(ptr nonnull %"gcroot#heap#array#", ptr null)
-  %"a#local#sym22#" = alloca ptr, align 8
-  store ptr null, ptr %"a#local#sym22#", align 8
-  call void @llvm.gcroot(ptr nonnull %"a#local#sym22#", ptr null)
+  %"a#local#sym24#" = alloca ptr, align 8
+  store ptr null, ptr %"a#local#sym24#", align 8
+  call void @llvm.gcroot(ptr nonnull %"a#local#sym24#", ptr null)
   %"heap#array#" = call ptr @gc_malloc(i64 16, i64 8, ptr null)
   store ptr %"heap#array#", ptr %"gcroot#heap#array#", align 8
   store i64 0, ptr %"heap#array#", align 4
@@ -51,12 +55,12 @@ entry:
   store i64 1, ptr %"heap#array#.repack8", align 4
   %"heap#struct#S#id0#" = call ptr @gc_malloc(i64 8, i64 8, ptr nonnull @"gc_callbacks#s1S")
   store ptr %"heap#array#", ptr %"heap#struct#S#id0#", align 8
-  store ptr %"heap#struct#S#id0#", ptr %"a#local#sym22#", align 8
+  store ptr %"heap#struct#S#id0#", ptr %"a#local#sym24#", align 8
   call void @gc_run()
-  %"a#local#sym22#2" = load ptr, ptr %"a#local#sym22#", align 8
-  %"a#local#sym22#2.field#idx0#sym21#3" = load ptr, ptr %"a#local#sym22#2", align 8
+  %"a#local#sym24#2" = load ptr, ptr %"a#local#sym24#", align 8
+  %"a#local#sym24#2.field#idx0#sym23#3" = load ptr, ptr %"a#local#sym24#2", align 8
   call void @tmc_check_array_index(i64 0, i64 2, i64 9, i64 21)
-  %"array[?]#4" = load i64, ptr %"a#local#sym22#2.field#idx0#sym21#3", align 4
+  %"array[?]#4" = load i64, ptr %"a#local#sym24#2.field#idx0#sym23#3", align 4
   ret i64 %"array[?]#4"
 }
 

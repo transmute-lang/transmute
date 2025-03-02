@@ -18,6 +18,10 @@ declare void @gc_mark(ptr)
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
+declare ptr @tmc_stdlib_string_new(ptr, i64)
+
+declare void @_TM0_5print1s(ptr)
+
 declare void @_TM0_5print1n(i64)
 
 declare void @_TM0_5print1b(i1)
@@ -27,19 +31,19 @@ entry:
   unreachable
 }
 
-define i64 @_TM0_1f1n(i64 %"n#param#sym23#") gc "shadow-stack" {
+define i64 @_TM0_1f1n(i64 %"n#param#sym25#") gc "shadow-stack" {
 entry:
-  %"s#local#sym24#" = alloca ptr, align 8
-  store ptr null, ptr %"s#local#sym24#", align 8
-  call void @llvm.gcroot(ptr %"s#local#sym24#", ptr null)
-  %"add#" = add i64 %"n#param#sym23#", 1
-  %"add#1" = add i64 %"n#param#sym23#", 2
+  %"s#local#sym26#" = alloca ptr, align 8
+  store ptr null, ptr %"s#local#sym26#", align 8
+  call void @llvm.gcroot(ptr %"s#local#sym26#", ptr null)
+  %"add#" = add i64 %"n#param#sym25#", 1
+  %"add#1" = add i64 %"n#param#sym25#", 2
   %"heap#struct#Struct#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"Struct#id0", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"Struct#id0" }, ptr null, i64 0, i32 1) to i64), ptr null)
-  %"heap#struct#Struct#id0#.field1#idx0#sym21" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
-  store i64 %"add#", ptr %"heap#struct#Struct#id0#.field1#idx0#sym21", align 4
-  %"heap#struct#Struct#id0#.field2#idx1#sym22" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 1
-  store i64 %"add#1", ptr %"heap#struct#Struct#id0#.field2#idx1#sym22", align 4
-  store ptr %"heap#struct#Struct#id0#", ptr %"s#local#sym24#", align 8
+  %"heap#struct#Struct#id0#.field1#idx0#sym23" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
+  store i64 %"add#", ptr %"heap#struct#Struct#id0#.field1#idx0#sym23", align 4
+  %"heap#struct#Struct#id0#.field2#idx1#sym24" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 1
+  store i64 %"add#1", ptr %"heap#struct#Struct#id0#.field2#idx1#sym24", align 4
+  store ptr %"heap#struct#Struct#id0#", ptr %"s#local#sym26#", align 8
   call void @gc_run()
   ret i64 1
 }
