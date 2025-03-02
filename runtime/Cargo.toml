@@ -6,5 +6,6 @@ edition = "2021"
 [features]
 gc-test = []
 gc-logs = []
-gc-stable-logs = ["gc-logs"]
+gc-logs-stable = ["gc-logs"]
+gc-logs-colors = ["gc-logs"]
 gc-functions = []

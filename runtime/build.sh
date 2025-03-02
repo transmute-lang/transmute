@@ -9,7 +9,7 @@ mkdir -p target/
 
 CFLAGS="-Wall -Werror -Wpedantic -Wno-zero-length-array"
 
-clang $CFLAGS -c -fPIC -ggdb src/gc/gc.c -D GC_TEST -D GC_LOGS -D GC_PTHREAD -o target/gc.o || exit 1
+clang $CFLAGS -c -fPIC -ggdb src/gc/gc.c -D GC_TEST -D GC_LOGS -D GC_LOGS_COLOR -D GC_PTHREAD -o target/gc.o || exit 1
 
 clang $CFLAGS \
       -D GC_TEST \
@@ -29,5 +29,6 @@ else
   GC_LOG_LEVEL=2 \
   GC_TEST_DUMP=0 \
   GC_TEST_DUMP_COLOR=1 \
+  GC_PRINT_STATS=1 \
   target/test
 fi
