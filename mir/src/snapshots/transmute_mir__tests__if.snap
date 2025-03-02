@@ -13,7 +13,9 @@ Ok(
                 symbol_id: SymbolId(21),
                 parameters: [],
                 variables: {},
-                body: ExprId(4),
+                body: Some(
+                    ExprId(4),
+                ),
                 ret: TypeId(1),
                 parent: None,
             },

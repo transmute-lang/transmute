@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser :: new(Lexer :: new(\"@ let f() { }\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `let`, expected one of (1) identifier",
+                span: 1:3; [2, 5],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    527,
+                ),
+            },
+        ],
+    },
+)

@@ -1,3 +1,4 @@
+use crate::annotation::Annotation;
 use crate::identifier::Identifier;
 use transmute_core::ids::{ExprId, IdentRefId, StmtId, TypeDefId};
 use transmute_core::span::Span;
@@ -20,8 +21,9 @@ pub enum StatementKind {
     Expression(ExprId),
     Let(Identifier, ExprId),
     Ret(Option<ExprId>, RetMode),
-    LetFn(Identifier, Vec<Parameter>, Return, ExprId),
-    Struct(Identifier, Vec<Field>),
+    LetFn(Identifier, Vec<Annotation>, Vec<Parameter>, Return, ExprId),
+    Struct(Identifier, Vec<Annotation>, Vec<Field>),
+    Annotation(Identifier),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

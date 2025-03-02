@@ -4,7 +4,7 @@ use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId};
 use transmute_hir::expression::{ExpressionKind, Target};
 use transmute_hir::literal::{Literal, LiteralKind};
 use transmute_hir::natives::NativeFnKind;
-use transmute_hir::statement::StatementKind;
+use transmute_hir::statement::{Implementation, StatementKind};
 use transmute_hir::symbol::SymbolKind;
 use transmute_hir::ResolvedHir;
 
@@ -26,16 +26,16 @@ impl<'a> Interpreter<'a> {
     }
 
     pub fn start(&mut self, main_parameters: Vec<Value>) -> i64 {
-        let (parameters, expr_id) = self
+        let (parameters, implementation) = self
             .hir
             .roots
             .iter()
             .filter_map(|stmt_id| {
-                if let StatementKind::LetFn(ident, params, _, expr_id) =
+                if let StatementKind::LetFn(ident, _, params, _, implementation) =
                     &self.hir.statements[*stmt_id].kind
                 {
                     if &self.hir.identifiers[ident.id] == "main" {
-                        return Some((params, *expr_id));
+                        return Some((params, *implementation));
                     }
                 }
                 None
@@ -43,6 +43,17 @@ impl<'a> Interpreter<'a> {
             .next()
             .expect("main function exists");
 
+        let expr_id = match implementation {
+            Implementation::Provided(expr_id) => expr_id,
+            #[cfg(debug_assertions)]
+            Implementation::Native(_) => {
+                panic!("native functions are not supported in interpreter")
+            }
+            #[cfg(not(debug_assertions))]
+            Implementation::Native => {
+                panic!("native functions are not supported in interpreter")
+            }
+        };
         let val = match &self.hir.expressions[expr_id].kind {
             ExpressionKind::Block(stmts) => {
                 let mut env = HashMap::with_capacity(parameters.len());
@@ -120,12 +131,13 @@ impl<'a> Interpreter<'a> {
 
                 Val::none()
             }
-            StatementKind::LetFn(_, _, _, _) => Val::none(),
+            StatementKind::LetFn(_, _, _, _, _) => Val::none(),
             StatementKind::Ret(None, _) => Val::of_option_ret(None),
             StatementKind::Ret(Some(e), _) => {
                 Val::of_option_ret(self.visit_expression(*e).value_ref)
             }
-            StatementKind::Struct(_, _) => Val::none(),
+            StatementKind::Struct(_, _, _) => Val::none(),
+            StatementKind::Annotation(_) => Val::none(),
         }
     }
 
@@ -295,14 +307,26 @@ impl<'a> Interpreter<'a> {
             | SymbolKind::Parameter(_, _, _)
             | SymbolKind::Field(_, _, _)
             | SymbolKind::Struct(_, _)
+            | SymbolKind::Annotation(_, _)
             | SymbolKind::NativeType(_, _) => {
                 panic!("let fn expected")
             }
             SymbolKind::LetFn(_, stmt, _, _) => {
                 let stmt = &self.hir.statements[*stmt];
                 match &stmt.kind {
-                    StatementKind::LetFn(_, parameters, _, expr) => {
-                        let expr = &self.hir.expressions[*expr];
+                    StatementKind::LetFn(_, _, parameters, _, implementation) => {
+                        let expr_id = match implementation {
+                            Implementation::Provided(expr_id) => expr_id,
+                            #[cfg(debug_assertions)]
+                            Implementation::Native(_) => {
+                                panic!("native functions are not supported in interpreter")
+                            }
+                            #[cfg(not(debug_assertions))]
+                            Implementation::Native => {
+                                panic!("native functions are not supported in interpreter")
+                            }
+                        };
+                        let expr = &self.hir.expressions[*expr_id];
                         match &expr.kind {
                             ExpressionKind::Block(stmts) => {
                                 let mut env = HashMap::with_capacity(parameters.len());

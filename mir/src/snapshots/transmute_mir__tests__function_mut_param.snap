@@ -23,7 +23,9 @@ Ok(
                     },
                 ],
                 variables: {},
-                body: ExprId(4),
+                body: Some(
+                    ExprId(4),
+                ),
                 ret: TypeId(1),
                 parent: None,
             },

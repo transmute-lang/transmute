@@ -13,7 +13,9 @@ Ok(
                 symbol_id: SymbolId(21),
                 parameters: [],
                 variables: {},
-                body: ExprId(3),
+                body: Some(
+                    ExprId(3),
+                ),
                 ret: TypeId(4),
                 parent: None,
             },
@@ -25,7 +27,9 @@ Ok(
                 symbol_id: SymbolId(22),
                 parameters: [],
                 variables: {},
-                body: ExprId(1),
+                body: Some(
+                    ExprId(1),
+                ),
                 ret: TypeId(3),
                 parent: Some(
                     FunctionId(0),

@@ -1,0 +1,57 @@
+---
+source: ast/src/parser.rs
+expression: "Parser :: new(Lexer :: new(\"@a let f() {}\")).parse()"
+---
+Ok(
+    Ast {
+        identifiers: [
+            IdentId(0) => "a",
+            IdentId(1) => "f",
+        ],
+        identifier_refs: [
+            IdentRefId(0) => IdentifierRef {
+                id: IdentRefId(0),
+                ident: Identifier {
+                    id: IdentId(0),
+                    span: 1:2; [1, 2],
+                },
+            },
+        ],
+        expressions: [
+            ExprId(0) => Expression {
+                id: ExprId(0),
+                kind: Block(
+                    [],
+                ),
+                span: 1:12; [11, 13],
+            },
+        ],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(1),
+                        span: 1:8; [7, 8],
+                    },
+                    [
+                        Annotation {
+                            ident_ref_id: IdentRefId(0),
+                            span: 1:1; [0, 2],
+                        },
+                    ],
+                    [],
+                    Return {
+                        type_def_id: None,
+                    },
+                    ExprId(0),
+                ),
+                span: 1:4; [3, 13],
+            },
+        ],
+        type_defs: [],
+        roots: [
+            StmtId(0),
+        ],
+    },
+)

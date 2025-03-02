@@ -108,13 +108,16 @@ Hir {
                     bound: Bound(21),
                 },
                 [],
+                [],
                 Return {
                     type_def_id: Some(
                         TypeDefId(0),
                     ),
                     typed: Typed(4),
                 },
-                ExprId(2),
+                Provided(
+                    ExprId(2),
+                ),
             ),
             span: 1:1; [0, 35],
         },

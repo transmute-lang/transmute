@@ -458,7 +458,7 @@ impl ImplicitRetConverter {
                 self.statements.insert(statement.id, statement);
                 true
             }
-            StatementKind::LetFn(_, _, _, expr) => {
+            StatementKind::LetFn(_, _, _, _, expr) => {
                 let expr = expressions.remove(*expr).unwrap();
                 self.visit_expression(statements, expressions, expr, 0, unreachable);
 
@@ -466,7 +466,11 @@ impl ImplicitRetConverter {
 
                 false
             }
-            StatementKind::Struct(_, _) => {
+            StatementKind::Struct(_, _, _) => {
+                self.statements.insert(statement.id, statement);
+                false
+            }
+            StatementKind::Annotation(_) => {
                 self.statements.insert(statement.id, statement);
                 false
             }

@@ -1,0 +1,12 @@
+---
+source: ast/src/pretty_print.rs
+expression: w
+---
+@a
+@b
+let f() = {
+}
+@c
+@d
+struct S {
+}

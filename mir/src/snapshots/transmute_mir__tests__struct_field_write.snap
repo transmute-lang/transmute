@@ -24,7 +24,9 @@ Ok(
                         mutable: false,
                     },
                 },
-                body: ExprId(7),
+                body: Some(
+                    ExprId(7),
+                ),
                 ret: TypeId(4),
                 parent: None,
             },

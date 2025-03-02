@@ -372,7 +372,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             self.gen_function_signature(mir, function);
         }
         for (_, function) in mir.functions.iter() {
-            self.gen_function_body(mir, function);
+            if function.body.is_some() {
+                self.gen_function_body(mir, function);
+            }
         }
 
         self.module.verify().unwrap_or_else(|str| {
@@ -829,7 +831,11 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             function.parent,
         );
         let f = self.module.add_function(&fn_name, fn_type, None);
-        f.set_gc("shadow-stack");
+
+        if function.body.is_some() {
+            f.set_gc("shadow-stack");
+        }
+
         self.functions.insert(function.symbol_id, f);
     }
 
@@ -905,7 +911,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             self.gen_variable(mir, variable);
         }
 
-        self.gen_expression(mir, &mir.expressions[function.body], true);
+        self.gen_expression(mir, &mir.expressions[function.body.unwrap()], true);
 
         Value::None
     }
@@ -2907,6 +2913,15 @@ mod tests {
             print(hello);
             print(world);
         }
+        "#
+    );
+
+    gen!(
+        native_function,
+        r#"
+        annotation native;
+        @native
+        let native(a: number): number {}
         "#
     );
 }

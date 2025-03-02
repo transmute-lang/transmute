@@ -4,7 +4,10 @@ use crate::identifier::Identifier;
 use crate::literal::LiteralKind;
 use crate::natives::{Native, Natives, Type};
 use crate::passes::exit_points_resolver::ExitPoint;
-use crate::statement::{Field, Parameter, Return, Statement, StatementKind, TypeDefKind};
+use crate::statement::{
+    Annotation, Field, Implementation, Parameter, RetMode, Return, Statement, StatementKind,
+    TypeDefKind,
+};
 use crate::symbol::{Symbol, SymbolKind};
 use crate::typed::{Typed, Untyped};
 use crate::{
@@ -17,7 +20,7 @@ use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeDef
 use transmute_core::span::Span;
 use transmute_core::vec_map::VecMap;
 
-type Function<T, B> = (Identifier<B>, Vec<Parameter<T, B>>, Return<T>);
+type Function<T, B> = (Identifier<B>, Vec<Parameter<T, B>>, Return<T>, bool);
 
 // todo:refactoring this would deserve a reordering of functions, and that each `resolve_` method
 //   does the actual resolution instead of giving to its caller the information required to resolve
@@ -38,6 +41,7 @@ pub struct Resolver {
     function_symbols: HashMap<StmtId, SymbolId>,
     /// maps structs (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
     struct_symbols: HashMap<StmtId, SymbolId>,
+    annotation_symbols: HashMap<StmtId, SymbolId>,
     stmt_symbols: HashMap<(StmtId, usize), SymbolId>,
 
     // cache
@@ -67,6 +71,7 @@ impl Resolver {
             scope_stack: Default::default(),
             function_symbols: Default::default(),
             struct_symbols: Default::default(),
+            annotation_symbols: Default::default(),
             stmt_symbols: Default::default(),
 
             invalid_type_id: Default::default(),
@@ -173,6 +178,7 @@ impl Resolver {
         }
 
         let root = hir.roots.clone();
+        self.insert_annotations(&mut hir, &root);
         self.insert_structs(&mut hir, &root);
         self.insert_functions(&mut hir, &root);
 
@@ -276,7 +282,6 @@ impl Resolver {
                         // todo:feature resolve function ref, see comment in visit_assignment
                         self.resolve_ident_ref(hir, ident_ref, None)
                             .map(|s| self.symbols[s].type_id)
-                            // fixme must issue a diagnostic when the identifier is not found
                             .unwrap_or(self.invalid_type_id)
                     }
                 }
@@ -292,7 +297,7 @@ impl Resolver {
                 let ty = self.find_type_by_type_id(expr_type_id);
                 let field_type_id = match ty {
                     Type::Struct(stmt_id) => match &self.statements[*stmt_id].kind {
-                        StatementKind::Struct(ident, fields) => {
+                        StatementKind::Struct(ident, _, fields) => {
                             match fields
                                 .iter()
                                 .enumerate()
@@ -564,7 +569,7 @@ impl Resolver {
                 _ => None,
             })
             .map(|s| match &s.kind {
-                StatementKind::Struct(struct_identifier, struct_fields) => {
+                StatementKind::Struct(struct_identifier, _, struct_fields) => {
                     (s.id, struct_identifier, struct_fields)
                 }
                 _ => panic!("must be a struct"),
@@ -713,6 +718,7 @@ impl Resolver {
                     StatementKind::Ret(..) => self.none_type_id,
                     StatementKind::LetFn(..) => self.void_type_id,
                     StatementKind::Struct(..) => self.void_type_id,
+                    StatementKind::Annotation(..) => self.void_type_id,
                 }
             };
 
@@ -767,16 +773,45 @@ impl Resolver {
 
                 self.none_type_id
             }
-            StatementKind::LetFn(ident, params, ret_type, expr) => {
-                let res =
-                    self.resolve_function(hir, stmt_id, (ident, params, ret_type), expr, &span);
+            StatementKind::LetFn(
+                ident,
+                annotations,
+                params,
+                ret_type,
+                Implementation::Provided(expr),
+            ) => {
+                let res = self.resolve_function(
+                    hir,
+                    stmt_id,
+                    (ident, params, ret_type, false),
+                    expr,
+                    &annotations,
+                    &span,
+                );
 
-                if let Ok((identifier, parameters, ret_type)) = res {
+                if let Ok((identifier, parameters, ret_type, native)) = res {
                     self.statements.insert(
                         stmt_id,
                         Statement::new(
                             stmt_id,
-                            StatementKind::LetFn(identifier, parameters, ret_type, expr),
+                            StatementKind::LetFn(
+                                identifier,
+                                annotations,
+                                parameters,
+                                ret_type,
+                                if native {
+                                    #[cfg(debug_assertions)]
+                                    {
+                                        Implementation::Native(expr)
+                                    }
+                                    #[cfg(not(debug_assertions))]
+                                    {
+                                        Implementation::Native
+                                    }
+                                } else {
+                                    Implementation::Provided(expr)
+                                },
+                            ),
                             span,
                         ),
                     );
@@ -784,12 +819,35 @@ impl Resolver {
 
                 self.void_type_id
             }
-            StatementKind::Struct(ident, fields) => {
-                let (ident, fields) = self.resolve_struct(hir, stmt_id, ident, fields);
+            #[cfg(debug_assertions)]
+            StatementKind::LetFn(_, _, _, _, Implementation::Native(_)) => {
+                panic!("body type must be implemented before resolution");
+            }
+            #[cfg(not(debug_assertions))]
+            StatementKind::LetFn(_, _, _, _, Implementation::Native) => {
+                panic!("body type must be implemented before resolution");
+            }
+            StatementKind::Struct(ident, annotations, fields) => {
+                let (ident, fields) =
+                    self.resolve_struct(hir, stmt_id, ident, fields, &annotations);
 
                 self.statements.insert(
                     stmt_id,
-                    Statement::new(stmt_id, StatementKind::Struct(ident, fields), span),
+                    Statement::new(
+                        stmt_id,
+                        StatementKind::Struct(ident, annotations, fields),
+                        span,
+                    ),
+                );
+
+                self.void_type_id
+            }
+            StatementKind::Annotation(ident) => {
+                let ident = self.resolve_annotation(hir, stmt_id, ident);
+
+                self.statements.insert(
+                    stmt_id,
+                    Statement::new(stmt_id, StatementKind::Annotation(ident), span),
                 );
 
                 self.void_type_id
@@ -826,12 +884,15 @@ impl Resolver {
         self.insert_symbol(ident.id, SymbolKind::Let(ident.id, stmt), expr_type_id)
     }
 
+    /// Resolves a function, starting by inserting all structs contained in the function (but not
+    /// in nested functions). See `insert_structs`.
     fn resolve_function(
         &mut self,
         hir: &mut UnresolvedHir,
         stmt_id: StmtId,
-        (ident, params, ret_type): Function<Untyped, Unbound>,
+        (ident, params, ret_type, _native): Function<Untyped, Unbound>,
         body_expr_id: ExprId,
+        annotations: &[Annotation],
         _span: &Span,
     ) -> Result<Function<Typed, Bound>, ()> {
         self.push_scope();
@@ -896,63 +957,99 @@ impl Resolver {
 
         success = success && parameters.len() == params_len;
 
-        // we want to visit the expression, hence no short-circuit
-        let expr_type_id = self.resolve_expression(hir, body_expr_id);
-        success = expr_type_id != self.invalid_type_id && success;
+        let is_native = self.native_annotation_present(hir, annotations);
+        if is_native {
+            let expression = &hir.expressions[body_expr_id];
+            let has_body = match &expression.kind {
+                ExpressionKind::Block(stmt_ids) => {
+                    // because the implicit ret runs before the resolution, empty function
+                    // bodies actually have exactly one implicit ret none.
+                    !(stmt_ids.len() == 1
+                        && matches!(
+                            &hir.statements[stmt_ids[0]].kind,
+                            &StatementKind::Ret(None, RetMode::Implicit)
+                        ))
+                }
+                _ => true,
+            };
 
-        if ret_type_id != self.invalid_type_id {
-            let exit_points = hir
-                .exit_points
-                .exit_points
-                .get(&body_expr_id)
-                .expect("exit points is computed");
-
-            if exit_points.is_empty() {
-                panic!("we must always have at least one exit point, even if implicit and void");
+            if has_body {
+                self.diagnostics.report_err(
+                    format!(
+                        "Native function {} must not have a body",
+                        self.identifiers.get_by_left(&ident.id).unwrap(),
+                    ),
+                    expression.span.clone(),
+                    (file!(), line!()),
+                );
+                success = false;
             }
+        }
 
-            #[cfg(test)]
-            println!(
-                "Exit points of {name} ({body_expr_id:?}): {exit_points:?}",
-                name = self.identifiers.get_by_left(&ident.id).unwrap(),
-            );
+        // we want to visit the expression, hence no short-circuit
+        // note that we resolve the expression even for native function (even though we don't
+        // report any error whatsoever so that we don't have "holes" in the resolved expressions)
+        let expr_type_id = self.resolve_expression(hir, body_expr_id);
 
-            // todo:refactor can we avoid that clone?
-            for exit_point in exit_points.clone().iter() {
-                let (exit_expr_id, explicit) = match exit_point {
-                    ExitPoint::Explicit(e) => (*e, true),
-                    ExitPoint::Implicit(e) => (*e, false),
-                };
+        if !is_native {
+            success = expr_type_id != self.invalid_type_id && success;
 
-                let expr_type_id = match exit_expr_id {
-                    None => self.void_type_id,
-                    Some(exit_expr_id) => self.resolve_expression(hir, exit_expr_id),
-                };
+            if ret_type_id != self.invalid_type_id {
+                let exit_points = hir
+                    .exit_points
+                    .exit_points
+                    .get(&body_expr_id)
+                    .expect("exit points is computed");
 
-                if expr_type_id == self.invalid_type_id {
-                    // nothing to report, that was reported already
-                } else if expr_type_id == self.none_type_id {
-                    panic!("functions must not return {}", Type::None)
-                } else if expr_type_id != ret_type_id
-                    && (ret_type_id != self.void_type_id || explicit)
-                {
-                    let expr_type = self.find_type_by_type_id(expr_type_id);
-                    // fixme the span is not accurate (in both cases)
-                    let span = if let Some(exit_expr_id) = exit_expr_id {
-                        self.expressions[exit_expr_id].span.clone()
-                    } else {
-                        self.expressions[body_expr_id].span.clone()
+                if exit_points.is_empty() {
+                    panic!(
+                        "we must always have at least one exit point, even if implicit and void"
+                    );
+                }
+
+                #[cfg(test)]
+                println!(
+                    "Exit points of {name} ({body_expr_id:?}): {exit_points:?}",
+                    name = self.identifiers.get_by_left(&ident.id).unwrap(),
+                );
+
+                // todo:refactor can we avoid that clone?
+                for exit_point in exit_points.clone().iter() {
+                    let (exit_expr_id, explicit) = match exit_point {
+                        ExitPoint::Explicit(e) => (*e, true),
+                        ExitPoint::Implicit(e) => (*e, false),
                     };
 
-                    self.diagnostics.report_err(
-                        format!(
-                            "Function {name} expected to return type {ret_type}, got {expr_type}",
-                            name = self.identifiers.get_by_left(&ident.id).unwrap(),
-                            ret_type = self.types.get_by_left(&ret_type_id).unwrap()
-                        ),
-                        span,
-                        (file!(), line!()),
-                    );
+                    let expr_type_id = match exit_expr_id {
+                        None => self.void_type_id,
+                        Some(exit_expr_id) => self.resolve_expression(hir, exit_expr_id),
+                    };
+
+                    if expr_type_id == self.invalid_type_id {
+                        // nothing to report, that was reported already
+                    } else if expr_type_id == self.none_type_id {
+                        panic!("functions must not return {}", Type::None)
+                    } else if expr_type_id != ret_type_id
+                        && (ret_type_id != self.void_type_id || explicit)
+                    {
+                        let expr_type = self.find_type_by_type_id(expr_type_id);
+                        // fixme the span is not accurate (in both cases)
+                        let span = if let Some(exit_expr_id) = exit_expr_id {
+                            self.expressions[exit_expr_id].span.clone()
+                        } else {
+                            self.expressions[body_expr_id].span.clone()
+                        };
+
+                        self.diagnostics.report_err(
+                            format!(
+                                "Function {name} expected to return type {ret_type}, got {expr_type}",
+                                name = self.identifiers.get_by_left(&ident.id).unwrap(),
+                                ret_type = self.types.get_by_left(&ret_type_id).unwrap()
+                            ),
+                            span,
+                            (file!(), line!()),
+                        );
+                    }
                 }
             }
         }
@@ -960,7 +1057,7 @@ impl Resolver {
         self.pop_scope();
 
         if success {
-            if let Some(symbol_id) = self.find_symbol_id_by_ident_and_param_types(
+            let symbol_id = self.find_symbol_id_by_ident_and_param_types(
                 ident.id,
                 Some(
                     &parameters
@@ -968,11 +1065,46 @@ impl Resolver {
                         .map(|p| p.resolved_type_id())
                         .collect::<Vec<TypeId>>(),
                 ),
-            ) {
+            );
+
+            if let Some(symbol_id) = symbol_id {
+                // if is_native {
+                //     // todo:refactor should we fix the comment below?
+                //     // We replace the non-native function (inserted in `insert_functions`) with its
+                //     // native counterpart. It would bo more logical to do it directly in
+                //     // `insert_functions` but it seemed easier to do it here instead, as doing
+                //     // otherwise would mean to resolve the annotations before inserting function.
+                //     let symbol = self.symbols.remove(symbol_id).unwrap();
+                //     let type_id = symbol.type_id;
+                //     let (ident_id, param_types, ret_type) = match symbol.kind {
+                //         SymbolKind::LetFn(ident_id, _, param_types, ret_type) => {
+                //             (ident_id, param_types, ret_type)
+                //         }
+                //         _ => panic!("expected function got {:?}", symbol.kind,),
+                //     };
+                //
+                //     self.symbols.insert(
+                //         symbol_id,
+                //         Symbol {
+                //             id: symbol_id,
+                //             kind: SymbolKind::Native(
+                //                 ident_id,
+                //                 param_types,
+                //                 ret_type,
+                //                 NativeFnKind::PrintString, // fixme
+                //             ),
+                //             type_id,
+                //         },
+                //     );
+                //
+                //     // self.statements.remove(stmt_id).unwrap();
+                // }
+
                 return Ok((
                     ident.bind(symbol_id),
                     parameters,
                     ret_type.typed(ret_type_id),
+                    is_native,
                 ));
             }
         }
@@ -986,7 +1118,16 @@ impl Resolver {
         stmt_id: StmtId,
         identifier: Identifier<Unbound>,
         fields: Vec<Field<Untyped, Unbound>>,
+        annotations: &[Annotation],
     ) -> (Identifier<Bound>, Vec<Field<Typed, Bound>>) {
+        let is_native = self.native_annotation_present(hir, annotations);
+        if is_native {
+            todo!(
+                "handle native struct: {}",
+                self.identifiers.get_by_left(&identifier.id).unwrap()
+            )
+        }
+
         let fields = fields
             .into_iter()
             .map(|field| {
@@ -1041,6 +1182,25 @@ impl Resolver {
             .unwrap_or(self.not_found_symbol_id);
 
         (identifier.bind(symbol_id), fields)
+    }
+
+    fn resolve_annotation(
+        &mut self,
+        _hir: &mut UnresolvedHir,
+        stmt_id: StmtId,
+        identifier: Identifier<Unbound>,
+    ) -> Identifier<Bound> {
+        let symbol_id = self
+            .annotation_symbols
+            .get(&stmt_id)
+            .cloned()
+            // todo:refactoring same handling as for visit_function: if not found, return Err()
+            //   or, return not_found_symbol_id in visit_function. This requires that the find_*()
+            //   and resolve_*() function are reworked...
+            // it may happen that the annotation is not found in case of duplicate def.
+            .unwrap_or(self.not_found_symbol_id);
+
+        identifier.bind(symbol_id)
     }
 
     /// Resolves an identifier ref by its `IdentRefId` and returns the corresponding `SymbolId`.
@@ -1118,6 +1278,26 @@ impl Resolver {
         }
     }
 
+    fn native_annotation_present(
+        &mut self,
+        hir: &mut UnresolvedHir,
+        annotations: &[Annotation],
+    ) -> bool {
+        for annotation in annotations.iter() {
+            // note that the diagnostic in case the identifier is not found is generated in
+            // `resolve_ident_ref`. There is a comment inside of it that says to move the diagnostic
+            // generation on the caller side.
+            if let Some(symbol_id) = self.resolve_ident_ref(hir, annotation.ident_ref_id, None) {
+                let annotation_ident_id = self.symbols[symbol_id].as_annotation();
+
+                if self.identifiers.get_by_left(annotation_ident_id).unwrap() == "native" {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     /// Resolves an identifier by its `IdentId` and returns the corresponding `SymbolId`. The
     /// resolution starts in the current scope and crawls the scopes stack up until the identifier
     /// is found.
@@ -1147,7 +1327,7 @@ impl Resolver {
         let ident_ref_ids = stmts
             .iter()
             .filter_map(|stmt_id| match &hir.statements[*stmt_id].kind {
-                StatementKind::LetFn(_, params, ret, ..) => {
+                StatementKind::LetFn(_, _, params, ret, ..) => {
                     let mut type_def_ids = params
                         .iter()
                         .map(|p| p.type_def_id)
@@ -1172,7 +1352,7 @@ impl Resolver {
         let functions = stmts
             .iter()
             .filter_map(|stmt_id| match &hir.statements[*stmt_id].kind {
-                StatementKind::LetFn(ident, params, ret_type, expr_id) => {
+                StatementKind::LetFn(ident, _, params, ret_type, expr_id) => {
                     let parameter_types = params
                         .iter()
                         .map(|p| {
@@ -1200,7 +1380,13 @@ impl Resolver {
                 }
                 _ => None,
             })
-            .collect::<Vec<(Identifier<Unbound>, StmtId, Vec<TypeId>, TypeId, ExprId)>>();
+            .collect::<Vec<(
+                Identifier<Unbound>,
+                StmtId,
+                Vec<TypeId>,
+                TypeId,
+                Implementation,
+            )>>();
 
         for (ident, stmt_id, parameter_types, ret_type, _) in functions.into_iter() {
             let fn_type_id = self.insert_type(Type::Function(parameter_types.clone(), ret_type));
@@ -1215,15 +1401,21 @@ impl Resolver {
         }
     }
 
+    /// Inserts all structs found in `stmts` into `self.struct_symbols` (which itself contains
+    /// reference to `self.symbols`) as well as the current stack frame's symbol table. While doing
+    /// so, we perform the following:
+    ///  - insert a type corresponding to the struct in `self.types`;
+    ///  - verify that no struct with the same name already exist in the current scope;
+    ///  - resolve the fields' types.
     fn insert_structs(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId]) {
         // we start by inserting all the structs we find, so that the types are available from
         // everywhere in the current scope.
 
-        // first, we insert all structs
+        // first, we collect and insert all structs
         let structs = stmts
             .iter()
             .filter_map(|stmt| match &hir.statements[*stmt].kind {
-                StatementKind::Struct(ident, _) => Some((*stmt, ident.clone())),
+                StatementKind::Struct(ident, _, _) => Some((*stmt, ident.clone())),
                 _ => None,
             })
             .collect::<Vec<(StmtId, Identifier<Unbound>)>>();
@@ -1252,7 +1444,7 @@ impl Resolver {
         let type_def_ids = stmts
             .iter()
             .filter_map(|stmt_id| match &hir.statements[*stmt_id].kind {
-                StatementKind::Struct(_, fields) => Some(
+                StatementKind::Struct(_, _, fields) => Some(
                     fields
                         .iter()
                         .map(|p| p.type_def_id)
@@ -1265,6 +1457,36 @@ impl Resolver {
 
         for type_def_id in type_def_ids.into_iter() {
             self.resolve_type_def(hir, type_def_id);
+        }
+    }
+
+    fn insert_annotations(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId]) {
+        let annotations = stmts
+            .iter()
+            .filter_map(|stmt| match &hir.statements[*stmt].kind {
+                StatementKind::Annotation(ident) => Some((*stmt, ident.clone())),
+                _ => None,
+            })
+            .collect::<Vec<(StmtId, Identifier<Unbound>)>>();
+
+        for (stmt_id, identifier) in annotations.into_iter() {
+            let ident_id = identifier.id;
+            let symbol_kind = SymbolKind::Annotation(ident_id, stmt_id);
+
+            if self.symbol_exists_in_current_scope(ident_id, &symbol_kind) {
+                self.diagnostics.report_err(
+                    format!(
+                        "Annotation '{ident}' is already defined in scope",
+                        ident = self.identifiers.get_by_left(&ident_id).unwrap(),
+                    ),
+                    identifier.span.clone(),
+                    (file!(), line!()),
+                )
+            } else {
+                let annotation_type_id = self.insert_type(Type::Void);
+                let symbol_id = self.insert_symbol(ident_id, symbol_kind, annotation_type_id);
+                self.annotation_symbols.insert(stmt_id, symbol_id);
+            }
         }
     }
 
@@ -1281,11 +1503,10 @@ impl Resolver {
             Some(symbols) => symbols.iter().map(|s| &self.symbols[*s]).any(|s| {
                 matches!(
                     (&s.kind, kind),
-                    (
-                        SymbolKind::Parameter(_, _, _),
-                        SymbolKind::Parameter(_, _, _)
-                    ) | (SymbolKind::Field(_, _, _), SymbolKind::Field(_, _, _))
-                        | (SymbolKind::Struct(_, _), SymbolKind::Struct(_, _))
+                    (SymbolKind::Parameter(..), SymbolKind::Parameter(..))
+                        | (SymbolKind::Field(..), SymbolKind::Field(..))
+                        | (SymbolKind::Struct(..), SymbolKind::Struct(..))
+                        | (SymbolKind::Annotation(..), SymbolKind::Annotation(..))
                 )
             }),
         }
@@ -1391,6 +1612,7 @@ impl Scope {
         }
     }
 
+    /// Find among `all_symbols` one that is in the current scope and that matches the `param_types`
     fn find(
         &self,
         all_symbols: &VecMap<SymbolId, Symbol>,
@@ -1413,6 +1635,7 @@ impl Scope {
                             | SymbolKind::NativeType(_, _)
                             | SymbolKind::Field(_, _, _)
                             | SymbolKind::Struct(_, _)
+                            | SymbolKind::Annotation(_, _)
                             | SymbolKind::NotFound => true,
                         },
                         Some(param_types) => match &symbol.kind {
@@ -1430,7 +1653,8 @@ impl Scope {
                             | SymbolKind::Parameter(_, _, _)
                             | SymbolKind::NativeType(_, _)
                             | SymbolKind::Field(_, _, _)
-                            | SymbolKind::Struct(_, _) => false,
+                            | SymbolKind::Struct(_, _)
+                            | SymbolKind::Annotation(_, _) => false,
                         },
                     }
                 })
@@ -1553,6 +1777,40 @@ mod tests {
     fn bindings_and_types() {
         let hir = UnresolvedHir::from(
             Parser::new(Lexer::new("struct S { f: S } let f(a: S, b: S): S { a; }"))
+                .parse()
+                .unwrap(),
+        )
+        .resolve(Natives::empty())
+        .unwrap();
+        assert_debug_snapshot!(&hir);
+    }
+
+    #[test]
+    fn annotation_function_bindings() {
+        let hir = UnresolvedHir::from(
+            Parser::new(Lexer::new("annotation a; @a let f() {}"))
+                .parse()
+                .unwrap(),
+        )
+        .resolve(Natives::empty())
+        .unwrap();
+        assert_debug_snapshot!(&hir);
+    }
+    #[test]
+    fn annotation_native_function_bindings() {
+        let hir = UnresolvedHir::from(
+            Parser::new(Lexer::new("annotation native; @native let f() {}"))
+                .parse()
+                .unwrap(),
+        )
+        .resolve(Natives::empty())
+        .unwrap();
+        assert_debug_snapshot!(&hir);
+    }
+    #[test]
+    fn annotation_struct_bindings() {
+        let hir = UnresolvedHir::from(
+            Parser::new(Lexer::new("annotation a; @a struct S {}"))
                 .parse()
                 .unwrap(),
         )
@@ -2250,5 +2508,45 @@ mod tests {
         "#,
         "No function 'f' found for parameters of types (array[3])",
         Span::new(5, 13, 73, 1)
+    );
+    test_type_ok!(define_annotation, "annotation a;");
+    test_type_ok!(
+        native_function_have_no_body,
+        r#"
+        annotation native;
+        @native let f(): number { }
+        "#
+    );
+    test_type_error!(
+        native_function_must_not_have_body,
+        r#"
+        annotation native;
+        @native let f(): number { true; }
+        "#,
+        "Native function f must not have a body",
+        Span::new(3, 33, 60, 9)
+    );
+    test_type_ok!(
+        non_native_function_have_body,
+        r#"
+        annotation non_native;
+        @non_native let f(): number { 10; }
+        "#
+    );
+    test_type_error!(
+        unknown_function_annotation,
+        r#"
+        @unknown let f(): number { 10; }
+        "#,
+        "Identifier 'unknown' not found",
+        Span::new(2, 10, 10, 7)
+    );
+    test_type_error!(
+        unknown_struct_annotation,
+        r#"
+        @unknown struct S {}
+        "#,
+        "Identifier 'unknown' not found",
+        Span::new(2, 10, 10, 7)
     );
 }

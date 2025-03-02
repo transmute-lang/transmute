@@ -1,6 +1,6 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser::new(Lexer::new(\"let times_two(a: number) = { a * 2; }\")).parse()"
+expression: "Parser :: new(Lexer :: new(\"let times_two(a: number) = { a * 2; }\")).parse()"
 ---
 Ok(
     Ast {
@@ -83,6 +83,7 @@ Ok(
                         id: IdentId(0),
                         span: 1:5; [4, 13],
                     },
+                    [],
                     [
                         Parameter {
                             identifier: Identifier {

@@ -191,6 +191,11 @@ impl<'s> Lexer<'s> {
                 self.advance_consumed(span.len);
                 (TokenKind::Semicolon, span)
             }
+            '@' => {
+                self.advance_column();
+                self.advance_consumed(span.len);
+                (TokenKind::At, span)
+            }
             '"' => self.string(),
             c if c.is_ascii_digit() => self.number(),
             c if c.is_ascii_alphabetic() || c == '_' => self.identifier(),
@@ -345,6 +350,10 @@ impl<'s> Lexer<'s> {
             token_kind: TokenKind,
             span: Span,
         ) -> Option<(TokenKind, Span)> {
+            if chars.as_str().is_empty() {
+                return None;
+            }
+
             let mut span = span;
             let mut cols = 1;
 
@@ -371,6 +380,13 @@ impl<'s> Lexer<'s> {
         let span = Span::new(self.location.line, self.location.column, self.pos, 0);
         let mut chars = self.remaining.chars();
         let keyword = match chars.next().expect("there is at least one ident char") {
+            'a' => make_keyword(
+                self,
+                chars,
+                "nnotation",
+                TokenKind::Annotation,
+                span.extend('a'.len_utf8()),
+            ),
             'e' => make_keyword(
                 self,
                 chars,
@@ -429,7 +445,7 @@ impl<'s> Lexer<'s> {
             None => {
                 let ident_span = self
                     .take_while(|c| is_identifier(&c))
-                    .expect("there is ony one identifier char");
+                    .expect("there is only one identifier char");
                 (TokenKind::Identifier, ident_span)
             }
         };
@@ -549,6 +565,8 @@ impl Token {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TokenKind {
+    Annotation,
+    At,
     CloseBracket,
     CloseCurlyBracket,
     CloseParenthesis,
@@ -588,6 +606,8 @@ pub enum TokenKind {
 impl TokenKind {
     pub fn description(&self) -> Cow<'_, str> {
         match self {
+            TokenKind::Annotation => Cow::from("`annotation`"),
+            TokenKind::At => Cow::from("`@`"),
             TokenKind::CloseBracket => Cow::from("`]`"),
             TokenKind::CloseCurlyBracket => Cow::from("`}`"),
             TokenKind::CloseParenthesis => Cow::from("`)`"),
@@ -639,34 +659,37 @@ impl TokenKind {
             TokenKind::Else => 8,
             TokenKind::While => 9,
             TokenKind::Struct => 10,
+            TokenKind::Annotation => 11,
 
-            TokenKind::Comma => 11,
-            TokenKind::Semicolon => 12,
-            TokenKind::Colon => 13,
-            TokenKind::Dot => 14,
+            TokenKind::Comma => 12,
+            TokenKind::Semicolon => 13,
+            TokenKind::Colon => 14,
+            TokenKind::Dot => 15,
 
-            TokenKind::CloseCurlyBracket => 15,
-            TokenKind::CloseParenthesis => 16,
-            TokenKind::OpenCurlyBracket => 17,
-            TokenKind::OpenParenthesis => 18,
+            TokenKind::CloseCurlyBracket => 16,
+            TokenKind::CloseParenthesis => 17,
+            TokenKind::OpenCurlyBracket => 18,
+            TokenKind::OpenParenthesis => 19,
 
-            TokenKind::Equal => 19,
+            TokenKind::Equal => 20,
 
-            TokenKind::Star => 20,
-            TokenKind::Slash => 21,
+            TokenKind::Star => 21,
+            TokenKind::Slash => 22,
 
-            TokenKind::Minus => 22,
-            TokenKind::Plus => 23,
+            TokenKind::Minus => 23,
+            TokenKind::Plus => 24,
 
-            TokenKind::EqualEqual => 24,
-            TokenKind::ExclaimEqual => 25,
-            TokenKind::Greater => 26,
-            TokenKind::GreaterEqual => 27,
-            TokenKind::Smaller => 28,
-            TokenKind::SmallerEqual => 29,
+            TokenKind::EqualEqual => 25,
+            TokenKind::ExclaimEqual => 26,
+            TokenKind::Greater => 27,
+            TokenKind::GreaterEqual => 28,
+            TokenKind::Smaller => 29,
+            TokenKind::SmallerEqual => 30,
 
-            TokenKind::CloseBracket => 30,
-            TokenKind::OpenBracket => 31,
+            TokenKind::CloseBracket => 31,
+            TokenKind::OpenBracket => 32,
+
+            TokenKind::At => 33,
 
             TokenKind::Eof => 254,
             TokenKind::Bad(_) => 255,
@@ -689,6 +712,12 @@ impl Ord for TokenKind {
 impl Display for TokenKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            TokenKind::Annotation => {
+                write!(f, "`annotation`")
+            }
+            TokenKind::At => {
+                write!(f, "`@`")
+            }
             TokenKind::CloseBracket => {
                 write!(f, "`]`")
             }
@@ -895,6 +924,7 @@ mod tests {
     lexer_test_next!(next_close_bracket, "]");
     lexer_test_next!(semicolon, ";");
     lexer_test_next!(colon, ":");
+    lexer_test_next!(at, "@");
     lexer_test_next!(bad, "\\");
     lexer_test_next!(comment, "#!transmute\n+");
     lexer_test_next!(eof, "");
@@ -909,6 +939,8 @@ mod tests {
     lexer_test_next!(keyword_true, "true");
     lexer_test_next!(keyword_false, "false");
     lexer_test_next!(keyword_struct, "struct");
+    lexer_test_next!(keyword_annotation, "annotation");
+    lexer_test_next!(keyword_a, "a");
 
     #[test]
     fn eof_after_tokens() {

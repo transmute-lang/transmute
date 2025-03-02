@@ -337,6 +337,7 @@ Hir {
                     span: 1:5; [4, 8],
                     bound: Bound(21),
                 },
+                [],
                 [
                     Parameter {
                         identifier: Identifier {
@@ -355,7 +356,9 @@ Hir {
                     ),
                     typed: Typed(4),
                 },
-                ExprId(15),
+                Provided(
+                    ExprId(15),
+                ),
             ),
             span: 1:1; [0, 98],
         },
