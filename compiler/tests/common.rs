@@ -75,6 +75,7 @@ pub fn compile(src: &str, test_dir: &TestDir) -> Command {
             let mut command = Command::new(bin_path);
             command.env("GC_LOG_LEVEL", "2");
             command.env("GC_TEST_POOL_SIZE", "16384");
+            command.env("GC_PRINT_STATS", "1");
             command
         }
         Err(d) => {

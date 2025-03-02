@@ -29,6 +29,7 @@ else
   GC_LOG_LEVEL=2 \
   GC_TEST_DUMP=0 \
   GC_TEST_DUMP_COLOR=1 \
+  GC_TEST_STEP=0 \
   GC_PRINT_STATS=1 \
   target/test
 fi

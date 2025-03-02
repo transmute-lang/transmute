@@ -162,7 +162,7 @@ int main() {
     gc_pool_dump();
     PAUSE();
 
-    printf("\n--- unroot map ---------------+\n");
+    printf("\n--- unroot map ----------------+\n");
     llvm_gc_root_chain->roots[IDX_MAP] = 0;
     printf("\n--- gc_run() ------------------+\n");
     gc_run();

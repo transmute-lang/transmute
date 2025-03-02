@@ -475,8 +475,13 @@ static inline void gc_free(GcBlock *block) {
     void *object = GC_OBJECT(block);
 
     if (block->callbacks && block->callbacks->free) {
+#ifdef GC_LOGS_STABLE
+        LOG(2, "    "COLOR_START_BLUE"%p"COLOR_END": recursive free(object at "COLOR_START_BLUE"%p"COLOR_END")\n",
+            (void *)block, object);
+#else // GC_LOGS_STABLE
         LOG(2, "    "COLOR_START_BLUE"%p"COLOR_END": recursive free(object at "COLOR_START_BLUE"%p"COLOR_END") @ %p\n",
             (void *)block, object, block->callbacks->free);
+#endif
         block->callbacks->free(object);
     }
 
@@ -773,9 +778,33 @@ void gc_set_callbacks(void *object, GcCallbacks *callbacks) {
     GcBlock *block = GC_BLOCK(object);
 
 #ifdef GC_TEST
-    LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') to %p\n", block, object, block->name, callbacks);
+#ifdef GC_LOGS_STABLE
+    LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s')\n",
+        block,
+        object,
+        block->name
+    );
+#else // GC_LOGS_STABLE
+    LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') to %p\n",
+        block,
+        object,
+        block->name,
+        callbacks
+    );
+#endif // GC_LOGS_STABLE
 #else // GC_TEST
-    LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END") to %p\n", block, object, callbacks);
+#ifdef GC_LOGS_STABLE
+    LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END")\n",
+        block,
+        object
+    );
+#else // GC_LOGS_STABLE
+    LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END") to %p\n",
+        block,
+        object,
+        callbacks
+    );
+#endif // GC_LOGS_STABLE
 #endif // GC_TEST
 
     assert(callbacks != NULL);
@@ -817,39 +846,50 @@ void gc_mark_managed(void *object) {
 
     if (block->callbacks && block->callbacks->mark) {
 #if GC_TEST
-        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark(object at "COLOR_START_GREEN"%p"COLOR_END": '%s') @ %p\n",
+#ifdef GC_LOGS_STABLE
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END": '%s')\n",
+            (void *)block,
+            object,
+            block->name
+        );
+#else // GC_LOGS_STABLE
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') @ %p\n",
             (void *)block,
             object,
             block->name,
             block->callbacks->mark
         );
+#endif // GC_LOGS_STABLE
 #else // GC_TEST
-        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark(object at "COLOR_START_GREEN"%p"COLOR_END") @ %p\n",
+#ifdef GC_LOGS_STABLE
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END")\n",
+            (void *)block,
+            object
+        );
+#else // GC_LOGS_STABLE
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END") @ %p\n",
             (void *)block,
             object,
             block->callbacks->mark
         );
+#endif // GC_LOGS_STABLE
 #endif // GC_TEST
         block->callbacks->mark(object);
     }
 #ifdef GC_LOGS
     else {
 #if GC_TEST
-        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": skip recursive mark(object at "COLOR_START_GREEN"%p"COLOR_END": '%s'): no mark callback\n",
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": skip recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END": '%s'): no mark callback\n",
             (void *)block,
             object,
             block->name
         );
 #else // GC_TEST
-        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": skip recursive mark(object at "COLOR_START_GREEN"%p"COLOR_END"): no mark callback\n",
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": skip recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END"): no mark callback\n",
             (void *)block,
             object
         );
 #endif // GC_TEST
     }
 #endif // GC_LOGS
-
-    // todo need to recursively mark...
-    //   - llvm must generate such functions for structs and arrays (could be written in C, and have a parameter that
-    //     tells how many pointers there are... a struct would become a kind of heterogeneous array)
 }

@@ -98,6 +98,8 @@ fn compile_to_llvm_ir(src: &Path, dst: &Path) {
         .arg(GC_LOGS_COLOR)
         .arg("-D GC_PTHREAD")
         .arg("-emit-llvm")
+        // todo:ux move behind a feature
+        .arg("-ggdb")
         .arg("-o")
         .arg(dst.as_os_str())
         .arg(src.as_os_str())
