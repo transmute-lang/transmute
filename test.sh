@@ -2,6 +2,7 @@
 
 source .env
 export LLVM_SYS_180_PREFIX
+export STDLIB_SRC_PATH
 export LIBTRANSMUTE_STDLIB_PATH
 
 cargo fmt                                                                                                     || exit 1

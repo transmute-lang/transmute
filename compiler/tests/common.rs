@@ -10,8 +10,31 @@ macro_rules! exec {
             fn [< test_ $name >]() {
                 let test_dir = test_dir::DirBuilder::create(test_dir::TestDir::temp(), ".", test_dir::FileType::Dir);
 
+                let stdlib_src = std::path::PathBuf::from( "../stdlib/src/stdlib");
+
+                let mut source = include_str!(concat!("../../examples/", $name, ".tm")).to_string();
+                for entry in std::fs::read_dir("../stdlib/src/stdlib").unwrap() {
+                    let file = entry
+                        .unwrap()
+                        .file_name()
+                        .to_str()
+                        .unwrap()
+                        .to_string();
+
+                    let src = stdlib_src.join(&file);
+                    if !src.extension().unwrap().eq("tm") {
+                        continue;
+                    }
+
+                    // println!("Reading {}", src.display());
+
+                    let src = std::fs::read_to_string(&src)
+                        .map_err(|e| format!("Could not read {}: {}", src.display(), e)).unwrap();
+                    source.push_str(&src);
+                }
+
                 let output = common::compile(
-                    include_str!(concat!("../../examples/", $name, ".tm")),
+                    &source,
                     &test_dir
                 )
                 .arg($arg)
@@ -38,8 +61,31 @@ macro_rules! exec_test_example {
             fn [< test_ $name >]() {
                 let test_dir = test_dir::DirBuilder::create(test_dir::TestDir::temp(), ".", test_dir::FileType::Dir);
 
+                let stdlib_src = std::path::PathBuf::from( "../stdlib/src/stdlib");
+
+                let mut source = include_str!(concat!("examples/", $name, ".tm")).to_string();
+                for entry in std::fs::read_dir("../stdlib/src/stdlib").unwrap() {
+                    let file = entry
+                        .unwrap()
+                        .file_name()
+                        .to_str()
+                        .unwrap()
+                        .to_string();
+
+                    let src = stdlib_src.join(&file);
+                    if !src.extension().unwrap().eq("tm") {
+                        continue;
+                    }
+
+                    // println!("Reading {}", src.display());
+
+                    let src = std::fs::read_to_string(&src)
+                        .map_err(|e| format!("Could not read {}: {}", src.display(), e)).unwrap();
+                    source.push_str(&src);
+                }
+
                 let output = common::compile(
-                    include_str!(concat!("examples/", $name, ".tm")),
+                    &source,
                     &test_dir
                 )
                 .arg($arg)

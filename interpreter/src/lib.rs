@@ -1,21 +1,60 @@
 use crate::interpreter::Interpreter;
-use crate::value::Value;
+use crate::value::{Ref, Value};
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::{env, fs};
 use transmute_ast::lexer::Lexer;
 use transmute_ast::parser::Parser;
 use transmute_ast::pretty_print::Options;
+use transmute_core::ids::IdentId;
 use transmute_hir::natives::Natives;
 use transmute_hir::UnresolvedHir;
 
 mod interpreter;
+pub mod natives;
 pub mod value;
 
-pub fn exec(src: &str, print_ast: bool, parameters: Vec<i64>) {
+pub type Stack = Vec<HashMap<IdentId, Ref>>;
+pub type Heap = Vec<Value>;
+
+pub fn exec<S: Into<String>, C: NativeContext>(
+    source: S,
+    print_ast: bool,
+    parameters: Vec<i64>,
+    context: C,
+) {
+    let mut source = source.into();
+
     let parameters = parameters
         .into_iter()
         .map(Value::Number)
         .collect::<Vec<Value>>();
 
-    let result = Parser::new(Lexer::new(src))
+    let stdlib_src =
+        PathBuf::from(env::var("STDLIB_SRC_PATH").expect("STDLIB_SRC_PATH is defined"));
+
+    for entry in fs::read_dir(&stdlib_src).unwrap() {
+        let file = entry
+            .expect("dir entry exists")
+            .file_name()
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        let src = stdlib_src.join(&file);
+        if !src.extension().unwrap().eq("tm") {
+            continue;
+        }
+
+        println!("Reading {}", src.display());
+
+        let src = fs::read_to_string(&src)
+            .map_err(|e| format!("Could not read {}: {}", src.display(), e))
+            .unwrap();
+        source.push_str(&src);
+    }
+
+    let result = Parser::new(Lexer::new(&source))
         .parse()
         .peek(|ast| {
             if print_ast {
@@ -26,7 +65,7 @@ pub fn exec(src: &str, print_ast: bool, parameters: Vec<i64>) {
         })
         .map(UnresolvedHir::from)
         .and_then(|hir| hir.resolve(Natives::new()))
-        .map(|ast| Interpreter::new(&ast).start(parameters));
+        .map(|ast| Interpreter::new(&ast, context).start(parameters));
 
     match result {
         Ok(res) => {
@@ -49,6 +88,16 @@ impl<T, E> Peek<T, E> for Result<T, E> {
         }
         self
     }
+}
+
+pub trait NativeContext {
+    fn execute(
+        &self,
+        name: &str,
+        parameters: &[Ref],
+        stack: &mut Stack,
+        heap: &mut Heap,
+    ) -> Option<Ref>;
 }
 
 #[cfg(test)]

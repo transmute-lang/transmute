@@ -21,12 +21,6 @@ declare void @tmc_check_array_index(i64, i64, i64, i64)
 
 declare ptr @tmc_stdlib_string_new(ptr, i64)
 
-declare void @_TM0_5print1s(ptr)
-
-declare void @_TM0_5print1n(i64)
-
-declare void @_TM0_5print1b(i1)
-
 define private void @_glob() {
 entry:
   unreachable
@@ -37,21 +31,21 @@ entry:
   %"gcroot#heap#struct#S#id0#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#struct#S#id0#", align 8
   call void @llvm.gcroot(ptr nonnull %"gcroot#heap#struct#S#id0#", ptr nonnull @layout_s1S)
-  %"a#local#sym24#" = alloca ptr, align 8
-  store ptr null, ptr %"a#local#sym24#", align 8
-  call void @llvm.gcroot(ptr nonnull %"a#local#sym24#", ptr nonnull @layout_a1s1S)
+  %"a#local#sym21#" = alloca ptr, align 8
+  store ptr null, ptr %"a#local#sym21#", align 8
+  call void @llvm.gcroot(ptr nonnull %"a#local#sym21#", ptr nonnull @layout_a1s1S)
   %"heap#struct#S#id0#" = call ptr @gc_malloc(i64 8, i64 8)
   store ptr %"heap#struct#S#id0#", ptr %"gcroot#heap#struct#S#id0#", align 8
   store i64 0, ptr %"heap#struct#S#id0#", align 4
   %"heap#array#" = call ptr @gc_malloc(i64 8, i64 8)
   store ptr %"heap#struct#S#id0#", ptr %"heap#array#", align 8
-  store ptr %"heap#array#", ptr %"a#local#sym24#", align 8
+  store ptr %"heap#array#", ptr %"a#local#sym21#", align 8
   call void @gc_run()
-  %"a#local#sym24#2" = load ptr, ptr %"a#local#sym24#", align 8
+  %"a#local#sym21#2" = load ptr, ptr %"a#local#sym21#", align 8
   call void @tmc_check_array_index(i64 0, i64 1, i64 7, i64 15)
-  %"array[?]#3" = load ptr, ptr %"a#local#sym24#2", align 8
-  %"array[?]#3.field#idx0#sym23#4" = load i64, ptr %"array[?]#3", align 4
-  ret i64 %"array[?]#3.field#idx0#sym23#4"
+  %"array[?]#3" = load ptr, ptr %"a#local#sym21#2", align 8
+  %"array[?]#3.field#idx0#sym20#4" = load i64, ptr %"array[?]#3", align 4
+  ret i64 %"array[?]#3.field#idx0#sym20#4"
 }
 
 attributes #0 = { nounwind }

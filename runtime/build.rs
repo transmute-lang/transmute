@@ -13,7 +13,7 @@ fn main() {
     let src_dir = current_dir().unwrap().join("src");
 
     #[cfg(not(feature = "gc-functions"))]
-    let dirs = ["gc", "main", "tmc"];
+    let dirs = ["gc", "main", "tmc", "runtimelib"];
     #[cfg(feature = "gc-functions")]
     let dirs = ["gc", "main", "tmc", "runtimelib"];
 

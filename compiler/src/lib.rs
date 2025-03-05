@@ -1,5 +1,5 @@
-use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::{env, fs};
 use transmute_ast::parse;
 use transmute_hir::resolve;
 use transmute_llvm::LlvmIrGen;
@@ -34,10 +34,45 @@ pub fn compile_file<S: AsRef<Path>, D: AsRef<Path>>(
     dst: &D,
     options: &Options,
 ) -> Result<(), String> {
-    let file_content = fs::read_to_string(src)
-        .map_err(|e| format!("Could not read {}: {}", src.as_ref().display(), e))?;
+    #[cfg(feature = "stdlib")]
+    let source = {
+        println!("Reading {}", src.as_ref().display());
+        let mut source = fs::read_to_string(src)
+            .map_err(|e| format!("Could not read {}: {}", src.as_ref().display(), e))?;
 
-    compile_str(&file_content, dst, options)
+        let stdlib_src =
+            PathBuf::from(env::var("STDLIB_SRC_PATH").expect("STDLIB_SRC_PATH is defined"));
+
+        for entry in fs::read_dir(&stdlib_src).unwrap() {
+            let file = entry
+                .expect("dir entry exists")
+                .file_name()
+                .to_str()
+                .unwrap()
+                .to_string();
+
+            let src = stdlib_src.join(&file);
+            if !src.extension().unwrap().eq("tm") {
+                continue;
+            }
+
+            println!("Reading {}", src.display());
+
+            let src = fs::read_to_string(&src)
+                .map_err(|e| format!("Could not read {}: {}", src.display(), e))?;
+            source.push_str(&src);
+        }
+
+        source
+    };
+
+    #[cfg(not(feature = "stdlib"))]
+    let source = {
+        fs::read_to_string(src)
+            .map_err(|e| format!("Could not read {}: {}", src.as_ref().display(), e))?
+    };
+
+    compile_str(&source, dst, options)
 }
 
 pub fn compile_str<S: AsRef<str>, D: AsRef<Path>>(

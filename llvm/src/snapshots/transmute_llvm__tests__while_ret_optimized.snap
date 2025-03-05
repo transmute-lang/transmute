@@ -20,23 +20,17 @@ declare void @tmc_check_array_index(i64, i64, i64, i64)
 
 declare ptr @tmc_stdlib_string_new(ptr, i64)
 
-declare void @_TM0_5print1s(ptr)
-
-declare void @_TM0_5print1n(i64)
-
-declare void @_TM0_5print1b(i1)
-
 define private void @_glob() {
 entry:
   unreachable
 }
 
-define i64 @_TM0_1f1n(i64 %"n#param#sym22#") gc "shadow-stack" {
+define i64 @_TM0_1f1n(i64 %"n#param#sym19#") gc "shadow-stack" {
 entry:
-  %"ne#.not" = icmp eq i64 %"n#param#sym22#", 42
+  %"ne#.not" = icmp eq i64 %"n#param#sym19#", 42
   %0 = xor i1 %"ne#.not", true
   call void @llvm.assume(i1 %0)
-  ret i64 %"n#param#sym22#"
+  ret i64 %"n#param#sym19#"
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write)

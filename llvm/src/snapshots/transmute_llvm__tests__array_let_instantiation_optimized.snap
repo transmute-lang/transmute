@@ -20,12 +20,6 @@ declare void @tmc_check_array_index(i64, i64, i64, i64)
 
 declare ptr @tmc_stdlib_string_new(ptr, i64)
 
-declare void @_TM0_5print1s(ptr)
-
-declare void @_TM0_5print1n(i64)
-
-declare void @_TM0_5print1b(i1)
-
 define private void @_glob() {
 entry:
   unreachable
@@ -33,14 +27,14 @@ entry:
 
 define void @_TM0_1f0() gc "shadow-stack" {
 entry:
-  %"a#local#sym22#" = alloca ptr, align 8
-  store ptr null, ptr %"a#local#sym22#", align 8
-  call void @llvm.gcroot(ptr nonnull %"a#local#sym22#", ptr null)
+  %"a#local#sym19#" = alloca ptr, align 8
+  store ptr null, ptr %"a#local#sym19#", align 8
+  call void @llvm.gcroot(ptr nonnull %"a#local#sym19#", ptr null)
   %"heap#array#" = call ptr @gc_malloc(i64 16, i64 8, ptr null)
   store i64 0, ptr %"heap#array#", align 4
   %"heap#array#.repack5" = getelementptr inbounds [2 x i64], ptr %"heap#array#", i64 0, i64 1
   store i64 1, ptr %"heap#array#.repack5", align 4
-  store ptr %"heap#array#", ptr %"a#local#sym22#", align 8
+  store ptr %"heap#array#", ptr %"a#local#sym19#", align 8
   call void @gc_run()
   ret void
 }

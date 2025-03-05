@@ -19,12 +19,6 @@ declare void @tmc_check_array_index(i64, i64, i64, i64)
 
 declare ptr @tmc_stdlib_string_new(ptr, i64)
 
-declare void @_TM0_5print1s(ptr)
-
-declare void @_TM0_5print1n(i64)
-
-declare void @_TM0_5print1b(i1)
-
 define private void @_glob() {
 entry:
   unreachable
@@ -38,9 +32,9 @@ entry:
   %"gcroot#heap#array#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#array#", align 8
   call void @llvm.gcroot(ptr %"gcroot#heap#array#", ptr @layout_a2n)
-  %"a#local#sym22#" = alloca ptr, align 8
-  store ptr null, ptr %"a#local#sym22#", align 8
-  call void @llvm.gcroot(ptr %"a#local#sym22#", ptr @layout_a2a2n)
+  %"a#local#sym19#" = alloca ptr, align 8
+  store ptr null, ptr %"a#local#sym19#", align 8
+  call void @llvm.gcroot(ptr %"a#local#sym19#", ptr @layout_a2a2n)
   %"heap#array#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr ([2 x i64], ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, [2 x i64] }, ptr null, i64 0, i32 1) to i64))
   store ptr %"heap#array#", ptr %"gcroot#heap#array#", align 8
   %"heap#array#1" = load [2 x i64], ptr %"heap#array#", align 4
@@ -58,11 +52,11 @@ entry:
   %"heap#array#[0]#9" = insertvalue [2 x ptr] %"heap#array#8", ptr %"heap#array#", 0
   %"heap#array#[1]#10" = insertvalue [2 x ptr] %"heap#array#[0]#9", ptr %"heap#array#3", 1
   store [2 x ptr] %"heap#array#[1]#10", ptr %"heap#array#7", align 8
-  store ptr %"heap#array#7", ptr %"a#local#sym22#", align 8
+  store ptr %"heap#array#7", ptr %"a#local#sym19#", align 8
   call void @gc_run()
-  %"a#local#sym22#11" = load ptr, ptr %"a#local#sym22#", align 8
+  %"a#local#sym19#11" = load ptr, ptr %"a#local#sym19#", align 8
   call void @tmc_check_array_index(i64 0, i64 2, i64 4, i64 15)
-  %"array[?]#" = getelementptr [2 x ptr], ptr %"a#local#sym22#11", i64 0, i64 0
+  %"array[?]#" = getelementptr [2 x ptr], ptr %"a#local#sym19#11", i64 0, i64 0
   %"array[?]#12" = load ptr, ptr %"array[?]#", align 8
   call void @tmc_check_array_index(i64 0, i64 2, i64 4, i64 18)
   %"array[?]#13" = getelementptr [2 x i64], ptr %"array[?]#12", i64 0, i64 0

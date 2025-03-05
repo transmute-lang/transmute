@@ -76,20 +76,6 @@ impl Natives {
             kind: NativeFnKind::NeqBooleanBoolean,
         });
 
-        natives.insert_fn(NativeFn {
-            name: "print",
-            kind: NativeFnKind::PrintNumber,
-        });
-        natives.insert_fn(NativeFn {
-            name: "print",
-            kind: NativeFnKind::PrintBoolean,
-        });
-        // todo this is not a native function
-        natives.insert_fn(NativeFn {
-            name: "print",
-            kind: NativeFnKind::PrintString,
-        });
-
         natives.insert_type(NativeType {
             name: Type::Boolean.identifier(),
             ty: Type::Boolean,
@@ -266,9 +252,6 @@ pub enum NativeFnKind {
     LeNumberNumber,
     EqBooleanBoolean,
     NeqBooleanBoolean,
-    PrintNumber,  // todo:refactoring not actually a native, but part of some prelude
-    PrintBoolean, // todo:refactoring not actually a native, but part of some prelude
-    PrintString,  // todo:refactoring not actually a native (see `Type::String` comment)
     #[cfg(feature = "gc-functions")]
     GcRun,
     #[cfg(feature = "gc-functions")]
@@ -292,9 +275,6 @@ impl NativeFnKind {
             NativeFnKind::EqBooleanBoolean | NativeFnKind::NeqBooleanBoolean => {
                 (&[Type::Boolean, Type::Boolean], Type::Boolean)
             }
-            NativeFnKind::PrintNumber => (&[Type::Number], Type::Void),
-            NativeFnKind::PrintBoolean => (&[Type::Boolean], Type::Void),
-            NativeFnKind::PrintString => (&[Type::String], Type::Void),
             #[cfg(feature = "gc-functions")]
             NativeFnKind::GcRun | NativeFnKind::GcStats => (&[], Type::Void),
         }

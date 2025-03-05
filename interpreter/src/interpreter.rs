@@ -1,6 +1,7 @@
 use crate::value::{Ref, Value};
+use crate::{Heap, NativeContext, Stack};
 use std::collections::HashMap;
-use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId};
+use transmute_core::ids::{ExprId, IdentRefId, StmtId};
 use transmute_hir::expression::{ExpressionKind, Target};
 use transmute_hir::literal::{Literal, LiteralKind};
 use transmute_hir::natives::NativeFnKind;
@@ -8,25 +9,27 @@ use transmute_hir::statement::{Implementation, StatementKind};
 use transmute_hir::symbol::SymbolKind;
 use transmute_hir::ResolvedHir;
 
-pub struct Interpreter<'a> {
+pub struct Interpreter<'a, C> {
     hir: &'a ResolvedHir,
+    context: C,
     /// Maps an identifier in the current frame to the value's index in the heap
     // todo:refactoring IdentId should be SymbolId
-    stack: Vec<HashMap<IdentId, Ref>>,
-    heap: Vec<Value>,
+    stack: Stack,
+    heap: Heap,
 }
 
-impl<'a> Interpreter<'a> {
-    pub fn new(ast: &'a ResolvedHir) -> Self {
+impl<'a, C: NativeContext> Interpreter<'a, C> {
+    pub fn new(ast: &'a ResolvedHir, context: C) -> Self {
         Self {
             hir: ast,
+            context,
             stack: vec![Default::default()],
             heap: Default::default(),
         }
     }
 
     pub fn start(&mut self, main_parameters: Vec<Value>) -> i64 {
-        let (parameters, implementation) = self
+        let (parameters, expr_id) = self
             .hir
             .roots
             .iter()
@@ -40,20 +43,13 @@ impl<'a> Interpreter<'a> {
                 }
                 None
             })
+            .filter_map(|(parameters, implementation)| match implementation {
+                Implementation::Provided(expr_id) => Some((parameters, expr_id)),
+                _ => None,
+            })
             .next()
             .expect("main function exists");
 
-        let expr_id = match implementation {
-            Implementation::Provided(expr_id) => expr_id,
-            #[cfg(debug_assertions)]
-            Implementation::Native(_) => {
-                panic!("native functions are not supported in interpreter")
-            }
-            #[cfg(not(debug_assertions))]
-            Implementation::Native => {
-                panic!("native functions are not supported in interpreter")
-            }
-        };
         let val = match &self.hir.expressions[expr_id].kind {
             ExpressionKind::Block(stmts) => {
                 let mut env = HashMap::with_capacity(parameters.len());
@@ -303,34 +299,13 @@ impl<'a> Interpreter<'a> {
 
     fn visit_function_call(&mut self, ident: &IdentRefId, arguments: &[ExprId]) -> Val {
         match &self.hir.symbol_by_ident_ref_id(*ident).kind {
-            SymbolKind::Let(_, _)
-            | SymbolKind::Parameter(_, _, _)
-            | SymbolKind::Field(_, _, _)
-            | SymbolKind::Struct(_, _)
-            | SymbolKind::Annotation(_, _)
-            | SymbolKind::NativeType(_, _) => {
-                panic!("let fn expected")
-            }
-            SymbolKind::LetFn(_, stmt, _, _) => {
+            SymbolKind::LetFn(ident_id, stmt, _, _) => {
                 let stmt = &self.hir.statements[*stmt];
                 match &stmt.kind {
                     StatementKind::LetFn(_, _, parameters, _, implementation) => {
-                        let expr_id = match implementation {
-                            Implementation::Provided(expr_id) => expr_id,
-                            #[cfg(debug_assertions)]
-                            Implementation::Native(_) => {
-                                panic!("native functions are not supported in interpreter")
-                            }
-                            #[cfg(not(debug_assertions))]
-                            Implementation::Native => {
-                                panic!("native functions are not supported in interpreter")
-                            }
-                        };
-                        let expr = &self.hir.expressions[*expr_id];
-                        match &expr.kind {
-                            ExpressionKind::Block(stmts) => {
+                        match implementation {
+                            Implementation::Provided(expr_id) => {
                                 let mut env = HashMap::with_capacity(parameters.len());
-
                                 for (param, expr_id) in parameters.iter().zip(arguments.iter()) {
                                     let val = self.visit_expression(*expr_id);
                                     if val.is_ret {
@@ -341,16 +316,41 @@ impl<'a> Interpreter<'a> {
                                         val.value_ref.expect("param has value"),
                                     );
                                 }
-
                                 self.stack.push(env);
 
-                                let ret = self.visit_statements(stmts);
+                                let expr = &self.hir.expressions[*expr_id];
+                                match &expr.kind {
+                                    ExpressionKind::Block(stmts) => {
+                                        let ret = self.visit_statements(stmts);
+                                        let _ = self.stack.pop();
+                                        Val::of_option(ret.value_ref)
+                                    }
+                                    _ => panic!("block expected"),
+                                }
+                            }
+                            _ => {
+                                let mut params = Vec::new();
+                                for expr_id in arguments.iter() {
+                                    let val = self.visit_expression(*expr_id);
+                                    if val.is_ret {
+                                        return val;
+                                    }
+                                    params.push(val.value_ref.expect("param has value"));
+                                }
+
+                                let env = HashMap::with_capacity(parameters.len());
+                                self.stack.push(env);
+
+                                let value = self.context.execute(
+                                    &self.hir.identifiers[*ident_id],
+                                    &params,
+                                    &mut self.stack,
+                                    &mut self.heap,
+                                );
 
                                 let _ = self.stack.pop();
-
-                                Val::of_option(ret.value_ref)
+                                Val::of_option(value)
                             }
-                            _ => panic!("block expected"),
                         }
                     }
                     _ => panic!("let fn expected"),
@@ -379,6 +379,7 @@ impl<'a> Interpreter<'a> {
                 Val::of(Ref(self.heap.len() - 1))
             }
             SymbolKind::NotFound => panic!("symbol was not resolved"),
+            _ => panic!("let fn expected"),
         }
     }
 
@@ -453,8 +454,6 @@ impl<'a> Interpreter<'a> {
         }
     }
 }
-
-impl<'a> Interpreter<'a> {}
 
 struct Val {
     value_ref: Option<Ref>,
@@ -559,21 +558,6 @@ impl RuntimeImpl for NativeFnKind {
                 let left = parameters.pop().unwrap().as_bool();
                 Value::Boolean(left != right)
             }
-            NativeFnKind::PrintNumber => {
-                let number = parameters.pop().unwrap().as_i64();
-                println!("{number}");
-                Value::Void
-            }
-            NativeFnKind::PrintBoolean => {
-                let bool = parameters.pop().unwrap().as_bool();
-                println!("{bool}");
-                Value::Void
-            }
-            NativeFnKind::PrintString => {
-                let val = parameters.pop().unwrap();
-                println!("{}", val.as_str());
-                Value::Void
-            }
         }
     }
 }
@@ -593,8 +577,9 @@ mod tests {
                 let hir = UnresolvedHir::from(Parser::new(Lexer::new($src)).parse().unwrap())
                     .resolve(Natives::default())
                     .unwrap();
+                let context = crate::natives::InterpreterNatives::new();
 
-                let actual = Interpreter::new(&hir).start(vec![]);
+                let actual = Interpreter::new(&hir, context).start(vec![]);
 
                 assert_eq!(actual, $value)
             }

@@ -20,12 +20,6 @@ declare void @tmc_check_array_index(i64, i64, i64, i64)
 
 declare ptr @tmc_stdlib_string_new(ptr, i64)
 
-declare void @_TM0_5print1s(ptr)
-
-declare void @_TM0_5print1n(i64)
-
-declare void @_TM0_5print1b(i1)
-
 define private void @_glob() {
 entry:
   unreachable
@@ -36,14 +30,14 @@ entry:
   %"gcroot#heap#struct#Struct#id0#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#struct#Struct#id0#", align 8
   call void @llvm.gcroot(ptr %"gcroot#heap#struct#Struct#id0#", ptr @layout_s6Struct)
-  %"s#local#sym24#" = alloca i64, align 8
+  %"s#local#sym21#" = alloca i64, align 8
   %"heap#struct#Struct#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"Struct#id0", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"Struct#id0" }, ptr null, i64 0, i32 1) to i64))
   store ptr %"heap#struct#Struct#id0#", ptr %"gcroot#heap#struct#Struct#id0#", align 8
-  %"heap#struct#Struct#id0#.field#idx0#sym23" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
-  store i64 1, ptr %"heap#struct#Struct#id0#.field#idx0#sym23", align 4
-  %"heap#struct#Struct#id0#.field#idx0#sym23#" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
-  %"heap#struct#Struct#id0#.field#idx0#sym23#1" = load i64, ptr %"heap#struct#Struct#id0#.field#idx0#sym23#", align 4
-  store i64 %"heap#struct#Struct#id0#.field#idx0#sym23#1", ptr %"s#local#sym24#", align 4
+  %"heap#struct#Struct#id0#.field#idx0#sym20" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
+  store i64 1, ptr %"heap#struct#Struct#id0#.field#idx0#sym20", align 4
+  %"heap#struct#Struct#id0#.field#idx0#sym20#" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
+  %"heap#struct#Struct#id0#.field#idx0#sym20#1" = load i64, ptr %"heap#struct#Struct#id0#.field#idx0#sym20#", align 4
+  store i64 %"heap#struct#Struct#id0#.field#idx0#sym20#1", ptr %"s#local#sym21#", align 4
   call void @gc_run()
   ret void
 }

@@ -22,8 +22,9 @@ use inkwell::values::{
 };
 use inkwell::{IntPredicate, OptimizationLevel};
 use std::collections::HashMap;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{exit, Command};
 use std::{env, fs};
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, StructId, SymbolId, TypeId};
@@ -97,18 +98,19 @@ impl LlvmIr<'_> {
         let path = path.into();
 
         let tm_object_path = path.clone().with_extension("o");
+        println!("Generating {}", tm_object_path.display());
         self.target_machine
             .write_to_file(&self.module, FileType::Object, &tm_object_path)
             .unwrap();
 
         // todo:ux parameterize cc
-
         let mut command = Command::new("cc");
         command.arg(&tm_object_path);
 
         let runtime_object_path = {
             // todo:rt think about static vs dynamic vs .ll/.bc linkage
             let runtime_object_path = path.with_file_name("runtime.o");
+            println!("Generating {}", runtime_object_path.display());
             let runtime_module = self
                 .module
                 .get_context()
@@ -136,26 +138,31 @@ impl LlvmIr<'_> {
             // command.arg("-lcrypto");
         }
 
+        println!("Generating {}", path.display());
         match command.arg("-o").arg(&path).output() {
             Ok(o) => {
                 if !o.status.success() {
-                    println!(
-                        "{cwd}$ {command:?}: {o:?}",
-                        cwd = env::current_dir().unwrap().to_str().unwrap()
-                    );
+                    eprintln!("{command:?} returned:");
+                    std::io::stdout().write(&o.stdout).unwrap();
+                    std::io::stdout().flush().unwrap();
+                    std::io::stderr().write(&o.stderr).unwrap();
+                    std::io::stderr().flush().unwrap();
+                    exit(o.status.code().unwrap());
                 } else {
                     println!("Wrote executable to {}", path.display());
                 }
             }
             Err(err) => {
                 eprintln!(
-                    "{cwd}$ {command:?}: {err}",
-                    cwd = env::current_dir().unwrap().to_str().unwrap()
+                    "\n{cwd}$ {command:?} returned\n{err:?}",
+                    cwd = env::current_dir().unwrap().to_str().unwrap(),
                 );
             }
         }
 
+        println!("Removing {}", runtime_object_path.display());
         fs::remove_file(runtime_object_path).unwrap();
+        println!("Removing {}", tm_object_path.display());
         fs::remove_file(tm_object_path).unwrap();
 
         Ok(())
@@ -194,6 +201,7 @@ struct Codegen<'ctx, 't> {
     #[cfg(feature = "runtime")]
     gc_mark: FunctionValue<'ctx>,
     tmc_check_array_index: FunctionValue<'ctx>,
+    // todo:refactor move away
     tmc_stdlib_string_new: FunctionValue<'ctx>,
 
     // todo:refactor could replace struct_types, array_types and all the *_types above with a unique
@@ -308,21 +316,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             if let SymbolKind::Native(ident_id, parameters, _, native_kind) = &symbol.kind {
                 let fn_name = mangle_function_name(mir, *ident_id, parameters, None);
                 match native_kind {
-                    NativeFnKind::PrintNumber => {
-                        let print_fn_type = self.void_type.fn_type(&[self.i64_type.into()], false);
-                        let print_fn = self.module.add_function(&fn_name, print_fn_type, None);
-                        self.functions.insert(symbol_id, print_fn);
-                    }
-                    NativeFnKind::PrintBoolean => {
-                        let print_fn_type = self.void_type.fn_type(&[self.bool_type.into()], false);
-                        let print_fn = self.module.add_function(&fn_name, print_fn_type, None);
-                        self.functions.insert(symbol_id, print_fn);
-                    }
-                    NativeFnKind::PrintString => {
-                        let print_fn_type = self.void_type.fn_type(&[self.ptr_type.into()], false);
-                        let print_fn = self.module.add_function(&fn_name, print_fn_type, None);
-                        self.functions.insert(symbol_id, print_fn);
-                    }
                     #[cfg(feature = "gc-functions")]
                     NativeFnKind::GcRun => {
                         self.functions.insert(symbol_id, self.gc_run);
@@ -808,9 +801,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 match parameter_type {
                     BasicTypeEnum::FloatType(_) => parameter_type.into(),
                     BasicTypeEnum::IntType(_) => parameter_type.into(),
-                    BasicTypeEnum::PointerType(_) => unimplemented!("pointers are not supported"),
-                    BasicTypeEnum::StructType(_) | BasicTypeEnum::ArrayType(_) => {
-                        // structs are passed by ref
+                    BasicTypeEnum::StructType(_)
+                    | BasicTypeEnum::ArrayType(_)
+                    | BasicTypeEnum::PointerType(_) => {
+                        // structs and arrays are passed by pointer
                         BasicTypeEnum::PointerType(self.ptr_type).into()
                     }
                     BasicTypeEnum::VectorType(_) => todo!(),
@@ -2023,9 +2017,6 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::LeNumberNumber => true,
             NativeFnKind::EqBooleanBoolean => true,
             NativeFnKind::NeqBooleanBoolean => true,
-            NativeFnKind::PrintNumber => false,
-            NativeFnKind::PrintBoolean => false,
-            NativeFnKind::PrintString => false,
             #[cfg(feature = "gc-functions")]
             NativeFnKind::GcRun => false,
             #[cfg(feature = "gc-functions")]
@@ -2173,9 +2164,6 @@ impl LlvmImpl for NativeFnKind {
                     .unwrap()
                     .into()
             }
-            NativeFnKind::PrintNumber => Value::None,
-            NativeFnKind::PrintBoolean => Value::None,
-            NativeFnKind::PrintString => Value::None,
             #[cfg(feature = "gc-functions")]
             NativeFnKind::GcRun => Value::None,
             #[cfg(feature = "gc-functions")]
@@ -2293,7 +2281,16 @@ mod tests {
         ne_boolean_boolean,
         "let f(l: boolean, r: boolean): boolean { l != r; }"
     );
-    gen!(print, "let a(n: number) { print(n); }");
+    gen!(
+        print,
+        r#"
+        annotation native;
+        @native let print(n: number) {}
+        let a(n: number) {
+            print(n);
+        }
+        "#
+    );
 
     gen!(
         assign_parameter,
@@ -2916,6 +2913,8 @@ mod tests {
     gen!(
         print_string_direct,
         r#"
+        annotation native;
+        @native let print(s: string) {}
         let f() {
             print("hello");
             print("world");
@@ -2925,6 +2924,8 @@ mod tests {
     gen!(
         print_string_indirect,
         r#"
+        annotation native;
+        @native let print(s: string) {}
         let f() {
             let hello = "hello";
             let world = "world";

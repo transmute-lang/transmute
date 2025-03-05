@@ -20,26 +20,20 @@ declare void @tmc_check_array_index(i64, i64, i64, i64)
 
 declare ptr @tmc_stdlib_string_new(ptr, i64)
 
-declare void @_TM0_5print1s(ptr)
-
-declare void @_TM0_5print1n(i64)
-
-declare void @_TM0_5print1b(i1)
-
 define private void @_glob() {
 entry:
   unreachable
 }
 
-define i64 @_TM0_1f1n(i64 %"n#param#sym22#") gc "shadow-stack" {
+define i64 @_TM0_1f1n(i64 %"n#param#sym19#") gc "shadow-stack" {
 entry:
-  switch i64 %"n#param#sym22#", label %end_if3 [
+  switch i64 %"n#param#sym19#", label %end_if3 [
     i64 0, label %common.ret
     i64 1, label %true_branch2
   ]
 
 common.ret:                                       ; preds = %cond, %entry, %true_branch2
-  %common.ret.op = phi i64 [ 1, %true_branch2 ], [ 0, %entry ], [ %"current#local#sym25#12", %cond ]
+  %common.ret.op = phi i64 [ 1, %true_branch2 ], [ 0, %entry ], [ %"current#local#sym22#12", %cond ]
   ret i64 %common.ret.op
 
 true_branch2:                                     ; preds = %entry
@@ -52,19 +46,19 @@ end_if3:                                          ; preds = %entry
   br label %cond
 
 cond:                                             ; preds = %body, %end_if3
-  %"prev#local#sym24#8" = phi i64 [ %"add#", %body ], [ 1, %end_if3 ]
-  %"prev_prev#local#sym23#7" = phi i64 [ %"prev#local#sym24#8", %body ], [ 0, %end_if3 ]
-  %"current#local#sym25#12" = phi i64 [ %"add#", %body ], [ 0, %end_if3 ]
-  %"n#local#sym22#11" = phi i64 [ %"sub#", %body ], [ %"n#param#sym22#", %end_if3 ]
-  %"gt#" = icmp sgt i64 %"n#local#sym22#11", 1
+  %"prev#local#sym21#8" = phi i64 [ %"add#", %body ], [ 1, %end_if3 ]
+  %"prev_prev#local#sym20#7" = phi i64 [ %"prev#local#sym21#8", %body ], [ 0, %end_if3 ]
+  %"current#local#sym22#12" = phi i64 [ %"add#", %body ], [ 0, %end_if3 ]
+  %"n#local#sym19#11" = phi i64 [ %"sub#", %body ], [ %"n#param#sym19#", %end_if3 ]
+  %"gt#" = icmp sgt i64 %"n#local#sym19#11", 1
   br i1 %"gt#", label %body, label %common.ret
 
 body:                                             ; preds = %cond
-  %"add#" = add i64 %"prev#local#sym24#8", %"prev_prev#local#sym23#7"
+  %"add#" = add i64 %"prev#local#sym21#8", %"prev_prev#local#sym20#7"
   call void @gc_run()
   call void @gc_run()
   call void @gc_run()
-  %"sub#" = add i64 %"n#local#sym22#11", -1
+  %"sub#" = add i64 %"n#local#sym19#11", -1
   call void @gc_run()
   br label %cond
 }
