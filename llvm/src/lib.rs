@@ -345,7 +345,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             self.gen_struct_signature(mir, struct_id, struct_def);
         }
         for (struct_id, struct_def) in mir.structs.iter() {
-            self.gen_struct_body(mir, struct_id, struct_def);
+            if struct_def.fields.is_some() {
+                self.gen_struct_body(mir, struct_id, struct_def);
+            }
         }
 
         let f = self.module.add_function(
@@ -357,8 +359,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         self.builder.position_at_end(block);
 
         #[cfg(feature = "rt-c")]
-        for (struct_id, s) in mir.structs.iter() {
-            self.gen_struct_layout(mir, struct_id, s.symbol_id);
+        for (struct_id, struct_def) in mir.structs.iter() {
+            if struct_def.fields.is_some() {
+                self.gen_struct_layout(mir, struct_id, struct_def.symbol_id);
+            }
         }
 
         #[cfg(feature = "runtime")]
@@ -444,6 +448,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     fn gen_struct_body(&mut self, mir: &Mir, struct_id: StructId, struct_def: &Struct) {
         let fields = struct_def
             .fields
+            .as_ref()
+            .expect("struct must have fields")
             .iter()
             .map(|field| {
                 let llvm_type = self.llvm_type(mir, field.type_id);
@@ -497,8 +503,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             }
             Type::Function(_, _) => {}
             Type::Struct(symbol_id, struct_id) => {
-                let callbacks = self.gen_struct_gc_callbacks(mir, *symbol_id, *struct_id);
-                self.gc_callbacks.insert(type_id, callbacks);
+                if let Some(callbacks) = self.gen_struct_gc_callbacks(mir, *symbol_id, *struct_id) {
+                    self.gc_callbacks.insert(type_id, callbacks);
+                }
             }
             Type::Array(element_type_id, len) => {
                 let callbacks = self.gen_array_gc_callbacks(mir, type_id, *element_type_id, *len);
@@ -515,14 +522,15 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         mir: &Mir,
         symbol_id: SymbolId,
         struct_id: StructId,
-    ) -> PointerValue<'ctx> {
-        if !mir.structs[struct_id]
-            .fields
+    ) -> Option<PointerValue<'ctx>> {
+        let fields = mir.structs[struct_id].fields.as_ref()?;
+
+        if !fields
             .iter()
             .map(|e| e.type_id)
             .any(|type_id| mir.types[type_id].is_heap_allocated())
         {
-            return self.ptr_type.const_null();
+            return Some(self.ptr_type.const_null());
         }
 
         let mangled_struct_name = mangle_struct_name(mir, struct_id, symbol_id);
@@ -535,7 +543,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             let builder = self.context.create_builder();
             builder.position_at_end(self.context.append_basic_block(callback, "entry"));
 
-            for (index, field) in mir.structs[struct_id].fields.iter().enumerate() {
+            for (index, field) in fields.iter().enumerate() {
                 if mir.types[field.type_id].is_heap_allocated() {
                     let field_ptr = builder
                         .build_struct_gep(
@@ -576,7 +584,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         );
         callbacks_global.set_initializer(&BasicValueEnum::StructValue(callbacks));
 
-        callbacks_global.as_pointer_value()
+        Some(callbacks_global.as_pointer_value())
     }
 
     #[cfg(feature = "runtime")]
@@ -707,7 +715,12 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         offsets.push(self.i64_type.const_int(entries_count as u64, false));
 
         let struct_type = self.struct_types[&struct_id];
-        for field in mir.structs[struct_id].fields.iter() {
+        for field in mir.structs[struct_id]
+            .fields
+            .as_ref()
+            .expect("struct has fields")
+            .iter()
+        {
             if let Some(field_layout_ptr) = self.gen_layout(mir, field.type_id) {
                 let name = format!("offset_struct{struct_id}_field{index}", index = field.index);
                 let field_pointer = self
@@ -911,7 +924,11 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             self.gen_variable(mir, variable);
         }
 
-        self.gen_expression(mir, &mir.expressions[function.body.unwrap()], true);
+        self.gen_expression(
+            mir,
+            &mir.expressions[function.body.expect("function must have a body")],
+            true,
+        );
 
         Value::None
     }
@@ -1574,12 +1591,13 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         }
 
         for (index, value) in field_values.into_iter().enumerate() {
+            let field = &mir.structs[struct_id]
+                .fields
+                .as_ref()
+                .expect("struct has fields")[index];
             let name = format!(
                 "{}.{}#idx{}#sym{}",
-                name,
-                mir.identifiers[mir.structs[struct_id].fields[index].identifier.id],
-                index,
-                mir.structs[struct_id].fields[index].symbol_id
+                name, mir.identifiers[field.identifier.id], index, field.symbol_id
             );
             let field_ptr = self
                 .builder
@@ -2922,6 +2940,15 @@ mod tests {
         annotation native;
         @native
         let native(a: number): number {}
+        "#
+    );
+    gen!(
+        native_struct,
+        r#"
+        annotation native;
+        @native
+        struct S {}
+        let f (s: S) {}
         "#
     );
 }

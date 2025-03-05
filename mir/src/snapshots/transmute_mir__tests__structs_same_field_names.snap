@@ -12,17 +12,19 @@ Ok(
                     span: 2:20; [20, 25],
                 },
                 symbol_id: SymbolId(21),
-                fields: [
-                    Field {
-                        identifier: Identifier {
-                            id: IdentId(1),
-                            span: 2:28; [28, 33],
+                fields: Some(
+                    [
+                        Field {
+                            identifier: Identifier {
+                                id: IdentId(1),
+                                span: 2:28; [28, 33],
+                            },
+                            index: 0,
+                            symbol_id: SymbolId(23),
+                            type_id: TypeId(4),
                         },
-                        index: 0,
-                        symbol_id: SymbolId(23),
-                        type_id: TypeId(4),
-                    },
-                ],
+                    ],
+                ),
                 parent: None,
             },
             StructId(1) => Struct {
@@ -31,17 +33,19 @@ Ok(
                     span: 3:20; [63, 68],
                 },
                 symbol_id: SymbolId(22),
-                fields: [
-                    Field {
-                        identifier: Identifier {
-                            id: IdentId(1),
-                            span: 3:28; [71, 76],
+                fields: Some(
+                    [
+                        Field {
+                            identifier: Identifier {
+                                id: IdentId(1),
+                                span: 3:28; [71, 76],
+                            },
+                            index: 0,
+                            symbol_id: SymbolId(24),
+                            type_id: TypeId(13),
                         },
-                        index: 0,
-                        symbol_id: SymbolId(24),
-                        type_id: TypeId(13),
-                    },
-                ],
+                    ],
+                ),
                 parent: None,
             },
         ],

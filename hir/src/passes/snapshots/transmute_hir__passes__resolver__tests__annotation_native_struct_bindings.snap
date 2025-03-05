@@ -4,7 +4,7 @@ expression: "&hir"
 ---
 Hir {
     identifiers: [
-        IdentId(0) => "a",
+        IdentId(0) => "native",
         IdentId(1) => "S",
         IdentId(2) => "boolean",
         IdentId(3) => "number",
@@ -15,7 +15,7 @@ Hir {
             id: IdentRefId(0),
             ident: Identifier {
                 id: IdentId(0),
-                span: 1:16; [15, 16],
+                span: 1:21; [20, 26],
                 bound: Bound(1),
             },
         },
@@ -27,31 +27,31 @@ Hir {
             kind: Annotation(
                 Identifier {
                     id: IdentId(0),
-                    span: 1:12; [11, 12],
+                    span: 1:12; [11, 17],
                     bound: Bound(1),
                 },
             ),
-            span: 1:1; [0, 13],
+            span: 1:1; [0, 18],
         },
         StmtId(1) => Statement {
             id: StmtId(1),
             kind: Struct(
                 Identifier {
                     id: IdentId(1),
-                    span: 1:25; [24, 25],
+                    span: 1:35; [34, 35],
                     bound: Bound(2),
                 },
                 [
                     Annotation {
                         ident_ref_id: IdentRefId(0),
-                        span: 1:15; [14, 16],
+                        span: 1:20; [19, 26],
                     },
                 ],
-                Provided(
+                Native(
                     [],
                 ),
             ),
-            span: 1:18; [17, 28],
+            span: 1:28; [27, 38],
         },
     ],
     type_defs: [],

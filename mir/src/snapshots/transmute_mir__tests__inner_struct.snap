@@ -27,17 +27,19 @@ Ok(
                     span: 1:18; [17, 23],
                 },
                 symbol_id: SymbolId(22),
-                fields: [
-                    Field {
-                        identifier: Identifier {
-                            id: IdentId(2),
-                            span: 1:27; [26, 31],
+                fields: Some(
+                    [
+                        Field {
+                            identifier: Identifier {
+                                id: IdentId(2),
+                                span: 1:27; [26, 31],
+                            },
+                            index: 0,
+                            symbol_id: SymbolId(23),
+                            type_id: TypeId(4),
                         },
-                        index: 0,
-                        symbol_id: SymbolId(23),
-                        type_id: TypeId(4),
-                    },
-                ],
+                    ],
+                ),
                 parent: Some(
                     FunctionId(0),
                 ),

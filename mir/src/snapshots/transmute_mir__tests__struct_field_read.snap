@@ -38,17 +38,19 @@ Ok(
                     span: 2:16; [16, 22],
                 },
                 symbol_id: SymbolId(21),
-                fields: [
-                    Field {
-                        identifier: Identifier {
-                            id: IdentId(1),
-                            span: 2:25; [25, 30],
+                fields: Some(
+                    [
+                        Field {
+                            identifier: Identifier {
+                                id: IdentId(1),
+                                span: 2:25; [25, 30],
+                            },
+                            index: 0,
+                            symbol_id: SymbolId(23),
+                            type_id: TypeId(4),
                         },
-                        index: 0,
-                        symbol_id: SymbolId(23),
-                        type_id: TypeId(4),
-                    },
-                ],
+                    ],
+                ),
                 parent: None,
             },
         ],

@@ -68,10 +68,12 @@ impl From<AstStatement> for Statement<Untyped, Unbound> {
                         .into_iter()
                         .map(Annotation::from)
                         .collect::<Vec<Annotation>>(),
-                    fields
-                        .into_iter()
-                        .map(Field::from)
-                        .collect::<Vec<Field<Untyped, Unbound>>>(),
+                    Implementation::Provided(
+                        fields
+                            .into_iter()
+                            .map(Field::from)
+                            .collect::<Vec<Field<Untyped, Unbound>>>(),
+                    ),
                 ),
                 AstStatementKind::Annotation(identifier) => {
                     StatementKind::Annotation(Identifier::from(identifier))
@@ -95,9 +97,13 @@ where
         Vec<Annotation>,
         Vec<Parameter<T, B>>,
         Return<T>,
-        Implementation,
+        Implementation<ExprId>,
     ),
-    Struct(Identifier<B>, Vec<Annotation>, Vec<Field<T, B>>),
+    Struct(
+        Identifier<B>,
+        Vec<Annotation>,
+        Implementation<Vec<Field<T, B>>>,
+    ),
     Annotation(Identifier<B>),
 }
 
@@ -127,12 +133,15 @@ impl From<AstRetMode> for RetMode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Implementation {
-    Provided(ExprId),
+pub enum Implementation<T> {
+    /// Denotes an implementation that is provided as transmute source code
+    Provided(T),
     #[cfg(not(debug_assertions))]
+    /// Denotes an implementation that is provided through FFI
     Native,
     #[cfg(debug_assertions)]
-    Native(ExprId),
+    /// Denotes an implementation that is provided through FFI
+    Native(T),
 }
 
 #[derive(Debug, Clone, PartialEq)]

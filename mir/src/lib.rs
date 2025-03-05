@@ -53,10 +53,18 @@ impl Transformer {
             let stmt = hir.statements.remove(stmt_id).unwrap();
 
             match stmt.kind {
-                HirStatementKind::LetFn(identifier, _, parameters, ret_type, expr_id) => self
-                    .transform_function(&mut hir, None, identifier, parameters, ret_type, expr_id),
-                HirStatementKind::Struct(identifier, _, fields) => {
-                    self.transform_struct(None, stmt_id, identifier, fields)
+                HirStatementKind::LetFn(identifier, _, parameters, ret_type, implementation) => {
+                    self.transform_function(
+                        &mut hir,
+                        None,
+                        identifier,
+                        parameters,
+                        ret_type,
+                        implementation,
+                    )
+                }
+                HirStatementKind::Struct(identifier, _, implementation) => {
+                    self.transform_struct(None, stmt_id, identifier, implementation)
                 }
                 HirStatementKind::Annotation(_) => {
                     self.statements.remove(stmt_id);
@@ -175,7 +183,7 @@ impl Transformer {
         identifier: HirIdentifier,
         parameters: Vec<HirParameter>,
         ret: HirReturn,
-        implementation: Implementation,
+        implementation: Implementation<ExprId>,
     ) {
         let function_id = self.functions.create();
 
@@ -236,7 +244,7 @@ impl Transformer {
         parent: Option<FunctionId>,
         stmt_id: StmtId,
         identifier: HirIdentifier,
-        fields: Vec<HirField>,
+        implementation: Implementation<Vec<HirField>>,
     ) {
         let struct_id = self.structs.create();
         let symbol_id = identifier.resolved_symbol_id();
@@ -245,16 +253,21 @@ impl Transformer {
             Struct {
                 identifier: identifier.into(),
                 symbol_id,
-                fields: fields
-                    .into_iter()
-                    .enumerate()
-                    .map(|(index, field)| Field {
-                        index,
-                        symbol_id: field.resolved_symbol_id(),
-                        type_id: field.resolved_type_id(),
-                        identifier: field.identifier.into(),
-                    })
-                    .collect::<Vec<Field>>(),
+                fields: match implementation {
+                    Implementation::Provided(fields) => Some(
+                        fields
+                            .into_iter()
+                            .enumerate()
+                            .map(|(index, field)| Field {
+                                index,
+                                symbol_id: field.resolved_symbol_id(),
+                                type_id: field.resolved_type_id(),
+                                identifier: field.identifier.into(),
+                            })
+                            .collect::<Vec<Field>>(),
+                    ),
+                    _ => None,
+                },
                 parent,
             },
         );
@@ -988,7 +1001,7 @@ pub struct Variable {
 pub struct Struct {
     pub identifier: Identifier,
     pub symbol_id: SymbolId,
-    pub fields: Vec<Field>,
+    pub fields: Option<Vec<Field>>,
     pub parent: Option<FunctionId>,
 }
 
@@ -1158,6 +1171,13 @@ mod tests {
     #[test]
     fn test_function_native() {
         let ast = transmute_ast::parse("annotation native; @native let f() { }").unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_struct_native() {
+        let ast = transmute_ast::parse("annotation native; @native struct S { }").unwrap();
         let hir = transmute_hir::resolve(ast).unwrap();
         assert_debug_snapshot!(make_mir(hir));
     }

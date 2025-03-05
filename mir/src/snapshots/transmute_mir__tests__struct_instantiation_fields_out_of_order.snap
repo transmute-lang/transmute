@@ -38,26 +38,28 @@ Ok(
                     span: 2:24; [24, 30],
                 },
                 symbol_id: SymbolId(21),
-                fields: [
-                    Field {
-                        identifier: Identifier {
-                            id: IdentId(1),
-                            span: 2:33; [33, 39],
+                fields: Some(
+                    [
+                        Field {
+                            identifier: Identifier {
+                                id: IdentId(1),
+                                span: 2:33; [33, 39],
+                            },
+                            index: 0,
+                            symbol_id: SymbolId(23),
+                            type_id: TypeId(4),
                         },
-                        index: 0,
-                        symbol_id: SymbolId(23),
-                        type_id: TypeId(4),
-                    },
-                    Field {
-                        identifier: Identifier {
-                            id: IdentId(3),
-                            span: 2:49; [49, 55],
+                        Field {
+                            identifier: Identifier {
+                                id: IdentId(3),
+                                span: 2:49; [49, 55],
+                            },
+                            index: 1,
+                            symbol_id: SymbolId(24),
+                            type_id: TypeId(3),
                         },
-                        index: 1,
-                        symbol_id: SymbolId(24),
-                        type_id: TypeId(3),
-                    },
-                ],
+                    ],
+                ),
                 parent: None,
             },
         ],

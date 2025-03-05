@@ -20,7 +20,12 @@ use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeDef
 use transmute_core::span::Span;
 use transmute_core::vec_map::VecMap;
 
-type Function<T, B> = (Identifier<B>, Vec<Parameter<T, B>>, Return<T>, bool);
+type Function<T, B> = (
+    Identifier<B>,
+    Vec<Parameter<T, B>>,
+    Return<T>,
+    Implementation<ExprId>,
+);
 
 // todo:refactoring this would deserve a reordering of functions, and that each `resolve_` method
 //   does the actual resolution instead of giving to its caller the information required to resolve
@@ -297,7 +302,7 @@ impl Resolver {
                 let ty = self.find_type_by_type_id(expr_type_id);
                 let field_type_id = match ty {
                     Type::Struct(stmt_id) => match &self.statements[*stmt_id].kind {
-                        StatementKind::Struct(ident, _, fields) => {
+                        StatementKind::Struct(ident, _, Implementation::Provided(fields)) => {
                             match fields
                                 .iter()
                                 .enumerate()
@@ -328,6 +333,17 @@ impl Resolver {
                                     self.invalid_type_id
                                 }
                             }
+                        }
+                        StatementKind::Struct(ident, _, _) => {
+                            self.diagnostics.report_err(
+                                format!(
+                                    "Native struct {} fields cannot be accessed",
+                                    self.identifiers.get_by_left(&ident.id).unwrap()
+                                ),
+                                expr.span.clone(),
+                                (file!(), line!()),
+                            );
+                            self.invalid_type_id
                         }
                         _ => panic!("struct expected"),
                     },
@@ -575,7 +591,21 @@ impl Resolver {
                 _ => panic!("must be a struct"),
             });
 
-        if let Some((struct_stmt_id, struct_identifier, field_types)) = struct_def {
+        if let Some((struct_stmt_id, struct_identifier, implementation)) = struct_def {
+            let field_types = match implementation {
+                Implementation::Provided(field_types) => field_types,
+                _ => {
+                    self.diagnostics.report_err(
+                        format!(
+                            "Native struct {} cannot be instantiated",
+                            self.identifiers.get_by_left(&struct_identifier.id).unwrap()
+                        ),
+                        span.clone(),
+                        (file!(), line!()),
+                    );
+                    &Default::default()
+                }
+            };
             if field_exprs.len() != field_types.len() {
                 self.diagnostics.report_err(
                     "Struct fields differ in length",
@@ -783,13 +813,12 @@ impl Resolver {
                 let res = self.resolve_function(
                     hir,
                     stmt_id,
-                    (ident, params, ret_type, false),
-                    expr,
+                    (ident, params, ret_type, Implementation::Provided(expr)),
                     &annotations,
                     &span,
                 );
 
-                if let Ok((identifier, parameters, ret_type, native)) = res {
+                if let Ok((identifier, parameters, ret_type, implementation)) = res {
                     self.statements.insert(
                         stmt_id,
                         Statement::new(
@@ -799,18 +828,7 @@ impl Resolver {
                                 annotations,
                                 parameters,
                                 ret_type,
-                                if native {
-                                    #[cfg(debug_assertions)]
-                                    {
-                                        Implementation::Native(expr)
-                                    }
-                                    #[cfg(not(debug_assertions))]
-                                    {
-                                        Implementation::Native
-                                    }
-                                } else {
-                                    Implementation::Provided(expr)
-                                },
+                                implementation,
                             ),
                             span,
                         ),
@@ -827,7 +845,11 @@ impl Resolver {
             StatementKind::LetFn(_, _, _, _, Implementation::Native) => {
                 panic!("body type must be implemented before resolution");
             }
-            StatementKind::Struct(ident, annotations, fields) => {
+            StatementKind::Struct(ident, annotations, implementation) => {
+                let fields = match implementation {
+                    Implementation::Provided(fields) => fields,
+                    _ => panic!("implementation required"),
+                };
                 let (ident, fields) =
                     self.resolve_struct(hir, stmt_id, ident, fields, &annotations);
 
@@ -890,11 +912,14 @@ impl Resolver {
         &mut self,
         hir: &mut UnresolvedHir,
         stmt_id: StmtId,
-        (ident, params, ret_type, _native): Function<Untyped, Unbound>,
-        body_expr_id: ExprId,
+        (ident, params, ret_type, implementation): Function<Untyped, Unbound>,
         annotations: &[Annotation],
         _span: &Span,
     ) -> Result<Function<Typed, Bound>, ()> {
+        let body_expr_id = match implementation {
+            Implementation::Provided(expr_id) => expr_id,
+            _ => panic!("implementation required"),
+        };
         self.push_scope();
 
         if let ExpressionKind::Block(stmt_ids) = &hir.expressions[body_expr_id].kind {
@@ -1068,43 +1093,22 @@ impl Resolver {
             );
 
             if let Some(symbol_id) = symbol_id {
-                // if is_native {
-                //     // todo:refactor should we fix the comment below?
-                //     // We replace the non-native function (inserted in `insert_functions`) with its
-                //     // native counterpart. It would bo more logical to do it directly in
-                //     // `insert_functions` but it seemed easier to do it here instead, as doing
-                //     // otherwise would mean to resolve the annotations before inserting function.
-                //     let symbol = self.symbols.remove(symbol_id).unwrap();
-                //     let type_id = symbol.type_id;
-                //     let (ident_id, param_types, ret_type) = match symbol.kind {
-                //         SymbolKind::LetFn(ident_id, _, param_types, ret_type) => {
-                //             (ident_id, param_types, ret_type)
-                //         }
-                //         _ => panic!("expected function got {:?}", symbol.kind,),
-                //     };
-                //
-                //     self.symbols.insert(
-                //         symbol_id,
-                //         Symbol {
-                //             id: symbol_id,
-                //             kind: SymbolKind::Native(
-                //                 ident_id,
-                //                 param_types,
-                //                 ret_type,
-                //                 NativeFnKind::PrintString, // fixme
-                //             ),
-                //             type_id,
-                //         },
-                //     );
-                //
-                //     // self.statements.remove(stmt_id).unwrap();
-                // }
-
                 return Ok((
                     ident.bind(symbol_id),
                     parameters,
                     ret_type.typed(ret_type_id),
-                    is_native,
+                    if is_native {
+                        #[cfg(debug_assertions)]
+                        {
+                            Implementation::Native(body_expr_id)
+                        }
+                        #[cfg(not(debug_assertions))]
+                        {
+                            Implementation::Native
+                        }
+                    } else {
+                        Implementation::Provided(body_expr_id)
+                    },
                 ));
             }
         }
@@ -1119,13 +1123,23 @@ impl Resolver {
         identifier: Identifier<Unbound>,
         fields: Vec<Field<Untyped, Unbound>>,
         annotations: &[Annotation],
-    ) -> (Identifier<Bound>, Vec<Field<Typed, Bound>>) {
+    ) -> (Identifier<Bound>, Implementation<Vec<Field<Typed, Bound>>>) {
         let is_native = self.native_annotation_present(hir, annotations);
         if is_native {
-            todo!(
-                "handle native struct: {}",
-                self.identifiers.get_by_left(&identifier.id).unwrap()
-            )
+            if !fields.is_empty() {
+                self.diagnostics.report_err(
+                    format!(
+                        "Native struct {} must not have a body",
+                        self.identifiers.get_by_left(&identifier.id).unwrap(),
+                    ),
+                    fields
+                        .first()
+                        .unwrap()
+                        .span
+                        .extend_to(&fields.last().unwrap().span),
+                    (file!(), line!()),
+                );
+            }
         }
 
         let fields = fields
@@ -1181,7 +1195,21 @@ impl Resolver {
             // it may happen that the struct is not found in case of duplicate def.
             .unwrap_or(self.not_found_symbol_id);
 
-        (identifier.bind(symbol_id), fields)
+        (
+            identifier.bind(symbol_id),
+            if is_native {
+                #[cfg(debug_assertions)]
+                {
+                    Implementation::Native(fields)
+                }
+                #[cfg(not(debug_assertions))]
+                {
+                    Implementation::Native
+                }
+            } else {
+                Implementation::Provided(fields)
+            },
+        )
     }
 
     fn resolve_annotation(
@@ -1385,7 +1413,7 @@ impl Resolver {
                 StmtId,
                 Vec<TypeId>,
                 TypeId,
-                Implementation,
+                Implementation<ExprId>,
             )>>();
 
         for (ident, stmt_id, parameter_types, ret_type, _) in functions.into_iter() {
@@ -1444,12 +1472,13 @@ impl Resolver {
         let type_def_ids = stmts
             .iter()
             .filter_map(|stmt_id| match &hir.statements[*stmt_id].kind {
-                StatementKind::Struct(_, _, fields) => Some(
+                StatementKind::Struct(_, _, Implementation::Provided(fields)) => Some(
                     fields
                         .iter()
                         .map(|p| p.type_def_id)
                         .collect::<Vec<TypeDefId>>(),
                 ),
+                StatementKind::Struct(_, _, _) => panic!("implementation required"),
                 _ => None,
             })
             .flatten()
@@ -1811,6 +1840,17 @@ mod tests {
     fn annotation_struct_bindings() {
         let hir = UnresolvedHir::from(
             Parser::new(Lexer::new("annotation a; @a struct S {}"))
+                .parse()
+                .unwrap(),
+        )
+        .resolve(Natives::empty())
+        .unwrap();
+        assert_debug_snapshot!(&hir);
+    }
+    #[test]
+    fn annotation_native_struct_bindings() {
+        let hir = UnresolvedHir::from(
+            Parser::new(Lexer::new("annotation native; @native struct S {}"))
                 .parse()
                 .unwrap(),
         )
@@ -2531,6 +2571,53 @@ mod tests {
         r#"
         annotation non_native;
         @non_native let f(): number { 10; }
+        "#
+    );
+    test_type_ok!(
+        native_struct_have_no_body,
+        r#"
+        annotation native;
+        @native struct S {}
+        "#
+    );
+    test_type_error!(
+        native_struct_must_not_have_body,
+        r#"
+        annotation native;
+        @native struct S { field1: number, field2: number }
+        "#,
+        "Native struct S must not have a body",
+        Span::new(3, 28, 55, 30)
+    );
+    test_type_error!(
+        native_struct_cannot_be_instantiated,
+        r#"
+        annotation native;
+        @native struct S {  }
+        let f() {
+            let s = S {};
+        }
+        "#,
+        "Native struct S cannot be instantiated",
+        Span::new(5, 21, 96, 4)
+    );
+    test_type_error!(
+        native_struct_fields_cannot_be_accessed,
+        r#"
+        annotation native;
+        @native struct S {  }
+        let f(s: S) {
+            s.whatever;
+        }
+        "#,
+        "Native struct S fields cannot be accessed",
+        Span::new(5, 13, 92, 10)
+    );
+    test_type_ok!(
+        non_native_struct_have_body,
+        r#"
+        annotation non_native;
+        @non_native struct S { field: number }
         "#
     );
     test_type_error!(
