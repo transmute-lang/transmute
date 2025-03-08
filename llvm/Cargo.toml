@@ -8,6 +8,9 @@ transmute-core = {path = "../core" }
 transmute-mir = {path = "../mir" }
 inkwell = { version = "0.5.0", features = ["llvm18-0"] }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+zstd = "0.13.3"
+
 [dev-dependencies]
 transmute-ast = {path = "../ast" }
 transmute-hir = {path = "../hir" }

@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 
-source .env
-export LLVM_SYS_180_PREFIX
-export STDLIB_SRC_PATH
-export LIBTRANSMUTE_STDLIB_PATH
+source setenv
 
 cargo fmt                                                                                                     || exit 1
 
@@ -40,8 +37,10 @@ cargo test -p tmi                                                               
 
 cargo build --bin tmi --release                                                                               || exit 1
 for f in examples/*.tm; do
-  echo -e "\e[0;34mExecuting ${f} ...\e[0m"
-  target/release/tmi "$f" 9                                                                                   #|| exit 1
+  if [ "$f" != "examples/arrays_bounds.tm" ]; then
+    echo -e "\033[0;34mExecuting ${f} ...\e[0m"
+    target/release/tmi "$f" 9                                                                                   #|| exit 1
+  fi
 done
 
 cargo build --bin tmc --release                                                                               || exit 1

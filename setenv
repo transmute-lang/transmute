@@ -1,0 +1,16 @@
+
+case "$(uname -s)" in
+  Darwin)
+    # homebrew installs llvm and clang, all versions aligned with the 18 required to build the project
+    LLVM_SYS_180_PREFIX="$(brew --prefix llvm@18)"
+    PATH="$LLVM_SYS_180_PREFIX/bin:$PATH"
+  ;;
+  *)
+    LLVM_SYS_180_PREFIX=/usr/local/llvm-18.1
+  ;;
+esac
+
+export LIBTRANSMUTE_STDLIB_PATH="$(realpath $(dirname "$0"))/target/debug/libtransmute_stdlib.a"
+export STDLIB_SRC_PATH="$(realpath $(dirname "$0"))/stdlib/src/stdlib"
+export LLVM_SYS_180_PREFIX
+export PATH

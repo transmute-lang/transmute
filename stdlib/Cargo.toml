@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["staticlib", "cdylib"]
+crate-type = [
+    "staticlib",
+    # fixme: not currently supported on macos (if requires the runtime to be linked together)
+    # "cdylib"
+]
 
 [dependencies]
 transmute-stdlib-macros = { path = "../stdlib-macros" }

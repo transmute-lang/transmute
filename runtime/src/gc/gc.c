@@ -103,6 +103,13 @@ do {                                                                            
 #define LOG(level, ...)
 #endif
 
+#ifdef __APPLE__
+// we pretend that we mmap'ed at the correct location...
+#define POOL_OFFSET(ptr)     ((void*)((uintptr_t)ptr - (uintptr_t)gc.pool + POOL_START))
+#else
+#define POOL_OFFSET(ptr)     ((void*)ptr)
+#endif // __APPLE__
+
 typedef enum GcBlockState {
     Unreachable = 0,
     Reachable   = 1,
@@ -257,7 +264,7 @@ static inline bool inside_block(uintptr_t addr, GcBlock *block) {
     return after_block_begin && before_block_end;
 }
 
-void gc_pool_dump() {
+void gc_pool_dump(void) {
     printf("\nMemory dump:\n\n");
 
     printf("  \033[%imboundary\033[0m \033[%imused\033[0m \033[%imfreed\033[0m \033[%imleft\033[0m\n\n",
@@ -327,7 +334,7 @@ void gc_set_object_name(void *object, char *name) {
 }
 #endif // GC_TEST
 
-void gc_print_statistics() {
+void gc_print_statistics(void) {
     printf("\nStatistics:\n\n");
     printf("  Executions ......%4i\n", gc.execution_count);
     printf("  Allocated .......%4i blocks\n", gc.alloc_count);
@@ -347,7 +354,7 @@ void gc_print_statistics() {
     printf("\n");
 }
 
-void gc_init() {
+void gc_init(void) {
     if (gc.initialized) {
         LOG(3, "already initialized\n");
         return;
@@ -416,15 +423,37 @@ LOG(1,  "Initialize GC with log level: %i\n", gc.log_level);
         (void *)POOL_START,
         gc.pool_size + 2 * BOUNDARY_SIZE,
         PROT_READ | PROT_WRITE,
+#ifdef __APPLE__
+        MAP_PRIVATE | MAP_ANONYMOUS,
+#else
         MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS,
+#endif // errno
         -1,
         0
     );
+
+#ifdef __APPLE__
+    if (errno == 0) {
+        LOG(2, "Allocate test GC memory pool (%li bytes): mmap returned %p (Success)\n",
+            gc.pool_size + 2 * BOUNDARY_SIZE,
+            POOL_OFFSET(gc.pool)
+        );
+    }
+    else {
+        LOG(2, "Allocate test GC memory pool (%li bytes): mmap returned %p (%s)\n",
+            gc.pool_size + 2 * BOUNDARY_SIZE,
+            POOL_OFFSET(gc.pool),
+            strerror(errno)
+        );
+    }
+#else
     LOG(2, "Allocate test GC memory pool (%li bytes): mmap returned %p (%s)\n",
         gc.pool_size + 2 * BOUNDARY_SIZE,
-        gc.pool,
+        POOL_OFFSET(gc.pool),
         strerror(errno)
     );
+#endif
+
     assert(errno == 0);
 
     LOG(3,  "memset %#02x at %p for %i bytes\n", FREE, gc.pool, gc.pool_size);
@@ -448,7 +477,7 @@ LOG(1,  "Initialize GC with log level: %i\n", gc.log_level);
 #endif // GC_PTHREAD
 }
 
-void gc_teardown() {
+void gc_teardown(void) {
     LOG(2, "GC Teardown\n");
 
 #ifdef GC_TEST
@@ -477,10 +506,10 @@ static inline void gc_free(GcBlock *block) {
     if (block->callbacks && block->callbacks->free) {
 #ifdef GC_LOGS_STABLE
         LOG(2, "    "COLOR_START_BLUE"%p"COLOR_END": recursive free(object at "COLOR_START_BLUE"%p"COLOR_END")\n",
-            (void *)block, object);
+            POOL_OFFSET(block), POOL_OFFSET(object));
 #else // GC_LOGS_STABLE
         LOG(2, "    "COLOR_START_BLUE"%p"COLOR_END": recursive free(object at "COLOR_START_BLUE"%p"COLOR_END") @ %p\n",
-            (void *)block, object, block->callbacks->free);
+            POOL_OFFSET(block), POOL_OFFSET(object), block->callbacks->free);
 #endif
         block->callbacks->free(object);
     }
@@ -504,7 +533,7 @@ static inline void gc_free(GcBlock *block) {
 #endif // GC_TEST
 }
 
-void gc_run() {
+void gc_run(void) {
     if (!gc.enable) {
         return;
     }
@@ -539,15 +568,15 @@ void gc_run() {
 #ifdef GC_LOGS
 #ifdef GC_TEST
         gc_log(2, "gc_run", __LINE__, "  block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s'): %s\n",
-            block,
-            GC_OBJECT(block),
+            POOL_OFFSET(block),
+            POOL_OFFSET(GC_OBJECT(block)),
             block->name,
             state_to_char(block->state)
         );
 #else // GC_TEST
         gc_log(2, "gc_run", __LINE__, "  block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END"): %s\n",
-            block,
-            GC_OBJECT(block),
+            POOL_OFFSET(block),
+            POOL_OFFSET(GC_OBJECT(block)),
             state_to_char(block->state)
         );
 #endif // GC_TEST
@@ -591,10 +620,10 @@ void gc_run() {
                 GcBlock *next = block->next;
 #ifdef GC_TEST
                 LOG(1,  "  freeing block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END", size: %li: '%s')\n",
-                    block, GC_OBJECT(block), block->data_size, block->name);
+                    POOL_OFFSET(block), POOL_OFFSET(GC_OBJECT(block)), block->data_size, block->name);
 #else
                 LOG(1,  "  freeing block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END", size: %li)\n",
-                    block, GC_OBJECT(block), block->data_size);
+                    POOL_OFFSET(block), POOL_OFFSET(GC_OBJECT(block)), block->data_size);
 #endif
                 gc_free(block);
                 block = next;
@@ -603,16 +632,16 @@ void gc_run() {
             else {
 #ifdef GC_TEST
                 LOG(1,  "  keeping block "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END", size: %li: '%s'): %s\n",
-                    block,
-                    GC_OBJECT(block),
+                    POOL_OFFSET(block),
+                    POOL_OFFSET(GC_OBJECT(block)),
                     block->data_size,
                     block->name,
                     state_to_char(block->state)
                 );
 #else // GC_TEST
                 LOG(1,  "  keeping block "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END", size: %li): %s\n",
-                    block,
-                    GC_OBJECT(block),
+                    POOL_OFFSET(block),
+                    POOL_OFFSET(GC_OBJECT(block)),
                     block->data_size,
                     state_to_char(block->state)
                 );
@@ -648,17 +677,17 @@ void gc_mark(void *object) {
         current_block = current_block->next;
     }
     PANIC_ARGS("unmanaged block "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END")",
-        (void *)block, object);
+        POOL_OFFSET(block), POOL_OFFSET(object));
     found:
 #endif // GC_TEST
 
 #ifdef GC_LOGS
 #ifdef GC_TEST
     LOG(2, "      mark %s block "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s')\n",
-        state_to_char(block->state), block, object, block->name);
+        state_to_char(block->state), POOL_OFFSET(block), POOL_OFFSET(object), block->name);
 #else // GC_TEST
     LOG(2, "      mark %s block "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END")\n",
-        state_to_char(block->state), block, object );
+        state_to_char(block->state), POOL_OFFSET(block), POOL_OFFSET(object));
 #endif // GC_TEST
 #endif // GC_LOGS
 
@@ -670,17 +699,17 @@ void gc_mark(void *object) {
     if (block->callbacks && block->callbacks->mark) {
 #ifdef GC_TEST
         LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark(object at "COLOR_START_GREEN"%p"COLOR_END": '%s')\n",
-            (void *)block, object, block->name);
+            POOL_OFFSET(block), POOL_OFFSET(object), block->name);
 #else // GC_TEST
         LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark(object at "COLOR_START_GREEN"%p"COLOR_END")\n",
-            (void *)block, object);
+            POOL_OFFSET(block), POOL_OFFSET(object));
 #endif // GC_TEST
         block->callbacks->mark(object);
     }
 #ifdef GC_LOGS
     else {
         LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": skip recursive mark(object at "COLOR_START_GREEN"%p"COLOR_END"): no mark callback\n",
-            (void *)block, object);
+            POOL_OFFSET(block), POOL_OFFSET(object));
     }
 #endif // GC_LOGS
 }
@@ -748,9 +777,9 @@ void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
 
     LOG(1,  "allocated block of size %li at "COLOR_START_BLUE"%p"COLOR_END", returning object of size %li at "COLOR_START_BLUE"%p"COLOR_END"(+%li)\n",
         alloc_size,
-        block,
+        POOL_OFFSET(block),
         data_size,
-        object,
+        POOL_OFFSET(object),
         (uint8_t *)object - (uint8_t *)block
     );
 
@@ -767,9 +796,11 @@ void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
 void gc_take_ownership(void *object) {
     GcBlock *block = GC_BLOCK(object);
 #ifdef GC_TEST
-    LOG(2, "mark block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') as owned\n", block, object, block->name);
+    LOG(2, "mark block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') as owned\n",
+        POOL_OFFSET(block), POOL_OFFSET(object), block->name );
 #else
-    LOG(2, "mark block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END") as owned\n", block, object);
+    LOG(2, "mark block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END") as owned\n",
+        POOL_OFFSET(block), POOL_OFFSET(object));
 #endif // GC_TEST
     block->state = Owned;
 }
@@ -780,30 +811,18 @@ void gc_set_callbacks(void *object, GcCallbacks *callbacks) {
 #ifdef GC_TEST
 #ifdef GC_LOGS_STABLE
     LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s')\n",
-        block,
-        object,
-        block->name
-    );
+        POOL_OFFSET(block), POOL_OFFSET(object), block->name);
 #else // GC_LOGS_STABLE
     LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') to %p\n",
-        block,
-        object,
-        block->name,
-        callbacks
-    );
+        POOL_OFFSET(block), POOL_OFFSET(object), block->name, callbacks);
 #endif // GC_LOGS_STABLE
 #else // GC_TEST
 #ifdef GC_LOGS_STABLE
     LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END")\n",
-        block,
-        object
-    );
+        POOL_OFFSET(block), POOL_OFFSET(object));
 #else // GC_LOGS_STABLE
     LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END") to %p\n",
-        block,
-        object,
-        callbacks
-    );
+        POOL_OFFSET(block), POOL_OFFSET(object), callbacks);
 #endif // GC_LOGS_STABLE
 #endif // GC_TEST
 
@@ -816,9 +835,11 @@ void gc_release_ownership(void *object, GcCallbacks *callbacks) {
     GcBlock *block = GC_BLOCK(object);
 
 #ifdef GC_TEST
-    LOG(2, "mark block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') as unreachable\n", block, object, block->name);
+    LOG(2, "mark block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') as unreachable\n",
+        POOL_OFFSET(block), POOL_OFFSET(object), block->name);
 #else // GC_TEST
-    LOG(2, "mark block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END") as unreachable\n", block, object);
+    LOG(2, "mark block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END") as unreachable\n",
+        POOL_OFFSET(block), POOL_OFFSET(object) );
 #endif // GC_TEST
 
     block->state = Unreachable;
@@ -829,17 +850,10 @@ void gc_mark_managed(void *object) {
 
 #ifdef GC_TEST
     LOG(2, "      mark %s block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') as reachable\n",
-        state_to_char(block->state),
-        block,
-        object,
-        block->name
-    );
+        state_to_char(block->state), POOL_OFFSET(block), POOL_OFFSET(object), block->name);
 #else // GC_TEST
     LOG(2, "      mark %s block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END") as reachable\n",
-        state_to_char(block->state),
-        block,
-        object
-    );
+        state_to_char(block->state), POOL_OFFSET(block), POOL_OFFSET(object));
 #endif // GC_TEST
 
     block->state = Reachable;
@@ -848,30 +862,18 @@ void gc_mark_managed(void *object) {
 #if GC_TEST
 #ifdef GC_LOGS_STABLE
         LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END": '%s')\n",
-            (void *)block,
-            object,
-            block->name
-        );
+            POOL_OFFSET(block), POOL_OFFSET(object), block->name);
 #else // GC_LOGS_STABLE
         LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') @ %p\n",
-            (void *)block,
-            object,
-            block->name,
-            block->callbacks->mark
-        );
+            POOL_OFFSET(block), POOL_OFFSET(object), block->name, block->callbacks->mark);
 #endif // GC_LOGS_STABLE
 #else // GC_TEST
 #ifdef GC_LOGS_STABLE
         LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END")\n",
-            (void *)block,
-            object
-        );
+            POOL_OFFSET(block), POOL_OFFSET(object));
 #else // GC_LOGS_STABLE
         LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END") @ %p\n",
-            (void *)block,
-            object,
-            block->callbacks->mark
-        );
+            POOL_OFFSET(block), POOL_OFFSET(object), block->callbacks->mark);
 #endif // GC_LOGS_STABLE
 #endif // GC_TEST
         block->callbacks->mark(object);
@@ -880,15 +882,10 @@ void gc_mark_managed(void *object) {
     else {
 #if GC_TEST
         LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": skip recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END": '%s'): no mark callback\n",
-            (void *)block,
-            object,
-            block->name
-        );
+            POOL_OFFSET(block), POOL_OFFSET(object), block->name);
 #else // GC_TEST
         LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": skip recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END"): no mark callback\n",
-            (void *)block,
-            object
-        );
+            POOL_OFFSET(block), POOL_OFFSET(object));
 #endif // GC_TEST
     }
 #endif // GC_LOGS

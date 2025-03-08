@@ -5,22 +5,19 @@ cargo build
 ./cbindgen.sh
 popd || exit 1
 
-mkdir -p target/
+mkdir -p target
 
-CFLAGS="-Wall -Werror -Wpedantic -Wno-zero-length-array"
-
-clang $CFLAGS -c -fPIC -ggdb src/gc/gc.c -D GC_TEST -D GC_LOGS -D GC_LOGS_COLOR -D GC_PTHREAD -o target/gc.o || exit 1
-clang $CFLAGS -c -fPIC -ggdb src/runtimelib/rtlib.c -o target/rtlib.o || exit 1
-
-clang $CFLAGS \
-      -D GC_TEST \
-      target/gc.o \
-      target/rtlib.o \
-      test/test.c \
-      ../target/debug/libtransmute_stdlib.a \
-      -lpthread -lm -ldl -lssl -lcrypto \
-      -ggdb \
-      -o target/test || exit 1
+clang -ggdb -Wall -Werror -Wpedantic -Wno-zero-length-array \
+  -D GC_TEST \
+  -D GC_LOGS \
+  -D GC_LOGS_COLOR \
+  -D GC_PTHREAD \
+  src/runtimelib/rtlib.c \
+  src/gc/gc.c \
+  test/test.c \
+  "$LIBTRANSMUTE_STDLIB_PATH" \
+  -lpthread -lm -ldl \
+  -o target/test || exit 1
 
 if [ "$GC_DEBUG" == 1 ]; then
   GC_TEST_POOL_SIZE=704 \

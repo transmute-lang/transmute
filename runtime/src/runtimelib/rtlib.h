@@ -9,4 +9,4 @@ void _TM0_5print1b(int8_t b);
 // print(string) -> _TM0_5print1s
 void _TM0_5print1s(Str *str);
 
-void _TM0_8gc_stats0();
+void _TM0_8gc_stats0(void);

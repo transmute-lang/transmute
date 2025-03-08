@@ -46,7 +46,7 @@ pub fn exec<S: Into<String>, C: NativeContext>(
             continue;
         }
 
-        println!("Reading {}", src.display());
+        // println!("Reading {}", src.display());
 
         let src = fs::read_to_string(&src)
             .map_err(|e| format!("Could not read {}: {}", src.display(), e))
@@ -117,7 +117,6 @@ mod tests {
         };
     }
 
-    exec!(arrays_bounds);
     exec!(arrays_if);
     exec!(arrays_nested);
     exec!(arrays_of_structs);

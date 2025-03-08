@@ -29,3 +29,20 @@ let fact(n: number): number = {
 
 fact(3);
 ```
+
+# Build
+## Required dependencies:
+### Cargo
+```
+cargo install --force cbindgen
+```
+
+### System
+#### LLVM
+##### macOS
+```
+brew install llvm@18
+```
+
+##### Linux
+Download and compile LLVM 18, put it in /usr/local/llvm-18.1

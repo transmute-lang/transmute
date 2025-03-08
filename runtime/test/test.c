@@ -23,7 +23,7 @@ GcCallbacks array3_callbacks = {
 
 #define PAUSE() do { if (step) { getchar(); } } while(false)
 
-int main() {
+int main(int argc, char **argv) {
     bool step = false;
     char *env_step = getenv("GC_TEST_STEP");
     if (env_step && strcmp(env_step, "1") == 0) {

@@ -9,10 +9,6 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-Reading /home/cpollet/Development/transmute-lang/transmute/stdlib/src/stdlib/number.tm
-Reading /home/cpollet/Development/transmute-lang/transmute/stdlib/src/stdlib/boolean.tm
-Reading /home/cpollet/Development/transmute-lang/transmute/stdlib/src/stdlib/str.tm
-Reading /home/cpollet/Development/transmute-lang/transmute/stdlib/src/stdlib/native.tm
 Result: 34
 
 ----- stderr -----

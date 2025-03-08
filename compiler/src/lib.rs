@@ -36,7 +36,7 @@ pub fn compile_file<S: AsRef<Path>, D: AsRef<Path>>(
 ) -> Result<(), String> {
     #[cfg(feature = "stdlib")]
     let source = {
-        println!("Reading {}", src.as_ref().display());
+        // println!("Reading {}", src.as_ref().display());
         let mut source = fs::read_to_string(src)
             .map_err(|e| format!("Could not read {}: {}", src.as_ref().display(), e))?;
 
@@ -56,7 +56,7 @@ pub fn compile_file<S: AsRef<Path>, D: AsRef<Path>>(
                 continue;
             }
 
-            println!("Reading {}", src.display());
+            // println!("Reading {}", src.display());
 
             let src = fs::read_to_string(&src)
                 .map_err(|e| format!("Could not read {}: {}", src.display(), e))?;
