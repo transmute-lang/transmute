@@ -312,6 +312,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
     // todo:refactor only insert used functions
     pub fn gen(mut self, mir: &Mir, optimize: bool) -> Result<Module<'ctx>, Diagnostics> {
+        #[allow(unused_variables)] // because of #[cfg(feature = "gc-functions")]
         for (symbol_id, symbol) in mir.symbols.iter() {
             if let SymbolKind::Native(ident_id, parameters, _, native_kind) = &symbol.kind {
                 let fn_name = mangle_function_name(mir, *ident_id, parameters, None);
