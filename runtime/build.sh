@@ -5,6 +5,9 @@ cargo build
 ./cbindgen.sh
 popd || exit 1
 
+cp ../target/debug/libtransmute_stdlib.a ../target/debug/transmute-stdlib/
+cp ../stdlib/src/stdlib/*.tm ../target/debug/transmute-stdlib/src/
+
 mkdir -p target
 
 clang -ggdb -Wall -Werror -Wpedantic -Wno-zero-length-array \
@@ -15,7 +18,7 @@ clang -ggdb -Wall -Werror -Wpedantic -Wno-zero-length-array \
   src/runtimelib/rtlib.c \
   src/gc/gc.c \
   test/test.c \
-  "$LIBTRANSMUTE_STDLIB_PATH" \
+  "$TRANSMUTE_STDLIB_PATH/libtransmute_stdlib.a" \
   -lpthread -lm -ldl \
   -o target/test || exit 1
 

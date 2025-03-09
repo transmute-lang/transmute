@@ -30,8 +30,9 @@ pub fn exec<S: Into<String>, C: NativeContext>(
         .map(Value::Number)
         .collect::<Vec<Value>>();
 
-    let stdlib_src =
-        PathBuf::from(env::var("STDLIB_SRC_PATH").expect("STDLIB_SRC_PATH is defined"));
+    let mut stdlib_src =
+        PathBuf::from(env::var("TRANSMUTE_STDLIB_PATH").expect("TRANSMUTE_STDLIB_PATH is defined"));
+    stdlib_src.push("src");
 
     for entry in fs::read_dir(&stdlib_src).unwrap() {
         let file = entry

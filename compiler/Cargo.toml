@@ -22,7 +22,7 @@ transmute-llvm = { path = "../llvm", features = ["gc-aggressive", "gc-functions"
 transmute-hir = { path = "../hir", features = ["gc-functions"] }
 
 [features]
-default = ["runtime", "stdlib"]
+default = ["runtime"]
 gc-test = ["transmute-crt/gc-test", "transmute-runtime/gc-test"]
 gc-logs = ["transmute-crt/gc-logs", "transmute-runtime/gc-logs"]
 gc-logs-stable = ["transmute-crt/gc-logs", "transmute-runtime/gc-logs-stable"]
@@ -33,6 +33,3 @@ gc-functions = ["transmute-hir/gc-functions", "transmute-llvm/gc-functions", "tr
 rt-c = ["dep:transmute-crt", "transmute-llvm/rt-c"]
 # Compile with runtime
 runtime = ["dep:transmute-runtime", "transmute-llvm/runtime"]
-
-# Compile with support for the stdlib
-stdlib = ["transmute-llvm/stdlib"]

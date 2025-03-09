@@ -1,3 +1,5 @@
+use std::env;
+use std::path::PathBuf;
 use std::process::Command;
 use test_dir::{DirBuilder, TestDir};
 use tmc::{compile_str, Options};
@@ -10,10 +12,11 @@ macro_rules! exec {
             fn [< test_ $name >]() {
                 let test_dir = test_dir::DirBuilder::create(test_dir::TestDir::temp(), ".", test_dir::FileType::Dir);
 
-                let stdlib_src = std::path::PathBuf::from( "../stdlib/src/stdlib");
+                let stdlib_src = std::path::PathBuf::from(std::env::var("TRANSMUTE_STDLIB_PATH").expect("TRANSMUTE_STDLIB_PATH is not set"));
+                let stdlib_src = stdlib_src.join("src");
 
                 let mut source = include_str!(concat!("../../examples/", $name, ".tm")).to_string();
-                for entry in std::fs::read_dir("../stdlib/src/stdlib").unwrap() {
+                for entry in std::fs::read_dir(&stdlib_src).unwrap() {
                     let file = entry
                         .unwrap()
                         .file_name()
@@ -61,10 +64,11 @@ macro_rules! exec_test_example {
             fn [< test_ $name >]() {
                 let test_dir = test_dir::DirBuilder::create(test_dir::TestDir::temp(), ".", test_dir::FileType::Dir);
 
-                let stdlib_src = std::path::PathBuf::from( "../stdlib/src/stdlib");
+                let stdlib_src = std::path::PathBuf::from(std::env::var("TRANSMUTE_STDLIB_PATH").expect("TRANSMUTE_STDLIB_PATH is not set"));
+                let stdlib_src = stdlib_src.join("src");
 
                 let mut source = include_str!(concat!("examples/", $name, ".tm")).to_string();
-                for entry in std::fs::read_dir("../stdlib/src/stdlib").unwrap() {
+                for entry in std::fs::read_dir(&stdlib_src).unwrap() {
                     let file = entry
                         .unwrap()
                         .file_name()
@@ -113,8 +117,10 @@ pub(crate) use exec_test_example;
 pub fn compile(src: &str, test_dir: &TestDir) -> Command {
     let bin_path = test_dir.path("a.out");
 
-    // println!("{}", bin_path.display());
-    let options = Options::default();
+    let mut options = Options::default();
+    let stdlib_path =
+        PathBuf::from(env::var("TRANSMUTE_STDLIB_PATH").expect("TRANSMUTE_STDLIB_PATH is not set"));
+    options.set_stdlib_path(stdlib_path);
 
     match compile_str(src, &bin_path, &options) {
         Ok(_) => {

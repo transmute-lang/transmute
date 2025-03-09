@@ -2,6 +2,8 @@
 
 source setenv
 
+mkdir -p target/debug/transmute-stdlib/src                                                                    || exit 1
+
 cargo fmt                                                                                                     || exit 1
 
 pushd runtime                                                                                                 || exit 1
@@ -10,6 +12,9 @@ popd                                                                            
 
 #cargo test -p transmute-stdlib                                                                                || exit 1
 cargo build -p transmute-stdlib                                                                               || exit 1
+
+cp target/debug/libtransmute_stdlib.a target/debug/transmute-stdlib/                                          || exit 1
+cp stdlib/src/stdlib/*.tm target/debug/transmute-stdlib/src/                                                  || exit 1
 
 cargo test -p transmute-core                                                                                  || exit 1
 

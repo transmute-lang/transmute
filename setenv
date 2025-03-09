@@ -10,7 +10,9 @@ case "$(uname -s)" in
   ;;
 esac
 
-export LIBTRANSMUTE_STDLIB_PATH="$(realpath $(dirname "$0"))/target/debug/libtransmute_stdlib.a"
-export STDLIB_SRC_PATH="$(realpath $(dirname "$0"))/stdlib/src/stdlib"
+#export LIBTRANSMUTE_STDLIB_PATH="$(realpath $(dirname "$0"))/target/debug/libtransmute_stdlib.a"
+#export STDLIB_SRC_PATH="$(realpath $(dirname "$0"))/stdlib/src/stdlib"
+
+export TRANSMUTE_STDLIB_PATH="$(realpath $(dirname "$0"))/target/debug/transmute-stdlib"
 export LLVM_SYS_180_PREFIX
 export PATH

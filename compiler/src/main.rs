@@ -20,6 +20,9 @@ fn main() {
         options.set_output_format(OutputFormat::Assembly);
     }
     options.set_optimize(args.optimize());
+    if let Some(stdlib_path) = args.stdlib_path() {
+        options.set_stdlib_path(stdlib_path);
+    }
 
     match compile_file(&args.input(), &args.output(), &options) {
         Ok(_) => {}

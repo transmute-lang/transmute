@@ -94,7 +94,12 @@ pub struct LlvmIr<'ctx> {
 
 impl LlvmIr<'_> {
     // todo:ux error handling
-    pub fn build_bin<P: Into<PathBuf>>(&self, runtime: &[u8], path: P) -> Result<(), Diagnostics> {
+    pub fn build_bin<P: Into<PathBuf>>(
+        &self,
+        runtime: &[u8],
+        path: P,
+        stdlib_path: Option<&Path>,
+    ) -> Result<(), Diagnostics> {
         let path = path.into();
 
         let tm_object_path = path.clone().with_extension("o");
@@ -124,12 +129,10 @@ impl LlvmIr<'_> {
             runtime_object_path
         };
 
-        #[cfg(feature = "stdlib")]
-        {
-            // fixme:ux make it flexible
-            command.arg(
-                env::var("LIBTRANSMUTE_STDLIB_PATH").expect("LIBTRANSMUTE_STDLIB_PATH is defined"),
-            );
+        if let Some(stdlib_path) = stdlib_path {
+            let stdlib_path = stdlib_path.join("libtransmute_stdlib.a");
+            command.arg(stdlib_path);
+
             // todo:ux check linked libraries
             command.arg("-lpthread");
             command.arg("-lm");

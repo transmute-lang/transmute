@@ -29,5 +29,3 @@ gc-functions = ["transmute-hir/gc-functions"]
 rt-c = []
 # Compile with runtime
 runtime = []
-
-stdlib = []
