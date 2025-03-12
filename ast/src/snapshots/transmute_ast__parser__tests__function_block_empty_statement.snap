@@ -1,6 +1,6 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser::new(Lexer::new(\"let a() {;}\")).parse()"
+expression: "Parser :: new(Lexer :: new(\"let a() {;}\")).parse()"
 ---
 Ok(
     Ast {
@@ -25,6 +25,7 @@ Ok(
                         id: IdentId(0),
                         span: 1:5; [4, 5],
                     },
+                    [],
                     [],
                     Return {
                         type_def_id: None,

@@ -18,24 +18,22 @@ declare void @gc_run()
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
-declare void @_TM0_5print1n(i64)
-
-declare void @_TM0_5print1b(i1)
+declare ptr @tmc_stdlib_string_new(ptr, i64)
 
 define private void @_glob() {
 entry:
   unreachable
 }
 
-define i64 @_TM0_1f1n(i64 %"n#param#sym22#") gc "shadow-stack" {
+define i64 @_TM0_1f1n(i64 %"n#param#sym21#") gc "shadow-stack" {
 entry:
-  %"s#local#sym23#" = alloca ptr, align 8
-  store ptr null, ptr %"s#local#sym23#", align 8
-  call void @llvm.gcroot(ptr nonnull %"s#local#sym23#", ptr nonnull @layout_s6Struct)
-  %"add#" = add i64 %"n#param#sym22#", 1
+  %"s#local#sym22#" = alloca ptr, align 8
+  store ptr null, ptr %"s#local#sym22#", align 8
+  call void @llvm.gcroot(ptr nonnull %"s#local#sym22#", ptr nonnull @layout_s6Struct)
+  %"add#" = add i64 %"n#param#sym21#", 1
   %"heap#struct#Struct#id0#" = call ptr @gc_malloc(i64 8, i64 8)
   store i64 %"add#", ptr %"heap#struct#Struct#id0#", align 4
-  store ptr %"heap#struct#Struct#id0#", ptr %"s#local#sym23#", align 8
+  store ptr %"heap#struct#Struct#id0#", ptr %"s#local#sym22#", align 8
   call void @gc_run()
   ret i64 1
 }

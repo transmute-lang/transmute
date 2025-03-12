@@ -1,0 +1,45 @@
+---
+source: ast/src/parser.rs
+expression: "Parser :: new(Lexer :: new(\"@a struct S {}\")).parse()"
+---
+Ok(
+    Ast {
+        identifiers: [
+            IdentId(0) => "a",
+            IdentId(1) => "S",
+        ],
+        identifier_refs: [
+            IdentRefId(0) => IdentifierRef {
+                id: IdentRefId(0),
+                ident: Identifier {
+                    id: IdentId(0),
+                    span: 1:2; [1, 2],
+                },
+            },
+        ],
+        expressions: [],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Struct(
+                    Identifier {
+                        id: IdentId(1),
+                        span: 1:11; [10, 11],
+                    },
+                    [
+                        Annotation {
+                            ident_ref_id: IdentRefId(0),
+                            span: 1:1; [0, 2],
+                        },
+                    ],
+                    [],
+                ),
+                span: 1:4; [3, 14],
+            },
+        ],
+        type_defs: [],
+        roots: [
+            StmtId(0),
+        ],
+    },
+)

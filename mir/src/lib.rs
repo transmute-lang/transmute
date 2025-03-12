@@ -16,9 +16,10 @@ use transmute_hir::{
     ResolvedParameter as HirParameter,
 };
 use transmute_hir::{ResolvedHir as Hir, ResolvedReturn as HirReturn};
-
 // todo:refactoring move to MIR?
 pub use transmute_hir::natives::NativeFnKind;
+// todo:refactoring copy to MIR?
+pub use transmute_hir::statement::Implementation;
 
 pub fn make_mir(hir: Hir) -> Result<Mir, Diagnostics> {
     Mir::try_from(hir)
@@ -52,17 +53,28 @@ impl Transformer {
             let stmt = hir.statements.remove(stmt_id).unwrap();
 
             match stmt.kind {
-                HirStatementKind::LetFn(identifier, parameters, ret_type, expr_id) => self
-                    .transform_function(&mut hir, None, identifier, parameters, ret_type, expr_id),
-                HirStatementKind::Struct(identifier, fields) => {
-                    self.transform_struct(None, stmt_id, identifier, fields)
+                HirStatementKind::LetFn(identifier, _, parameters, ret_type, implementation) => {
+                    self.transform_function(
+                        &mut hir,
+                        None,
+                        identifier,
+                        parameters,
+                        ret_type,
+                        implementation,
+                    )
+                }
+                HirStatementKind::Struct(identifier, _, implementation) => {
+                    self.transform_struct(None, stmt_id, identifier, implementation)
+                }
+                HirStatementKind::Annotation(_) => {
+                    self.statements.remove(stmt_id);
                 }
                 kind => panic!("function or struct expected, got {:?}", kind),
             }
         }
 
-        debug_assert!(hir.expressions.is_empty());
-        debug_assert!(hir.statements.is_empty());
+        debug_assert!(hir.expressions.is_empty(), "{:?}", hir.expressions);
+        debug_assert!(hir.statements.is_empty(), "{:?}", hir.statements);
 
         Ok(Mir {
             functions: self.functions,
@@ -74,7 +86,9 @@ impl Transformer {
                 .symbols
                 .into_iter()
                 .filter_map(|(symbol_id, symbol)| {
-                    if matches!(&symbol.kind, &HirSymbolKind::NotFound) {
+                    if matches!(&symbol.kind, &HirSymbolKind::NotFound)
+                        || matches!(&symbol.kind, &HirSymbolKind::Annotation(_, _))
+                    {
                         return None;
                     }
 
@@ -87,7 +101,9 @@ impl Transformer {
                         HirSymbolKind::Field(ident_id, _, _) => ident_id,
                         HirSymbolKind::NativeType(ident_id, _) => ident_id,
                         HirSymbolKind::Native(ident_id, _, _, _) => ident_id,
+                        HirSymbolKind::Annotation(ident_id, _) => ident_id,
                     };
+
                     Some((
                         symbol_id,
                         Symbol {
@@ -95,7 +111,9 @@ impl Transformer {
                             type_id: symbol.type_id,
                             ident_id: *ident_id,
                             kind: match symbol.kind {
-                                HirSymbolKind::NotFound => unreachable!(),
+                                HirSymbolKind::NotFound | HirSymbolKind::Annotation(_, _) => {
+                                    unreachable!()
+                                }
                                 HirSymbolKind::Let(_, _) => SymbolKind::Let,
                                 HirSymbolKind::LetFn(_, _, params, ret_type_id) => {
                                     SymbolKind::LetFn(params, ret_type_id)
@@ -120,6 +138,7 @@ impl Transformer {
                                         HirType::Struct(_) => todo!(),
                                         HirType::Array(_, _) => todo!(),
                                         HirType::Number => Type::Number,
+                                        HirType::String => Type::String,
                                         HirType::Void => Type::Void,
                                         HirType::None => Type::None,
                                     },
@@ -149,6 +168,7 @@ impl Transformer {
                         Some((type_id, Type::Array(value_type_id, len)))
                     }
                     HirType::Number => Some((type_id, Type::Number)),
+                    HirType::String => Some((type_id, Type::String)),
                     HirType::Void => Some((type_id, Type::Void)),
                     HirType::None => Some((type_id, Type::None)),
                 })
@@ -163,13 +183,32 @@ impl Transformer {
         identifier: HirIdentifier,
         parameters: Vec<HirParameter>,
         ret: HirReturn,
-        expr_id: ExprId,
+        implementation: Implementation<ExprId>,
     ) {
         let function_id = self.functions.create();
 
-        let expression = hir.expressions.remove(expr_id).unwrap();
-        let (mutated_symbol_ids, mut variables) =
-            self.transform_expression(hir, Some(function_id), expression);
+        let (expr_id, mutated_symbol_ids, mut variables) = match implementation {
+            Implementation::Provided(expr_id) => {
+                let expression = hir.expressions.remove(expr_id).unwrap();
+
+                let (mutated_symbol_ids, variables) =
+                    self.transform_expression(hir, Some(function_id), expression);
+
+                (Some(expr_id), mutated_symbol_ids, variables)
+            }
+            #[cfg(debug_assertions)]
+            Implementation::Native(expr_id) => {
+                let expression = hir.expressions.remove(expr_id).unwrap();
+                if let HirExpressionKind::Block(stmt_ids) = expression.kind {
+                    for stmt_id in stmt_ids {
+                        hir.statements.remove(stmt_id);
+                    }
+                }
+                (None, Default::default(), Default::default())
+            }
+            #[cfg(not(debug_assertions))]
+            Implementation::Native => (None, Default::default(), Default::default()),
+        };
 
         let parameters = parameters
             .into_iter()
@@ -205,7 +244,7 @@ impl Transformer {
         parent: Option<FunctionId>,
         stmt_id: StmtId,
         identifier: HirIdentifier,
-        fields: Vec<HirField>,
+        implementation: Implementation<Vec<HirField>>,
     ) {
         let struct_id = self.structs.create();
         let symbol_id = identifier.resolved_symbol_id();
@@ -214,16 +253,21 @@ impl Transformer {
             Struct {
                 identifier: identifier.into(),
                 symbol_id,
-                fields: fields
-                    .into_iter()
-                    .enumerate()
-                    .map(|(index, field)| Field {
-                        index,
-                        symbol_id: field.resolved_symbol_id(),
-                        type_id: field.resolved_type_id(),
-                        identifier: field.identifier.into(),
-                    })
-                    .collect::<Vec<Field>>(),
+                fields: match implementation {
+                    Implementation::Provided(fields) => Some(
+                        fields
+                            .into_iter()
+                            .enumerate()
+                            .map(|(index, field)| Field {
+                                index,
+                                symbol_id: field.resolved_symbol_id(),
+                                type_id: field.resolved_type_id(),
+                                identifier: field.identifier.into(),
+                            })
+                            .collect::<Vec<Field>>(),
+                    ),
+                    _ => None,
+                },
                 parent,
             },
         );
@@ -369,6 +413,18 @@ impl Transformer {
                     id: expr_id,
                     kind: ExpressionKind::Literal(Literal {
                         kind: LiteralKind::Number(n),
+                        span: literal.span,
+                    }),
+                    span,
+                    type_id,
+                },
+            ),
+            HirLiteralKind::String(n) => self.expressions.insert(
+                expr_id,
+                Expression {
+                    id: expr_id,
+                    kind: ExpressionKind::Literal(Literal {
+                        kind: LiteralKind::String(n),
                         span: literal.span,
                     }),
                     span,
@@ -614,11 +670,14 @@ impl Transformer {
                     ));
                     kept_stmt_ids.push(stmt.id)
                 }
-                HirStatementKind::LetFn(identifier, parameters, ret_type, expr_id) => {
+                HirStatementKind::LetFn(identifier, _, parameters, ret_type, expr_id) => {
                     self.transform_function(hir, parent, identifier, parameters, ret_type, expr_id);
                 }
-                HirStatementKind::Struct(identifier, fields) => {
+                HirStatementKind::Struct(identifier, _, fields) => {
                     self.transform_struct(parent, stmt_id, identifier, fields)
+                }
+                HirStatementKind::Annotation(_) => {
+                    // nothing
                 }
             }
         }
@@ -901,7 +960,7 @@ pub struct Function {
     pub symbol_id: SymbolId,
     pub parameters: Vec<Parameter>,
     pub variables: BTreeMap<SymbolId, Variable>,
-    pub body: ExprId,
+    pub body: Option<ExprId>,
     pub ret: TypeId,
     pub parent: Option<FunctionId>,
 }
@@ -942,7 +1001,7 @@ pub struct Variable {
 pub struct Struct {
     pub identifier: Identifier,
     pub symbol_id: SymbolId,
-    pub fields: Vec<Field>,
+    pub fields: Option<Vec<Field>>,
     pub parent: Option<FunctionId>,
 }
 
@@ -1004,6 +1063,7 @@ pub enum LiteralKind {
     Boolean(bool),
     Identifier(SymbolId),
     Number(i64),
+    String(String),
 }
 
 #[derive(Debug)]
@@ -1030,6 +1090,7 @@ pub enum StatementKind {
 pub enum Type {
     Boolean,
     Number,
+    String,
 
     Function(Vec<TypeId>, TypeId),
 
@@ -1103,6 +1164,20 @@ mod tests {
     #[test]
     fn test_function_local2() {
         let ast = transmute_ast::parse("let f() { let a = 0; let b = 1 ; }").unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_function_native() {
+        let ast = transmute_ast::parse("annotation native; @native let f() { }").unwrap();
+        let hir = transmute_hir::resolve(ast).unwrap();
+        assert_debug_snapshot!(make_mir(hir));
+    }
+
+    #[test]
+    fn test_struct_native() {
+        let ast = transmute_ast::parse("annotation native; @native struct S { }").unwrap();
         let hir = transmute_hir::resolve(ast).unwrap();
         assert_debug_snapshot!(make_mir(hir));
     }

@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser :: new(Lexer :: new(\"let f() { @a1 if true {} }\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Annotations not supported on expressions",
+                span: 1:11; [10, 13],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    402,
+                ),
+            },
+        ],
+    },
+)

@@ -1,6 +1,7 @@
 use crate::bound::{Bound, BoundState, Unbound};
 use crate::identifier::Identifier;
 use crate::typed::{Typed, TypedState, Untyped};
+use transmute_ast::annotation::Annotation as AstAnnotation;
 use transmute_ast::statement::Field as AstField;
 use transmute_ast::statement::Parameter as AstParameter;
 use transmute_ast::statement::RetMode as AstRetMode;
@@ -46,24 +47,37 @@ impl From<AstStatement> for Statement<Untyped, Unbound> {
                 AstStatementKind::Ret(expr_id, ret_mode) => {
                     StatementKind::Ret(expr_id, RetMode::from(ret_mode))
                 }
-                AstStatementKind::LetFn(identifier, params, ret_type, expr_id) => {
+                AstStatementKind::LetFn(identifier, annotations, params, ret_type, expr_id) => {
                     StatementKind::LetFn(
                         Identifier::from(identifier),
+                        annotations
+                            .into_iter()
+                            .map(Annotation::from)
+                            .collect::<Vec<Annotation>>(),
                         params
                             .into_iter()
                             .map(Parameter::from)
                             .collect::<Vec<Parameter<Untyped, Unbound>>>(),
                         Return::from(ret_type),
-                        expr_id,
+                        Implementation::Provided(expr_id),
                     )
                 }
-                AstStatementKind::Struct(identifier, fields) => StatementKind::Struct(
+                AstStatementKind::Struct(identifier, annotations, fields) => StatementKind::Struct(
                     Identifier::from(identifier),
-                    fields
+                    annotations
                         .into_iter()
-                        .map(Field::from)
-                        .collect::<Vec<Field<Untyped, Unbound>>>(),
+                        .map(Annotation::from)
+                        .collect::<Vec<Annotation>>(),
+                    Implementation::Provided(
+                        fields
+                            .into_iter()
+                            .map(Field::from)
+                            .collect::<Vec<Field<Untyped, Unbound>>>(),
+                    ),
                 ),
+                AstStatementKind::Annotation(identifier) => {
+                    StatementKind::Annotation(Identifier::from(identifier))
+                }
             },
         }
     }
@@ -78,8 +92,19 @@ where
     Expression(ExprId),
     Let(Identifier<B>, ExprId),
     Ret(Option<ExprId>, RetMode),
-    LetFn(Identifier<B>, Vec<Parameter<T, B>>, Return<T>, ExprId),
-    Struct(Identifier<B>, Vec<Field<T, B>>),
+    LetFn(
+        Identifier<B>,
+        Vec<Annotation>,
+        Vec<Parameter<T, B>>,
+        Return<T>,
+        Implementation<ExprId>,
+    ),
+    Struct(
+        Identifier<B>,
+        Vec<Annotation>,
+        Implementation<Vec<Field<T, B>>>,
+    ),
+    Annotation(Identifier<B>),
 }
 
 // todo:refactoring: does not really make sense in HIR
@@ -107,6 +132,18 @@ impl From<AstRetMode> for RetMode {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Implementation<T> {
+    /// Denotes an implementation that is provided as transmute source code
+    Provided(T),
+    #[cfg(not(debug_assertions))]
+    /// Denotes an implementation that is provided through FFI
+    Native,
+    #[cfg(debug_assertions)]
+    /// Denotes an implementation that is provided through FFI
+    Native(T),
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeDef {
     pub kind: TypeDefKind,
@@ -118,15 +155,6 @@ pub enum TypeDefKind {
     Simple(IdentRefId),
     Array(TypeDefId, usize),
 }
-
-// impl TypeDef {
-//     pub fn identifier_ref_id(&self) -> IdentRefId {
-//         match self.kind {
-//             TypeDefKind::Simple(ident_ref_id) => ident_ref_id,
-//             TypeDefKind::Array(type_def_id, _) => ident_ref_id,
-//         }
-//     }
-// }
 
 impl From<AstTypeDef> for TypeDef {
     fn from(value: AstTypeDef) -> Self {
@@ -140,6 +168,21 @@ impl From<AstTypeDef> for TypeDef {
                 span: value.span,
             },
             AstTypeDefKind::Dummy => panic!("Cannot convert AstType::Dummy"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Annotation {
+    pub ident_ref_id: IdentRefId,
+    pub span: Span,
+}
+
+impl From<AstAnnotation> for Annotation {
+    fn from(value: AstAnnotation) -> Self {
+        Annotation {
+            ident_ref_id: value.ident_ref_id,
+            span: value.span,
         }
     }
 }

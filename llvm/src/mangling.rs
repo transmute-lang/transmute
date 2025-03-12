@@ -72,6 +72,7 @@ fn mangle_type(mir: &Mir, t: &Type) -> Cow<'static, str> {
     match t {
         Type::Boolean => Cow::Borrowed("b"),
         Type::Number => Cow::Borrowed("n"),
+        Type::String => Cow::Borrowed("s"),
         Type::Function(_, _) => todo!(),
         Type::Struct(symbol_id, struct_id) => {
             Cow::Owned(mangle_struct_name(mir, *struct_id, *symbol_id))

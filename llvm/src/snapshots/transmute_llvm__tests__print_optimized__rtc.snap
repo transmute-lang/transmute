@@ -16,18 +16,18 @@ declare void @gc_run()
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
-declare void @_TM0_5print1n(i64)
-
-declare void @_TM0_5print1b(i1)
+declare ptr @tmc_stdlib_string_new(ptr, i64)
 
 define private void @_glob() {
 entry:
   unreachable
 }
 
-define void @_TM0_1a1n(i64 %"n#param#sym20#") gc "shadow-stack" {
+declare void @_TM0_5print1n(i64)
+
+define void @_TM0_1a1n(i64 %"n#param#sym22#") gc "shadow-stack" {
 entry:
-  call void @_TM0_5print1n(i64 %"n#param#sym20#")
+  call void @_TM0_5print1n(i64 %"n#param#sym22#")
   ret void
 }
 

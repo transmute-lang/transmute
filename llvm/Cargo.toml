@@ -4,9 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-transmute-core = {path = "../core" }
-transmute-mir = {path = "../mir" }
+transmute-core = { path = "../core" }
+transmute-mir = { path = "../mir" }
 inkwell = { version = "0.5.0", features = ["llvm18-0"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+zstd = "0.13.3"
 
 [dev-dependencies]
 transmute-ast = {path = "../ast" }
@@ -21,8 +24,3 @@ default = []
 gc-aggressive = []
 # Provides gc related functions to transmute source code
 gc-functions = ["transmute-hir/gc-functions"]
-
-# Compile with rt/c
-rt-c = []
-# Compile with runtime
-runtime = []

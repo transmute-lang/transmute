@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use transmute_ast::parse;
 use transmute_hir::resolve;
 use transmute_llvm::LlvmIrGen;
@@ -9,6 +9,7 @@ use transmute_mir::make_mir;
 pub struct Options {
     output_format: OutputFormat,
     optimize: bool,
+    stdlib_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Default)]
@@ -27,6 +28,10 @@ impl Options {
     pub fn set_optimize(&mut self, optimize: bool) {
         self.optimize = optimize;
     }
+
+    pub fn set_stdlib_path(&mut self, stdlib_path: PathBuf) {
+        self.stdlib_path = Some(stdlib_path);
+    }
 }
 
 pub fn compile_file<S: AsRef<Path>, D: AsRef<Path>>(
@@ -34,10 +39,38 @@ pub fn compile_file<S: AsRef<Path>, D: AsRef<Path>>(
     dst: &D,
     options: &Options,
 ) -> Result<(), String> {
-    let file_content = fs::read_to_string(src)
-        .map_err(|e| format!("Could not read {}: {}", src.as_ref().display(), e))?;
+    let source = if let Some(stdlib_path) = options.stdlib_path.as_ref() {
+        // println!("Reading {}", src.as_ref().display());
+        let mut source = fs::read_to_string(src)
+            .map_err(|e| format!("Could not read {}: {}", src.as_ref().display(), e))?;
 
-    compile_str(&file_content, dst, options)
+        let stdlib_src = stdlib_path.join("src");
+        for entry in fs::read_dir(&stdlib_src).unwrap() {
+            let file = entry
+                .expect("dir entry exists")
+                .file_name()
+                .to_str()
+                .unwrap()
+                .to_string();
+
+            let src = stdlib_src.join(&file);
+            if !src.extension().unwrap().eq("tm") {
+                continue;
+            }
+
+            // println!("Reading {}", src.display());
+            let src = fs::read_to_string(&src)
+                .map_err(|e| format!("Could not read {}: {}", src.display(), e))?;
+            source.push_str(&src);
+        }
+        source
+    } else {
+        // println!("Reading {}", src.display());
+        fs::read_to_string(src)
+            .map_err(|e| format!("Could not read {}: {}", src.as_ref().display(), e))?
+    };
+
+    compile_str(&source, dst, options)
 }
 
 pub fn compile_str<S: AsRef<str>, D: AsRef<Path>>(
@@ -56,14 +89,12 @@ pub fn compile_str<S: AsRef<str>, D: AsRef<Path>>(
 
     match options.output_format {
         OutputFormat::Object => {
-            #[cfg(feature = "rt-c")]
-            let runtime = transmute_crt::get_crt();
-
-            #[cfg(feature = "runtime")]
-            let runtime = transmute_runtime::get_runtime();
-
             llvm_ir
-                .build_bin(runtime, dst.as_ref())
+                .build_bin(
+                    transmute_runtime::get_runtime(),
+                    dst.as_ref(),
+                    options.stdlib_path.as_ref().map(|p| p.as_path()),
+                )
                 .map_err(|d| d.to_string())?;
         }
         OutputFormat::LlvmIr => {

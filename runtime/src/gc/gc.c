@@ -1,7 +1,9 @@
 // defines:
 //  - GC_TEST:            compile with test mode support
 //  - GC_LOGS:            compile with logs support
-//  - GC_STABLE_LOGS:     compile with stable logs support
+//  - GC_LOGS_STABLE:     compile with stable logs support
+//  - GC_LOGS_COLOR:      compile with colored logs support
+//  - GC_PTHREAD          compile with multi-threading support using pthread
 //
 // standard env. variables
 //  - GC_ENABLE:          if set to 0, GC is not executed
@@ -15,9 +17,9 @@
 //  - GC_TEST_DUMP:       if set to 1, a memory dump is printed to stdout at the end of program execution
 //  - GC_TEST_DUMP_COLOR: if set to 1, the memory dump is colored (implied GC_TEST_DUMP=1)
 //  - GC_TEST_FINAL_RUN:  if set to 0, the GC is not run during the teardown phase
-//  - GC_PRINT_STATS:     has no effect, stats are displayed anyway at the end of execution
 
 #include <assert.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -51,10 +53,30 @@ do {                                                                            
      exit(1);                                                         \
  } while (0)
 
+#define COLOR_WHITE 0
+#define COLOR_GREEN 32
+#define COLOR_RED   31
+#define COLOR_BLUE  34
+
+#ifdef GC_LOGS_COLOR
+    #define COLOR_START_WHITE "\033[0m"
+    #define COLOR_START_GREEN "\033[32m"
+    #define COLOR_START_RED "\033[31m"
+    #define COLOR_START_BLUE "\033[34m"
+    #define COLOR_END "\033[0m"
+#else // GC_LOGS_COLOR
+    #define COLOR_START_WHITE ""
+    #define COLOR_START_GREEN ""
+    #define COLOR_START_RED ""
+    #define COLOR_START_BLUE ""
+    #define COLOR_END ""
+#endif // GC_LOGS_COLOR
+
 #ifdef GC_TEST
 #include <sys/mman.h>
 #include <errno.h>
 
+// if in GC_TEST we define GC_LOGS
 #ifndef GC_LOGS
 #define GC_LOGS
 #endif // ifndef GC_LOGS
@@ -80,6 +102,13 @@ do {                                                                            
 #else
 #define LOG(level, ...)
 #endif
+
+#ifdef __APPLE__
+// we pretend that we mmap'ed at the correct location...
+#define POOL_OFFSET(ptr)     ((void*)((uintptr_t)ptr - (uintptr_t)gc.pool + POOL_START))
+#else
+#define POOL_OFFSET(ptr)     ((void*)ptr)
+#endif // __APPLE__
 
 typedef enum GcBlockState {
     Unreachable = 0,
@@ -117,7 +146,11 @@ typedef struct GcBlock {         // 32 or 48 bytes
 #define GC_OBJECT(block)      ((void *)((uintptr_t)block + GC_BLOCK_SIZE))
 
 typedef struct Gc {
-    int enable;
+#ifdef GC_PTHREAD
+    pthread_mutex_t lock;
+#endif // GC_PTHREAD
+    bool initialized;
+    bool enable;
     GcBlock *blocks_chain;
 
     int execution_count;
@@ -151,8 +184,16 @@ typedef struct Gc {
 #endif // GC_TEST
 } Gc;
 
+#ifdef GC_PTHREAD
+static pthread_mutex_t gc_init_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif // GC_PTHREAD
+
 Gc gc = {
-    .enable = 1,
+#ifdef GC_PTHREAD
+    .lock = { 0 },
+#endif // GC_PTHREAD
+    .initialized = false,
+    .enable = true,
     .blocks_chain = NULL,
 
     .execution_count = 0,
@@ -189,11 +230,11 @@ Gc gc = {
 #ifdef GC_LOGS
 static inline void gc_log(int level, const char* func, int line, const char *fmt, ...) {
     if (gc.log_level >= level) {
-#ifdef GC_STABLE_LOGS
+#ifdef GC_LOGS_STABLE
         printf("[%i] %-22s | ", level, func);
 #else
         printf("[%i] %-22s %i | ", level, func, line);
-#endif // GC_STABLE_LOGS
+#endif // GC_LOGS_STABLE
         va_list args;
         va_start(args, fmt);
         vprintf(fmt, args);
@@ -203,11 +244,6 @@ static inline void gc_log(int level, const char* func, int line, const char *fmt
 #endif // GC_LOGS
 
 #ifdef GC_TEST
-#define COLOR_WHITE 0
-#define COLOR_GREEN 32
-#define COLOR_RED   31
-#define COLOR_BLUE  34
-
 static inline void print_byte(uint8_t byte, bool print_char, int color) {
     if (print_char) {
         if (byte > 31 && byte < 127) {
@@ -228,7 +264,7 @@ static inline bool inside_block(uintptr_t addr, GcBlock *block) {
     return after_block_begin && before_block_end;
 }
 
-void gc_pool_dump() {
+void gc_pool_dump(void) {
     printf("\nMemory dump:\n\n");
 
     printf("  \033[%imboundary\033[0m \033[%imused\033[0m \033[%imfreed\033[0m \033[%imleft\033[0m\n\n",
@@ -298,7 +334,7 @@ void gc_set_object_name(void *object, char *name) {
 }
 #endif // GC_TEST
 
-void gc_print_statistics() {
+void gc_print_statistics(void) {
     printf("\nStatistics:\n\n");
     printf("  Executions ......%4i\n", gc.execution_count);
     printf("  Allocated .......%4i blocks\n", gc.alloc_count);
@@ -318,20 +354,39 @@ void gc_print_statistics() {
     printf("\n");
 }
 
-void gc_init() {
-//    GcBlock *b = NULL;
-//    printf("(void*)b->data = %p\n", (void*)b->data);
-//    printf("GC_OBJECT(b) = %p\n", GC_OBJECT(b));
-//    exit(1);
-//    printf("GC_BLOCK_SIZE=%lu\n", GC_BLOCK_SIZE);
-//    printf("sizeof(GcBlock)=%lu\n", sizeof(GcBlock));
-//    exit(1);
+void gc_init(void) {
+    if (gc.initialized) {
+        LOG(3, "already initialized\n");
+        return;
+    }
     assert(GC_BLOCK_SIZE % 16 == 0);
-//    assert(sizeof(GcBlock) % 16 == 0);
+
+#ifdef GC_PTHREAD
+    if (pthread_mutex_trylock(&gc_init_mutex) != 0) {
+        LOG(3, "being initialized\n");
+        return;
+    }
+
+    pthread_mutexattr_t mutex_attr;
+    if (pthread_mutexattr_init(&mutex_attr) != 0) {
+        PANIC("Could not initialize mutex attributes");
+    }
+    if (pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_RECURSIVE) != 0) {
+        PANIC("Could not initialize mutex kind");
+    }
+    if (pthread_mutex_init(&gc.lock, &mutex_attr) != 0) {
+        PANIC("Could not initialize mutex");
+    }
+    if (pthread_mutexattr_destroy(&mutex_attr) != 0) {
+#ifdef GC_TEST
+        PANIC("Could not destroy mutex attributes");
+#endif // GC_TEST
+    }
+#endif // GC_PTHREAD
 
     char *gc_enable_env = getenv("GC_ENABLE");
     if (gc_enable_env && strcmp(gc_enable_env, "0") == 0) {
-        gc.enable = 0;
+        gc.enable = false;
     }
 
 #ifdef GC_LOGS
@@ -368,15 +423,37 @@ LOG(1,  "Initialize GC with log level: %i\n", gc.log_level);
         (void *)POOL_START,
         gc.pool_size + 2 * BOUNDARY_SIZE,
         PROT_READ | PROT_WRITE,
+#ifdef __APPLE__
+        MAP_PRIVATE | MAP_ANONYMOUS,
+#else
         MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS,
+#endif // errno
         -1,
         0
     );
+
+#ifdef __APPLE__
+    if (errno == 0) {
+        LOG(2, "Allocate test GC memory pool (%li bytes): mmap returned %p (Success)\n",
+            gc.pool_size + 2 * BOUNDARY_SIZE,
+            POOL_OFFSET(gc.pool)
+        );
+    }
+    else {
+        LOG(2, "Allocate test GC memory pool (%li bytes): mmap returned %p (%s)\n",
+            gc.pool_size + 2 * BOUNDARY_SIZE,
+            POOL_OFFSET(gc.pool),
+            strerror(errno)
+        );
+    }
+#else
     LOG(2, "Allocate test GC memory pool (%li bytes): mmap returned %p (%s)\n",
         gc.pool_size + 2 * BOUNDARY_SIZE,
-        gc.pool,
+        POOL_OFFSET(gc.pool),
         strerror(errno)
     );
+#endif
+
     assert(errno == 0);
 
     LOG(3,  "memset %#02x at %p for %i bytes\n", FREE, gc.pool, gc.pool_size);
@@ -390,9 +467,17 @@ LOG(1,  "Initialize GC with log level: %i\n", gc.log_level);
         gc_pool_dump();
     }
 #endif // GC_TEST
+
+    gc.initialized = true;
+
+#ifdef GC_PTHREAD
+    if (pthread_mutex_unlock(&gc_init_mutex) != 0) {
+        PANIC("Cannot unlock mutex");
+    }
+#endif // GC_PTHREAD
 }
 
-void gc_teardown() {
+void gc_teardown(void) {
     LOG(2, "GC Teardown\n");
 
 #ifdef GC_TEST
@@ -405,21 +490,27 @@ void gc_teardown() {
     if (gc.test_dump) {
         gc_pool_dump();
     }
-    gc_print_statistics();
+
     assert(munmap((void *)gc.pool, gc.pool_size + 2 * BOUNDARY_SIZE) == 0);
-#else // GC_TEST
+#endif // GC_TEST
+
     char *gc_print_stats_env = getenv("GC_PRINT_STATS");
     if (gc_print_stats_env && strcmp(gc_print_stats_env, "1") == 0) {
         gc_print_statistics();
     }
-#endif // GC_TEST
 }
 
 static inline void gc_free(GcBlock *block) {
     void *object = GC_OBJECT(block);
 
     if (block->callbacks && block->callbacks->free) {
-        LOG(2, "    %p: recursive free(object at %p) @ %p\n", (void *)block, object, block->callbacks->free);
+#ifdef GC_LOGS_STABLE
+        LOG(2, "    "COLOR_START_BLUE"%p"COLOR_END": recursive free(object at "COLOR_START_BLUE"%p"COLOR_END")\n",
+            POOL_OFFSET(block), POOL_OFFSET(object));
+#else // GC_LOGS_STABLE
+        LOG(2, "    "COLOR_START_BLUE"%p"COLOR_END": recursive free(object at "COLOR_START_BLUE"%p"COLOR_END") @ %p\n",
+            POOL_OFFSET(block), POOL_OFFSET(object), block->callbacks->free);
+#endif
         block->callbacks->free(object);
     }
 
@@ -434,25 +525,37 @@ static inline void gc_free(GcBlock *block) {
         block->next = gc.freed_blocks_chain;
         gc.freed_blocks_chain = block;
     }
-    else {
-        LOG(3,  "      memset %#02x at %p for %li bytes\n", FREED, block, GC_BLOCK_SIZE + block->data_size);
-        memset((void *)block, FREED, GC_BLOCK_SIZE + block->data_size);
-    }
+
+    LOG(3,  "      memset %#02x at %p for %li bytes\n", FREED, block, GC_BLOCK_SIZE + block->data_size);
+    memset(GC_OBJECT(block), FREED, block->data_size);
 #else // GC_TEST
     free(block);
 #endif // GC_TEST
 }
 
-void gc_run() {
+void gc_run(void) {
     if (!gc.enable) {
         return;
     }
+
+#ifdef GC_PTHREAD
+    if (pthread_mutex_lock(&gc.lock) != 0) {
+        PANIC("Cannot lock mutex");
+    }
+    LOG(3, "lock acquired\n");
+#endif // GC_PTHREAD
 
     gc.execution_count++;
 
     LOG(2, "Start GC [%i]\n", gc.execution_count);
     if (gc.blocks_chain == NULL) {
         LOG(2, "no allocated blocks\n");
+#ifdef GC_PTHREAD
+        if (pthread_mutex_unlock(&gc.lock) != 0) {
+            PANIC("Cannot unlock mutex");
+        }
+        LOG(3, "lock released\n");
+#endif // GC_PTHREAD
         return;
     }
 
@@ -463,19 +566,31 @@ void gc_run() {
             block->state = Unreachable;
         }
 #ifdef GC_LOGS
-        gc_log(2, "gc_run", __LINE__, "  block at %p (object at %p: '%s'): %s\n",
-            block,
-            GC_OBJECT(block),
+#ifdef GC_TEST
+        gc_log(2, "gc_run", __LINE__, "  block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s'): %s\n",
+            POOL_OFFSET(block),
+            POOL_OFFSET(GC_OBJECT(block)),
             block->name,
             state_to_char(block->state)
         );
-#endif
+#else // GC_TEST
+        gc_log(2, "gc_run", __LINE__, "  block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END"): %s\n",
+            POOL_OFFSET(block),
+            POOL_OFFSET(GC_OBJECT(block)),
+            state_to_char(block->state)
+        );
+#endif // GC_TEST
+#endif // GC_LOGS
         block = block->next;
     }
 
     LOG(2, "Phase: mark\n");
     LlvmStackFrame *frame = llvm_gc_root_chain;
+#ifdef GC_LOGS
     for (int frame_idx = 0; frame; frame_idx++) {
+#else
+    while (frame) {
+#endif // GC_LOGS
         LOG(2, "  frame %i (%i roots):\n", frame_idx, frame->map->num_roots);
 
         for (int32_t root_idx = 0; root_idx < frame->map->num_roots; root_idx++) {
@@ -491,7 +606,9 @@ void gc_run() {
         frame = frame->next;
     }
 
+#ifdef GC_LOGS
     int run_count = 0;
+#endif // GC_LOGS
     while (true) {
         LOG(2, "Phase: sweep (%i)\n", run_count);
         int freed = 0;
@@ -508,9 +625,11 @@ void gc_run() {
                 }
                 GcBlock *next = block->next;
 #ifdef GC_TEST
-                LOG(1,  "  freeing block at %p (object at %p, size: %li: '%s')\n", block, GC_OBJECT(block), block->data_size, block->name);
+                LOG(1,  "  freeing block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END", size: %li: '%s')\n",
+                    POOL_OFFSET(block), POOL_OFFSET(GC_OBJECT(block)), block->data_size, block->name);
 #else
-                LOG(1,  "  freeing block at %p (object at %p, size: %li)\n", block, GC_OBJECT(block), block->data_size);
+                LOG(1,  "  freeing block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END", size: %li)\n",
+                    POOL_OFFSET(block), POOL_OFFSET(GC_OBJECT(block)), block->data_size);
 #endif
                 gc_free(block);
                 block = next;
@@ -518,11 +637,20 @@ void gc_run() {
             }
             else {
 #ifdef GC_TEST
-                LOG(1,  "  keeping block at %p (object at %p, size: %li: '%s'): %s\n",
-                    block, GC_OBJECT(block), block->data_size, block->name, state_to_char(block->state));
+                LOG(1,  "  keeping block "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END", size: %li: '%s'): %s\n",
+                    POOL_OFFSET(block),
+                    POOL_OFFSET(GC_OBJECT(block)),
+                    block->data_size,
+                    block->name,
+                    state_to_char(block->state)
+                );
 #else // GC_TEST
-                LOG(1,  "  keeping block at %p (object at %p, size: %li): %s\n",
-                    block, GC_OBJECT(block), block->data_size, state_to_char(block->state));
+                LOG(1,  "  keeping block "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END", size: %li): %s\n",
+                    POOL_OFFSET(block),
+                    POOL_OFFSET(GC_OBJECT(block)),
+                    block->data_size,
+                    state_to_char(block->state)
+                );
 #endif // GC_TEST
                 prev = block;
                 block = block->next;
@@ -532,8 +660,17 @@ void gc_run() {
             break;
         }
         freed = 0;
+#ifdef GC_LOGS
         run_count++;
+#endif // GC_LOGS
     }
+
+#ifdef GC_PTHREAD
+    if (pthread_mutex_unlock(&gc.lock) != 0) {
+        PANIC("Cannot unlock mutex");
+    }
+    LOG(3, "lock released\n");
+#endif // GC_PTHREAD
 }
 
 void gc_mark(void *object) {
@@ -547,24 +684,18 @@ void gc_mark(void *object) {
         }
         current_block = current_block->next;
     }
-    PANIC_ARGS("unmanaged block %p (object at %p)", (void *)block, object);
+    PANIC_ARGS("unmanaged block "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END")",
+        POOL_OFFSET(block), POOL_OFFSET(object));
     found:
 #endif // GC_TEST
 
 #ifdef GC_LOGS
 #ifdef GC_TEST
-    LOG(2, "      mark %s block at %p (object at %p: '%s')\n",
-        state_to_char(block->state),
-        block,
-        object,
-        block->name
-    );
+    LOG(2, "      mark %s block "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s')\n",
+        state_to_char(block->state), POOL_OFFSET(block), POOL_OFFSET(object), block->name);
 #else // GC_TEST
-    LOG(2, "      mark %s block at %p (object at %p)\n",
-        state_to_char(block->state),
-        block,
-        object
-    );
+    LOG(2, "      mark %s block "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END")\n",
+        state_to_char(block->state), POOL_OFFSET(block), POOL_OFFSET(object));
 #endif // GC_TEST
 #endif // GC_LOGS
 
@@ -575,27 +706,32 @@ void gc_mark(void *object) {
 
     if (block->callbacks && block->callbacks->mark) {
 #ifdef GC_TEST
-        LOG(2, "        %p: recursive mark(object at %p: '%s')\n",
-            (void *)block,
-            object,
-            block->name
-        );
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark(object at "COLOR_START_GREEN"%p"COLOR_END": '%s')\n",
+            POOL_OFFSET(block), POOL_OFFSET(object), block->name);
 #else // GC_TEST
-        LOG(2, "        %p: recursive mark(object at %p)\n",
-            (void *)block,
-            object
-        );
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark(object at "COLOR_START_GREEN"%p"COLOR_END")\n",
+            POOL_OFFSET(block), POOL_OFFSET(object));
 #endif // GC_TEST
         block->callbacks->mark(object);
     }
 #ifdef GC_LOGS
     else {
-        LOG(2, "        %p: skip recursive mark(object at %p): no mark callback\n", (void *)block, object);
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": skip recursive mark(object at "COLOR_START_GREEN"%p"COLOR_END"): no mark callback\n",
+            POOL_OFFSET(block), POOL_OFFSET(object));
     }
 #endif // GC_LOGS
 }
 
 void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
+    assert(gc.initialized);
+
+#ifdef GC_PTHREAD
+    if (pthread_mutex_lock(&gc.lock) != 0) {
+        PANIC("Cannot lock mutex");
+    }
+    LOG(3, "lock acquired\n");
+#endif // GC_PTHREAD
+
     LOG(2, "alloc %li bytes, align %li\n", data_size, align);
     gc_run();
 
@@ -647,13 +783,20 @@ void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
         gc.max_object_alloc_sz = gc.current_object_alloc_sz;
     }
 
-    LOG(1,  "allocated block of size %li at %p, returning object of size %li at %p(+%li)\n",
+    LOG(1,  "allocated block of size %li at "COLOR_START_BLUE"%p"COLOR_END", returning object of size %li at "COLOR_START_BLUE"%p"COLOR_END"(+%li)\n",
         alloc_size,
-        block,
+        POOL_OFFSET(block),
         data_size,
-        object,
+        POOL_OFFSET(object),
         (uint8_t *)object - (uint8_t *)block
     );
+
+#ifdef GC_PTHREAD
+    if (pthread_mutex_unlock(&gc.lock) != 0) {
+        PANIC("Cannot unlock mutex");
+    }
+    LOG(3, "lock released\n");
+#endif // GC_PTHREAD
 
     return object;
 }
@@ -661,9 +804,11 @@ void* gc_malloc(size_t data_size, size_t align, GcCallbacks *callbacks) {
 void gc_take_ownership(void *object) {
     GcBlock *block = GC_BLOCK(object);
 #ifdef GC_TEST
-    LOG(2, "mark block at %p (object at %p: '%s') as owned\n", block, object, block->name);
+    LOG(2, "mark block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') as owned\n",
+        POOL_OFFSET(block), POOL_OFFSET(object), block->name );
 #else
-    LOG(2, "mark block at %p (object at %p) as owned\n", block, object);
+    LOG(2, "mark block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END") as owned\n",
+        POOL_OFFSET(block), POOL_OFFSET(object));
 #endif // GC_TEST
     block->state = Owned;
 }
@@ -672,9 +817,21 @@ void gc_set_callbacks(void *object, GcCallbacks *callbacks) {
     GcBlock *block = GC_BLOCK(object);
 
 #ifdef GC_TEST
-    LOG(2, "set callback of block at %p (object at %p: '%s') to %p\n", block, object, block->name, callbacks);
+#ifdef GC_LOGS_STABLE
+    LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s')\n",
+        POOL_OFFSET(block), POOL_OFFSET(object), block->name);
+#else // GC_LOGS_STABLE
+    LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') to %p\n",
+        POOL_OFFSET(block), POOL_OFFSET(object), block->name, callbacks);
+#endif // GC_LOGS_STABLE
 #else // GC_TEST
-    LOG(2, "set callback of block at %p (object at %p) to %p\n", block, object, callbacks);
+#ifdef GC_LOGS_STABLE
+    LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END")\n",
+        POOL_OFFSET(block), POOL_OFFSET(object));
+#else // GC_LOGS_STABLE
+    LOG(2, "set callback of block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END") to %p\n",
+        POOL_OFFSET(block), POOL_OFFSET(object), callbacks);
+#endif // GC_LOGS_STABLE
 #endif // GC_TEST
 
     assert(callbacks != NULL);
@@ -682,13 +839,15 @@ void gc_set_callbacks(void *object, GcCallbacks *callbacks) {
     block->callbacks = callbacks;
 }
 
-void gc_release_ownership(void *object, GcCallbacks *callbacks) {
+void gc_release_ownership(void *object) {
     GcBlock *block = GC_BLOCK(object);
 
 #ifdef GC_TEST
-    LOG(2, "mark block at %p (object at %p: '%s') as unreachable\n", block, object, block->name);
+    LOG(2, "mark block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') as unreachable\n",
+        POOL_OFFSET(block), POOL_OFFSET(object), block->name);
 #else // GC_TEST
-    LOG(2, "mark block at %p (object at %p) as unreachable\n", block, object);
+    LOG(2, "mark block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END") as unreachable\n",
+        POOL_OFFSET(block), POOL_OFFSET(object) );
 #endif // GC_TEST
 
     block->state = Unreachable;
@@ -698,57 +857,44 @@ void gc_mark_managed(void *object) {
     GcBlock *block = GC_BLOCK(object);
 
 #ifdef GC_TEST
-    LOG(2, "      mark %s block at %p (object at %p: '%s') as reachable\n",
-        state_to_char(block->state),
-        block,
-        object,
-        block->name
-    );
+    LOG(2, "      mark %s block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') as reachable\n",
+        state_to_char(block->state), POOL_OFFSET(block), POOL_OFFSET(object), block->name);
 #else // GC_TEST
-    LOG(2, "      mark %s block at %p (object at %p) as reachable\n",
-        state_to_char(block->state),
-        block,
-        object
-    );
+    LOG(2, "      mark %s block at "COLOR_START_BLUE"%p"COLOR_END" (object at "COLOR_START_GREEN"%p"COLOR_END") as reachable\n",
+        state_to_char(block->state), POOL_OFFSET(block), POOL_OFFSET(object));
 #endif // GC_TEST
 
     block->state = Reachable;
 
     if (block->callbacks && block->callbacks->mark) {
 #if GC_TEST
-        LOG(2, "        %p: recursive mark(object at %p: '%s') @ %p\n",
-            (void *)block,
-            object,
-            block->name,
-            block->callbacks->mark
-        );
+#ifdef GC_LOGS_STABLE
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END": '%s')\n",
+            POOL_OFFSET(block), POOL_OFFSET(object), block->name);
+#else // GC_LOGS_STABLE
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END": '%s') @ %p\n",
+            POOL_OFFSET(block), POOL_OFFSET(object), block->name, block->callbacks->mark);
+#endif // GC_LOGS_STABLE
 #else // GC_TEST
-        LOG(2, "        %p: recursive mark(object at %p) @ %p\n",
-            (void *)block,
-            object,
-            block->callbacks->mark
-        );
+#ifdef GC_LOGS_STABLE
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END")\n",
+            POOL_OFFSET(block), POOL_OFFSET(object));
+#else // GC_LOGS_STABLE
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END") @ %p\n",
+            POOL_OFFSET(block), POOL_OFFSET(object), block->callbacks->mark);
+#endif // GC_LOGS_STABLE
 #endif // GC_TEST
         block->callbacks->mark(object);
     }
 #ifdef GC_LOGS
     else {
 #if GC_TEST
-        LOG(2, "        %p: skip recursive mark(object at %p: '%s'): no mark callback\n",
-            (void *)block,
-            object,
-            block->name
-        );
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": skip recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END": '%s'): no mark callback\n",
+            POOL_OFFSET(block), POOL_OFFSET(object), block->name);
 #else // GC_TEST
-        LOG(2, "        %p: skip recursive mark(object at %p): no mark callback\n",
-            (void *)block,
-            object
-        );
+        LOG(2, "        "COLOR_START_BLUE"%p"COLOR_END": skip recursive mark (object at "COLOR_START_GREEN"%p"COLOR_END"): no mark callback\n",
+            POOL_OFFSET(block), POOL_OFFSET(object));
 #endif // GC_TEST
     }
 #endif // GC_LOGS
-
-    // todo need to recursively mark...
-    //   - llvm must generate such functions for structs and arrays (could be written in C, and have a parameter that
-    //     tells how many pointers there are... a struct would become a kind of heterogeneous array)
 }

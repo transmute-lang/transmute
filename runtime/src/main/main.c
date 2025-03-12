@@ -20,24 +20,14 @@ int main(int argc, char **argv) {
     int64_t n = strtoll(argv[1], NULL, 10);
 
     for (int64_t i = 0; i < n; i++) {
-        printf("main(%li) = %li\n", i, _TM0_4main1n(i));
+#ifdef __APPLE__
+    printf("main(%lli) = %lli\n", i, _TM0_4main1n(i));
+#else
+    printf("main(%li) = %li\n", i, _TM0_4main1n(i));
+#endif // __APPLE__
     }
 
     gc_teardown();
 
     return 0;
-}
-
-// print(number) -> _TM0_5print1n
-void _TM0_5print1n(int64_t a) {
-    printf("%li\n", a);
-}
-
-// print(boolean) -> _TM0_5print1b
-void _TM0_5print1b(int8_t b) {
-    if (b) {
-        printf("true\n");
-    } else {
-        printf("false\n");
-    }
 }

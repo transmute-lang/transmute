@@ -3,9 +3,9 @@ extern crate core;
 use crate::cli::parse_args;
 use std::{fs, process};
 use tmi::exec;
+use tmi::natives::InterpreterNatives;
 
 mod cli;
-
 // todo:check to check:
 //  - let f() = 0:
 //  - f = 1;
@@ -21,5 +21,7 @@ fn main() {
         }
     };
 
-    exec(&script, cli.output_parsed, cli.params);
+    let context = InterpreterNatives::new();
+
+    exec(script, cli.output_parsed, cli.params, context);
 }

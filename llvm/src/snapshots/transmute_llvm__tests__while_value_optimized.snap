@@ -18,31 +18,29 @@ declare void @gc_mark(ptr)
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
-declare void @_TM0_5print1n(i64)
-
-declare void @_TM0_5print1b(i1)
+declare ptr @tmc_stdlib_string_new(ptr, i64)
 
 define private void @_glob() {
 entry:
   unreachable
 }
 
-define i64 @_TM0_1f1n(i64 %"n#param#sym20#") gc "shadow-stack" {
+define i64 @_TM0_1f1n(i64 %"n#param#sym19#") gc "shadow-stack" {
 entry:
   br label %cond
 
 cond:                                             ; preds = %body, %entry
-  %"n#local#sym20#2" = phi i64 [ %"add#", %body ], [ %"n#param#sym20#", %entry ]
-  %"lt#" = icmp slt i64 %"n#local#sym20#2", 42
+  %"n#local#sym19#2" = phi i64 [ %"add#", %body ], [ %"n#param#sym19#", %entry ]
+  %"lt#" = icmp slt i64 %"n#local#sym19#2", 42
   br i1 %"lt#", label %body, label %end_while
 
 body:                                             ; preds = %cond
-  %"add#" = add i64 %"n#local#sym20#2", 1
+  %"add#" = add i64 %"n#local#sym19#2", 1
   call void @gc_run()
   br label %cond
 
 end_while:                                        ; preds = %cond
-  ret i64 %"n#local#sym20#2"
+  ret i64 %"n#local#sym19#2"
 }
 
 attributes #0 = { nounwind }

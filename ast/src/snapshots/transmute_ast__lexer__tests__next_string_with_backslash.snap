@@ -1,0 +1,10 @@
+---
+source: ast/src/lexer.rs
+expression: actual
+---
+Token {
+    kind: String(
+        " \\ ",
+    ),
+    span: 1:1; [0, 6],
+}

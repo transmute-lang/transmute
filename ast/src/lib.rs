@@ -7,6 +7,7 @@ use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, TypeDefId};
 use transmute_core::vec_map::VecMap;
 
+pub mod annotation;
 pub mod expression;
 pub mod identifier;
 pub mod identifier_ref;

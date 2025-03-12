@@ -67,7 +67,7 @@ where
     pub symbols: VecMap<SymbolId, Symbol>,
     /// All types
     pub types: VecMap<TypeId, Type>,
-    /// All exit exit points
+    /// All exit points
     pub exit_points: ExitPoints,
 }
 
@@ -120,7 +120,7 @@ impl From<Ast> for UnresolvedHir {
         let mut unreachable = vec![];
 
         for (_, stmt) in statements.iter() {
-            if let &AstStatementKind::LetFn(_, _, _, expr_id) = &stmt.kind {
+            if let &AstStatementKind::LetFn(_, _, _, _, expr_id) = &stmt.kind {
                 let mut output =
                     ExitPointsResolver::new(&expressions, &statements).exit_points(expr_id);
 

@@ -18,9 +18,7 @@ declare void @gc_mark(ptr)
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
-declare void @_TM0_5print1n(i64)
-
-declare void @_TM0_5print1b(i1)
+declare ptr @tmc_stdlib_string_new(ptr, i64)
 
 define private void @_glob() {
 entry:

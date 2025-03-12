@@ -246,8 +246,9 @@ impl<'a> ExitPointsResolver<'a> {
 
                 (collected, true)
             }
-            StatementKind::LetFn(_, _, _, _) => (Collected::default(), false),
-            StatementKind::Struct(_, _) => (Collected::default(), false),
+            StatementKind::LetFn(_, _, _, _, _) => (Collected::default(), false),
+            StatementKind::Struct(_, _, _) => (Collected::default(), false),
+            StatementKind::Annotation(_) => (Collected::default(), false),
         }
     }
 }

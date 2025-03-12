@@ -1,3 +1,4 @@
+use crate::annotation::Annotation;
 use crate::expression::{ExpressionKind, Target};
 use crate::identifier::Identifier;
 use crate::identifier_ref::IdentifierRef;
@@ -222,9 +223,9 @@ impl<'s> Parser<'s> {
 
         while let Some(statement) = self.parse_statement() {
             match &statement.kind {
-                StatementKind::LetFn(_, _, _, _) | StatementKind::Struct(_, _) => {
-                    statements.push(statement.id)
-                }
+                StatementKind::LetFn(_, _, _, _, _)
+                | StatementKind::Struct(_, _, _)
+                | StatementKind::Annotation(_) => statements.push(statement.id),
                 StatementKind::Expression(_)
                 | StatementKind::Let(_, _)
                 | StatementKind::Ret(_, _) => {
@@ -259,6 +260,8 @@ impl<'s> Parser<'s> {
             .map(|(ident, _)| ident)
             .collect::<Vec<String>>();
 
+        self.diagnostics.append(self.lexer.diagnostics());
+
         if self.diagnostics.is_empty() {
             Ok(Ast::new(
                 identifiers,
@@ -276,11 +279,12 @@ impl<'s> Parser<'s> {
     /// Parses the following:
     /// ```raw
     /// 'let ident = expr ;
-    /// 'let ident ( expr , ... ) = expr ;
-    /// 'let ident ( expr , ... ) = { expr ; ... }
-    /// `struct ident { ident : ident , ... }`
+    /// '@annotation let ident ( expr , ... ) = expr ;
+    /// '@annotation let ident ( expr , ... ) = { expr ; ... }
+    /// `@annotation struct ident { ident : ident , ... }`
     /// 'expr ;
     /// 'ret expr ;
+    /// 'annotation ident ;
     /// ```
     fn parse_statement(&mut self) -> Option<&Statement> {
         let mut token = self.lexer.peek();
@@ -295,6 +299,12 @@ impl<'s> Parser<'s> {
             return None;
         }
 
+        let mut annotations = Vec::new();
+        while let Some(annotation) = self.parse_annotation() {
+            annotations.push(annotation);
+        }
+
+        let token = self.lexer.peek();
         match &token.kind {
             TokenKind::Let => {
                 let let_token = self.lexer.next();
@@ -320,7 +330,18 @@ impl<'s> Parser<'s> {
 
                 if token.kind == TokenKind::OpenParenthesis {
                     // let ident '( expr , ... ) = expr ;
-                    return self.parse_function(&let_token.span, identifier);
+                    return self.parse_function(&let_token.span, annotations, identifier);
+                }
+
+                if !annotations.is_empty() {
+                    self.diagnostics.report_err(
+                        "Annotations not supported on non `let`-function statements",
+                        annotations
+                            .first()?
+                            .span
+                            .extend_to(&annotations.last()?.span),
+                        (file!(), line!()),
+                    );
                 }
 
                 // let ident '= expr ;
@@ -343,6 +364,16 @@ impl<'s> Parser<'s> {
             TokenKind::Ret => {
                 let ret_token = self.lexer.next();
                 self.potential_tokens.clear();
+                if !annotations.is_empty() {
+                    self.diagnostics.report_err(
+                        "Annotations not supported on `ret` statements",
+                        annotations
+                            .first()?
+                            .span
+                            .extend_to(&annotations.last()?.span),
+                        (file!(), line!()),
+                    );
+                }
 
                 let expression = match self.lexer.peek().kind {
                     TokenKind::Semicolon => None,
@@ -361,6 +392,17 @@ impl<'s> Parser<'s> {
                 Some(&self.statements[id!(id)])
             }
             TokenKind::If | TokenKind::While => {
+                if !annotations.is_empty() {
+                    self.diagnostics.report_err(
+                        "Annotations not supported on expressions",
+                        annotations
+                            .first()?
+                            .span
+                            .extend_to(&annotations.last()?.span),
+                        (file!(), line!()),
+                    );
+                }
+
                 let (expression, need_semi) = self.parse_expression(true, true);
                 let span = expression.span.extend_to(&expression.span);
                 let id = expression.id;
@@ -376,9 +418,21 @@ impl<'s> Parser<'s> {
             | TokenKind::Identifier
             | TokenKind::Minus
             | TokenKind::Number(_)
+            | TokenKind::String(_)
             | TokenKind::OpenParenthesis
             | TokenKind::OpenBracket
             | TokenKind::True => {
+                if !annotations.is_empty() {
+                    self.diagnostics.report_err(
+                        "Annotations not supported on expressions",
+                        annotations
+                            .first()?
+                            .span
+                            .extend_to(&annotations.last()?.span),
+                        (file!(), line!()),
+                    );
+                }
+
                 let expression = self.parse_expression(true, true).0;
                 let span = expression.span.clone();
                 let expression = expression.id;
@@ -389,7 +443,46 @@ impl<'s> Parser<'s> {
                 let id = self.push_statement(StatementKind::Expression(expression), span);
                 Some(&self.statements[id!(id)])
             }
-            TokenKind::Struct => self.parse_struct(),
+            TokenKind::Struct => self.parse_struct(annotations),
+            TokenKind::Annotation => {
+                let annotation_token = self.lexer.next();
+                self.potential_tokens.clear();
+
+                if !annotations.is_empty() {
+                    self.diagnostics.report_err(
+                        "Annotations not supported on annotations",
+                        annotations
+                            .first()?
+                            .span
+                            .extend_to(&annotations.last()?.span),
+                        (file!(), line!()),
+                    );
+                }
+
+                let identifier_token = self.lexer.next();
+                let identifier = match &identifier_token.kind {
+                    TokenKind::Identifier => Identifier::new(
+                        self.push_identifier(&identifier_token.span),
+                        identifier_token.span.clone(),
+                    ),
+                    _ => {
+                        report_unexpected_token!(
+                            self,
+                            identifier_token,
+                            [expected_token!(TokenKind::Identifier),]
+                        );
+                        self.take_until_one_of(vec![TokenKind::Semicolon]);
+                        return None;
+                    }
+                };
+
+                let semicolon_span = self.parse_semicolon();
+
+                let span = annotation_token.span.extend_to(&semicolon_span);
+
+                let id = self.push_statement(StatementKind::Annotation(identifier), span);
+                Some(&self.statements[id!(id)])
+            }
             _ => {
                 let token = self.lexer.next();
                 report_unexpected_token!(
@@ -420,12 +513,50 @@ impl<'s> Parser<'s> {
         }
     }
 
+    fn parse_annotation(&mut self) -> Option<Annotation> {
+        if matches!(self.lexer.peek().kind, TokenKind::At) {
+            let at_token = self.lexer.next();
+
+            let identifier_token = self.lexer.next();
+            let identifier = match &identifier_token.kind {
+                TokenKind::Identifier => Identifier::new(
+                    self.push_identifier(&identifier_token.span),
+                    identifier_token.span.clone(),
+                ),
+                _ => {
+                    report_unexpected_token!(
+                        self,
+                        identifier_token,
+                        [expected_token!(TokenKind::Identifier),]
+                    );
+                    self.lexer.push_next(identifier_token);
+                    return None;
+                }
+            };
+
+            let span = at_token.span.extend_to(&identifier.span);
+            let ident_ref = self.push_identifier_ref(identifier);
+
+            return Some(Annotation {
+                ident_ref_id: ident_ref,
+                span,
+            });
+        }
+
+        None
+    }
+
     /// Parses the following:
     /// ```raw
     /// let ident '( param , ... ): type = expr ;
     /// let ident '( param , ... ): type = { expr ; ... } ;
     /// ```
-    fn parse_function(&mut self, span: &Span, identifier: Identifier) -> Option<&Statement> {
+    fn parse_function(
+        &mut self,
+        span: &Span,
+        annotations: Vec<Annotation>,
+        identifier: Identifier,
+    ) -> Option<&Statement> {
         // let name '( param , ... ): type = expr ;
         let open_parenthesis_token = self.lexer.next();
         self.potential_tokens.clear();
@@ -558,7 +689,7 @@ impl<'s> Parser<'s> {
         };
 
         let stmt_id = self.push_statement(
-            StatementKind::LetFn(identifier, parameters, ty, expr_id),
+            StatementKind::LetFn(identifier, annotations, parameters, ty, expr_id),
             span.extend_to(&end_span),
         );
 
@@ -664,7 +795,7 @@ impl<'s> Parser<'s> {
         }
     }
 
-    fn parse_struct(&mut self) -> Option<&Statement> {
+    fn parse_struct(&mut self, annotations: Vec<Annotation>) -> Option<&Statement> {
         // 'struct ident { ident : ident , ... }
         let token_struct = self.lexer.next();
         let identifier_token = self.lexer.next();
@@ -842,7 +973,7 @@ impl<'s> Parser<'s> {
         };
 
         let stmt_id = self.push_statement(
-            StatementKind::Struct(identifier, fields),
+            StatementKind::Struct(identifier, annotations, fields),
             token_struct.span.extend_to(&last_token.span),
         );
         Some(&self.statements[id!(stmt_id)])
@@ -874,7 +1005,7 @@ impl<'s> Parser<'s> {
     ) -> (&Expression, bool) {
         let token = self.lexer.next();
 
-        let mut expr_id = match &token.kind {
+        let mut expr_id = match token.kind {
             TokenKind::If => {
                 self.potential_tokens.clear();
                 self.parse_if_expression(token.span.clone()).id
@@ -920,7 +1051,12 @@ impl<'s> Parser<'s> {
             }
             TokenKind::Number(n) => {
                 self.potential_tokens.clear();
-                let literal = Literal::new(LiteralKind::Number(*n), token.span.clone());
+                let literal = Literal::new(LiteralKind::Number(n), token.span.clone());
+                self.push_expression(ExpressionKind::Literal(literal), token.span.clone())
+            }
+            TokenKind::String(str) => {
+                self.potential_tokens.clear();
+                let literal = Literal::new(LiteralKind::String(str), token.span.clone());
                 self.push_expression(ExpressionKind::Literal(literal), token.span.clone())
             }
             TokenKind::Minus => {
@@ -999,6 +1135,7 @@ impl<'s> Parser<'s> {
                         expected_token!(TokenKind::While),
                         expected_token!(TokenKind::Identifier),
                         expected_token!(TokenKind::Number(0)),
+                        expected_token!(TokenKind::String("".to_string())),
                         expected_token!(TokenKind::Minus),
                         expected_token!(TokenKind::True),
                         expected_token!(TokenKind::False),
@@ -1914,6 +2051,7 @@ mod tests {
     test_syntax!(expression_literal_identifier => "forty_two;");
     test_syntax!(expression_literal_boolean => "true;");
     test_syntax!(expression => "2 + 20 * 2;");
+    test_syntax!(expression_with_diagnostic_reported_by_lexer => "\"Hello\\gworld!\";");
     test_syntax!(binary_operator_minus => "43 - 1;");
     test_syntax!(prefix_minus => "- 40 * 2;");
     test_syntax!(let_statement => "let forty_two = 42;");
@@ -2044,4 +2182,17 @@ mod tests {
     test_syntax!(err_array_type_missing_len => "struct S { field: [number; ] }");
     test_syntax!(err_array_type_missing_close_bracket => "struct S { field: [number; 4 }");
     test_syntax!(err_array_type_missing_after_base => "struct S { field: [number }");
+    test_syntax!(annotation_on_fn => "@a let f() {}");
+    test_syntax!(annotations_on_fn => "@a1 @a2 let f() {}");
+    test_syntax!(annotation_on_struct => "@a struct S {}");
+    test_syntax!(err_annotations_on_let => "let f() { @a1 @a2 let a = 1; }");
+    test_syntax!(err_annotations_on_ret => "let f() { @a1 @a2 ret 1; }");
+    test_syntax!(err_annotations_on_if => "let f() { @a1 if true {} }");
+    test_syntax!(err_annotations_on_true => "let f() { @a1 while false {} }");
+    test_syntax!(err_annotations_on_annotation => "@a1 annotation a2;");
+    test_syntax!(err_annotations_without_identifier => "@ let f() { }");
+    test_syntax!(define_annotation => "annotation a;");
+    test_syntax!(err_define_annotation_with_at => "annotation @a;");
+    test_syntax!(err_define_annotation_missing_name => "annotation ;");
+    test_syntax!(err_define_annotation_missing_semi => "annotation a");
 }

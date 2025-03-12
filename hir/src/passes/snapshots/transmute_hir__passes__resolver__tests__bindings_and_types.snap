@@ -64,7 +64,7 @@ Hir {
                 },
             ),
             span: 1:42; [41, 42],
-            typed: Typed(5),
+            typed: Typed(6),
         },
         ExprId(1) => Expression {
             id: ExprId(1),
@@ -86,18 +86,21 @@ Hir {
                     span: 1:8; [7, 8],
                     bound: Bound(1),
                 },
-                [
-                    Field {
-                        identifier: Identifier {
-                            id: IdentId(1),
-                            span: 1:12; [11, 12],
-                            bound: Bound(3),
+                [],
+                Provided(
+                    [
+                        Field {
+                            identifier: Identifier {
+                                id: IdentId(1),
+                                span: 1:12; [11, 12],
+                                bound: Bound(3),
+                            },
+                            type_def_id: TypeDefId(0),
+                            span: 1:12; [11, 15],
+                            typed: Typed(6),
                         },
-                        type_def_id: TypeDefId(0),
-                        span: 1:12; [11, 15],
-                        typed: Typed(5),
-                    },
-                ],
+                    ],
+                ),
             ),
             span: 1:1; [0, 17],
         },
@@ -119,6 +122,7 @@ Hir {
                     span: 1:23; [22, 23],
                     bound: Bound(2),
                 },
+                [],
                 [
                     Parameter {
                         identifier: Identifier {
@@ -128,7 +132,7 @@ Hir {
                         },
                         type_def_id: TypeDefId(1),
                         span: 1:25; [24, 28],
-                        typed: Typed(5),
+                        typed: Typed(6),
                     },
                     Parameter {
                         identifier: Identifier {
@@ -138,16 +142,18 @@ Hir {
                         },
                         type_def_id: TypeDefId(2),
                         span: 1:31; [30, 34],
-                        typed: Typed(5),
+                        typed: Typed(6),
                     },
                 ],
                 Return {
                     type_def_id: Some(
                         TypeDefId(3),
                     ),
-                    typed: Typed(5),
+                    typed: Typed(6),
                 },
-                ExprId(1),
+                Provided(
+                    ExprId(1),
+                ),
             ),
             span: 1:19; [18, 45],
         },
@@ -194,7 +200,7 @@ Hir {
                 IdentId(0),
                 StmtId(0),
             ),
-            type_id: TypeId(5),
+            type_id: TypeId(6),
         },
         SymbolId(2) => Symbol {
             id: SymbolId(2),
@@ -202,12 +208,12 @@ Hir {
                 IdentId(1),
                 StmtId(2),
                 [
-                    TypeId(5),
-                    TypeId(5),
+                    TypeId(6),
+                    TypeId(6),
                 ],
-                TypeId(5),
+                TypeId(6),
             ),
-            type_id: TypeId(6),
+            type_id: TypeId(7),
         },
         SymbolId(3) => Symbol {
             id: SymbolId(3),
@@ -216,7 +222,7 @@ Hir {
                 StmtId(0),
                 0,
             ),
-            type_id: TypeId(5),
+            type_id: TypeId(6),
         },
         SymbolId(4) => Symbol {
             id: SymbolId(4),
@@ -225,7 +231,7 @@ Hir {
                 StmtId(2),
                 0,
             ),
-            type_id: TypeId(5),
+            type_id: TypeId(6),
         },
         SymbolId(5) => Symbol {
             id: SymbolId(5),
@@ -234,7 +240,7 @@ Hir {
                 StmtId(2),
                 1,
             ),
-            type_id: TypeId(5),
+            type_id: TypeId(6),
         },
     ],
     types: [
@@ -243,15 +249,16 @@ Hir {
         TypeId(2) => None,
         TypeId(3) => Boolean,
         TypeId(4) => Number,
-        TypeId(5) => Struct(
+        TypeId(5) => String,
+        TypeId(6) => Struct(
             StmtId(0),
         ),
-        TypeId(6) => Function(
+        TypeId(7) => Function(
             [
-                TypeId(5),
-                TypeId(5),
+                TypeId(6),
+                TypeId(6),
             ],
-            TypeId(5),
+            TypeId(6),
         ),
     ],
     exit_points: ExitPoints {

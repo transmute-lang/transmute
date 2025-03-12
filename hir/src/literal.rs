@@ -30,6 +30,7 @@ pub enum LiteralKind {
     Boolean(bool),
     Identifier(IdentRefId),
     Number(i64),
+    String(String),
 }
 
 impl From<AstLiteralKind> for LiteralKind {
@@ -38,6 +39,7 @@ impl From<AstLiteralKind> for LiteralKind {
             AstLiteralKind::Boolean(b) => Self::Boolean(b),
             AstLiteralKind::Identifier(i) => Self::Identifier(i),
             AstLiteralKind::Number(n) => Self::Number(n),
+            AstLiteralKind::String(s) => Self::String(s),
         }
     }
 }
@@ -48,6 +50,7 @@ impl Debug for LiteralKind {
             LiteralKind::Boolean(v) => write!(f, "Boolean({v})"),
             LiteralKind::Identifier(v) => write!(f, "IdentRefId({v})"),
             LiteralKind::Number(v) => write!(f, "Number({v})"),
+            LiteralKind::String(v) => write!(f, "String({v})"),
         }
     }
 }

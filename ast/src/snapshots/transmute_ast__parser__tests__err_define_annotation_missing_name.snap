@@ -1,0 +1,19 @@
+---
+source: ast/src/parser.rs
+expression: "Parser :: new(Lexer :: new(\"annotation ;\")).parse()"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected `;`, expected one of (1) identifier",
+                span: 1:12; [11, 12],
+                level: Error,
+                generated_at: (
+                    "ast/src/parser.rs",
+                    469,
+                ),
+            },
+        ],
+    },
+)

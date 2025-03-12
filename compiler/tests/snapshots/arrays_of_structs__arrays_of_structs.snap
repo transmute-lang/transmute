@@ -18,12 +18,12 @@ stdout:
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0: skipped (null)
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark unreachable block 0x10010 (object at 0x10040: '')
 [2] gc_mark                |         0x10010: skip recursive mark(object at 0x10040): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10010 (object at 0x10040, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10050, returning object of size 16 at 0x10080(+48)
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [3]
@@ -33,16 +33,16 @@ stdout:
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10050 (object at 0x10080: '')
+[2] gc_mark                |       mark unreachable block 0x10050 (object at 0x10080: '')
 [2] gc_mark                |         0x10050: skip recursive mark(object at 0x10080): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark unreachable block 0x10010 (object at 0x10040: '')
 [2] gc_mark                |         0x10010: skip recursive mark(object at 0x10040): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10050 (object at 0x10080, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10010 (object at 0x10040, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10050 (object at 0x10080, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10090, returning object of size 16 at 0x100c0(+48)
 [2] gc_run                 | Start GC [4]
 [2] gc_run                 | Phase: init.
@@ -52,21 +52,21 @@ stdout:
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10050 (object at 0x10080: '')
+[2] gc_mark                |       mark unreachable block 0x10050 (object at 0x10080: '')
 [2] gc_mark                |         0x10050: skip recursive mark(object at 0x10080): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark unreachable block 0x10010 (object at 0x10040: '')
 [2] gc_mark                |         0x10010: skip recursive mark(object at 0x10040): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10090 (object at 0x100c0: '')
+[2] gc_mark                |       mark unreachable block 0x10090 (object at 0x100c0: '')
 [2] gc_mark                |         0x10090: recursive mark(object at 0x100c0: '')
-[2] gc_mark                |       mark reachable block at 0x10050 (object at 0x10080: '')
-[2] gc_mark                |       mark reachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark reachable block 0x10050 (object at 0x10080: '')
+[2] gc_mark                |       mark reachable block 0x10010 (object at 0x10040: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10090 (object at 0x100c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10050 (object at 0x10080, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10010 (object at 0x10040, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10090 (object at 0x100c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10050 (object at 0x10080, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 16: ''): reachable
 [2] gc_run                 | Start GC [5]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10090 (object at 0x100c0: ''): unreachable
@@ -75,21 +75,21 @@ stdout:
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10050 (object at 0x10080: '')
+[2] gc_mark                |       mark unreachable block 0x10050 (object at 0x10080: '')
 [2] gc_mark                |         0x10050: skip recursive mark(object at 0x10080): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark unreachable block 0x10010 (object at 0x10040: '')
 [2] gc_mark                |         0x10010: skip recursive mark(object at 0x10040): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10090 (object at 0x100c0: '')
+[2] gc_mark                |       mark unreachable block 0x10090 (object at 0x100c0: '')
 [2] gc_mark                |         0x10090: recursive mark(object at 0x100c0: '')
-[2] gc_mark                |       mark reachable block at 0x10050 (object at 0x10080: '')
-[2] gc_mark                |       mark reachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark reachable block 0x10050 (object at 0x10080: '')
+[2] gc_mark                |       mark reachable block 0x10010 (object at 0x10040: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10090 (object at 0x100c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10050 (object at 0x10080, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10010 (object at 0x10040, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10090 (object at 0x100c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10050 (object at 0x10080, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 16: ''): reachable
 [2] gc_run                 | Start GC [6]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10090 (object at 0x100c0: ''): unreachable
@@ -98,22 +98,22 @@ stdout:
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10050 (object at 0x10080: '')
+[2] gc_mark                |       mark unreachable block 0x10050 (object at 0x10080: '')
 [2] gc_mark                |         0x10050: skip recursive mark(object at 0x10080): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark unreachable block 0x10010 (object at 0x10040: '')
 [2] gc_mark                |         0x10010: skip recursive mark(object at 0x10040): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10090 (object at 0x100c0: '')
+[2] gc_mark                |       mark unreachable block 0x10090 (object at 0x100c0: '')
 [2] gc_mark                |         0x10090: recursive mark(object at 0x100c0: '')
-[2] gc_mark                |       mark reachable block at 0x10050 (object at 0x10080: '')
-[2] gc_mark                |       mark reachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark reachable block 0x10050 (object at 0x10080: '')
+[2] gc_mark                |       mark reachable block 0x10010 (object at 0x10040: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark reachable block 0x10010 (object at 0x10040: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10090 (object at 0x100c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10050 (object at 0x10080, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10010 (object at 0x10040, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10090 (object at 0x100c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10050 (object at 0x10080, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 16: ''): reachable
 [2] gc_run                 | Start GC [7]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10090 (object at 0x100c0: ''): unreachable
@@ -122,22 +122,22 @@ stdout:
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10050 (object at 0x10080: '')
+[2] gc_mark                |       mark unreachable block 0x10050 (object at 0x10080: '')
 [2] gc_mark                |         0x10050: skip recursive mark(object at 0x10080): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark unreachable block 0x10010 (object at 0x10040: '')
 [2] gc_mark                |         0x10010: skip recursive mark(object at 0x10040): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10090 (object at 0x100c0: '')
+[2] gc_mark                |       mark unreachable block 0x10090 (object at 0x100c0: '')
 [2] gc_mark                |         0x10090: recursive mark(object at 0x100c0: '')
-[2] gc_mark                |       mark reachable block at 0x10050 (object at 0x10080: '')
-[2] gc_mark                |       mark reachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark reachable block 0x10050 (object at 0x10080: '')
+[2] gc_mark                |       mark reachable block 0x10010 (object at 0x10040: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark reachable block 0x10010 (object at 0x10040: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10090 (object at 0x100c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10050 (object at 0x10080, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10010 (object at 0x10040, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10090 (object at 0x100c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10050 (object at 0x10080, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 16: ''): reachable
 [2] gc_run                 | Start GC [8]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10090 (object at 0x100c0: ''): unreachable
@@ -146,22 +146,22 @@ stdout:
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10050 (object at 0x10080: '')
+[2] gc_mark                |       mark unreachable block 0x10050 (object at 0x10080: '')
 [2] gc_mark                |         0x10050: skip recursive mark(object at 0x10080): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark unreachable block 0x10010 (object at 0x10040: '')
 [2] gc_mark                |         0x10010: skip recursive mark(object at 0x10040): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10090 (object at 0x100c0: '')
+[2] gc_mark                |       mark unreachable block 0x10090 (object at 0x100c0: '')
 [2] gc_mark                |         0x10090: recursive mark(object at 0x100c0: '')
-[2] gc_mark                |       mark reachable block at 0x10050 (object at 0x10080: '')
-[2] gc_mark                |       mark reachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark reachable block 0x10050 (object at 0x10080: '')
+[2] gc_mark                |       mark reachable block 0x10010 (object at 0x10040: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10010 (object at 0x10040: '')
+[2] gc_mark                |       mark reachable block 0x10010 (object at 0x10040: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10090 (object at 0x100c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10050 (object at 0x10080, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10010 (object at 0x10040, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10090 (object at 0x100c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10050 (object at 0x10080, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 16: ''): reachable
 main(0) = 1
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [9]
@@ -189,12 +189,12 @@ main(0) = 1
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0: skipped (null)
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark unreachable block 0x100d0 (object at 0x10100: '')
 [2] gc_mark                |         0x100d0: skip recursive mark(object at 0x10100): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x100d0 (object at 0x10100, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x100d0 (object at 0x10100, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10110, returning object of size 16 at 0x10140(+48)
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [11]
@@ -204,16 +204,16 @@ main(0) = 1
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10110 (object at 0x10140: '')
+[2] gc_mark                |       mark unreachable block 0x10110 (object at 0x10140: '')
 [2] gc_mark                |         0x10110: skip recursive mark(object at 0x10140): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark unreachable block 0x100d0 (object at 0x10100: '')
 [2] gc_mark                |         0x100d0: skip recursive mark(object at 0x10100): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10110 (object at 0x10140, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x100d0 (object at 0x10100, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10110 (object at 0x10140, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x100d0 (object at 0x10100, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10150, returning object of size 16 at 0x10180(+48)
 [2] gc_run                 | Start GC [12]
 [2] gc_run                 | Phase: init.
@@ -223,21 +223,21 @@ main(0) = 1
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10110 (object at 0x10140: '')
+[2] gc_mark                |       mark unreachable block 0x10110 (object at 0x10140: '')
 [2] gc_mark                |         0x10110: skip recursive mark(object at 0x10140): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark unreachable block 0x100d0 (object at 0x10100: '')
 [2] gc_mark                |         0x100d0: skip recursive mark(object at 0x10100): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10150 (object at 0x10180: '')
+[2] gc_mark                |       mark unreachable block 0x10150 (object at 0x10180: '')
 [2] gc_mark                |         0x10150: recursive mark(object at 0x10180: '')
-[2] gc_mark                |       mark reachable block at 0x10110 (object at 0x10140: '')
-[2] gc_mark                |       mark reachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark reachable block 0x10110 (object at 0x10140: '')
+[2] gc_mark                |       mark reachable block 0x100d0 (object at 0x10100: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10150 (object at 0x10180, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10110 (object at 0x10140, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x100d0 (object at 0x10100, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10150 (object at 0x10180, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10110 (object at 0x10140, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x100d0 (object at 0x10100, size: 16: ''): reachable
 [2] gc_run                 | Start GC [13]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10150 (object at 0x10180: ''): unreachable
@@ -246,21 +246,21 @@ main(0) = 1
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10110 (object at 0x10140: '')
+[2] gc_mark                |       mark unreachable block 0x10110 (object at 0x10140: '')
 [2] gc_mark                |         0x10110: skip recursive mark(object at 0x10140): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark unreachable block 0x100d0 (object at 0x10100: '')
 [2] gc_mark                |         0x100d0: skip recursive mark(object at 0x10100): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10150 (object at 0x10180: '')
+[2] gc_mark                |       mark unreachable block 0x10150 (object at 0x10180: '')
 [2] gc_mark                |         0x10150: recursive mark(object at 0x10180: '')
-[2] gc_mark                |       mark reachable block at 0x10110 (object at 0x10140: '')
-[2] gc_mark                |       mark reachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark reachable block 0x10110 (object at 0x10140: '')
+[2] gc_mark                |       mark reachable block 0x100d0 (object at 0x10100: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10150 (object at 0x10180, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10110 (object at 0x10140, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x100d0 (object at 0x10100, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10150 (object at 0x10180, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10110 (object at 0x10140, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x100d0 (object at 0x10100, size: 16: ''): reachable
 [2] gc_run                 | Start GC [14]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10150 (object at 0x10180: ''): unreachable
@@ -269,22 +269,22 @@ main(0) = 1
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10110 (object at 0x10140: '')
+[2] gc_mark                |       mark unreachable block 0x10110 (object at 0x10140: '')
 [2] gc_mark                |         0x10110: skip recursive mark(object at 0x10140): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark unreachable block 0x100d0 (object at 0x10100: '')
 [2] gc_mark                |         0x100d0: skip recursive mark(object at 0x10100): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10150 (object at 0x10180: '')
+[2] gc_mark                |       mark unreachable block 0x10150 (object at 0x10180: '')
 [2] gc_mark                |         0x10150: recursive mark(object at 0x10180: '')
-[2] gc_mark                |       mark reachable block at 0x10110 (object at 0x10140: '')
-[2] gc_mark                |       mark reachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark reachable block 0x10110 (object at 0x10140: '')
+[2] gc_mark                |       mark reachable block 0x100d0 (object at 0x10100: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark reachable block 0x100d0 (object at 0x10100: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10150 (object at 0x10180, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10110 (object at 0x10140, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x100d0 (object at 0x10100, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10150 (object at 0x10180, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10110 (object at 0x10140, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x100d0 (object at 0x10100, size: 16: ''): reachable
 [2] gc_run                 | Start GC [15]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10150 (object at 0x10180: ''): unreachable
@@ -293,22 +293,22 @@ main(0) = 1
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10110 (object at 0x10140: '')
+[2] gc_mark                |       mark unreachable block 0x10110 (object at 0x10140: '')
 [2] gc_mark                |         0x10110: skip recursive mark(object at 0x10140): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark unreachable block 0x100d0 (object at 0x10100: '')
 [2] gc_mark                |         0x100d0: skip recursive mark(object at 0x10100): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10150 (object at 0x10180: '')
+[2] gc_mark                |       mark unreachable block 0x10150 (object at 0x10180: '')
 [2] gc_mark                |         0x10150: recursive mark(object at 0x10180: '')
-[2] gc_mark                |       mark reachable block at 0x10110 (object at 0x10140: '')
-[2] gc_mark                |       mark reachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark reachable block 0x10110 (object at 0x10140: '')
+[2] gc_mark                |       mark reachable block 0x100d0 (object at 0x10100: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark reachable block 0x100d0 (object at 0x10100: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10150 (object at 0x10180, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10110 (object at 0x10140, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x100d0 (object at 0x10100, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10150 (object at 0x10180, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10110 (object at 0x10140, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x100d0 (object at 0x10100, size: 16: ''): reachable
 [2] gc_run                 | Start GC [16]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10150 (object at 0x10180: ''): unreachable
@@ -317,22 +317,22 @@ main(0) = 1
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10110 (object at 0x10140: '')
+[2] gc_mark                |       mark unreachable block 0x10110 (object at 0x10140: '')
 [2] gc_mark                |         0x10110: skip recursive mark(object at 0x10140): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark unreachable block 0x100d0 (object at 0x10100: '')
 [2] gc_mark                |         0x100d0: skip recursive mark(object at 0x10100): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10150 (object at 0x10180: '')
+[2] gc_mark                |       mark unreachable block 0x10150 (object at 0x10180: '')
 [2] gc_mark                |         0x10150: recursive mark(object at 0x10180: '')
-[2] gc_mark                |       mark reachable block at 0x10110 (object at 0x10140: '')
-[2] gc_mark                |       mark reachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark reachable block 0x10110 (object at 0x10140: '')
+[2] gc_mark                |       mark reachable block 0x100d0 (object at 0x10100: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |       mark reachable block 0x100d0 (object at 0x10100: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10150 (object at 0x10180, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10110 (object at 0x10140, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x100d0 (object at 0x10100, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10150 (object at 0x10180, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10110 (object at 0x10140, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x100d0 (object at 0x10100, size: 16: ''): reachable
 main(1) = 0
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [17]
@@ -360,12 +360,12 @@ main(1) = 0
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0: skipped (null)
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark unreachable block 0x10190 (object at 0x101c0: '')
 [2] gc_mark                |         0x10190: skip recursive mark(object at 0x101c0): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10190 (object at 0x101c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10190 (object at 0x101c0, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x101d0, returning object of size 16 at 0x10200(+48)
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [19]
@@ -375,16 +375,16 @@ main(1) = 0
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x101d0 (object at 0x10200: '')
+[2] gc_mark                |       mark unreachable block 0x101d0 (object at 0x10200: '')
 [2] gc_mark                |         0x101d0: skip recursive mark(object at 0x10200): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark unreachable block 0x10190 (object at 0x101c0: '')
 [2] gc_mark                |         0x10190: skip recursive mark(object at 0x101c0): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x101d0 (object at 0x10200, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10190 (object at 0x101c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x101d0 (object at 0x10200, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10190 (object at 0x101c0, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10210, returning object of size 16 at 0x10240(+48)
 [2] gc_run                 | Start GC [20]
 [2] gc_run                 | Phase: init.
@@ -394,21 +394,21 @@ main(1) = 0
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x101d0 (object at 0x10200: '')
+[2] gc_mark                |       mark unreachable block 0x101d0 (object at 0x10200: '')
 [2] gc_mark                |         0x101d0: skip recursive mark(object at 0x10200): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark unreachable block 0x10190 (object at 0x101c0: '')
 [2] gc_mark                |         0x10190: skip recursive mark(object at 0x101c0): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10210 (object at 0x10240: '')
+[2] gc_mark                |       mark unreachable block 0x10210 (object at 0x10240: '')
 [2] gc_mark                |         0x10210: recursive mark(object at 0x10240: '')
-[2] gc_mark                |       mark reachable block at 0x101d0 (object at 0x10200: '')
-[2] gc_mark                |       mark reachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark reachable block 0x101d0 (object at 0x10200: '')
+[2] gc_mark                |       mark reachable block 0x10190 (object at 0x101c0: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10210 (object at 0x10240, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x101d0 (object at 0x10200, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10190 (object at 0x101c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10210 (object at 0x10240, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x101d0 (object at 0x10200, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10190 (object at 0x101c0, size: 16: ''): reachable
 [2] gc_run                 | Start GC [21]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10210 (object at 0x10240: ''): unreachable
@@ -417,21 +417,21 @@ main(1) = 0
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x101d0 (object at 0x10200: '')
+[2] gc_mark                |       mark unreachable block 0x101d0 (object at 0x10200: '')
 [2] gc_mark                |         0x101d0: skip recursive mark(object at 0x10200): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark unreachable block 0x10190 (object at 0x101c0: '')
 [2] gc_mark                |         0x10190: skip recursive mark(object at 0x101c0): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10210 (object at 0x10240: '')
+[2] gc_mark                |       mark unreachable block 0x10210 (object at 0x10240: '')
 [2] gc_mark                |         0x10210: recursive mark(object at 0x10240: '')
-[2] gc_mark                |       mark reachable block at 0x101d0 (object at 0x10200: '')
-[2] gc_mark                |       mark reachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark reachable block 0x101d0 (object at 0x10200: '')
+[2] gc_mark                |       mark reachable block 0x10190 (object at 0x101c0: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10210 (object at 0x10240, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x101d0 (object at 0x10200, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10190 (object at 0x101c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10210 (object at 0x10240, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x101d0 (object at 0x10200, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10190 (object at 0x101c0, size: 16: ''): reachable
 [2] gc_run                 | Start GC [22]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10210 (object at 0x10240: ''): unreachable
@@ -440,22 +440,22 @@ main(1) = 0
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x101d0 (object at 0x10200: '')
+[2] gc_mark                |       mark unreachable block 0x101d0 (object at 0x10200: '')
 [2] gc_mark                |         0x101d0: skip recursive mark(object at 0x10200): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark unreachable block 0x10190 (object at 0x101c0: '')
 [2] gc_mark                |         0x10190: skip recursive mark(object at 0x101c0): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10210 (object at 0x10240: '')
+[2] gc_mark                |       mark unreachable block 0x10210 (object at 0x10240: '')
 [2] gc_mark                |         0x10210: recursive mark(object at 0x10240: '')
-[2] gc_mark                |       mark reachable block at 0x101d0 (object at 0x10200: '')
-[2] gc_mark                |       mark reachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark reachable block 0x101d0 (object at 0x10200: '')
+[2] gc_mark                |       mark reachable block 0x10190 (object at 0x101c0: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark reachable block 0x10190 (object at 0x101c0: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10210 (object at 0x10240, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x101d0 (object at 0x10200, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10190 (object at 0x101c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10210 (object at 0x10240, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x101d0 (object at 0x10200, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10190 (object at 0x101c0, size: 16: ''): reachable
 [2] gc_run                 | Start GC [23]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10210 (object at 0x10240: ''): unreachable
@@ -464,22 +464,22 @@ main(1) = 0
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x101d0 (object at 0x10200: '')
+[2] gc_mark                |       mark unreachable block 0x101d0 (object at 0x10200: '')
 [2] gc_mark                |         0x101d0: skip recursive mark(object at 0x10200): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark unreachable block 0x10190 (object at 0x101c0: '')
 [2] gc_mark                |         0x10190: skip recursive mark(object at 0x101c0): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10210 (object at 0x10240: '')
+[2] gc_mark                |       mark unreachable block 0x10210 (object at 0x10240: '')
 [2] gc_mark                |         0x10210: recursive mark(object at 0x10240: '')
-[2] gc_mark                |       mark reachable block at 0x101d0 (object at 0x10200: '')
-[2] gc_mark                |       mark reachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark reachable block 0x101d0 (object at 0x10200: '')
+[2] gc_mark                |       mark reachable block 0x10190 (object at 0x101c0: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark reachable block 0x10190 (object at 0x101c0: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10210 (object at 0x10240, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x101d0 (object at 0x10200, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10190 (object at 0x101c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10210 (object at 0x10240, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x101d0 (object at 0x10200, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10190 (object at 0x101c0, size: 16: ''): reachable
 [2] gc_run                 | Start GC [24]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10210 (object at 0x10240: ''): unreachable
@@ -488,22 +488,22 @@ main(1) = 0
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x101d0 (object at 0x10200: '')
+[2] gc_mark                |       mark unreachable block 0x101d0 (object at 0x10200: '')
 [2] gc_mark                |         0x101d0: skip recursive mark(object at 0x10200): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark unreachable block 0x10190 (object at 0x101c0: '')
 [2] gc_mark                |         0x10190: skip recursive mark(object at 0x101c0): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10210 (object at 0x10240: '')
+[2] gc_mark                |       mark unreachable block 0x10210 (object at 0x10240: '')
 [2] gc_mark                |         0x10210: recursive mark(object at 0x10240: '')
-[2] gc_mark                |       mark reachable block at 0x101d0 (object at 0x10200: '')
-[2] gc_mark                |       mark reachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark reachable block 0x101d0 (object at 0x10200: '')
+[2] gc_mark                |       mark reachable block 0x10190 (object at 0x101c0: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10190 (object at 0x101c0: '')
+[2] gc_mark                |       mark reachable block 0x10190 (object at 0x101c0: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10210 (object at 0x10240, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x101d0 (object at 0x10200, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10190 (object at 0x101c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10210 (object at 0x10240, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x101d0 (object at 0x10200, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10190 (object at 0x101c0, size: 16: ''): reachable
 main(2) = 1
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [25]
@@ -531,12 +531,12 @@ main(2) = 1
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0: skipped (null)
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark unreachable block 0x10250 (object at 0x10280: '')
 [2] gc_mark                |         0x10250: skip recursive mark(object at 0x10280): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10250 (object at 0x10280, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10250 (object at 0x10280, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10290, returning object of size 16 at 0x102c0(+48)
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [27]
@@ -546,16 +546,16 @@ main(2) = 1
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10290 (object at 0x102c0: '')
+[2] gc_mark                |       mark unreachable block 0x10290 (object at 0x102c0: '')
 [2] gc_mark                |         0x10290: skip recursive mark(object at 0x102c0): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark unreachable block 0x10250 (object at 0x10280: '')
 [2] gc_mark                |         0x10250: skip recursive mark(object at 0x10280): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10290 (object at 0x102c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10250 (object at 0x10280, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10290 (object at 0x102c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10250 (object at 0x10280, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x102d0, returning object of size 16 at 0x10300(+48)
 [2] gc_run                 | Start GC [28]
 [2] gc_run                 | Phase: init.
@@ -565,21 +565,21 @@ main(2) = 1
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10290 (object at 0x102c0: '')
+[2] gc_mark                |       mark unreachable block 0x10290 (object at 0x102c0: '')
 [2] gc_mark                |         0x10290: skip recursive mark(object at 0x102c0): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark unreachable block 0x10250 (object at 0x10280: '')
 [2] gc_mark                |         0x10250: skip recursive mark(object at 0x10280): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x102d0 (object at 0x10300: '')
+[2] gc_mark                |       mark unreachable block 0x102d0 (object at 0x10300: '')
 [2] gc_mark                |         0x102d0: recursive mark(object at 0x10300: '')
-[2] gc_mark                |       mark reachable block at 0x10290 (object at 0x102c0: '')
-[2] gc_mark                |       mark reachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark reachable block 0x10290 (object at 0x102c0: '')
+[2] gc_mark                |       mark reachable block 0x10250 (object at 0x10280: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x102d0 (object at 0x10300, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10290 (object at 0x102c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10250 (object at 0x10280, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x102d0 (object at 0x10300, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10290 (object at 0x102c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10250 (object at 0x10280, size: 16: ''): reachable
 [2] gc_run                 | Start GC [29]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x102d0 (object at 0x10300: ''): unreachable
@@ -588,21 +588,21 @@ main(2) = 1
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10290 (object at 0x102c0: '')
+[2] gc_mark                |       mark unreachable block 0x10290 (object at 0x102c0: '')
 [2] gc_mark                |         0x10290: skip recursive mark(object at 0x102c0): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark unreachable block 0x10250 (object at 0x10280: '')
 [2] gc_mark                |         0x10250: skip recursive mark(object at 0x10280): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x102d0 (object at 0x10300: '')
+[2] gc_mark                |       mark unreachable block 0x102d0 (object at 0x10300: '')
 [2] gc_mark                |         0x102d0: recursive mark(object at 0x10300: '')
-[2] gc_mark                |       mark reachable block at 0x10290 (object at 0x102c0: '')
-[2] gc_mark                |       mark reachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark reachable block 0x10290 (object at 0x102c0: '')
+[2] gc_mark                |       mark reachable block 0x10250 (object at 0x10280: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x102d0 (object at 0x10300, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10290 (object at 0x102c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10250 (object at 0x10280, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x102d0 (object at 0x10300, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10290 (object at 0x102c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10250 (object at 0x10280, size: 16: ''): reachable
 [2] gc_run                 | Start GC [30]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x102d0 (object at 0x10300: ''): unreachable
@@ -611,22 +611,22 @@ main(2) = 1
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10290 (object at 0x102c0: '')
+[2] gc_mark                |       mark unreachable block 0x10290 (object at 0x102c0: '')
 [2] gc_mark                |         0x10290: skip recursive mark(object at 0x102c0): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark unreachable block 0x10250 (object at 0x10280: '')
 [2] gc_mark                |         0x10250: skip recursive mark(object at 0x10280): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x102d0 (object at 0x10300: '')
+[2] gc_mark                |       mark unreachable block 0x102d0 (object at 0x10300: '')
 [2] gc_mark                |         0x102d0: recursive mark(object at 0x10300: '')
-[2] gc_mark                |       mark reachable block at 0x10290 (object at 0x102c0: '')
-[2] gc_mark                |       mark reachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark reachable block 0x10290 (object at 0x102c0: '')
+[2] gc_mark                |       mark reachable block 0x10250 (object at 0x10280: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark reachable block 0x10250 (object at 0x10280: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x102d0 (object at 0x10300, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10290 (object at 0x102c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10250 (object at 0x10280, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x102d0 (object at 0x10300, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10290 (object at 0x102c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10250 (object at 0x10280, size: 16: ''): reachable
 [2] gc_run                 | Start GC [31]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x102d0 (object at 0x10300: ''): unreachable
@@ -635,22 +635,22 @@ main(2) = 1
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10290 (object at 0x102c0: '')
+[2] gc_mark                |       mark unreachable block 0x10290 (object at 0x102c0: '')
 [2] gc_mark                |         0x10290: skip recursive mark(object at 0x102c0): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark unreachable block 0x10250 (object at 0x10280: '')
 [2] gc_mark                |         0x10250: skip recursive mark(object at 0x10280): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x102d0 (object at 0x10300: '')
+[2] gc_mark                |       mark unreachable block 0x102d0 (object at 0x10300: '')
 [2] gc_mark                |         0x102d0: recursive mark(object at 0x10300: '')
-[2] gc_mark                |       mark reachable block at 0x10290 (object at 0x102c0: '')
-[2] gc_mark                |       mark reachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark reachable block 0x10290 (object at 0x102c0: '')
+[2] gc_mark                |       mark reachable block 0x10250 (object at 0x10280: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark reachable block 0x10250 (object at 0x10280: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x102d0 (object at 0x10300, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10290 (object at 0x102c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10250 (object at 0x10280, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x102d0 (object at 0x10300, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10290 (object at 0x102c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10250 (object at 0x10280, size: 16: ''): reachable
 [2] gc_run                 | Start GC [32]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x102d0 (object at 0x10300: ''): unreachable
@@ -659,22 +659,22 @@ main(2) = 1
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10290 (object at 0x102c0: '')
+[2] gc_mark                |       mark unreachable block 0x10290 (object at 0x102c0: '')
 [2] gc_mark                |         0x10290: skip recursive mark(object at 0x102c0): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark unreachable block 0x10250 (object at 0x10280: '')
 [2] gc_mark                |         0x10250: skip recursive mark(object at 0x10280): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x102d0 (object at 0x10300: '')
+[2] gc_mark                |       mark unreachable block 0x102d0 (object at 0x10300: '')
 [2] gc_mark                |         0x102d0: recursive mark(object at 0x10300: '')
-[2] gc_mark                |       mark reachable block at 0x10290 (object at 0x102c0: '')
-[2] gc_mark                |       mark reachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark reachable block 0x10290 (object at 0x102c0: '')
+[2] gc_mark                |       mark reachable block 0x10250 (object at 0x10280: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10250 (object at 0x10280: '')
+[2] gc_mark                |       mark reachable block 0x10250 (object at 0x10280: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x102d0 (object at 0x10300, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10290 (object at 0x102c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10250 (object at 0x10280, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x102d0 (object at 0x10300, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10290 (object at 0x102c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10250 (object at 0x10280, size: 16: ''): reachable
 main(3) = 4
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [33]
@@ -702,12 +702,12 @@ main(3) = 4
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0: skipped (null)
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark unreachable block 0x10310 (object at 0x10340: '')
 [2] gc_mark                |         0x10310: skip recursive mark(object at 0x10340): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10310 (object at 0x10340, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10310 (object at 0x10340, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10350, returning object of size 16 at 0x10380(+48)
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [35]
@@ -717,16 +717,16 @@ main(3) = 4
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10350 (object at 0x10380: '')
+[2] gc_mark                |       mark unreachable block 0x10350 (object at 0x10380: '')
 [2] gc_mark                |         0x10350: skip recursive mark(object at 0x10380): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark unreachable block 0x10310 (object at 0x10340: '')
 [2] gc_mark                |         0x10310: skip recursive mark(object at 0x10340): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10350 (object at 0x10380, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10310 (object at 0x10340, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10350 (object at 0x10380, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10310 (object at 0x10340, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10390, returning object of size 16 at 0x103c0(+48)
 [2] gc_run                 | Start GC [36]
 [2] gc_run                 | Phase: init.
@@ -736,21 +736,21 @@ main(3) = 4
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10350 (object at 0x10380: '')
+[2] gc_mark                |       mark unreachable block 0x10350 (object at 0x10380: '')
 [2] gc_mark                |         0x10350: skip recursive mark(object at 0x10380): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark unreachable block 0x10310 (object at 0x10340: '')
 [2] gc_mark                |         0x10310: skip recursive mark(object at 0x10340): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10390 (object at 0x103c0: '')
+[2] gc_mark                |       mark unreachable block 0x10390 (object at 0x103c0: '')
 [2] gc_mark                |         0x10390: recursive mark(object at 0x103c0: '')
-[2] gc_mark                |       mark reachable block at 0x10350 (object at 0x10380: '')
-[2] gc_mark                |       mark reachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark reachable block 0x10350 (object at 0x10380: '')
+[2] gc_mark                |       mark reachable block 0x10310 (object at 0x10340: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10390 (object at 0x103c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10350 (object at 0x10380, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10310 (object at 0x10340, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10390 (object at 0x103c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10350 (object at 0x10380, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10310 (object at 0x10340, size: 16: ''): reachable
 [2] gc_run                 | Start GC [37]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10390 (object at 0x103c0: ''): unreachable
@@ -759,21 +759,21 @@ main(3) = 4
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10350 (object at 0x10380: '')
+[2] gc_mark                |       mark unreachable block 0x10350 (object at 0x10380: '')
 [2] gc_mark                |         0x10350: skip recursive mark(object at 0x10380): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark unreachable block 0x10310 (object at 0x10340: '')
 [2] gc_mark                |         0x10310: skip recursive mark(object at 0x10340): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10390 (object at 0x103c0: '')
+[2] gc_mark                |       mark unreachable block 0x10390 (object at 0x103c0: '')
 [2] gc_mark                |         0x10390: recursive mark(object at 0x103c0: '')
-[2] gc_mark                |       mark reachable block at 0x10350 (object at 0x10380: '')
-[2] gc_mark                |       mark reachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark reachable block 0x10350 (object at 0x10380: '')
+[2] gc_mark                |       mark reachable block 0x10310 (object at 0x10340: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10390 (object at 0x103c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10350 (object at 0x10380, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10310 (object at 0x10340, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10390 (object at 0x103c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10350 (object at 0x10380, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10310 (object at 0x10340, size: 16: ''): reachable
 [2] gc_run                 | Start GC [38]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10390 (object at 0x103c0: ''): unreachable
@@ -782,22 +782,22 @@ main(3) = 4
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10350 (object at 0x10380: '')
+[2] gc_mark                |       mark unreachable block 0x10350 (object at 0x10380: '')
 [2] gc_mark                |         0x10350: skip recursive mark(object at 0x10380): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark unreachable block 0x10310 (object at 0x10340: '')
 [2] gc_mark                |         0x10310: skip recursive mark(object at 0x10340): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10390 (object at 0x103c0: '')
+[2] gc_mark                |       mark unreachable block 0x10390 (object at 0x103c0: '')
 [2] gc_mark                |         0x10390: recursive mark(object at 0x103c0: '')
-[2] gc_mark                |       mark reachable block at 0x10350 (object at 0x10380: '')
-[2] gc_mark                |       mark reachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark reachable block 0x10350 (object at 0x10380: '')
+[2] gc_mark                |       mark reachable block 0x10310 (object at 0x10340: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark reachable block 0x10310 (object at 0x10340: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10390 (object at 0x103c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10350 (object at 0x10380, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10310 (object at 0x10340, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10390 (object at 0x103c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10350 (object at 0x10380, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10310 (object at 0x10340, size: 16: ''): reachable
 [2] gc_run                 | Start GC [39]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10390 (object at 0x103c0: ''): unreachable
@@ -806,22 +806,22 @@ main(3) = 4
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10350 (object at 0x10380: '')
+[2] gc_mark                |       mark unreachable block 0x10350 (object at 0x10380: '')
 [2] gc_mark                |         0x10350: skip recursive mark(object at 0x10380): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark unreachable block 0x10310 (object at 0x10340: '')
 [2] gc_mark                |         0x10310: skip recursive mark(object at 0x10340): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10390 (object at 0x103c0: '')
+[2] gc_mark                |       mark unreachable block 0x10390 (object at 0x103c0: '')
 [2] gc_mark                |         0x10390: recursive mark(object at 0x103c0: '')
-[2] gc_mark                |       mark reachable block at 0x10350 (object at 0x10380: '')
-[2] gc_mark                |       mark reachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark reachable block 0x10350 (object at 0x10380: '')
+[2] gc_mark                |       mark reachable block 0x10310 (object at 0x10340: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark reachable block 0x10310 (object at 0x10340: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10390 (object at 0x103c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10350 (object at 0x10380, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10310 (object at 0x10340, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10390 (object at 0x103c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10350 (object at 0x10380, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10310 (object at 0x10340, size: 16: ''): reachable
 [2] gc_run                 | Start GC [40]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10390 (object at 0x103c0: ''): unreachable
@@ -830,22 +830,22 @@ main(3) = 4
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10350 (object at 0x10380: '')
+[2] gc_mark                |       mark unreachable block 0x10350 (object at 0x10380: '')
 [2] gc_mark                |         0x10350: skip recursive mark(object at 0x10380): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark unreachable block 0x10310 (object at 0x10340: '')
 [2] gc_mark                |         0x10310: skip recursive mark(object at 0x10340): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10390 (object at 0x103c0: '')
+[2] gc_mark                |       mark unreachable block 0x10390 (object at 0x103c0: '')
 [2] gc_mark                |         0x10390: recursive mark(object at 0x103c0: '')
-[2] gc_mark                |       mark reachable block at 0x10350 (object at 0x10380: '')
-[2] gc_mark                |       mark reachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark reachable block 0x10350 (object at 0x10380: '')
+[2] gc_mark                |       mark reachable block 0x10310 (object at 0x10340: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10310 (object at 0x10340: '')
+[2] gc_mark                |       mark reachable block 0x10310 (object at 0x10340: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10390 (object at 0x103c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10350 (object at 0x10380, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10310 (object at 0x10340, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10390 (object at 0x103c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10350 (object at 0x10380, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10310 (object at 0x10340, size: 16: ''): reachable
 main(4) = 9
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [41]
@@ -873,12 +873,12 @@ main(4) = 9
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0: skipped (null)
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark unreachable block 0x103d0 (object at 0x10400: '')
 [2] gc_mark                |         0x103d0: skip recursive mark(object at 0x10400): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x103d0 (object at 0x10400, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x103d0 (object at 0x10400, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10410, returning object of size 16 at 0x10440(+48)
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [43]
@@ -888,16 +888,16 @@ main(4) = 9
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10410 (object at 0x10440: '')
+[2] gc_mark                |       mark unreachable block 0x10410 (object at 0x10440: '')
 [2] gc_mark                |         0x10410: skip recursive mark(object at 0x10440): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark unreachable block 0x103d0 (object at 0x10400: '')
 [2] gc_mark                |         0x103d0: skip recursive mark(object at 0x10400): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10410 (object at 0x10440, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x103d0 (object at 0x10400, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10410 (object at 0x10440, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x103d0 (object at 0x10400, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10450, returning object of size 16 at 0x10480(+48)
 [2] gc_run                 | Start GC [44]
 [2] gc_run                 | Phase: init.
@@ -907,21 +907,21 @@ main(4) = 9
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10410 (object at 0x10440: '')
+[2] gc_mark                |       mark unreachable block 0x10410 (object at 0x10440: '')
 [2] gc_mark                |         0x10410: skip recursive mark(object at 0x10440): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark unreachable block 0x103d0 (object at 0x10400: '')
 [2] gc_mark                |         0x103d0: skip recursive mark(object at 0x10400): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10450 (object at 0x10480: '')
+[2] gc_mark                |       mark unreachable block 0x10450 (object at 0x10480: '')
 [2] gc_mark                |         0x10450: recursive mark(object at 0x10480: '')
-[2] gc_mark                |       mark reachable block at 0x10410 (object at 0x10440: '')
-[2] gc_mark                |       mark reachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark reachable block 0x10410 (object at 0x10440: '')
+[2] gc_mark                |       mark reachable block 0x103d0 (object at 0x10400: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10450 (object at 0x10480, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10410 (object at 0x10440, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x103d0 (object at 0x10400, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10450 (object at 0x10480, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10410 (object at 0x10440, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x103d0 (object at 0x10400, size: 16: ''): reachable
 [2] gc_run                 | Start GC [45]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10450 (object at 0x10480: ''): unreachable
@@ -930,21 +930,21 @@ main(4) = 9
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10410 (object at 0x10440: '')
+[2] gc_mark                |       mark unreachable block 0x10410 (object at 0x10440: '')
 [2] gc_mark                |         0x10410: skip recursive mark(object at 0x10440): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark unreachable block 0x103d0 (object at 0x10400: '')
 [2] gc_mark                |         0x103d0: skip recursive mark(object at 0x10400): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10450 (object at 0x10480: '')
+[2] gc_mark                |       mark unreachable block 0x10450 (object at 0x10480: '')
 [2] gc_mark                |         0x10450: recursive mark(object at 0x10480: '')
-[2] gc_mark                |       mark reachable block at 0x10410 (object at 0x10440: '')
-[2] gc_mark                |       mark reachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark reachable block 0x10410 (object at 0x10440: '')
+[2] gc_mark                |       mark reachable block 0x103d0 (object at 0x10400: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10450 (object at 0x10480, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10410 (object at 0x10440, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x103d0 (object at 0x10400, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10450 (object at 0x10480, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10410 (object at 0x10440, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x103d0 (object at 0x10400, size: 16: ''): reachable
 [2] gc_run                 | Start GC [46]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10450 (object at 0x10480: ''): unreachable
@@ -953,22 +953,22 @@ main(4) = 9
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10410 (object at 0x10440: '')
+[2] gc_mark                |       mark unreachable block 0x10410 (object at 0x10440: '')
 [2] gc_mark                |         0x10410: skip recursive mark(object at 0x10440): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark unreachable block 0x103d0 (object at 0x10400: '')
 [2] gc_mark                |         0x103d0: skip recursive mark(object at 0x10400): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10450 (object at 0x10480: '')
+[2] gc_mark                |       mark unreachable block 0x10450 (object at 0x10480: '')
 [2] gc_mark                |         0x10450: recursive mark(object at 0x10480: '')
-[2] gc_mark                |       mark reachable block at 0x10410 (object at 0x10440: '')
-[2] gc_mark                |       mark reachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark reachable block 0x10410 (object at 0x10440: '')
+[2] gc_mark                |       mark reachable block 0x103d0 (object at 0x10400: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark reachable block 0x103d0 (object at 0x10400: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10450 (object at 0x10480, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10410 (object at 0x10440, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x103d0 (object at 0x10400, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10450 (object at 0x10480, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10410 (object at 0x10440, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x103d0 (object at 0x10400, size: 16: ''): reachable
 [2] gc_run                 | Start GC [47]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10450 (object at 0x10480: ''): unreachable
@@ -977,22 +977,22 @@ main(4) = 9
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10410 (object at 0x10440: '')
+[2] gc_mark                |       mark unreachable block 0x10410 (object at 0x10440: '')
 [2] gc_mark                |         0x10410: skip recursive mark(object at 0x10440): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark unreachable block 0x103d0 (object at 0x10400: '')
 [2] gc_mark                |         0x103d0: skip recursive mark(object at 0x10400): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10450 (object at 0x10480: '')
+[2] gc_mark                |       mark unreachable block 0x10450 (object at 0x10480: '')
 [2] gc_mark                |         0x10450: recursive mark(object at 0x10480: '')
-[2] gc_mark                |       mark reachable block at 0x10410 (object at 0x10440: '')
-[2] gc_mark                |       mark reachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark reachable block 0x10410 (object at 0x10440: '')
+[2] gc_mark                |       mark reachable block 0x103d0 (object at 0x10400: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark reachable block 0x103d0 (object at 0x10400: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10450 (object at 0x10480, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10410 (object at 0x10440, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x103d0 (object at 0x10400, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10450 (object at 0x10480, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10410 (object at 0x10440, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x103d0 (object at 0x10400, size: 16: ''): reachable
 [2] gc_run                 | Start GC [48]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10450 (object at 0x10480: ''): unreachable
@@ -1001,22 +1001,22 @@ main(4) = 9
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10410 (object at 0x10440: '')
+[2] gc_mark                |       mark unreachable block 0x10410 (object at 0x10440: '')
 [2] gc_mark                |         0x10410: skip recursive mark(object at 0x10440): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark unreachable block 0x103d0 (object at 0x10400: '')
 [2] gc_mark                |         0x103d0: skip recursive mark(object at 0x10400): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10450 (object at 0x10480: '')
+[2] gc_mark                |       mark unreachable block 0x10450 (object at 0x10480: '')
 [2] gc_mark                |         0x10450: recursive mark(object at 0x10480: '')
-[2] gc_mark                |       mark reachable block at 0x10410 (object at 0x10440: '')
-[2] gc_mark                |       mark reachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark reachable block 0x10410 (object at 0x10440: '')
+[2] gc_mark                |       mark reachable block 0x103d0 (object at 0x10400: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x103d0 (object at 0x10400: '')
+[2] gc_mark                |       mark reachable block 0x103d0 (object at 0x10400: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10450 (object at 0x10480, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10410 (object at 0x10440, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x103d0 (object at 0x10400, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10450 (object at 0x10480, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10410 (object at 0x10440, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x103d0 (object at 0x10400, size: 16: ''): reachable
 main(5) = 16
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [49]
@@ -1044,12 +1044,12 @@ main(5) = 16
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0: skipped (null)
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark unreachable block 0x10490 (object at 0x104c0: '')
 [2] gc_mark                |         0x10490: skip recursive mark(object at 0x104c0): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10490 (object at 0x104c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10490 (object at 0x104c0, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x104d0, returning object of size 16 at 0x10500(+48)
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [51]
@@ -1059,16 +1059,16 @@ main(5) = 16
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x104d0 (object at 0x10500: '')
+[2] gc_mark                |       mark unreachable block 0x104d0 (object at 0x10500: '')
 [2] gc_mark                |         0x104d0: skip recursive mark(object at 0x10500): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark unreachable block 0x10490 (object at 0x104c0: '')
 [2] gc_mark                |         0x10490: skip recursive mark(object at 0x104c0): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x104d0 (object at 0x10500, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10490 (object at 0x104c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x104d0 (object at 0x10500, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10490 (object at 0x104c0, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10510, returning object of size 16 at 0x10540(+48)
 [2] gc_run                 | Start GC [52]
 [2] gc_run                 | Phase: init.
@@ -1078,21 +1078,21 @@ main(5) = 16
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x104d0 (object at 0x10500: '')
+[2] gc_mark                |       mark unreachable block 0x104d0 (object at 0x10500: '')
 [2] gc_mark                |         0x104d0: skip recursive mark(object at 0x10500): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark unreachable block 0x10490 (object at 0x104c0: '')
 [2] gc_mark                |         0x10490: skip recursive mark(object at 0x104c0): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10510 (object at 0x10540: '')
+[2] gc_mark                |       mark unreachable block 0x10510 (object at 0x10540: '')
 [2] gc_mark                |         0x10510: recursive mark(object at 0x10540: '')
-[2] gc_mark                |       mark reachable block at 0x104d0 (object at 0x10500: '')
-[2] gc_mark                |       mark reachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark reachable block 0x104d0 (object at 0x10500: '')
+[2] gc_mark                |       mark reachable block 0x10490 (object at 0x104c0: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10510 (object at 0x10540, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x104d0 (object at 0x10500, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10490 (object at 0x104c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10510 (object at 0x10540, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x104d0 (object at 0x10500, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10490 (object at 0x104c0, size: 16: ''): reachable
 [2] gc_run                 | Start GC [53]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10510 (object at 0x10540: ''): unreachable
@@ -1101,21 +1101,21 @@ main(5) = 16
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x104d0 (object at 0x10500: '')
+[2] gc_mark                |       mark unreachable block 0x104d0 (object at 0x10500: '')
 [2] gc_mark                |         0x104d0: skip recursive mark(object at 0x10500): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark unreachable block 0x10490 (object at 0x104c0: '')
 [2] gc_mark                |         0x10490: skip recursive mark(object at 0x104c0): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10510 (object at 0x10540: '')
+[2] gc_mark                |       mark unreachable block 0x10510 (object at 0x10540: '')
 [2] gc_mark                |         0x10510: recursive mark(object at 0x10540: '')
-[2] gc_mark                |       mark reachable block at 0x104d0 (object at 0x10500: '')
-[2] gc_mark                |       mark reachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark reachable block 0x104d0 (object at 0x10500: '')
+[2] gc_mark                |       mark reachable block 0x10490 (object at 0x104c0: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10510 (object at 0x10540, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x104d0 (object at 0x10500, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10490 (object at 0x104c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10510 (object at 0x10540, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x104d0 (object at 0x10500, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10490 (object at 0x104c0, size: 16: ''): reachable
 [2] gc_run                 | Start GC [54]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10510 (object at 0x10540: ''): unreachable
@@ -1124,22 +1124,22 @@ main(5) = 16
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x104d0 (object at 0x10500: '')
+[2] gc_mark                |       mark unreachable block 0x104d0 (object at 0x10500: '')
 [2] gc_mark                |         0x104d0: skip recursive mark(object at 0x10500): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark unreachable block 0x10490 (object at 0x104c0: '')
 [2] gc_mark                |         0x10490: skip recursive mark(object at 0x104c0): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10510 (object at 0x10540: '')
+[2] gc_mark                |       mark unreachable block 0x10510 (object at 0x10540: '')
 [2] gc_mark                |         0x10510: recursive mark(object at 0x10540: '')
-[2] gc_mark                |       mark reachable block at 0x104d0 (object at 0x10500: '')
-[2] gc_mark                |       mark reachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark reachable block 0x104d0 (object at 0x10500: '')
+[2] gc_mark                |       mark reachable block 0x10490 (object at 0x104c0: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark reachable block 0x10490 (object at 0x104c0: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10510 (object at 0x10540, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x104d0 (object at 0x10500, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10490 (object at 0x104c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10510 (object at 0x10540, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x104d0 (object at 0x10500, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10490 (object at 0x104c0, size: 16: ''): reachable
 [2] gc_run                 | Start GC [55]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10510 (object at 0x10540: ''): unreachable
@@ -1148,22 +1148,22 @@ main(5) = 16
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x104d0 (object at 0x10500: '')
+[2] gc_mark                |       mark unreachable block 0x104d0 (object at 0x10500: '')
 [2] gc_mark                |         0x104d0: skip recursive mark(object at 0x10500): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark unreachable block 0x10490 (object at 0x104c0: '')
 [2] gc_mark                |         0x10490: skip recursive mark(object at 0x104c0): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10510 (object at 0x10540: '')
+[2] gc_mark                |       mark unreachable block 0x10510 (object at 0x10540: '')
 [2] gc_mark                |         0x10510: recursive mark(object at 0x10540: '')
-[2] gc_mark                |       mark reachable block at 0x104d0 (object at 0x10500: '')
-[2] gc_mark                |       mark reachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark reachable block 0x104d0 (object at 0x10500: '')
+[2] gc_mark                |       mark reachable block 0x10490 (object at 0x104c0: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark reachable block 0x10490 (object at 0x104c0: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10510 (object at 0x10540, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x104d0 (object at 0x10500, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10490 (object at 0x104c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10510 (object at 0x10540, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x104d0 (object at 0x10500, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10490 (object at 0x104c0, size: 16: ''): reachable
 [2] gc_run                 | Start GC [56]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10510 (object at 0x10540: ''): unreachable
@@ -1172,22 +1172,22 @@ main(5) = 16
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x104d0 (object at 0x10500: '')
+[2] gc_mark                |       mark unreachable block 0x104d0 (object at 0x10500: '')
 [2] gc_mark                |         0x104d0: skip recursive mark(object at 0x10500): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark unreachable block 0x10490 (object at 0x104c0: '')
 [2] gc_mark                |         0x10490: skip recursive mark(object at 0x104c0): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10510 (object at 0x10540: '')
+[2] gc_mark                |       mark unreachable block 0x10510 (object at 0x10540: '')
 [2] gc_mark                |         0x10510: recursive mark(object at 0x10540: '')
-[2] gc_mark                |       mark reachable block at 0x104d0 (object at 0x10500: '')
-[2] gc_mark                |       mark reachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark reachable block 0x104d0 (object at 0x10500: '')
+[2] gc_mark                |       mark reachable block 0x10490 (object at 0x104c0: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10490 (object at 0x104c0: '')
+[2] gc_mark                |       mark reachable block 0x10490 (object at 0x104c0: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10510 (object at 0x10540, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x104d0 (object at 0x10500, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10490 (object at 0x104c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10510 (object at 0x10540, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x104d0 (object at 0x10500, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10490 (object at 0x104c0, size: 16: ''): reachable
 main(6) = 25
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [57]
@@ -1215,12 +1215,12 @@ main(6) = 25
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0: skipped (null)
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark unreachable block 0x10550 (object at 0x10580: '')
 [2] gc_mark                |         0x10550: skip recursive mark(object at 0x10580): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10550 (object at 0x10580, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10550 (object at 0x10580, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10590, returning object of size 16 at 0x105c0(+48)
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [59]
@@ -1230,16 +1230,16 @@ main(6) = 25
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10590 (object at 0x105c0: '')
+[2] gc_mark                |       mark unreachable block 0x10590 (object at 0x105c0: '')
 [2] gc_mark                |         0x10590: skip recursive mark(object at 0x105c0): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark unreachable block 0x10550 (object at 0x10580: '')
 [2] gc_mark                |         0x10550: skip recursive mark(object at 0x10580): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10590 (object at 0x105c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10550 (object at 0x10580, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10590 (object at 0x105c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10550 (object at 0x10580, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x105d0, returning object of size 16 at 0x10600(+48)
 [2] gc_run                 | Start GC [60]
 [2] gc_run                 | Phase: init.
@@ -1249,21 +1249,21 @@ main(6) = 25
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10590 (object at 0x105c0: '')
+[2] gc_mark                |       mark unreachable block 0x10590 (object at 0x105c0: '')
 [2] gc_mark                |         0x10590: skip recursive mark(object at 0x105c0): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark unreachable block 0x10550 (object at 0x10580: '')
 [2] gc_mark                |         0x10550: skip recursive mark(object at 0x10580): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x105d0 (object at 0x10600: '')
+[2] gc_mark                |       mark unreachable block 0x105d0 (object at 0x10600: '')
 [2] gc_mark                |         0x105d0: recursive mark(object at 0x10600: '')
-[2] gc_mark                |       mark reachable block at 0x10590 (object at 0x105c0: '')
-[2] gc_mark                |       mark reachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark reachable block 0x10590 (object at 0x105c0: '')
+[2] gc_mark                |       mark reachable block 0x10550 (object at 0x10580: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x105d0 (object at 0x10600, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10590 (object at 0x105c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10550 (object at 0x10580, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x105d0 (object at 0x10600, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10590 (object at 0x105c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10550 (object at 0x10580, size: 16: ''): reachable
 [2] gc_run                 | Start GC [61]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x105d0 (object at 0x10600: ''): unreachable
@@ -1272,21 +1272,21 @@ main(6) = 25
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10590 (object at 0x105c0: '')
+[2] gc_mark                |       mark unreachable block 0x10590 (object at 0x105c0: '')
 [2] gc_mark                |         0x10590: skip recursive mark(object at 0x105c0): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark unreachable block 0x10550 (object at 0x10580: '')
 [2] gc_mark                |         0x10550: skip recursive mark(object at 0x10580): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x105d0 (object at 0x10600: '')
+[2] gc_mark                |       mark unreachable block 0x105d0 (object at 0x10600: '')
 [2] gc_mark                |         0x105d0: recursive mark(object at 0x10600: '')
-[2] gc_mark                |       mark reachable block at 0x10590 (object at 0x105c0: '')
-[2] gc_mark                |       mark reachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark reachable block 0x10590 (object at 0x105c0: '')
+[2] gc_mark                |       mark reachable block 0x10550 (object at 0x10580: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x105d0 (object at 0x10600, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10590 (object at 0x105c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10550 (object at 0x10580, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x105d0 (object at 0x10600, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10590 (object at 0x105c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10550 (object at 0x10580, size: 16: ''): reachable
 [2] gc_run                 | Start GC [62]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x105d0 (object at 0x10600: ''): unreachable
@@ -1295,22 +1295,22 @@ main(6) = 25
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10590 (object at 0x105c0: '')
+[2] gc_mark                |       mark unreachable block 0x10590 (object at 0x105c0: '')
 [2] gc_mark                |         0x10590: skip recursive mark(object at 0x105c0): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark unreachable block 0x10550 (object at 0x10580: '')
 [2] gc_mark                |         0x10550: skip recursive mark(object at 0x10580): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x105d0 (object at 0x10600: '')
+[2] gc_mark                |       mark unreachable block 0x105d0 (object at 0x10600: '')
 [2] gc_mark                |         0x105d0: recursive mark(object at 0x10600: '')
-[2] gc_mark                |       mark reachable block at 0x10590 (object at 0x105c0: '')
-[2] gc_mark                |       mark reachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark reachable block 0x10590 (object at 0x105c0: '')
+[2] gc_mark                |       mark reachable block 0x10550 (object at 0x10580: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark reachable block 0x10550 (object at 0x10580: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x105d0 (object at 0x10600, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10590 (object at 0x105c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10550 (object at 0x10580, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x105d0 (object at 0x10600, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10590 (object at 0x105c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10550 (object at 0x10580, size: 16: ''): reachable
 [2] gc_run                 | Start GC [63]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x105d0 (object at 0x10600: ''): unreachable
@@ -1319,22 +1319,22 @@ main(6) = 25
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10590 (object at 0x105c0: '')
+[2] gc_mark                |       mark unreachable block 0x10590 (object at 0x105c0: '')
 [2] gc_mark                |         0x10590: skip recursive mark(object at 0x105c0): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark unreachable block 0x10550 (object at 0x10580: '')
 [2] gc_mark                |         0x10550: skip recursive mark(object at 0x10580): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x105d0 (object at 0x10600: '')
+[2] gc_mark                |       mark unreachable block 0x105d0 (object at 0x10600: '')
 [2] gc_mark                |         0x105d0: recursive mark(object at 0x10600: '')
-[2] gc_mark                |       mark reachable block at 0x10590 (object at 0x105c0: '')
-[2] gc_mark                |       mark reachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark reachable block 0x10590 (object at 0x105c0: '')
+[2] gc_mark                |       mark reachable block 0x10550 (object at 0x10580: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark reachable block 0x10550 (object at 0x10580: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x105d0 (object at 0x10600, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10590 (object at 0x105c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10550 (object at 0x10580, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x105d0 (object at 0x10600, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10590 (object at 0x105c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10550 (object at 0x10580, size: 16: ''): reachable
 [2] gc_run                 | Start GC [64]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x105d0 (object at 0x10600: ''): unreachable
@@ -1343,22 +1343,22 @@ main(6) = 25
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10590 (object at 0x105c0: '')
+[2] gc_mark                |       mark unreachable block 0x10590 (object at 0x105c0: '')
 [2] gc_mark                |         0x10590: skip recursive mark(object at 0x105c0): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark unreachable block 0x10550 (object at 0x10580: '')
 [2] gc_mark                |         0x10550: skip recursive mark(object at 0x10580): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x105d0 (object at 0x10600: '')
+[2] gc_mark                |       mark unreachable block 0x105d0 (object at 0x10600: '')
 [2] gc_mark                |         0x105d0: recursive mark(object at 0x10600: '')
-[2] gc_mark                |       mark reachable block at 0x10590 (object at 0x105c0: '')
-[2] gc_mark                |       mark reachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark reachable block 0x10590 (object at 0x105c0: '')
+[2] gc_mark                |       mark reachable block 0x10550 (object at 0x10580: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10550 (object at 0x10580: '')
+[2] gc_mark                |       mark reachable block 0x10550 (object at 0x10580: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x105d0 (object at 0x10600, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10590 (object at 0x105c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10550 (object at 0x10580, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x105d0 (object at 0x10600, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10590 (object at 0x105c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10550 (object at 0x10580, size: 16: ''): reachable
 main(7) = 36
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [65]
@@ -1386,12 +1386,12 @@ main(7) = 36
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0: skipped (null)
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark unreachable block 0x10610 (object at 0x10640: '')
 [2] gc_mark                |         0x10610: skip recursive mark(object at 0x10640): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10610 (object at 0x10640, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10610 (object at 0x10640, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10650, returning object of size 16 at 0x10680(+48)
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [67]
@@ -1401,16 +1401,16 @@ main(7) = 36
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10650 (object at 0x10680: '')
+[2] gc_mark                |       mark unreachable block 0x10650 (object at 0x10680: '')
 [2] gc_mark                |         0x10650: skip recursive mark(object at 0x10680): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark unreachable block 0x10610 (object at 0x10640: '')
 [2] gc_mark                |         0x10610: skip recursive mark(object at 0x10640): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10650 (object at 0x10680, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10610 (object at 0x10640, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10650 (object at 0x10680, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10610 (object at 0x10640, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10690, returning object of size 16 at 0x106c0(+48)
 [2] gc_run                 | Start GC [68]
 [2] gc_run                 | Phase: init.
@@ -1420,21 +1420,21 @@ main(7) = 36
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10650 (object at 0x10680: '')
+[2] gc_mark                |       mark unreachable block 0x10650 (object at 0x10680: '')
 [2] gc_mark                |         0x10650: skip recursive mark(object at 0x10680): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark unreachable block 0x10610 (object at 0x10640: '')
 [2] gc_mark                |         0x10610: skip recursive mark(object at 0x10640): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10690 (object at 0x106c0: '')
+[2] gc_mark                |       mark unreachable block 0x10690 (object at 0x106c0: '')
 [2] gc_mark                |         0x10690: recursive mark(object at 0x106c0: '')
-[2] gc_mark                |       mark reachable block at 0x10650 (object at 0x10680: '')
-[2] gc_mark                |       mark reachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark reachable block 0x10650 (object at 0x10680: '')
+[2] gc_mark                |       mark reachable block 0x10610 (object at 0x10640: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10690 (object at 0x106c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10650 (object at 0x10680, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10610 (object at 0x10640, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10690 (object at 0x106c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10650 (object at 0x10680, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10610 (object at 0x10640, size: 16: ''): reachable
 [2] gc_run                 | Start GC [69]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10690 (object at 0x106c0: ''): unreachable
@@ -1443,21 +1443,21 @@ main(7) = 36
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10650 (object at 0x10680: '')
+[2] gc_mark                |       mark unreachable block 0x10650 (object at 0x10680: '')
 [2] gc_mark                |         0x10650: skip recursive mark(object at 0x10680): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark unreachable block 0x10610 (object at 0x10640: '')
 [2] gc_mark                |         0x10610: skip recursive mark(object at 0x10640): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10690 (object at 0x106c0: '')
+[2] gc_mark                |       mark unreachable block 0x10690 (object at 0x106c0: '')
 [2] gc_mark                |         0x10690: recursive mark(object at 0x106c0: '')
-[2] gc_mark                |       mark reachable block at 0x10650 (object at 0x10680: '')
-[2] gc_mark                |       mark reachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark reachable block 0x10650 (object at 0x10680: '')
+[2] gc_mark                |       mark reachable block 0x10610 (object at 0x10640: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10690 (object at 0x106c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10650 (object at 0x10680, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10610 (object at 0x10640, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10690 (object at 0x106c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10650 (object at 0x10680, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10610 (object at 0x10640, size: 16: ''): reachable
 [2] gc_run                 | Start GC [70]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10690 (object at 0x106c0: ''): unreachable
@@ -1466,22 +1466,22 @@ main(7) = 36
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10650 (object at 0x10680: '')
+[2] gc_mark                |       mark unreachable block 0x10650 (object at 0x10680: '')
 [2] gc_mark                |         0x10650: skip recursive mark(object at 0x10680): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark unreachable block 0x10610 (object at 0x10640: '')
 [2] gc_mark                |         0x10610: skip recursive mark(object at 0x10640): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10690 (object at 0x106c0: '')
+[2] gc_mark                |       mark unreachable block 0x10690 (object at 0x106c0: '')
 [2] gc_mark                |         0x10690: recursive mark(object at 0x106c0: '')
-[2] gc_mark                |       mark reachable block at 0x10650 (object at 0x10680: '')
-[2] gc_mark                |       mark reachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark reachable block 0x10650 (object at 0x10680: '')
+[2] gc_mark                |       mark reachable block 0x10610 (object at 0x10640: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark reachable block 0x10610 (object at 0x10640: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10690 (object at 0x106c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10650 (object at 0x10680, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10610 (object at 0x10640, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10690 (object at 0x106c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10650 (object at 0x10680, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10610 (object at 0x10640, size: 16: ''): reachable
 [2] gc_run                 | Start GC [71]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10690 (object at 0x106c0: ''): unreachable
@@ -1490,22 +1490,22 @@ main(7) = 36
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10650 (object at 0x10680: '')
+[2] gc_mark                |       mark unreachable block 0x10650 (object at 0x10680: '')
 [2] gc_mark                |         0x10650: skip recursive mark(object at 0x10680): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark unreachable block 0x10610 (object at 0x10640: '')
 [2] gc_mark                |         0x10610: skip recursive mark(object at 0x10640): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10690 (object at 0x106c0: '')
+[2] gc_mark                |       mark unreachable block 0x10690 (object at 0x106c0: '')
 [2] gc_mark                |         0x10690: recursive mark(object at 0x106c0: '')
-[2] gc_mark                |       mark reachable block at 0x10650 (object at 0x10680: '')
-[2] gc_mark                |       mark reachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark reachable block 0x10650 (object at 0x10680: '')
+[2] gc_mark                |       mark reachable block 0x10610 (object at 0x10640: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark reachable block 0x10610 (object at 0x10640: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10690 (object at 0x106c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10650 (object at 0x10680, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10610 (object at 0x10640, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10690 (object at 0x106c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10650 (object at 0x10680, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10610 (object at 0x10640, size: 16: ''): reachable
 [2] gc_run                 | Start GC [72]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10690 (object at 0x106c0: ''): unreachable
@@ -1514,22 +1514,22 @@ main(7) = 36
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10650 (object at 0x10680: '')
+[2] gc_mark                |       mark unreachable block 0x10650 (object at 0x10680: '')
 [2] gc_mark                |         0x10650: skip recursive mark(object at 0x10680): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark unreachable block 0x10610 (object at 0x10640: '')
 [2] gc_mark                |         0x10610: skip recursive mark(object at 0x10640): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10690 (object at 0x106c0: '')
+[2] gc_mark                |       mark unreachable block 0x10690 (object at 0x106c0: '')
 [2] gc_mark                |         0x10690: recursive mark(object at 0x106c0: '')
-[2] gc_mark                |       mark reachable block at 0x10650 (object at 0x10680: '')
-[2] gc_mark                |       mark reachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark reachable block 0x10650 (object at 0x10680: '')
+[2] gc_mark                |       mark reachable block 0x10610 (object at 0x10640: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x10610 (object at 0x10640: '')
+[2] gc_mark                |       mark reachable block 0x10610 (object at 0x10640: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10690 (object at 0x106c0, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10650 (object at 0x10680, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10610 (object at 0x10640, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10690 (object at 0x106c0, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10650 (object at 0x10680, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10610 (object at 0x10640, size: 16: ''): reachable
 main(8) = 49
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [73]
@@ -1557,12 +1557,12 @@ main(8) = 49
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0: skipped (null)
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark unreachable block 0x106d0 (object at 0x10700: '')
 [2] gc_mark                |         0x106d0: skip recursive mark(object at 0x10700): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x106d0 (object at 0x10700, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x106d0 (object at 0x10700, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10710, returning object of size 16 at 0x10740(+48)
 [2] gc_malloc              | alloc 16 bytes, align 8
 [2] gc_run                 | Start GC [75]
@@ -1572,16 +1572,16 @@ main(8) = 49
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10710 (object at 0x10740: '')
+[2] gc_mark                |       mark unreachable block 0x10710 (object at 0x10740: '')
 [2] gc_mark                |         0x10710: skip recursive mark(object at 0x10740): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark unreachable block 0x106d0 (object at 0x10700: '')
 [2] gc_mark                |         0x106d0: skip recursive mark(object at 0x10700): no mark callback
 [2] gc_run                 |     root 2: skipped (null)
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10710 (object at 0x10740, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x106d0 (object at 0x10700, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10710 (object at 0x10740, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x106d0 (object at 0x10700, size: 16: ''): reachable
 [1] gc_malloc              | allocated block of size 64 at 0x10750, returning object of size 16 at 0x10780(+48)
 [2] gc_run                 | Start GC [76]
 [2] gc_run                 | Phase: init.
@@ -1591,21 +1591,21 @@ main(8) = 49
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10710 (object at 0x10740: '')
+[2] gc_mark                |       mark unreachable block 0x10710 (object at 0x10740: '')
 [2] gc_mark                |         0x10710: skip recursive mark(object at 0x10740): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark unreachable block 0x106d0 (object at 0x10700: '')
 [2] gc_mark                |         0x106d0: skip recursive mark(object at 0x10700): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10750 (object at 0x10780: '')
+[2] gc_mark                |       mark unreachable block 0x10750 (object at 0x10780: '')
 [2] gc_mark                |         0x10750: recursive mark(object at 0x10780: '')
-[2] gc_mark                |       mark reachable block at 0x10710 (object at 0x10740: '')
-[2] gc_mark                |       mark reachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark reachable block 0x10710 (object at 0x10740: '')
+[2] gc_mark                |       mark reachable block 0x106d0 (object at 0x10700: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10750 (object at 0x10780, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10710 (object at 0x10740, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x106d0 (object at 0x10700, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10750 (object at 0x10780, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10710 (object at 0x10740, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x106d0 (object at 0x10700, size: 16: ''): reachable
 [2] gc_run                 | Start GC [77]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10750 (object at 0x10780: ''): unreachable
@@ -1614,21 +1614,21 @@ main(8) = 49
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10710 (object at 0x10740: '')
+[2] gc_mark                |       mark unreachable block 0x10710 (object at 0x10740: '')
 [2] gc_mark                |         0x10710: skip recursive mark(object at 0x10740): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark unreachable block 0x106d0 (object at 0x10700: '')
 [2] gc_mark                |         0x106d0: skip recursive mark(object at 0x10700): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10750 (object at 0x10780: '')
+[2] gc_mark                |       mark unreachable block 0x10750 (object at 0x10780: '')
 [2] gc_mark                |         0x10750: recursive mark(object at 0x10780: '')
-[2] gc_mark                |       mark reachable block at 0x10710 (object at 0x10740: '')
-[2] gc_mark                |       mark reachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark reachable block 0x10710 (object at 0x10740: '')
+[2] gc_mark                |       mark reachable block 0x106d0 (object at 0x10700: '')
 [2] gc_run                 |     root 3: skipped (null)
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10750 (object at 0x10780, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10710 (object at 0x10740, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x106d0 (object at 0x10700, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10750 (object at 0x10780, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10710 (object at 0x10740, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x106d0 (object at 0x10700, size: 16: ''): reachable
 [2] gc_run                 | Start GC [78]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10750 (object at 0x10780: ''): unreachable
@@ -1637,22 +1637,22 @@ main(8) = 49
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10710 (object at 0x10740: '')
+[2] gc_mark                |       mark unreachable block 0x10710 (object at 0x10740: '')
 [2] gc_mark                |         0x10710: skip recursive mark(object at 0x10740): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark unreachable block 0x106d0 (object at 0x10700: '')
 [2] gc_mark                |         0x106d0: skip recursive mark(object at 0x10700): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10750 (object at 0x10780: '')
+[2] gc_mark                |       mark unreachable block 0x10750 (object at 0x10780: '')
 [2] gc_mark                |         0x10750: recursive mark(object at 0x10780: '')
-[2] gc_mark                |       mark reachable block at 0x10710 (object at 0x10740: '')
-[2] gc_mark                |       mark reachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark reachable block 0x10710 (object at 0x10740: '')
+[2] gc_mark                |       mark reachable block 0x106d0 (object at 0x10700: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark reachable block 0x106d0 (object at 0x10700: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10750 (object at 0x10780, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10710 (object at 0x10740, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x106d0 (object at 0x10700, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10750 (object at 0x10780, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10710 (object at 0x10740, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x106d0 (object at 0x10700, size: 16: ''): reachable
 [2] gc_run                 | Start GC [79]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10750 (object at 0x10780: ''): unreachable
@@ -1661,22 +1661,22 @@ main(8) = 49
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10710 (object at 0x10740: '')
+[2] gc_mark                |       mark unreachable block 0x10710 (object at 0x10740: '')
 [2] gc_mark                |         0x10710: skip recursive mark(object at 0x10740): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark unreachable block 0x106d0 (object at 0x10700: '')
 [2] gc_mark                |         0x106d0: skip recursive mark(object at 0x10700): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10750 (object at 0x10780: '')
+[2] gc_mark                |       mark unreachable block 0x10750 (object at 0x10780: '')
 [2] gc_mark                |         0x10750: recursive mark(object at 0x10780: '')
-[2] gc_mark                |       mark reachable block at 0x10710 (object at 0x10740: '')
-[2] gc_mark                |       mark reachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark reachable block 0x10710 (object at 0x10740: '')
+[2] gc_mark                |       mark reachable block 0x106d0 (object at 0x10700: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark reachable block 0x106d0 (object at 0x10700: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10750 (object at 0x10780, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10710 (object at 0x10740, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x106d0 (object at 0x10700, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10750 (object at 0x10780, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10710 (object at 0x10740, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x106d0 (object at 0x10700, size: 16: ''): reachable
 [2] gc_run                 | Start GC [80]
 [2] gc_run                 | Phase: init.
 [2] gc_run                 |   block at 0x10750 (object at 0x10780: ''): unreachable
@@ -1685,22 +1685,22 @@ main(8) = 49
 [2] gc_run                 | Phase: mark
 [2] gc_run                 |   frame 0 (4 roots):
 [2] gc_run                 |     root 0:
-[2] gc_mark                |       mark unreachable block at 0x10710 (object at 0x10740: '')
+[2] gc_mark                |       mark unreachable block 0x10710 (object at 0x10740: '')
 [2] gc_mark                |         0x10710: skip recursive mark(object at 0x10740): no mark callback
 [2] gc_run                 |     root 1:
-[2] gc_mark                |       mark unreachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark unreachable block 0x106d0 (object at 0x10700: '')
 [2] gc_mark                |         0x106d0: skip recursive mark(object at 0x10700): no mark callback
 [2] gc_run                 |     root 2:
-[2] gc_mark                |       mark unreachable block at 0x10750 (object at 0x10780: '')
+[2] gc_mark                |       mark unreachable block 0x10750 (object at 0x10780: '')
 [2] gc_mark                |         0x10750: recursive mark(object at 0x10780: '')
-[2] gc_mark                |       mark reachable block at 0x10710 (object at 0x10740: '')
-[2] gc_mark                |       mark reachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark reachable block 0x10710 (object at 0x10740: '')
+[2] gc_mark                |       mark reachable block 0x106d0 (object at 0x10700: '')
 [2] gc_run                 |     root 3:
-[2] gc_mark                |       mark reachable block at 0x106d0 (object at 0x10700: '')
+[2] gc_mark                |       mark reachable block 0x106d0 (object at 0x10700: '')
 [2] gc_run                 | Phase: sweep (0)
-[1] gc_run                 |   keeping block at 0x10750 (object at 0x10780, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x10710 (object at 0x10740, size: 16: ''): reachable
-[1] gc_run                 |   keeping block at 0x106d0 (object at 0x10700, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10750 (object at 0x10780, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x10710 (object at 0x10740, size: 16: ''): reachable
+[1] gc_run                 |   keeping block 0x106d0 (object at 0x10700, size: 16: ''): reachable
 main(9) = 64
 [2] gc_teardown            | GC Teardown
 [2] gc_run                 | Start GC [81]

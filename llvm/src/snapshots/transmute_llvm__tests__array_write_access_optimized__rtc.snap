@@ -18,9 +18,7 @@ declare void @gc_run()
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
-declare void @_TM0_5print1n(i64)
-
-declare void @_TM0_5print1b(i1)
+declare ptr @tmc_stdlib_string_new(ptr, i64)
 
 define private void @_glob() {
 entry:
@@ -29,15 +27,15 @@ entry:
 
 define void @_TM0_1f0() gc "shadow-stack" {
 entry:
-  %"a#local#sym20#" = alloca ptr, align 8
-  store ptr null, ptr %"a#local#sym20#", align 8
-  call void @llvm.gcroot(ptr nonnull %"a#local#sym20#", ptr nonnull @layout_a1n)
+  %"a#local#sym19#" = alloca ptr, align 8
+  store ptr null, ptr %"a#local#sym19#", align 8
+  call void @llvm.gcroot(ptr nonnull %"a#local#sym19#", ptr nonnull @layout_a1n)
   %"heap#array#" = call ptr @gc_malloc(i64 8, i64 8)
   store i64 0, ptr %"heap#array#", align 4
-  store ptr %"heap#array#", ptr %"a#local#sym20#", align 8
+  store ptr %"heap#array#", ptr %"a#local#sym19#", align 8
   call void @gc_run()
-  %"a#local#sym20#2" = load ptr, ptr %"a#local#sym20#", align 8
-  store i64 1, ptr %"a#local#sym20#2", align 4
+  %"a#local#sym19#2" = load ptr, ptr %"a#local#sym19#", align 8
+  store i64 1, ptr %"a#local#sym19#2", align 4
   call void @gc_run()
   ret void
 }

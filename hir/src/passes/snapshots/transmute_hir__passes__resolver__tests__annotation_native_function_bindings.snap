@@ -1,0 +1,133 @@
+---
+source: hir/src/passes/resolver.rs
+expression: "&hir"
+---
+Hir {
+    identifiers: [
+        IdentId(0) => "native",
+        IdentId(1) => "f",
+        IdentId(2) => "boolean",
+        IdentId(3) => "number",
+        IdentId(4) => "void",
+    ],
+    identifier_refs: [
+        IdentRefId(0) => IdentifierRef {
+            id: IdentRefId(0),
+            ident: Identifier {
+                id: IdentId(0),
+                span: 1:21; [20, 26],
+                bound: Bound(1),
+            },
+        },
+    ],
+    expressions: [
+        ExprId(0) => Expression {
+            id: ExprId(0),
+            kind: Block(
+                [
+                    StmtId(2),
+                ],
+            ),
+            span: 1:36; [35, 37],
+            typed: Typed(2),
+        },
+    ],
+    statements: [
+        StmtId(0) => Statement {
+            id: StmtId(0),
+            kind: Annotation(
+                Identifier {
+                    id: IdentId(0),
+                    span: 1:12; [11, 17],
+                    bound: Bound(1),
+                },
+            ),
+            span: 1:1; [0, 18],
+        },
+        StmtId(1) => Statement {
+            id: StmtId(1),
+            kind: LetFn(
+                Identifier {
+                    id: IdentId(1),
+                    span: 1:32; [31, 32],
+                    bound: Bound(2),
+                },
+                [
+                    Annotation {
+                        ident_ref_id: IdentRefId(0),
+                        span: 1:20; [19, 26],
+                    },
+                ],
+                [],
+                Return {
+                    type_def_id: None,
+                    typed: Typed(1),
+                },
+                Native(
+                    ExprId(0),
+                ),
+            ),
+            span: 1:28; [27, 37],
+        },
+        StmtId(2) => Statement {
+            id: StmtId(2),
+            kind: Ret(
+                None,
+                Implicit,
+            ),
+            span: 1:36; [35, 37],
+        },
+    ],
+    type_defs: [],
+    roots: [
+        StmtId(0),
+        StmtId(1),
+    ],
+    symbols: [
+        SymbolId(0) => Symbol {
+            id: SymbolId(0),
+            kind: NotFound,
+            type_id: TypeId(0),
+        },
+        SymbolId(1) => Symbol {
+            id: SymbolId(1),
+            kind: Annotation(
+                IdentId(0),
+                StmtId(0),
+            ),
+            type_id: TypeId(1),
+        },
+        SymbolId(2) => Symbol {
+            id: SymbolId(2),
+            kind: LetFn(
+                IdentId(1),
+                StmtId(1),
+                [],
+                TypeId(1),
+            ),
+            type_id: TypeId(6),
+        },
+    ],
+    types: [
+        TypeId(0) => Invalid,
+        TypeId(1) => Void,
+        TypeId(2) => None,
+        TypeId(3) => Boolean,
+        TypeId(4) => Number,
+        TypeId(5) => String,
+        TypeId(6) => Function(
+            [],
+            TypeId(1),
+        ),
+    ],
+    exit_points: ExitPoints {
+        exit_points: {
+            ExprId(0): [
+                Implicit(
+                    None,
+                ),
+            ],
+        },
+        unreachable: [],
+    },
+}

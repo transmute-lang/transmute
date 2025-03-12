@@ -28,19 +28,20 @@ fn main() {
                 .to_string();
 
             let src = res_dir.join(&c_file_name);
-            if !src.extension().unwrap().eq("c") {
-                continue;
+            let extension = src.extension().unwrap();
+            if extension.eq("c") {
+                let dst = PathBuf::from(format!(
+                    "{}/{}.ll",
+                    env::var("OUT_DIR").unwrap(),
+                    c_file_name
+                ));
+
+                println!("cargo::rerun-if-changed={}", src.display());
+                compile_to_llvm_ir(&src, &dst);
+                llvm_link_command.arg(dst.as_os_str());
+            } else if extension.eq("h") {
+                println!("cargo::rerun-if-changed={}", src.display());
             }
-
-            let dst = PathBuf::from(format!(
-                "{}/{}.ll",
-                env::var("OUT_DIR").unwrap(),
-                c_file_name
-            ));
-
-            println!("cargo::rerun-if-changed={}", src.display());
-            compile_to_llvm_ir(&src, &dst);
-            llvm_link_command.arg(dst.as_os_str());
         }
     }
 
@@ -71,11 +72,17 @@ const GC_LOGS: &str = "-D GC_LOGS";
 #[cfg(not(feature = "gc-logs"))]
 const GC_LOGS: &str = "";
 
-#[cfg(feature = "gc-stable-logs")]
-const GC_STABLE_LOGS: &str = "-D GC_STABLE_LOGS";
+#[cfg(feature = "gc-logs-stable")]
+const GC_LOGS_STABLE: &str = "-D GC_LOGS_STABLE";
 
-#[cfg(not(feature = "gc-stable-logs"))]
-const GC_STABLE_LOGS: &str = "";
+#[cfg(not(feature = "gc-logs-stable"))]
+const GC_LOGS_STABLE: &str = "";
+
+#[cfg(feature = "gc-logs-colors")]
+const GC_LOGS_COLOR: &str = "-D GC_LOGS_COLOR";
+
+#[cfg(not(feature = "gc-logs-colors"))]
+const GC_LOGS_COLOR: &str = "";
 
 #[cfg(feature = "gc-test")]
 const GC_TEST: &str = "-D GC_TEST";
@@ -88,8 +95,12 @@ fn compile_to_llvm_ir(src: &Path, dst: &Path) {
         .arg("-S")
         .arg(GC_TEST)
         .arg(GC_LOGS)
-        .arg(GC_STABLE_LOGS)
+        .arg(GC_LOGS_STABLE)
+        .arg(GC_LOGS_COLOR)
+        .arg("-D GC_PTHREAD")
         .arg("-emit-llvm")
+        // todo:ux move behind a feature
+        .arg("-ggdb")
         .arg("-o")
         .arg(dst.as_os_str())
         .arg(src.as_os_str())

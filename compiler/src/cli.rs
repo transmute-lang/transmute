@@ -1,4 +1,5 @@
 use clap::Parser;
+use std::env;
 use std::path::PathBuf;
 
 pub fn parse_args() -> Args {
@@ -26,6 +27,10 @@ pub struct Args {
     /// Outputs Assembly
     #[arg(long, conflicts_with = "llvm_ir")]
     assembly: bool,
+
+    /// Path to the stdlib library. If not provided, use `TRANSMUTE_STDLIB_PATH` env. variable if set.
+    #[arg(long)]
+    stdlib_path: Option<String>,
 }
 
 impl Args {
@@ -52,5 +57,12 @@ impl Args {
 
     pub fn output_assembly(&self) -> bool {
         self.assembly
+    }
+
+    pub fn stdlib_path(&self) -> Option<PathBuf> {
+        self.stdlib_path
+            .as_ref()
+            .map(|s| PathBuf::from(s))
+            .or_else(|| env::var("TRANSMUTE_STDLIB_PATH").ok().map(PathBuf::from))
     }
 }

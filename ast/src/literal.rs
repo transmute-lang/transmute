@@ -19,6 +19,7 @@ pub enum LiteralKind {
     Boolean(bool),
     Identifier(IdentRefId),
     Number(i64),
+    String(String),
 }
 
 impl Debug for LiteralKind {
@@ -27,6 +28,7 @@ impl Debug for LiteralKind {
             LiteralKind::Boolean(v) => write!(f, "Boolean({v})"),
             LiteralKind::Identifier(v) => write!(f, "IdentRefId({v})"),
             LiteralKind::Number(v) => write!(f, "Number({v})"),
+            LiteralKind::String(v) => write!(f, "String({v})"),
         }
     }
 }

@@ -11,6 +11,7 @@ exit_code: 0
 ----- stdout -----
 9
 false
+hello, world
 Result: 9
 
 ----- stderr -----

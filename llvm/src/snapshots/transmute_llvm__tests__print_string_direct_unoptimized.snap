@@ -1,0 +1,48 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+@str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
+@str.1 = private unnamed_addr constant [6 x i8] c"world\00", align 1
+
+; Function Attrs: nounwind
+declare void @llvm.gcroot(ptr, ptr) #0
+
+declare ptr @gc_malloc(i64, i64, ptr)
+
+declare void @gc_run()
+
+declare void @gc_mark(ptr)
+
+declare void @tmc_check_array_index(i64, i64, i64, i64)
+
+declare ptr @tmc_stdlib_string_new(ptr, i64)
+
+define private void @_glob() {
+entry:
+  unreachable
+}
+
+declare void @_TM0_5print1s(ptr)
+
+define void @_TM0_1f0() gc "shadow-stack" {
+entry:
+  %"gcroot#new_str2" = alloca ptr, align 8
+  store ptr null, ptr %"gcroot#new_str2", align 8
+  call void @llvm.gcroot(ptr %"gcroot#new_str2", ptr null)
+  %"gcroot#new_str" = alloca ptr, align 8
+  store ptr null, ptr %"gcroot#new_str", align 8
+  call void @llvm.gcroot(ptr %"gcroot#new_str", ptr null)
+  %new_str = call ptr @tmc_stdlib_string_new(ptr @str, i64 5)
+  store ptr %new_str, ptr %"gcroot#new_str", align 8
+  call void @_TM0_5print1s(ptr %new_str)
+  %new_str1 = call ptr @tmc_stdlib_string_new(ptr @str.1, i64 5)
+  store ptr %new_str1, ptr %"gcroot#new_str2", align 8
+  call void @_TM0_5print1s(ptr %new_str1)
+  ret void
+}
+
+attributes #0 = { nounwind }

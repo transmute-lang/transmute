@@ -2,8 +2,9 @@ target
 .idea
 *.iml
 
+.env
+
 *.o
 *.a
 main
 gdb.in
-bindings

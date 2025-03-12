@@ -149,6 +149,7 @@ expression: "(ast, block_exit_points)"
                         span: 2:17; [17, 18],
                     },
                     [],
+                    [],
                     Return {
                         type_def_id: None,
                     },

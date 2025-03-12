@@ -19,9 +19,7 @@ declare void @gc_run()
 
 declare void @tmc_check_array_index(i64, i64, i64, i64)
 
-declare void @_TM0_5print1n(i64)
-
-declare void @_TM0_5print1b(i1)
+declare ptr @tmc_stdlib_string_new(ptr, i64)
 
 define private void @_glob() {
 entry:
@@ -33,32 +31,32 @@ entry:
   %"gcroot#heap#struct#S#id0#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#struct#S#id0#", align 8
   call void @llvm.gcroot(ptr %"gcroot#heap#struct#S#id0#", ptr @layout_s1S)
-  %"b#local#sym23#" = alloca ptr, align 8
-  %"a#local#sym22#" = alloca ptr, align 8
-  store ptr null, ptr %"a#local#sym22#", align 8
-  call void @llvm.gcroot(ptr %"a#local#sym22#", ptr @layout_a1s1S)
-  store ptr null, ptr %"b#local#sym23#", align 8
-  call void @llvm.gcroot(ptr %"b#local#sym23#", ptr @layout_s1S)
+  %"b#local#sym22#" = alloca ptr, align 8
+  %"a#local#sym21#" = alloca ptr, align 8
+  store ptr null, ptr %"a#local#sym21#", align 8
+  call void @llvm.gcroot(ptr %"a#local#sym21#", ptr @layout_a1s1S)
+  store ptr null, ptr %"b#local#sym22#", align 8
+  call void @llvm.gcroot(ptr %"b#local#sym22#", ptr @layout_s1S)
   %"heap#struct#S#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"S#id0", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"S#id0" }, ptr null, i64 0, i32 1) to i64))
   store ptr %"heap#struct#S#id0#", ptr %"gcroot#heap#struct#S#id0#", align 8
-  %"heap#struct#S#id0#.field#idx0#sym21" = getelementptr inbounds %"S#id0", ptr %"heap#struct#S#id0#", i32 0, i32 0
-  store i64 0, ptr %"heap#struct#S#id0#.field#idx0#sym21", align 4
+  %"heap#struct#S#id0#.field#idx0#sym20" = getelementptr inbounds %"S#id0", ptr %"heap#struct#S#id0#", i32 0, i32 0
+  store i64 0, ptr %"heap#struct#S#id0#.field#idx0#sym20", align 4
   %"heap#array#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr ([1 x ptr], ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, [1 x ptr] }, ptr null, i64 0, i32 1) to i64))
   %"heap#array#1" = load [1 x ptr], ptr %"heap#array#", align 8
   %"heap#array#[0]#" = insertvalue [1 x ptr] %"heap#array#1", ptr %"heap#struct#S#id0#", 0
   store [1 x ptr] %"heap#array#[0]#", ptr %"heap#array#", align 8
-  store ptr %"heap#array#", ptr %"a#local#sym22#", align 8
+  store ptr %"heap#array#", ptr %"a#local#sym21#", align 8
   call void @gc_run()
-  %"a#local#sym22#2" = load ptr, ptr %"a#local#sym22#", align 8
+  %"a#local#sym21#2" = load ptr, ptr %"a#local#sym21#", align 8
   call void @tmc_check_array_index(i64 0, i64 1, i64 7, i64 23)
-  %"array[?]#" = getelementptr [1 x ptr], ptr %"a#local#sym22#2", i64 0, i64 0
+  %"array[?]#" = getelementptr [1 x ptr], ptr %"a#local#sym21#2", i64 0, i64 0
   %"array[?]#3" = load ptr, ptr %"array[?]#", align 8
-  store ptr %"array[?]#3", ptr %"b#local#sym23#", align 8
+  store ptr %"array[?]#3", ptr %"b#local#sym22#", align 8
   call void @gc_run()
-  %"b#local#sym23#4" = load ptr, ptr %"b#local#sym23#", align 8
-  %"b#local#sym23#4.field#idx0#sym21#" = getelementptr inbounds %"S#id0", ptr %"b#local#sym23#4", i32 0, i32 0
-  %"b#local#sym23#4.field#idx0#sym21#5" = load i64, ptr %"b#local#sym23#4.field#idx0#sym21#", align 4
-  ret i64 %"b#local#sym23#4.field#idx0#sym21#5"
+  %"b#local#sym22#4" = load ptr, ptr %"b#local#sym22#", align 8
+  %"b#local#sym22#4.field#idx0#sym20#" = getelementptr inbounds %"S#id0", ptr %"b#local#sym22#4", i32 0, i32 0
+  %"b#local#sym22#4.field#idx0#sym20#5" = load i64, ptr %"b#local#sym22#4.field#idx0#sym20#", align 4
+  ret i64 %"b#local#sym22#4.field#idx0#sym20#5"
 }
 
 attributes #0 = { nounwind }

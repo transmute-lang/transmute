@@ -42,6 +42,10 @@ impl PrettyPrint for Literal {
             LiteralKind::Number(n) => {
                 write!(f, "{n}")
             }
+            LiteralKind::String(n) => {
+                // todo:feature handle escapes
+                write!(f, "\"{n}\"")
+            }
         }
     }
 }
@@ -230,8 +234,15 @@ impl PrettyPrint for Statement {
                 }
                 writeln!(f, ";")
             }
-            StatementKind::LetFn(ident, parameters, ret_type, expr_id) => {
+            StatementKind::LetFn(ident, annotations, parameters, ret_type, expr_id) => {
                 let indent = ctx.indent();
+                for annotation in annotations {
+                    write!(
+                        f,
+                        "{indent}@{ident}\n",
+                        ident = ctx.identifier_ref(annotation.ident_ref_id)
+                    )?;
+                }
                 write!(f, "{indent}let {ident}(", ident = ctx.identifier(ident.id))?;
 
                 for (i, parameter) in parameters.iter().enumerate() {
@@ -257,8 +268,15 @@ impl PrettyPrint for Statement {
                 ctx.level -= 1;
                 writeln!(f, "{indent}}}")
             }
-            StatementKind::Struct(ident, fields) => {
+            StatementKind::Struct(ident, annotations, fields) => {
                 let indent = ctx.indent();
+                for annotation in annotations {
+                    write!(
+                        f,
+                        "{indent}@{ident}\n",
+                        ident = ctx.identifier_ref(annotation.ident_ref_id)
+                    )?;
+                }
                 writeln!(
                     f,
                     "{indent}struct {ident} {{",
@@ -275,6 +293,14 @@ impl PrettyPrint for Statement {
                     writeln!(f, ",")?;
                 }
                 writeln!(f, "{indent}}}")
+            }
+            StatementKind::Annotation(ident) => {
+                let indent = ctx.indent();
+                writeln!(
+                    f,
+                    "{indent}annotation {ident};",
+                    ident = ctx.identifier(ident.id)
+                )
             }
         }
     }
@@ -951,6 +977,19 @@ mod tests {
     #[test]
     fn dot_acces_array_access() {
         let ast = Parser::new(Lexer::new("a.b[1];")).parse().unwrap();
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_snapshot!(w);
+    }
+
+    #[test]
+    fn annotations() {
+        let ast = Parser::new(Lexer::new("@a @b let f() {} @c @d struct S {}"))
+            .parse()
+            .unwrap();
 
         let mut w = String::new();
 

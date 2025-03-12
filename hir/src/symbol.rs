@@ -15,6 +15,13 @@ impl Symbol {
             _ => panic!("{:?} is not a function", self),
         }
     }
+
+    pub fn as_annotation(&self) -> &IdentId {
+        match &self.kind {
+            SymbolKind::Annotation(ident, _) => ident,
+            _ => panic!("{:?} is not an annotation", self),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -25,6 +32,7 @@ pub enum SymbolKind {
     // todo:refactoring could StmtId be replaced with SymbolId (the symbol that defines the function)
     Parameter(IdentId, StmtId, usize),
     Struct(IdentId, StmtId),
+    Annotation(IdentId, StmtId),
     // todo:refactoring could StmtId be replaced with SymbolId (the symbol that defines the struct)
     Field(IdentId, StmtId, usize),
     NativeType(IdentId, Type),

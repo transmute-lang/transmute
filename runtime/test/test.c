@@ -2,10 +2,13 @@
 #include <string.h>
 #include <assert.h>
 #include "../src/gc/gc.h"
-#include "../../stdlib/bindings/transmute-stdlib.h"
 
 #define __LLVM_DEFINE_ROOT
 #include "../src/llvm/llvm.h"
+
+#include "../../stdlib/src/stdlib/bindings.h"
+// print(string) -> _TM0_5print1s
+void _TM0_5print1s(Str *str);
 
 void array3_mark(void *object) {
     void **array3 = object;
@@ -23,7 +26,7 @@ GcCallbacks array3_callbacks = {
 
 #define PAUSE() do { if (step) { getchar(); } } while(false)
 
-int main() {
+int main(int argc, char **argv) {
     bool step = false;
     char *env_step = getenv("GC_TEST_STEP");
     if (env_step && strcmp(env_step, "1") == 0) {
@@ -54,15 +57,19 @@ int main() {
     gc_pool_dump();
     PAUSE();
 
-    printf("\n--- stdlib_string_new ----------+\n");
-    Str *str = stdlib_string_new();
+    printf("\n--- tmc_stdlib_string_new -----+\n");
+    Str *str = tmc_stdlib_string_new((uint8_t *)"hello, world", 12);
     gc_set_object_name(str, "str");
-    printf("str = %p\n", (void *)str);
+    printf("*str = %p\n", (void *)str);
     gc_pool_dump();
     PAUSE();
 
     printf("\n--- array3[0] = str -----------+\n");
     array3[0] = str;
+    PAUSE();
+
+    printf("\n--- _TM0_5print1s -------------+\n");
+    _TM0_5print1s(str);
     PAUSE();
 
     printf("\n--- stdlib_list_new() ---------+\n");
@@ -162,7 +169,7 @@ int main() {
     gc_pool_dump();
     PAUSE();
 
-    printf("\n--- unroot map ---------------+\n");
+    printf("\n--- unroot map ----------------+\n");
     llvm_gc_root_chain->roots[IDX_MAP] = 0;
     printf("\n--- gc_run() ------------------+\n");
     gc_run();
