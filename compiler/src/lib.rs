@@ -89,15 +89,9 @@ pub fn compile_str<S: AsRef<str>, D: AsRef<Path>>(
 
     match options.output_format {
         OutputFormat::Object => {
-            #[cfg(feature = "rt-c")]
-            let runtime = transmute_crt::get_crt();
-
-            #[cfg(feature = "runtime")]
-            let runtime = transmute_runtime::get_runtime();
-
             llvm_ir
                 .build_bin(
-                    runtime,
+                    transmute_runtime::get_runtime(),
                     dst.as_ref(),
                     options.stdlib_path.as_ref().map(|p| p.as_path()),
                 )

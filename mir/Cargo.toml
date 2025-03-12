@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-transmute-core = {path = "../core" }
-transmute-hir = {path = "../hir" }
+transmute-core = { path = "../core" }
+transmute-hir = { path = "../hir" }
 
 [dev-dependencies]
 transmute-ast = {path = "../ast"}

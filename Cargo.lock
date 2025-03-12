@@ -473,7 +473,6 @@ dependencies = [
  "paste",
  "test_dir",
  "transmute-ast",
- "transmute-crt",
  "transmute-hir",
  "transmute-llvm",
  "transmute-mir",
@@ -502,10 +501,6 @@ dependencies = [
 
 [[package]]
 name = "transmute-core"
-version = "0.1.0"
-
-[[package]]
-name = "transmute-crt"
 version = "0.1.0"
 
 [[package]]

@@ -1,21 +1,18 @@
 #!/usr/bin/env bash
 
 cargo run \
-  --features transmute-crt/gc-test \
   --features transmute-runtime/gc-test \
   --features transmute-llvm/gc-aggressive \
   --bin tmc -- \
   --llvm-ir examples/gc.tm -o target/gc.ll || exit 1
 
 cargo run \
-  --features transmute-crt/gc-test \
   --features transmute-runtime/gc-test \
   --features transmute-llvm/gc-aggressive \
   --bin tmc -- \
   --assembly examples/gc.tm -o target/gc.s || exit 1
 
 cargo run \
-  --features transmute-crt/gc-test \
   --features transmute-runtime/gc-test \
   --features transmute-llvm/gc-aggressive \
   --bin tmc -- \

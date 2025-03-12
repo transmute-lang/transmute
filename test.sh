@@ -25,14 +25,10 @@ cargo test -p transmute-hir                                                     
 
 cargo test -p transmute-mir                                                                                   || exit 1
 
-cargo test -p transmute-llvm -F runtime                                                                       || exit 1
-#cargo test -p transmute-llvm -F runtime -F gc-functions                                                       || exit 1
-#cargo test -p transmute-llvm -F runtime -F gc-aggressive                                                      || exit 1
-#cargo test -p transmute-llvm -F runtime -F gc-functions -F gc-aggressive                                      || exit 1
-cargo test -p transmute-llvm -F rt-c                                                                          || exit 1
-#cargo test -p transmute-llvm -F rt-c -F gc-functions                                                          || exit 1
-#cargo test -p transmute-llvm -F rt-c -F gc-aggressive                                                         || exit 1
-#cargo test -p transmute-llvm -F rt-c -F gc-functions -F gc-aggressive                                         || exit 1
+cargo test -p transmute-llvm                                                                                  || exit 1
+#cargo test -p transmute-llvm -F gc-functions                                                                  || exit 1
+#cargo test -p transmute-llvm -F gc-aggressive                                                                 || exit 1
+#cargo test -p transmute-llvm -F gc-functions -F gc-aggressive                                                 || exit 1
 
 cargo test -p tmc                                                                                             || exit 1
 #cargo test -p tmc -F rt-c --no-default-features                                                               || exit 1
@@ -50,6 +46,7 @@ done
 
 cargo build --bin tmc --release                                                                               || exit 1
 
+echo "Executing GC test"
 ./test-gc.sh                                                                                                  || exit 1
 
 echo "OK."

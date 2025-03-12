@@ -1,9 +1,7 @@
 mod mangling;
-#[cfg(feature = "runtime")]
 mod types;
 
 use crate::mangling::{mangle_array_name, mangle_function_name, mangle_struct_name};
-#[cfg(feature = "runtime")]
 use crate::types::Allocation;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
@@ -36,12 +34,6 @@ use transmute_mir::{NativeFnKind, Variable};
 
 // fixme this generates invalid IR:
 //  let main(n: number): number {f(); n;} let f() { [0]; }
-
-#[cfg(any(
-    all(feature = "runtime", feature = "rt-c"),
-    not(any(feature = "runtime", feature = "rt-c"))
-))]
-compile_error!("exactly one of 'runtime' and 'rt-c' is required");
 
 pub struct LlvmIrGen {
     context: Context,
@@ -194,14 +186,11 @@ struct Codegen<'ctx, 't> {
     void_type: VoidType<'ctx>,
     size_type: IntType<'ctx>,
     ptr_type: PointerType<'ctx>,
-    #[cfg(feature = "rt-c")]
-    i64_array3_type: ArrayType<'ctx>,
 
     llvm_gcroot: FunctionValue<'ctx>,
     malloc: FunctionValue<'ctx>,
     #[cfg(any(test, feature = "gc-aggressive", feature = "gc-functions"))]
     gc_run: FunctionValue<'ctx>,
-    #[cfg(feature = "runtime")]
     gc_mark: FunctionValue<'ctx>,
     tmc_check_array_index: FunctionValue<'ctx>,
     // todo:refactor move away
@@ -214,12 +203,9 @@ struct Codegen<'ctx, 't> {
     //   by name
     struct_types: HashMap<StructId, StructType<'ctx>>,
     array_types: HashMap<(TypeId, usize), ArrayType<'ctx>>,
-    #[cfg(feature = "rt-c")]
-    type_layouts: HashMap<TypeId, PointerValue<'ctx>>,
     /// The callbacks used by the GC to trigger the marking and the freeing of nested/contained.
     /// The pointers point to a struct with a layout corresponding to the layout of GcCallbacks (see
     /// gc.h)
-    #[cfg(feature = "runtime")]
     gc_callbacks: HashMap<TypeId, PointerValue<'ctx>>,
     variables: HashMap<SymbolId, PointerValue<'ctx>>,
     functions: HashMap<SymbolId, FunctionValue<'ctx>>,
@@ -243,9 +229,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let void_type = context.void_type();
         let ptr_type = context.ptr_type(Default::default());
 
-        #[cfg(feature = "rt-c")]
-        let i64_array3_type = i64_type.array_type(3);
-
         Self {
             context,
             builder,
@@ -254,18 +237,12 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             void_type,
             size_type,
             ptr_type,
-            #[cfg(feature = "rt-c")]
-            i64_array3_type,
             llvm_gcroot: {
                 let llvm_gcroot_fn_type =
                     void_type.fn_type(&[ptr_type.into(), ptr_type.into()], false);
                 module.add_function("llvm.gcroot", llvm_gcroot_fn_type, None)
             },
             malloc: {
-                #[cfg(feature = "rt-c")]
-                let malloc_fn_type = ptr_type.fn_type(&[size_type.into(), size_type.into()], false);
-
-                #[cfg(feature = "runtime")]
                 let malloc_fn_type = ptr_type.fn_type(
                     &[size_type.into(), size_type.into(), ptr_type.into()],
                     false,
@@ -278,7 +255,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 let gc_fn_type = void_type.fn_type(&[], false);
                 module.add_function("gc_run", gc_fn_type, None)
             },
-            #[cfg(feature = "runtime")]
             gc_mark: {
                 let gc_fn_type = void_type.fn_type(&[ptr_type.into()], false);
                 module.add_function("gc_mark", gc_fn_type, None)
@@ -301,9 +277,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             },
             struct_types: Default::default(),
             array_types: Default::default(),
-            #[cfg(feature = "rt-c")]
-            type_layouts: Default::default(),
-            #[cfg(feature = "runtime")]
             gc_callbacks: Default::default(),
             variables: Default::default(),
             functions: Default::default(),
@@ -355,14 +328,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let block = self.context.append_basic_block(f, "entry");
         self.builder.position_at_end(block);
 
-        #[cfg(feature = "rt-c")]
-        for (struct_id, struct_def) in mir.structs.iter() {
-            if struct_def.fields.is_some() {
-                self.gen_struct_layout(mir, struct_id, struct_def.symbol_id);
-            }
-        }
-
-        #[cfg(feature = "runtime")]
         for (type_id, _) in &mir.types {
             self.gen_gc_callbacks(mir, type_id);
         }
@@ -411,27 +376,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 PassBuilderOptions::create(),
             )
             .unwrap();
-
-        // let path = fs::canonicalize(&PathBuf::from(".".to_string()))
-        //     .unwrap()
-        //     .parent()
-        //     .unwrap()
-        //     .join("exp");
-        //
-        // let ll_path = path.clone().join("assembly.ll");
-        // self.module.print_to_file(ll_path).unwrap();
-        //
-        // let asm_path = path.clone().join("assembly.s");
-        // println!("Writing assembly to {}", asm_path.display());
-        // target_machine
-        //     .write_to_file(&self.module, FileType::Assembly, &asm_path)
-        //     .unwrap();
-        //
-        // let object_path = path.clone().join("object.o");
-        // println!("Writing object to {}", asm_path.display());
-        // target_machine
-        //     .write_to_file(&self.module, FileType::Object, &object_path)
-        //     .unwrap()
     }
 
     fn gen_struct_signature(&mut self, mir: &Mir, struct_id: StructId, struct_def: &Struct) {
@@ -457,36 +401,8 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let struct_type = *self.struct_types.get(&struct_id).unwrap();
 
         struct_type.set_body(fields.as_slice(), false);
-
-        #[cfg(feature = "rt-c")]
-        {
-            let offsets_count = struct_type
-                .get_field_types_iter()
-                .filter(|f| matches!(f, BasicTypeEnum::PointerType(_)))
-                .count();
-
-            // todo:refactoring find a way to make it using structs instead of a flat array of i64
-            let i64_array_type = self.i64_type.array_type(offsets_count as u32 * 2 + 2);
-            let global = self.module.add_global(
-                i64_array_type,
-                None,
-                &format!(
-                    "layout_{}",
-                    mangle_struct_name(mir, struct_id, struct_def.symbol_id),
-                ),
-            );
-            // global.set_constant(true);
-            // global.set_externally_initialized(false);
-            // global.set_linkage(Linkage::LinkerPrivate);
-
-            self.type_layouts.insert(
-                mir.symbols[mir.structs[struct_id].symbol_id].type_id,
-                global.as_pointer_value(),
-            );
-        }
     }
 
-    #[cfg(feature = "runtime")]
     fn gen_gc_callbacks(&mut self, mir: &Mir, type_id: TypeId) {
         match &mir.types[type_id] {
             Type::Boolean => {
@@ -513,7 +429,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         }
     }
 
-    #[cfg(feature = "runtime")]
     fn gen_struct_gc_callbacks(
         &mut self,
         mir: &Mir,
@@ -584,7 +499,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         Some(callbacks_global.as_pointer_value())
     }
 
-    #[cfg(feature = "runtime")]
     fn gen_array_gc_callbacks(
         &mut self,
         mir: &Mir,
@@ -682,118 +596,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         callbacks_global.set_initializer(&BasicValueEnum::StructValue(callbacks));
 
         callbacks_global.as_pointer_value()
-    }
-
-    #[cfg(feature = "rt-c")]
-    /// the struct layout is an array of i64.
-    /// the first one is set to 1
-    /// the second one gives the count of pointer fields, n
-    /// then, n pairs of i64 follows:
-    ///  - the first element is the field's offset
-    ///  - the second element is the field's layout pointer
-    // todo:refactor move that into gen_layout, so we trigger it on the fly, the first time a
-    //   struct is instantiated
-    fn gen_struct_layout(&mut self, mir: &Mir, struct_id: StructId, symbol_id: SymbolId) {
-        let global = self
-            .module
-            .get_global(&format!(
-                "layout_{}",
-                mangle_struct_name(mir, struct_id, symbol_id),
-            ))
-            .unwrap();
-
-        let mut offsets =
-            Vec::with_capacity(global.get_value_type().into_array_type().len() as usize);
-
-        // we push the union tag
-        offsets.push(self.i64_type.const_int(0, false));
-        // then the count
-        let entries_count = (global.get_value_type().into_array_type().len() - 1) / 2;
-        offsets.push(self.i64_type.const_int(entries_count as u64, false));
-
-        let struct_type = self.struct_types[&struct_id];
-        for field in mir.structs[struct_id]
-            .fields
-            .as_ref()
-            .expect("struct has fields")
-            .iter()
-        {
-            if let Some(field_layout_ptr) = self.gen_layout(mir, field.type_id) {
-                let name = format!("offset_struct{struct_id}_field{index}", index = field.index);
-                let field_pointer = self
-                    .builder
-                    .build_struct_gep(
-                        struct_type,
-                        self.ptr_type.const_null(),
-                        field.index as u32,
-                        &name,
-                    )
-                    .unwrap();
-                let field_offset = self
-                    .builder
-                    .build_ptr_to_int(field_pointer, self.i64_type, &name)
-                    .unwrap();
-                offsets.push(field_offset);
-
-                let field_layout_ptr = self
-                    .builder
-                    .build_ptr_to_int(field_layout_ptr, self.i64_type, &name)
-                    .unwrap();
-                offsets.push(field_layout_ptr);
-            }
-        }
-
-        global.set_initializer(&self.i64_type.const_array(&offsets));
-    }
-
-    #[cfg(feature = "rt-c")]
-    fn gen_layout(&mut self, mir: &Mir, type_id: TypeId) -> Option<PointerValue<'ctx>> {
-        match self.type_layouts.get(&type_id) {
-            Some(layout) => Some(*layout),
-            None => {
-                match &mir.types[type_id] {
-                    Type::Array(element_type_id, len) => {
-                        let mut layout = Vec::with_capacity(3);
-
-                        // we push the union tag
-                        layout.push(self.i64_type.const_int(1, false));
-
-                        // we push the len
-                        layout.push(self.i64_type.const_int(*len as u64, false));
-
-                        // we push the type layout
-                        let element_layout_ptr = self
-                            .gen_layout(mir, *element_type_id)
-                            .unwrap_or_else(|| self.ptr_type.const_null());
-
-                        layout.push(
-                            self.builder
-                                .build_ptr_to_int(
-                                    element_layout_ptr,
-                                    self.i64_type,
-                                    &format!("type_layout#{type_id}#"),
-                                )
-                                .unwrap(),
-                        );
-
-                        let global = self.module.add_global(
-                            self.i64_array3_type,
-                            None,
-                            &format!("layout_{}", mangle_array_name(mir, *element_type_id, *len),),
-                        );
-                        global.set_initializer(&self.i64_type.const_array(&layout));
-
-                        let layout_ptr = global.as_pointer_value();
-
-                        self.type_layouts.insert(type_id, layout_ptr);
-
-                        Some(layout_ptr)
-                    }
-                    Type::Struct(_, _) => panic!("Struct layouts already created"),
-                    _ => None,
-                }
-            }
-        }
     }
 
     fn gen_function_signature(&mut self, mir: &Mir, function: &Function) {
@@ -945,17 +747,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             None,
         );
 
-        #[cfg(feature = "rt-c")]
-        if let Some(layout) = self.gen_layout(mir, mir.symbols[variable.symbol_id].type_id) {
-            self.builder
-                .build_store(ptr, self.ptr_type.const_zero())
-                .unwrap();
-
-            self.builder
-                .build_call(self.llvm_gcroot, &[ptr.into(), layout.into()], "gcroot")
-                .unwrap();
-        }
-        #[cfg(feature = "runtime")]
         if self.is_collected(mir, mir.symbols[variable.symbol_id].type_id) {
             self.builder
                 .build_store(ptr, self.ptr_type.const_zero())
@@ -1508,13 +1299,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .into_pointer_value();
 
         if must_create_gcroot {
-            #[cfg(feature = "runtime")]
-            {
-                // todo:feature these gc root don't live for the whole of the frame, we can set them
-                //   to null when the value is assigned to something else
-                let gcroot = self.create_gcroot("new_str");
-                self.builder.build_store(gcroot, string_ptr).unwrap();
-            }
+            // todo:feature these gc root don't live for the whole of the frame, we can set them
+            //   to null when the value is assigned to something else
+            let gcroot = self.create_gcroot("new_str");
+            self.builder.build_store(gcroot, string_ptr).unwrap();
         }
 
         Value::String(string_ptr)
@@ -1551,18 +1339,11 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             //   to null when the value is assigned to something else
             // todo:refactor the type_id can come from the expression, as we to in array
             //   instantiation
-            Some(self.create_gcroot(
-                &name,
-                #[cfg(feature = "rt-c")]
-                mir,
-                #[cfg(feature = "rt-c")]
-                mir.symbols[mir.structs[struct_id].symbol_id].type_id,
-            ))
+            Some(self.create_gcroot(&name))
         } else {
             None
         };
 
-        #[cfg(feature = "runtime")]
         let gc_callbacks =
             self.gc_callbacks[&mir.symbols[mir.structs[struct_id].symbol_id].type_id];
 
@@ -1573,7 +1354,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 &[
                     struct_type.size_of().unwrap().as_basic_value_enum().into(),
                     struct_type.get_alignment().into(),
-                    #[cfg(feature = "runtime")]
                     gc_callbacks.into(),
                 ],
                 &name,
@@ -1632,20 +1412,13 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let gcroot = if must_create_gcroot {
             // todo:feature these gc root don't live for the whole of the frame, we can set them
             //   to null when the value is assigned to something else
-            Some(self.create_gcroot(
-                name,
-                #[cfg(feature = "rt-c")]
-                mir,
-                #[cfg(feature = "rt-c")]
-                array_type_id,
-            ))
+            Some(self.create_gcroot(name))
         } else {
             None
         };
 
         let array_type = self.llvm_type(mir, array_type_id);
 
-        #[cfg(feature = "runtime")]
         let gc_callbacks = self.gc_callbacks[&array_type_id];
 
         let array_ptr = self
@@ -1655,7 +1428,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 &[
                     array_type.size_of().unwrap().as_basic_value_enum().into(),
                     array_type.into_array_type().get_alignment().into(),
-                    #[cfg(feature = "runtime")]
                     gc_callbacks.into(),
                 ],
                 name,
@@ -1785,12 +1557,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         }
     }
 
-    fn create_gcroot(
-        &mut self,
-        for_name: &str,
-        #[cfg(feature = "rt-c")] mir: &Mir,
-        #[cfg(feature = "rt-c")] type_id: TypeId,
-    ) -> PointerValue<'ctx> {
+    fn create_gcroot(&mut self, for_name: &str) -> PointerValue<'ctx> {
         let builder = self.context.create_builder();
         let first_basic_bloc = self.current_function().get_first_basic_block().unwrap();
 
@@ -1811,15 +1578,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             .build_store(gcroot, self.ptr_type.const_zero())
             .unwrap();
 
-        #[cfg(feature = "rt-c")]
-        {
-            let layout = self.gen_layout(mir, type_id).unwrap();
-
-            builder
-                .build_call(self.llvm_gcroot, &[gcroot.into(), layout.into()], "gcroot")
-                .unwrap();
-        }
-        #[cfg(feature = "runtime")]
         builder
             .build_call(
                 self.llvm_gcroot,
@@ -1882,7 +1640,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         }
     }
 
-    #[cfg(feature = "runtime")]
     fn is_collected(&self, mir: &Mir, type_id: TypeId) -> bool {
         match &mir.types[type_id] {
             Type::Boolean => false,
@@ -2189,10 +1946,6 @@ mod tests {
     use transmute_hir::UnresolvedHir;
     use transmute_mir::make_mir;
 
-    #[cfg(feature = "rt-c")]
-    const FLAVOR: &str = "__rtc";
-
-    #[cfg(feature = "runtime")]
     const FLAVOR: &str = "";
 
     macro_rules! gen {

@@ -252,8 +252,10 @@ pub enum NativeFnKind {
     LeNumberNumber,
     EqBooleanBoolean,
     NeqBooleanBoolean,
+    //todo:feature is it still needed?
     #[cfg(feature = "gc-functions")]
     GcRun,
+    //todo:feature is it still needed?
     #[cfg(feature = "gc-functions")]
     GcStats,
 }
