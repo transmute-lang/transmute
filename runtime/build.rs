@@ -13,7 +13,7 @@ fn main() {
     let src_dir = current_dir().unwrap().join("src");
 
     #[cfg(not(feature = "gc-functions"))]
-    let dirs = ["gc", "main", "tmc", "runtimelib"];
+    let dirs = ["gc", "main", "tmc"];
     #[cfg(feature = "gc-functions")]
     let dirs = ["gc", "main", "tmc", "runtimelib"];
 
@@ -28,19 +28,20 @@ fn main() {
                 .to_string();
 
             let src = res_dir.join(&c_file_name);
-            if !src.extension().unwrap().eq("c") {
-                continue;
+            let extension = src.extension().unwrap();
+            if extension.eq("c") {
+                let dst = PathBuf::from(format!(
+                    "{}/{}.ll",
+                    env::var("OUT_DIR").unwrap(),
+                    c_file_name
+                ));
+
+                println!("cargo::rerun-if-changed={}", src.display());
+                compile_to_llvm_ir(&src, &dst);
+                llvm_link_command.arg(dst.as_os_str());
+            } else if extension.eq("h") {
+                println!("cargo::rerun-if-changed={}", src.display());
             }
-
-            let dst = PathBuf::from(format!(
-                "{}/{}.ll",
-                env::var("OUT_DIR").unwrap(),
-                c_file_name
-            ));
-
-            println!("cargo::rerun-if-changed={}", src.display());
-            compile_to_llvm_ir(&src, &dst);
-            llvm_link_command.arg(dst.as_os_str());
         }
     }
 

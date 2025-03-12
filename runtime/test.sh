@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
+mkdir -p ../target/debug/transmute-stdlib/src
+
 pushd ../stdlib || exit 1
 cargo build
-./cbindgen.sh
 popd || exit 1
 
 cp ../target/debug/libtransmute_stdlib.a ../target/debug/transmute-stdlib/

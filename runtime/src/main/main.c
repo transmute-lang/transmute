@@ -20,7 +20,11 @@ int main(int argc, char **argv) {
     int64_t n = strtoll(argv[1], NULL, 10);
 
     for (int64_t i = 0; i < n; i++) {
-        printf("main(%li) = %li\n", i, _TM0_4main1n(i));
+#ifdef __APPLE__
+    printf("main(%lli) = %lli\n", i, _TM0_4main1n(i));
+#else
+    printf("main(%li) = %li\n", i, _TM0_4main1n(i));
+#endif // __APPLE__
     }
 
     gc_teardown();

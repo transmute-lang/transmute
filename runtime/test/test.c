@@ -2,10 +2,13 @@
 #include <string.h>
 #include <assert.h>
 #include "../src/gc/gc.h"
-#include "../src/runtimelib/rtlib.h"
 
 #define __LLVM_DEFINE_ROOT
 #include "../src/llvm/llvm.h"
+
+#include "../../stdlib/src/stdlib/bindings.h"
+// print(string) -> _TM0_5print1s
+void _TM0_5print1s(Str *str);
 
 void array3_mark(void *object) {
     void **array3 = object;

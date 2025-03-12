@@ -586,7 +586,11 @@ void gc_run(void) {
 
     LOG(2, "Phase: mark\n");
     LlvmStackFrame *frame = llvm_gc_root_chain;
+#ifdef GC_LOGS
     for (int frame_idx = 0; frame; frame_idx++) {
+#else
+    while (frame) {
+#endif // GC_LOGS
         LOG(2, "  frame %i (%i roots):\n", frame_idx, frame->map->num_roots);
 
         for (int32_t root_idx = 0; root_idx < frame->map->num_roots; root_idx++) {
@@ -602,7 +606,9 @@ void gc_run(void) {
         frame = frame->next;
     }
 
+#ifdef GC_LOGS
     int run_count = 0;
+#endif // GC_LOGS
     while (true) {
         LOG(2, "Phase: sweep (%i)\n", run_count);
         int freed = 0;
@@ -654,7 +660,9 @@ void gc_run(void) {
             break;
         }
         freed = 0;
+#ifdef GC_LOGS
         run_count++;
+#endif // GC_LOGS
     }
 
 #ifdef GC_PTHREAD
@@ -831,7 +839,7 @@ void gc_set_callbacks(void *object, GcCallbacks *callbacks) {
     block->callbacks = callbacks;
 }
 
-void gc_release_ownership(void *object, GcCallbacks *callbacks) {
+void gc_release_ownership(void *object) {
     GcBlock *block = GC_BLOCK(object);
 
 #ifdef GC_TEST

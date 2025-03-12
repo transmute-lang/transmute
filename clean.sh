@@ -2,4 +2,3 @@
 
 cargo clean
 rm -rf runtime/target
-rm -rf stdlib/bindings

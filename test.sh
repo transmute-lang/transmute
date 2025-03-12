@@ -2,19 +2,19 @@
 
 source setenv
 
-mkdir -p target/debug/transmute-stdlib/src                                                                    || exit 1
-
 cargo fmt                                                                                                     || exit 1
 
-pushd runtime                                                                                                 || exit 1
-./build.sh                                                                                                    || exit 1
-popd                                                                                                          || exit 1
-
+## prepare stdlib
 #cargo test -p transmute-stdlib                                                                                || exit 1
 cargo build -p transmute-stdlib                                                                               || exit 1
-
+mkdir -p target/debug/transmute-stdlib/src                                                                    || exit 1
 cp target/debug/libtransmute_stdlib.a target/debug/transmute-stdlib/                                          || exit 1
 cp stdlib/src/stdlib/*.tm target/debug/transmute-stdlib/src/                                                  || exit 1
+
+## test runtime
+pushd runtime                                                                                                 || exit 1
+./test.sh                                                                                                     || exit 1
+popd                                                                                                          || exit 1
 
 cargo test -p transmute-core                                                                                  || exit 1
 
@@ -43,8 +43,8 @@ cargo test -p tmi                                                               
 cargo build --bin tmi --release                                                                               || exit 1
 for f in examples/*.tm; do
   if [ "$f" != "examples/arrays_bounds.tm" ]; then
-    echo -e "\033[0;34mExecuting ${f} ...\e[0m"
-    target/release/tmi "$f" 9                                                                                   #|| exit 1
+    echo -e "\033[0;34mExecuting ${f} ...\033[0m"
+    target/release/tmi "$f" 9                                                                                 #|| exit 1
   fi
 done
 

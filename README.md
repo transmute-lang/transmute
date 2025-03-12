@@ -31,6 +31,11 @@ fact(3);
 ```
 
 # Build
+Build + test everything:
+```shell
+$ ./test.sh
+```
+
 ## Required dependencies:
 ### Cargo
 ```
@@ -45,4 +50,10 @@ brew install llvm@18
 ```
 
 ##### Linux
-Download and compile LLVM 18, put it in /usr/local/llvm-18.1
+* Download and compile LLVM 18, put it in `/usr/local/llvm-18.1`
+    * this installs `llvm-link` in `/usr/local/llvm-18.1/bin`
+* Get clang 18 (on ubuntu: https://ubuntuhandbook.org/index.php/2023/09/how-to-install-clang-17-or-16-in-ubuntu-22-04-20-04/)
+    * this install `clang-18`
+* Make sure:
+    * `clang` is in your PATH and points to clang-18
+    * `llvm-link` is in your PATH

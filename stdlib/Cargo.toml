@@ -6,13 +6,22 @@ edition = "2021"
 [lib]
 crate-type = [
     "staticlib",
-    # fixme: not currently supported on macos (if requires the runtime to be linked together)
+    # fixme: not currently supported on macos (it requires the runtime to be linked together)
+    #  https://users.rust-lang.org/t/building-cdylib-as-plugin-failure-on-mac-with-missing-host-symbols-works-on-linux/28297
     # "cdylib"
 ]
 
 [dependencies]
 transmute-stdlib-macros = { path = "../stdlib-macros" }
 
+[build-dependencies]
+cc = "1.2.16"
+
 [features]
-default = ["test-wrapper"]
-test-wrapper = []
+default = ["stdc"]
+
+# this feature trigger the compilation of the C part of the stdlib. It must be disabled when generating the bindings
+# with cbindgen in order to be able to compile the stdlib without the C part that depends on the missing bindings.h
+# file. Compiling the stdlib is required as we need the macros to be expanded (some macro output needs to be put in
+# the generated bindings.h file).
+stdc = []
