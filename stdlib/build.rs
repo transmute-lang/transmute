@@ -29,6 +29,7 @@ fn main() {
             }
         }
 
+        cc.debug(true);
         cc.compile("stdc");
     }
 }

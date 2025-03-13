@@ -17,18 +17,8 @@ pub mod value;
 pub type Stack = Vec<HashMap<IdentId, Ref>>;
 pub type Heap = Vec<Value>;
 
-pub fn exec<S: Into<String>, C: NativeContext>(
-    source: S,
-    print_ast: bool,
-    parameters: Vec<i64>,
-    context: C,
-) {
+pub fn exec<S: Into<String>, C: NativeContext>(source: S, print_ast: bool, context: C) {
     let mut source = source.into();
-
-    let parameters = parameters
-        .into_iter()
-        .map(Value::Number)
-        .collect::<Vec<Value>>();
 
     let mut stdlib_src =
         PathBuf::from(env::var("TRANSMUTE_STDLIB_PATH").expect("TRANSMUTE_STDLIB_PATH is defined"));
@@ -47,8 +37,6 @@ pub fn exec<S: Into<String>, C: NativeContext>(
             continue;
         }
 
-        // println!("Reading {}", src.display());
-
         let src = fs::read_to_string(&src)
             .map_err(|e| format!("Could not read {}: {}", src.display(), e))
             .unwrap();
@@ -66,15 +54,10 @@ pub fn exec<S: Into<String>, C: NativeContext>(
         })
         .map(UnresolvedHir::from)
         .and_then(|hir| hir.resolve(Natives::new()))
-        .map(|ast| Interpreter::new(&ast, context).start(parameters));
+        .map(|ast| Interpreter::new(&ast, context).start());
 
-    match result {
-        Ok(res) => {
-            println!("Result: {}", res)
-        }
-        Err(err) => {
-            print!("Errors:\n{}", err)
-        }
+    if let Err(err) = result {
+        print!("Errors:\n{}", err)
     }
 }
 

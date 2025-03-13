@@ -23,5 +23,5 @@ stdout:
 
 
 stderr:
-error at line 4, column 7
+error at line 4, column 13
 index out of bounds: the len is 1 but the index is 1

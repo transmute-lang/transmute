@@ -30,6 +30,9 @@ type Function<T, B> = (
 // todo:refactoring this would deserve a reordering of functions, and that each `resolve_` method
 //   does the actual resolution instead of giving to its caller the information required to resolve
 
+// fixme: void functions with last expr being non-void are passed to llvm with a ret of the number
+//  value
+
 pub struct Resolver {
     // out
     identifiers: BiHashMap<IdentId, String>,
@@ -1793,9 +1796,18 @@ mod tests {
     #[test]
     fn fibonacci_rec() {
         let hir = UnresolvedHir::from(
-            Parser::new(Lexer::new(include_str!("../../../examples/fibo_rec.tm")))
-                .parse()
-                .unwrap(),
+            Parser::new(Lexer::new(
+                r#"
+            let main(n: number): number {
+                if n < 2 {
+                    ret n;
+                }
+                main(n - 1) + main(n - 2);
+            }
+            "#,
+            ))
+            .parse()
+            .unwrap(),
         )
         .resolve(Natives::default())
         .unwrap();

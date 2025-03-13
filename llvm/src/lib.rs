@@ -675,7 +675,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 Value::Number(val) => {
                     self.builder.build_return(Some(&val)).unwrap();
                 }
-                Value::Struct(val, _) | Value::Array(val, _) | Value::String(val) => {
+                Value::Struct(val, _)
+                | Value::NativeStruct(val)
+                | Value::Array(val, _)
+                | Value::String(val) => {
                     self.builder.build_return(Some(&val)).unwrap();
                 }
             };
@@ -1206,9 +1209,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 |e| match self.gen_expression(mir, &mir.expressions[*e], true) {
                     Value::None | Value::Never => panic!(),
                     Value::Number(val) => BasicMetadataValueEnum::IntValue(val),
-                    Value::Struct(val, _) | Value::Array(val, _) | Value::String(val) => {
-                        BasicMetadataValueEnum::PointerValue(val)
-                    }
+                    Value::Struct(val, _)
+                    | Value::NativeStruct(val)
+                    | Value::Array(val, _)
+                    | Value::String(val) => BasicMetadataValueEnum::PointerValue(val),
                 },
             )
             .collect::<Vec<BasicMetadataValueEnum>>();
@@ -1234,7 +1238,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 Some(BasicTypeEnum::ArrayType(_)) => todo!(),
                 Some(BasicTypeEnum::FloatType(_)) => todo!(),
                 Some(BasicTypeEnum::IntType(_)) => Some(Value::from(ret)),
-                Some(BasicTypeEnum::PointerType(_)) => unimplemented!("pointers are not supported"),
+                Some(BasicTypeEnum::PointerType(_)) => {
+                    Some(Value::NativeStruct(ret.into_pointer_value()))
+                }
                 Some(t @ BasicTypeEnum::StructType(_)) => {
                     // fixme this must become a gcroot otherwise it will be GCed
                     Some(Value::Struct(ret.into_pointer_value(), t))
@@ -1322,6 +1328,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 |(_, expr_id)| match self.gen_expression(mir, &mir.expressions[*expr_id], true) {
                     Value::Number(val) => val.into(),
                     Value::Struct(pointer_value, _) => pointer_value.into(),
+                    Value::NativeStruct(pointer_value) => pointer_value.into(),
                     Value::Array(pointer_value, _) => pointer_value.into(),
                     Value::String(pointer_value) => pointer_value.into(),
                     Value::Never | Value::None => panic!("value expected"),
@@ -1702,8 +1709,10 @@ enum Value<'ctx> {
     Never,
     None,
     Number(IntValue<'ctx>),
+    // todo remove and use NativeStruct instead
     String(PointerValue<'ctx>),
     Struct(PointerValue<'ctx>, BasicTypeEnum<'ctx>),
+    NativeStruct(PointerValue<'ctx>),
     Array(PointerValue<'ctx>, BasicTypeEnum<'ctx>),
 }
 
@@ -1733,7 +1742,10 @@ impl<'ctx> From<Value<'ctx>> for BasicValueEnum<'ctx> {
         match value {
             Value::Never | Value::None => panic!(),
             Value::Number(val) => val.into(),
-            Value::Struct(val, _) | Value::Array(val, _) | Value::String(val) => val.into(),
+            Value::Struct(val, _)
+            | Value::NativeStruct(val)
+            | Value::Array(val, _)
+            | Value::String(val) => val.into(),
         }
     }
 }
@@ -1746,6 +1758,7 @@ impl<'ctx> From<Value<'ctx>> for IntValue<'ctx> {
             Value::Number(val) => val,
             Value::String(_) => panic!(),
             Value::Struct(_, _) => panic!(),
+            Value::NativeStruct(_) => panic!(),
             Value::Array(_, _) => panic!(),
         }
     }

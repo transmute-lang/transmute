@@ -1,16 +1,19 @@
 use crate::value::{Ref, Value};
 use crate::{Heap, NativeContext, Stack};
 
-pub struct InterpreterNatives {}
+pub struct InterpreterNatives<'i> {
+    args: &'i [String],
+}
 
-impl InterpreterNatives {
-    pub fn new() -> Self {
-        Self {}
+impl<'i> InterpreterNatives<'i> {
+    pub fn new(args: &'i [String]) -> Self {
+        Self { args }
     }
 }
 
-impl InterpreterNatives {
+impl InterpreterNatives<'_> {
     fn dispatch_boolean(
+        &self,
         name: &str,
         parameters: &[Ref],
         _stack: &mut Stack,
@@ -29,6 +32,7 @@ impl InterpreterNatives {
     }
 
     fn dispatch_number(
+        &self,
         name: &str,
         parameters: &[Ref],
         _stack: &mut Stack,
@@ -47,6 +51,7 @@ impl InterpreterNatives {
     }
 
     fn dispatch_string(
+        &self,
         name: &str,
         parameters: &[Ref],
         _stack: &mut Stack,
@@ -58,6 +63,12 @@ impl InterpreterNatives {
                 println!("{}", val);
                 None
             }
+            "number_parse" => {
+                let s = heap.get(parameters[0].0).unwrap().as_str();
+                let i = i64::from_str_radix(s, 10).unwrap_or(0);
+                heap.push(Value::Number(i));
+                Some(Ref(heap.len() - 1))
+            }
             _ => {
                 panic!("function {} not found on number", name)
             }
@@ -65,6 +76,7 @@ impl InterpreterNatives {
     }
 
     fn dispatch_struct(
+        &self,
         name: &str,
         _parameters: &[Ref],
         _stack: &mut Stack,
@@ -74,25 +86,48 @@ impl InterpreterNatives {
     }
 
     fn dispatch_array(
+        &self,
         name: &str,
-        _parameters: &[Ref],
+        parameters: &[Ref],
         _stack: &mut Stack,
-        _heap: &mut Heap,
+        heap: &mut Heap,
     ) -> Option<Ref> {
-        panic!("function {} not found on array", name)
+        match name {
+            "list_get" => {
+                let arr = parameters[0];
+                let arr = heap.get(arr.0).unwrap().as_array();
+                let index = parameters[1];
+                let index = heap.get(index.0).unwrap().as_i64() as usize;
+                arr.get(index).cloned()
+            }
+            _ => panic!("function {} not found on array", name),
+        }
     }
 
     fn dispatch_void(
+        &self,
         name: &str,
         _parameters: &[Ref],
         _stack: &mut Stack,
-        _heap: &mut Heap,
+        heap: &mut Heap,
     ) -> Option<Ref> {
-        panic!("function {} not found on void", name)
+        match name {
+            "args" => {
+                // fixme if called multiple time, heap is polluted with new instances
+                let mut args = Vec::new();
+                for arg in self.args {
+                    heap.push(Value::String(arg.clone()));
+                    args.push(Ref(heap.len() - 1));
+                }
+                heap.push(Value::Array(args));
+                Some(Ref(heap.len() - 1))
+            }
+            _ => panic!("function {} not found on void", name),
+        }
     }
 }
 
-impl NativeContext for InterpreterNatives {
+impl NativeContext for InterpreterNatives<'_> {
     fn execute(
         &self,
         name: &str,
@@ -105,12 +140,12 @@ impl NativeContext for InterpreterNatives {
             .map(|p| heap.get(p.0).unwrap())
             .unwrap_or(&Value::Void)
         {
-            Value::Boolean(_) => Self::dispatch_boolean(name, &parameters, stack, heap),
-            Value::Number(_) => Self::dispatch_number(name, &parameters, stack, heap),
-            Value::String(_) => Self::dispatch_string(name, &parameters, stack, heap),
-            Value::Struct(_) => Self::dispatch_struct(name, &parameters, stack, heap),
-            Value::Array(_) => Self::dispatch_array(name, &parameters, stack, heap),
-            Value::Void => Self::dispatch_void(name, &parameters, stack, heap),
+            Value::Boolean(_) => self.dispatch_boolean(name, &parameters, stack, heap),
+            Value::Number(_) => self.dispatch_number(name, &parameters, stack, heap),
+            Value::String(_) => self.dispatch_string(name, &parameters, stack, heap),
+            Value::Struct(_) => self.dispatch_struct(name, &parameters, stack, heap),
+            Value::Array(_) => self.dispatch_array(name, &parameters, stack, heap),
+            Value::Void => self.dispatch_void(name, &parameters, stack, heap),
         }
     }
 }

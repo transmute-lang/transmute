@@ -6,37 +6,128 @@ success:true
 stdout:
 [1] gc_init                | Initialize GC with log level: 2
 [2] gc_init                | Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
-main(0) = 0
-main(1) = 1
-main(2) = 1
-main(3) = 2
-main(4) = 3
-main(5) = 5
-main(6) = 8
-main(7) = 13
-main(8) = 21
-main(9) = 34
-[2] gc_teardown            | GC Teardown
+[2] gc_malloc              | alloc 24 bytes, align 8
 [2] gc_run                 | Start GC [1]
 [2] gc_run                 | no allocated blocks
+[1] gc_malloc              | allocated block of size 72 at 0x10010, returning object of size 24 at 0x10040(+48)
+[2] gc_take_ownership      | mark block at 0x10010 (object at 0x10040: '') as owned
+[2] gc_set_callbacks       | set callback of block at 0x10010 (object at 0x10040: '')
+[2] gc_release_ownership   | mark block at 0x10010 (object at 0x10040: '') as unreachable
+[2] gc_take_ownership      | mark block at 0x10010 (object at 0x10040: '') as owned
+[2] gc_malloc              | alloc 63 bytes, align 1
+[2] gc_run                 | Start GC [2]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): owned
+[2] gc_run                 | Phase: mark
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 24: ''): owned
+[1] gc_malloc              | allocated block of size 111 at 0x10058, returning object of size 63 at 0x10088(+48)
+[2] gc_take_ownership      | mark block at 0x10058 (object at 0x10088: '') as owned
+[2] gc_malloc              | alloc 24 bytes, align 8
+[2] gc_run                 | Start GC [3]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10058 (object at 0x10088: ''): owned
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): owned
+[2] gc_run                 | Phase: mark
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block 0x10058 (object at 0x10088, size: 63: ''): owned
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 24: ''): owned
+[1] gc_malloc              | allocated block of size 72 at 0x100c8, returning object of size 24 at 0x100f8(+48)
+[2] gc_take_ownership      | mark block at 0x100c8 (object at 0x100f8: '') as owned
+[2] gc_set_callbacks       | set callback of block at 0x100c8 (object at 0x100f8: '')
+[2] gc_release_ownership   | mark block at 0x100c8 (object at 0x100f8: '') as unreachable
+[2] gc_release_ownership   | mark block at 0x10058 (object at 0x10088: '') as unreachable
+[2] gc_take_ownership      | mark block at 0x100c8 (object at 0x100f8: '') as owned
+[2] gc_malloc              | alloc 32 bytes, align 8
+[2] gc_run                 | Start GC [4]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x100c8 (object at 0x100f8: ''): owned
+[2] gc_run                 |   block at 0x10058 (object at 0x10088: ''): unreachable
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): owned
+[2] gc_run                 | Phase: mark
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block 0x100c8 (object at 0x100f8, size: 24: ''): owned
+[1] gc_run                 |   freeing block at 0x10058 (object at 0x10088, size: 63: '')
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 24: ''): owned
+[2] gc_run                 | Phase: sweep (1)
+[1] gc_run                 |   keeping block 0x100c8 (object at 0x100f8, size: 24: ''): owned
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 24: ''): owned
+[1] gc_malloc              | allocated block of size 80 at 0x10110, returning object of size 32 at 0x10140(+48)
+[2] gc_take_ownership      | mark block at 0x10110 (object at 0x10140: '') as owned
+[2] gc_set_callbacks       | set callback of block at 0x10010 (object at 0x10040: '')
+[2] gc_release_ownership   | mark block at 0x10010 (object at 0x10040: '') as unreachable
+[2] gc_release_ownership   | mark block at 0x10110 (object at 0x10140: '') as unreachable
+[2] gc_take_ownership      | mark block at 0x10010 (object at 0x10040: '') as owned
+[2] gc_release_ownership   | mark block at 0x100c8 (object at 0x100f8: '') as unreachable
+[2] gc_malloc              | alloc 2 bytes, align 1
+[2] gc_run                 | Start GC [5]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10110 (object at 0x10140: ''): unreachable
+[2] gc_run                 |   block at 0x100c8 (object at 0x100f8: ''): unreachable
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): owned
+[2] gc_run                 | Phase: mark
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   freeing block at 0x10110 (object at 0x10140, size: 32: '')
+[1] gc_run                 |   freeing block at 0x100c8 (object at 0x100f8, size: 24: '')
+[2] gc_free                |     0x100c8: recursive free(object at 0x100f8)
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 24: ''): owned
+[2] gc_run                 | Phase: sweep (1)
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 24: ''): owned
+[1] gc_malloc              | allocated block of size 50 at 0x10160, returning object of size 2 at 0x10190(+48)
+[2] gc_take_ownership      | mark block at 0x10160 (object at 0x10190: '') as owned
+[2] gc_malloc              | alloc 24 bytes, align 8
+[2] gc_run                 | Start GC [6]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10160 (object at 0x10190: ''): owned
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): owned
+[2] gc_run                 | Phase: mark
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block 0x10160 (object at 0x10190, size: 2: ''): owned
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 24: ''): owned
+[1] gc_malloc              | allocated block of size 72 at 0x10198, returning object of size 24 at 0x101c8(+48)
+[2] gc_take_ownership      | mark block at 0x10198 (object at 0x101c8: '') as owned
+[2] gc_set_callbacks       | set callback of block at 0x10198 (object at 0x101c8: '')
+[2] gc_release_ownership   | mark block at 0x10198 (object at 0x101c8: '') as unreachable
+[2] gc_release_ownership   | mark block at 0x10160 (object at 0x10190: '') as unreachable
+[2] gc_take_ownership      | mark block at 0x10198 (object at 0x101c8: '') as owned
+[2] gc_set_callbacks       | set callback of block at 0x10010 (object at 0x10040: '')
+[2] gc_release_ownership   | mark block at 0x10010 (object at 0x10040: '') as unreachable
+[2] gc_release_ownership   | mark block at 0x10110 (object at 0x10140: '') as unreachable
+[2] gc_take_ownership      | mark block at 0x10010 (object at 0x10040: '') as owned
+[2] gc_release_ownership   | mark block at 0x10198 (object at 0x101c8: '') as unreachable
+55
+[2] gc_teardown            | GC Teardown
+[2] gc_run                 | Start GC [7]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10198 (object at 0x101c8: ''): unreachable
+[2] gc_run                 |   block at 0x10160 (object at 0x10190: ''): unreachable
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): owned
+[2] gc_run                 | Phase: mark
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   freeing block at 0x10198 (object at 0x101c8, size: 24: '')
+[2] gc_free                |     0x10198: recursive free(object at 0x101c8)
+[1] gc_run                 |   freeing block at 0x10160 (object at 0x10190, size: 2: '')
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 24: ''): owned
+[2] gc_run                 | Phase: sweep (1)
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 24: ''): owned
 
 Statistics:
 
-  Executions ......   1
-  Allocated .......   0 blocks
+  Executions ......   7
+  Allocated .......   6 blocks
     Total
-      objects         0 bytes
-      blocks          0 bytes
+      objects       169 bytes
+      blocks        457 bytes
     Max
-      objects         0 bytes
-      blocks          0 bytes
+      objects       111 bytes
+      blocks        255 bytes
     End
-      objects         0 bytes
-      blocks          0 bytes
-  Freed ...........   0 blocks
+      objects        24 bytes
+      blocks         72 bytes
+  Freed ...........   5 blocks
     Total
-      objects         0 bytes
-      blocks          0 bytes
+      objects       145 bytes
+      blocks        385 bytes
 
 
 

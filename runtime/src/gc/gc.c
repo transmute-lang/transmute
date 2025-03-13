@@ -103,17 +103,22 @@ do {                                                                            
 #define LOG(level, ...)
 #endif
 
+#ifdef GC_TEST
 #ifdef __APPLE__
 // we pretend that we mmap'ed at the correct location...
 #define POOL_OFFSET(ptr)     ((void*)((uintptr_t)ptr - (uintptr_t)gc.pool + POOL_START))
 #else
 #define POOL_OFFSET(ptr)     ((void*)ptr)
 #endif // __APPLE__
+#else // GC_TEST
+#define POOL_OFFSET(ptr)     ((void*)ptr)
+#endif // GC_TEST
 
 typedef enum GcBlockState {
     Unreachable = 0,
     Reachable   = 1,
     Owned       = 2,
+    // todo think about a new state "Root" (see the "mess" we do in env.c)
 } GcBlockState;
 
 #if defined(GC_LOGS) || defined(GC_TEST)

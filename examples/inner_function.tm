@@ -2,12 +2,15 @@ let fibo(n: number): number {
     0;
 }
 
-let main(n: number): number {
+let main() {
+    let n = number_parse(list_get(args(), 1));
+
     let fibo(n: number): number {
         if n < 2 {
             ret n;
         }
-        main(n - 1) + fibo(n - 2);
+        fibo(n - 1) + fibo(n - 2);
     }
-    fibo(n);
+
+    print(fibo(n));
 }

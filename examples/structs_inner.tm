@@ -20,6 +20,6 @@ let area(n: number): number = {
     );
 }
 
-let main(n: number): number {
-    area(n);
+let main() {
+    print(area(number_parse(list_get(args(), 1))));
 }

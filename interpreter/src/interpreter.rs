@@ -16,6 +16,7 @@ pub struct Interpreter<'a, C> {
     // todo:refactoring IdentId should be SymbolId
     stack: Stack,
     heap: Heap,
+    res: Option<Value>,
 }
 
 impl<'a, C: NativeContext> Interpreter<'a, C> {
@@ -25,26 +26,27 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
             context,
             stack: vec![Default::default()],
             heap: Default::default(),
+            res: None,
         }
     }
 
-    pub fn start(&mut self, main_parameters: Vec<Value>) -> i64 {
-        let (parameters, expr_id) = self
+    pub fn start(&mut self) {
+        let expr_id = self
             .hir
             .roots
             .iter()
             .filter_map(|stmt_id| {
-                if let StatementKind::LetFn(ident, _, params, _, implementation) =
+                if let StatementKind::LetFn(ident, _, _, _, implementation) =
                     &self.hir.statements[*stmt_id].kind
                 {
                     if &self.hir.identifiers[ident.id] == "main" {
-                        return Some((params, *implementation));
+                        return Some(*implementation);
                     }
                 }
                 None
             })
-            .filter_map(|(parameters, implementation)| match implementation {
-                Implementation::Provided(expr_id) => Some((parameters, expr_id)),
+            .filter_map(|implementation| match implementation {
+                Implementation::Provided(expr_id) => Some(expr_id),
                 _ => None,
             })
             .next()
@@ -52,12 +54,7 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
 
         let val = match &self.hir.expressions[expr_id].kind {
             ExpressionKind::Block(stmts) => {
-                let mut env = HashMap::with_capacity(parameters.len());
-
-                for (param, value) in parameters.iter().zip(main_parameters.into_iter()) {
-                    self.heap.push(value);
-                    env.insert(param.identifier.id, Ref(self.heap.len() - 1));
-                }
+                let env = HashMap::new();
 
                 self.stack.push(env);
 
@@ -75,24 +72,18 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
             .map(|r| &self.heap[r.0])
             .cloned()
             .unwrap_or_default();
+        self.res = Some(val);
+    }
 
-        match val {
-            Value::Boolean(true) => 1,
-            Value::Boolean(false) => 0,
-            Value::Number(n) => n,
-            Value::String(_) => {
-                eprintln!("Cannot return a string");
-                0
-            }
-            Value::Struct(_) => {
-                eprintln!("Cannot return a struct");
-                0
-            }
-            Value::Array(_) => {
-                eprintln!("Cannot return an array");
-                0
-            }
-            Value::Void => 0,
+    #[cfg(test)]
+    fn res(&self) -> i64 {
+        match self.res.as_ref() {
+            None => 0,
+            Some(Value::Number(i)) => *i,
+            Some(Value::Boolean(true)) => 1,
+            Some(Value::Boolean(false)) => 0,
+            Some(Value::Void) => 0,
+            _ => panic!("res expected"),
         }
     }
 
@@ -335,7 +326,12 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
                                     if val.is_ret {
                                         return val;
                                     }
-                                    params.push(val.value_ref.expect("param has value"));
+                                    params.push(val.value_ref.unwrap_or_else(|| {
+                                        panic!(
+                                            "param has value when calling {}",
+                                            self.hir.identifiers[*ident_id]
+                                        )
+                                    }));
                                 }
 
                                 let env = HashMap::with_capacity(parameters.len());
@@ -577,29 +573,16 @@ mod tests {
                 let hir = UnresolvedHir::from(Parser::new(Lexer::new($src)).parse().unwrap())
                     .resolve(Natives::default())
                     .unwrap();
-                let context = crate::natives::InterpreterNatives::new();
+                let context = crate::natives::InterpreterNatives::new(&[]);
 
-                let actual = Interpreter::new(&hir, context).start(vec![]);
+                let mut interpreter = Interpreter::new(&hir, context);
+                interpreter.start();
+
+                let actual = interpreter.res();
 
                 assert_eq!(actual, $value)
             }
-        }; // ($name:ident, $src:expr => $kind:ident) => {
-           //     #[test]
-           //     fn $name() {
-           //         let parser = Parser::new(Lexer::new($src));
-           //         let ast = parser
-           //             .parse()
-           //             .unwrap()
-           //             .convert_implicit_ret()
-           //             .convert_operators()
-           //             .resolve(Natives::new())
-           //             .unwrap();
-           //
-           //         let actual = Interpreter::new(&ast).start();
-           //
-           //         assert_eq!(actual, super::Value::$kind)
-           //     }
-           // };
+        };
     }
 
     eval!(simple_precedence_1, "let main() { 2 + 20 * 2; }" => 42);

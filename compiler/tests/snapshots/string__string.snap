@@ -84,7 +84,6 @@ stdout:
 [2] gc_release_ownership   | mark block at 0x10090 (object at 0x100c0: '') as unreachable
 hello, 
 world
-main(0) = 0
 [2] gc_teardown            | GC Teardown
 [2] gc_run                 | Start GC [6]
 [2] gc_run                 | Phase: init.

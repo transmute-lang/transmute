@@ -21,7 +21,10 @@ fn main() {
         }
     };
 
-    let context = InterpreterNatives::new();
+    let mut params = cli.params;
+    params.insert(0, "tmi".to_string());
 
-    exec(script, cli.output_parsed, cli.params, context);
+    let context = InterpreterNatives::new(&params);
+
+    exec(script, cli.output_parsed, context);
 }

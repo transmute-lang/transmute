@@ -1,6 +1,17 @@
-let main(n: number): number {
+let main() {
+    let n = number_parse(
+        list_get(
+            args(),
+            1
+        )
+    );
+    let f = fibo(n);
+    print(f);
+}
+
+let fibo(n: number): number {
     if n < 2 {
         ret n;
     }
-    main(n - 1) + main(n - 2);
+    fibo(n - 1) + fibo(n - 2);
 }

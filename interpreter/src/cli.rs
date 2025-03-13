@@ -11,7 +11,7 @@ pub struct Cli {
     pub output_parsed: bool,
 
     /// The parameters to pass to main
-    pub params: Vec<i64>,
+    pub params: Vec<String>,
 }
 
 pub fn parse_args() -> Cli {

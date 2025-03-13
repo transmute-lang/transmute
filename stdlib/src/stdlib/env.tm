@@ -1,0 +1,3 @@
+
+@native
+let args(): List {}

@@ -65,7 +65,6 @@ Statistics:
       objects        24 bytes
       blocks         72 bytes
 
-main(0) = 0
 [2] gc_teardown            | GC Teardown
 [2] gc_run                 | Start GC [4]
 [2] gc_run                 | no allocated blocks

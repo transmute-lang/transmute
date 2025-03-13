@@ -1,6 +1,8 @@
-let main(n: number): number = {
-    if n == 0 { ret 0; }
-    if n == 1 { ret 1; }
+let main() = {
+    let n = number_parse(list_get(args(), 1));
+
+    if n == 0 { print(0); ret; }
+    if n == 1 { print(1); ret; }
 
     let prev_prev = 0;
     let prev = 1;
@@ -13,5 +15,5 @@ let main(n: number): number = {
         n = n - 1;
     }
 
-    current;
+    print(current);
 }

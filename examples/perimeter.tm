@@ -8,7 +8,9 @@ struct Square {
     b: Point,
 }
 
-let main(n: number): number = {
+let main() = {
+    let n = number_parse(list_get(args(), 1));
+
     let square = Square {
         a: Point {
             x: 0,
@@ -23,5 +25,5 @@ let main(n: number): number = {
     let width = square.b.x - square.a.x;
     let height = square.b.y - square.a.y;
 
-    ret width * 2 + height * 2;
+    print(width * 2 + height * 2);
 }

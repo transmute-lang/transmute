@@ -2,12 +2,14 @@ struct Struct {
     field: number,
 }
 
-let main(n: number): number = {
+let main() = {
+    let n = number_parse(list_get(args(), 1));
+
     let s = Struct {
         field: n * 2,
     };
 
     s.field = s.field + 1;
 
-    ret s.field;
+    print(s.field);
 }

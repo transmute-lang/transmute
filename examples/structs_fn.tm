@@ -3,7 +3,9 @@ struct Point {
     y: number
 }
 
-let main(n: number): number {
+let main() {
+    let n = number_parse(list_get(args(), 1));
+
     let origin = origin();
 
     let a = area(origin, Point {
@@ -11,7 +13,7 @@ let main(n: number): number {
         y: n,
     });
 
-    a;
+    print(a);
 }
 
 let origin(): Point {

@@ -15,7 +15,9 @@ let perimeter(square: Square): number {
     ret width * 2 + height * 2;
 }
 
-let main(n: number): number = {
+let main() = {
+    let n = number_parse(list_get(args(), 1));
+
     let square = Square {
         a: Point {
             x: 0,
@@ -27,5 +29,5 @@ let main(n: number): number = {
         },
     };
 
-    perimeter(square);
+    print(perimeter(square));
 }

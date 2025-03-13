@@ -8,7 +8,9 @@ struct Rect {
     b: Point,
 }
 
-let main(n: number): number {
+let main() {
+    let n = number_parse(list_get(args(), 1));
+
     let origin = origin();
 
     let p1 = Point {
@@ -55,7 +57,7 @@ let main(n: number): number {
     # trigger gc
     let a = 0;
 
-    a1 + a2;
+    print(a1 + a2);
 }
 
 let origin(): Point {

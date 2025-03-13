@@ -8,11 +8,10 @@ struct Inner {
     i2: number,
 }
 
-let main(n: number): number {
+let main() {
     f();
     gc_run();
     gc_stats();
-    n;
 }
 
 let f() {

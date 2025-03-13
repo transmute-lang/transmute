@@ -13,6 +13,8 @@ void gc_teardown(void);
 void gc_print_statistics(void);
 
 void gc_mark(void *object);
+void gc_take_ownership(void *object);
+void gc_release_ownership(void *object);
 
 void gc_set_callbacks(void *object, GcCallbacks *callbacks);
 

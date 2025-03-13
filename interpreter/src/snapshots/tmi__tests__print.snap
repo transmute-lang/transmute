@@ -12,6 +12,5 @@ exit_code: 0
 9
 false
 hello, world
-Result: 9
 
 ----- stderr -----

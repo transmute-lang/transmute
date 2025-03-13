@@ -9,6 +9,6 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-Result: 64
+64
 
 ----- stderr -----

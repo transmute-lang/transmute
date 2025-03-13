@@ -6,8 +6,9 @@ struct Outer {
     field: Inner,
 }
 
-let main(i: number): number {
-    f2(i) + f3(i) + f4(i) + f5(i);
+let main() {
+    let i = number_parse(list_get(args(), 1));
+    print(f2(i) + f3(i) + f4(i) + f5(i));
 }
 
 let f2(i: number): number {

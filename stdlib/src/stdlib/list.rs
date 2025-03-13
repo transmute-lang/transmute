@@ -91,3 +91,15 @@ pub extern "C" fn stdlib_list_pop(list: *mut List) -> ListElement {
     list_ptr.as_ref_mut().update(vec);
     element.unwrap_or(ptr::null())
 }
+
+#[no_mangle]
+// list_get(List, number) -> _TM0_8list_get2s4Listn
+pub extern "C" fn _TM0_8list_get2s4Listn(list: *const List, index: usize) -> ListElement {
+    let list_ptr = ObjectPtr::from_raw(list as *mut List).unwrap();
+    let list = Vec::from(list_ptr.as_ref());
+
+    let element = list.get(index).map(|e| e.clone()).unwrap_or(ptr::null());
+    list.leak();
+
+    element
+}

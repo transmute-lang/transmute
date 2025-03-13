@@ -4,7 +4,9 @@ struct Point {
     y: number,
 }
 
-let main(n: number): number {
+let main() {
+    let n = number_parse(list_get(args(), 1));
+
     let square = [
         Point {
             x: 0,
@@ -23,5 +25,5 @@ let main(n: number): number {
 
     let area = (square[1].x - s0.x) * (square[1].y - s0.y);
 
-    area;
+    print(area);
 }

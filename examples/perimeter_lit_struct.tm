@@ -15,17 +15,21 @@ let perimeter(square: Square): number {
     ret width * 2 + height * 2;
 }
 
-let main(n: number): number = {
-    perimeter(
-        Square {
-            a: Point {
-                x: 0,
-                y: 0,
-            },
-            b: Point {
-                x: n,
-                y: n,
-            },
-        }
+let main() = {
+    let n = number_parse(list_get(args(), 1));
+
+    print(
+        perimeter(
+            Square {
+                a: Point {
+                    x: 0,
+                    y: 0,
+                },
+                b: Point {
+                    x: n,
+                    y: n,
+                },
+            }
+        )
     );
 }
