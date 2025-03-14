@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 
 // print(number) -> _TM0_5print1n
 void _TM0_5print1n(int64_t a) {
