@@ -6,5 +6,4 @@ target
 
 *.o
 *.a
-main
 gdb.in
