@@ -6,7 +6,12 @@ case "$(uname -s)" in
     PATH="$LLVM_SYS_180_PREFIX/bin:$PATH"
   ;;
   *)
-    LLVM_SYS_180_PREFIX=/usr/local/llvm-18.1
+    if [ -d /usr/lib/llvm-18/bin/ ]; then
+      PATH="/usr/lib/llvm-18/bin:$PATH"
+      LLVM_SYS_180_PREFIX=/usr/lib/llvm-18
+    else
+      LLVM_SYS_180_PREFIX=/usr/local/llvm-18.1
+    fi
   ;;
 esac
 
@@ -28,3 +33,4 @@ if [ $(llvm-link --version 2>/dev/null | grep 18.1 | wc -l) -ne 1 ]; then
 else
     echo "found llvm-link 18.1 at $(which llvm-link)"
 fi
+

@@ -39,7 +39,8 @@ $ ./test.sh
 ## Required dependencies:
 ### Cargo
 ```
-cargo install --force cbindgen
+cargo install cbindgen
+cargo install cargo-insta
 ```
 
 ### System
@@ -50,10 +51,9 @@ brew install llvm@18
 ```
 
 ##### Linux
-* Download and compile LLVM 18, put it in `/usr/local/llvm-18.1`
-    * this installs `llvm-link` in `/usr/local/llvm-18.1/bin`
 * Get clang 18 (on ubuntu: https://ubuntuhandbook.org/index.php/2023/09/how-to-install-clang-17-or-16-in-ubuntu-22-04-20-04/)
-    * this install `clang-18`
+    * this install `clang-18` in `/usr/lib/llvm-18/`
+* install the requried dependencies: `sudo apt install libpolly-18-dev libzstd-dev libz-dev`
 * Make sure:
     * `clang` is in your `PATH` and points to clang-18
     * `llvm-link` is in your `PATH`
