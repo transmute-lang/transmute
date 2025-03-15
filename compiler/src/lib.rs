@@ -93,7 +93,7 @@ pub fn compile_str<S: AsRef<str>, D: AsRef<Path>>(
                 .build_bin(
                     transmute_runtime::get_runtime(),
                     dst.as_ref(),
-                    options.stdlib_path.as_ref().map(|p| p.as_path()),
+                    options.stdlib_path.as_deref(),
                 )
                 .map_err(|d| d.to_string())?;
         }

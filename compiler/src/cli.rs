@@ -62,7 +62,7 @@ impl Args {
     pub fn stdlib_path(&self) -> Option<PathBuf> {
         self.stdlib_path
             .as_ref()
-            .map(|s| PathBuf::from(s))
+            .map(PathBuf::from)
             .or_else(|| env::var("TRANSMUTE_STDLIB_PATH").ok().map(PathBuf::from))
     }
 }

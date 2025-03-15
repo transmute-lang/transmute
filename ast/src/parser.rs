@@ -1658,7 +1658,7 @@ impl<'s> Parser<'s> {
 
         let span = loop {
             let token = self.lexer.next_token();
-            if &token.kind == &closing_token {
+            if token.kind == closing_token {
                 if arguments.len() < min_arguments_count {
                     if !comma_seen {
                         report_unexpected_token!(self, token, [expected_token!(TokenKind::Comma),]);
@@ -1727,42 +1727,41 @@ impl<'s> Parser<'s> {
                                 ]
                             );
                         }
+                    } else if arguments.len() < min_arguments_count {
+                        report_unexpected_token!(
+                            self,
+                            token,
+                            [
+                                expected_token!(TokenKind::Identifier),
+                                expected_token!(TokenKind::Number(0)),
+                                expected_token!(TokenKind::Minus),
+                                expected_token!(TokenKind::True),
+                                expected_token!(TokenKind::False),
+                                expected_token!(TokenKind::OpenBracket),
+                                expected_token!(TokenKind::OpenParenthesis),
+                                expected_token!(TokenKind::If),
+                                expected_token!(TokenKind::While),
+                            ]
+                        );
                     } else {
-                        if arguments.len() < min_arguments_count {
-                            report_unexpected_token!(
-                                self,
-                                token,
-                                [
-                                    expected_token!(TokenKind::Identifier),
-                                    expected_token!(TokenKind::Number(0)),
-                                    expected_token!(TokenKind::Minus),
-                                    expected_token!(TokenKind::True),
-                                    expected_token!(TokenKind::False),
-                                    expected_token!(TokenKind::OpenBracket),
-                                    expected_token!(TokenKind::OpenParenthesis),
-                                    expected_token!(TokenKind::If),
-                                    expected_token!(TokenKind::While),
-                                ]
-                            );
-                        } else {
-                            report_unexpected_token!(
-                                self,
-                                token,
-                                [
-                                    expected_token!(closing_token.clone()),
-                                    expected_token!(TokenKind::Identifier),
-                                    expected_token!(TokenKind::Number(0)),
-                                    expected_token!(TokenKind::Minus),
-                                    expected_token!(TokenKind::True),
-                                    expected_token!(TokenKind::False),
-                                    expected_token!(TokenKind::OpenBracket),
-                                    expected_token!(TokenKind::OpenParenthesis),
-                                    expected_token!(TokenKind::If),
-                                    expected_token!(TokenKind::While),
-                                ]
-                            );
-                        }
+                        report_unexpected_token!(
+                            self,
+                            token,
+                            [
+                                expected_token!(closing_token.clone()),
+                                expected_token!(TokenKind::Identifier),
+                                expected_token!(TokenKind::Number(0)),
+                                expected_token!(TokenKind::Minus),
+                                expected_token!(TokenKind::True),
+                                expected_token!(TokenKind::False),
+                                expected_token!(TokenKind::OpenBracket),
+                                expected_token!(TokenKind::OpenParenthesis),
+                                expected_token!(TokenKind::If),
+                                expected_token!(TokenKind::While),
+                            ]
+                        );
                     }
+
                     self.lexer.push_next(token);
                     break span;
                 }

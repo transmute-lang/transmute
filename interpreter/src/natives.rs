@@ -65,7 +65,7 @@ impl InterpreterNatives<'_> {
             }
             "number_parse" => {
                 let s = heap.get(parameters[0].0).unwrap().as_str();
-                let i = i64::from_str_radix(s, 10).unwrap_or(0);
+                let i = s.parse::<i64>().unwrap_or(0);
                 heap.push(Value::Number(i));
                 Some(Ref(heap.len() - 1))
             }
@@ -140,12 +140,12 @@ impl NativeContext for InterpreterNatives<'_> {
             .map(|p| heap.get(p.0).unwrap())
             .unwrap_or(&Value::Void)
         {
-            Value::Boolean(_) => self.dispatch_boolean(name, &parameters, stack, heap),
-            Value::Number(_) => self.dispatch_number(name, &parameters, stack, heap),
-            Value::String(_) => self.dispatch_string(name, &parameters, stack, heap),
-            Value::Struct(_) => self.dispatch_struct(name, &parameters, stack, heap),
-            Value::Array(_) => self.dispatch_array(name, &parameters, stack, heap),
-            Value::Void => self.dispatch_void(name, &parameters, stack, heap),
+            Value::Boolean(_) => self.dispatch_boolean(name, parameters, stack, heap),
+            Value::Number(_) => self.dispatch_number(name, parameters, stack, heap),
+            Value::String(_) => self.dispatch_string(name, parameters, stack, heap),
+            Value::Struct(_) => self.dispatch_struct(name, parameters, stack, heap),
+            Value::Array(_) => self.dispatch_array(name, parameters, stack, heap),
+            Value::Void => self.dispatch_void(name, parameters, stack, heap),
         }
     }
 }

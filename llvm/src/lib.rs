@@ -138,9 +138,9 @@ impl LlvmIr<'_> {
             Ok(o) => {
                 if !o.status.success() {
                     eprintln!("{command:?} returned:");
-                    std::io::stdout().write(&o.stdout).unwrap();
+                    let _ = std::io::stdout().write(&o.stdout).unwrap();
                     std::io::stdout().flush().unwrap();
-                    std::io::stderr().write(&o.stderr).unwrap();
+                    let _ = std::io::stderr().write(&o.stderr).unwrap();
                     std::io::stderr().flush().unwrap();
                     exit(o.status.code().unwrap());
                 } else {

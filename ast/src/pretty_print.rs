@@ -237,9 +237,9 @@ impl PrettyPrint for Statement {
             StatementKind::LetFn(ident, annotations, parameters, ret_type, expr_id) => {
                 let indent = ctx.indent();
                 for annotation in annotations {
-                    write!(
+                    writeln!(
                         f,
-                        "{indent}@{ident}\n",
+                        "{indent}@{ident}",
                         ident = ctx.identifier_ref(annotation.ident_ref_id)
                     )?;
                 }
@@ -271,9 +271,9 @@ impl PrettyPrint for Statement {
             StatementKind::Struct(ident, annotations, fields) => {
                 let indent = ctx.indent();
                 for annotation in annotations {
-                    write!(
+                    writeln!(
                         f,
-                        "{indent}@{ident}\n",
+                        "{indent}@{ident}",
                         ident = ctx.identifier_ref(annotation.ident_ref_id)
                     )?;
                 }

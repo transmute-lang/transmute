@@ -49,10 +49,10 @@ impl Ast {
     ) -> Self {
         Self {
             identifiers: identifiers.into(),
-            identifier_refs: identifier_refs.into(),
+            identifier_refs,
             expressions: expressions.into(),
-            statements: statements.into(),
-            type_defs: type_defs.into(),
+            statements,
+            type_defs,
             roots,
         }
     }

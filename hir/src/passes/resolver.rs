@@ -253,9 +253,7 @@ impl Resolver {
                 let lhs_type_id = self.resolve_expression(hir, *lhs_expr_id);
                 let rhs_type_id = self.resolve_expression(hir, *rhs_expr_id);
 
-                if lhs_type_id == self.invalid_type_id {
-                    self.invalid_type_id
-                } else if rhs_type_id == self.invalid_type_id {
+                if lhs_type_id == self.invalid_type_id || rhs_type_id == self.invalid_type_id {
                     self.invalid_type_id
                 } else if lhs_type_id != rhs_type_id {
                     self.diagnostics.report_err(
@@ -669,8 +667,10 @@ impl Resolver {
         hir: &mut UnresolvedHir,
         values: &[ExprId],
     ) -> TypeId {
-        let expected_type_id =
-            self.resolve_expression(hir, *values.get(0).expect("array has at least one element"));
+        let expected_type_id = self.resolve_expression(
+            hir,
+            *values.first().expect("array has at least one element"),
+        );
 
         for (index, expr_id) in values.iter().enumerate().skip(1) {
             let type_id = self.resolve_expression(hir, *expr_id);
@@ -1125,21 +1125,19 @@ impl Resolver {
         annotations: &[Annotation],
     ) -> (Identifier<Bound>, Implementation<Vec<Field<Typed, Bound>>>) {
         let is_native = self.native_annotation_present(hir, annotations);
-        if is_native {
-            if !fields.is_empty() {
-                self.diagnostics.report_err(
-                    format!(
-                        "Native struct {} must not have a body",
-                        self.identifiers.get_by_left(&identifier.id).unwrap(),
-                    ),
-                    fields
-                        .first()
-                        .unwrap()
-                        .span
-                        .extend_to(&fields.last().unwrap().span),
-                    (file!(), line!()),
-                );
-            }
+        if is_native && !fields.is_empty() {
+            self.diagnostics.report_err(
+                format!(
+                    "Native struct {} must not have a body",
+                    self.identifiers.get_by_left(&identifier.id).unwrap(),
+                ),
+                fields
+                    .first()
+                    .unwrap()
+                    .span
+                    .extend_to(&fields.last().unwrap().span),
+                (file!(), line!()),
+            );
         }
 
         let fields = fields

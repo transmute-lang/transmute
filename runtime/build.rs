@@ -66,37 +66,37 @@ fn main() {
 }
 
 #[cfg(feature = "gc-logs")]
-const GC_LOGS: &str = "-D GC_LOGS";
+const GC_LOGS: [&str; 2] = ["-D", "GC_LOGS"];
 
 #[cfg(not(feature = "gc-logs"))]
-const GC_LOGS: &str = "";
+const GC_LOGS: [&str; 0] = [];
 
 #[cfg(feature = "gc-logs-stable")]
-const GC_LOGS_STABLE: &str = "-D GC_LOGS_STABLE";
+const GC_LOGS_STABLE: [&str; 2] = ["-D", "GC_LOGS_STABLE"];
 
 #[cfg(not(feature = "gc-logs-stable"))]
-const GC_LOGS_STABLE: &str = "";
+const GC_LOGS_STABLE: [&str; 0] = [];
 
 #[cfg(feature = "gc-logs-colors")]
-const GC_LOGS_COLOR: &str = "-D GC_LOGS_COLOR";
+const GC_LOGS_COLOR: [&str; 2] = ["-D", "GC_LOGS_COLOR"];
 
 #[cfg(not(feature = "gc-logs-colors"))]
-const GC_LOGS_COLOR: &str = "";
+const GC_LOGS_COLOR: [&str; 0] = [];
 
 #[cfg(feature = "gc-test")]
-const GC_TEST: &str = "-D GC_TEST";
+const GC_TEST: [&str; 2] = ["-D", "GC_TEST"];
 
 #[cfg(not(feature = "gc-test"))]
-const GC_TEST: &str = "";
+const GC_TEST: [&str; 0] = [];
 
 fn compile_to_llvm_ir(src: &Path, dst: &Path) {
     let output = Command::new("clang")
         .arg("-S")
-        .arg(GC_TEST)
-        .arg(GC_LOGS)
-        .arg(GC_LOGS_STABLE)
-        .arg(GC_LOGS_COLOR)
-        .arg("-D GC_PTHREAD")
+        .args(GC_TEST)
+        .args(GC_LOGS)
+        .args(GC_LOGS_STABLE)
+        .args(GC_LOGS_COLOR)
+        .args(["-D", "GC_PTHREAD"])
         .arg("-emit-llvm")
         // todo:ux move behind a feature
         .arg("-ggdb")
