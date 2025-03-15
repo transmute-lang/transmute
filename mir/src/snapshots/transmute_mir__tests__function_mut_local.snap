@@ -111,6 +111,17 @@ Ok(
                 span: 1:19; [18, 19],
                 type_id: TypeId(4),
             },
+            ExprId(5) => Expression {
+                id: ExprId(5),
+                kind: Block(
+                    [
+                        StmtId(3),
+                        StmtId(4),
+                    ],
+                ),
+                span: 1:22; [21, 27],
+                type_id: TypeId(1),
+            },
         ],
         statements: [
             StmtId(0) => Statement {
@@ -122,10 +133,22 @@ Ok(
             },
             StmtId(1) => Statement {
                 id: StmtId(1),
+                kind: Expression(
+                    ExprId(5),
+                ),
+                span: 1:22; [21, 27],
+            },
+            StmtId(3) => Statement {
+                id: StmtId(3),
+                kind: Expression(
+                    ExprId(2),
+                ),
+                span: 1:22; [21, 27],
+            },
+            StmtId(4) => Statement {
+                id: StmtId(4),
                 kind: Ret(
-                    Some(
-                        ExprId(2),
-                    ),
+                    None,
                 ),
                 span: 1:22; [21, 27],
             },

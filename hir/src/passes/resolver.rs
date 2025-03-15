@@ -30,9 +30,6 @@ type Function<T, B> = (
 // todo:refactoring this would deserve a reordering of functions, and that each `resolve_` method
 //   does the actual resolution instead of giving to its caller the information required to resolve
 
-// fixme:void-fn: void functions with last expr being non-void are passed to llvm with a ret of the number
-//  value
-
 pub struct Resolver {
     // out
     identifiers: BiHashMap<IdentId, String>,
@@ -2383,14 +2380,6 @@ mod tests {
         "Function f expected to return type number, got void",
         Span::new(1, 30, 29, 3)
     );
-
-    // fixme:void-fn uncomment this test
-    // test_type_error!(
-    //     return_from_void2,
-    //     "let fibo(n: number) { 0; }",
-    //     "",
-    //     Span::default()
-    // );
 
     test_type_ok!(
         struct_in_function,

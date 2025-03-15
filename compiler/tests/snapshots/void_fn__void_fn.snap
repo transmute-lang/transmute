@@ -1,0 +1,33 @@
+---
+source: compiler/tests/void_fn.rs
+expression: "format!\n(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(), String ::\nfrom_utf8(output.stdout).unwrap(), String ::\nfrom_utf8(output.stderr).unwrap())"
+---
+success:true
+stdout:
+[1] gc_init                | Initialize GC with log level: 2
+[2] gc_init                | Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
+[2] gc_teardown            | GC Teardown
+[2] gc_run                 | Start GC [1]
+[2] gc_run                 | no allocated blocks
+
+Statistics:
+
+  Executions ......   1
+  Allocated .......   0 blocks
+    Total
+      objects         0 bytes
+      blocks          0 bytes
+    Max
+      objects         0 bytes
+      blocks          0 bytes
+    End
+      objects         0 bytes
+      blocks          0 bytes
+  Freed ...........   0 blocks
+    Total
+      objects         0 bytes
+      blocks          0 bytes
+
+
+
+stderr:

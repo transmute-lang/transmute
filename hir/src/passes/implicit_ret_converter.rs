@@ -3,7 +3,7 @@ use transmute_ast::statement::{RetMode, Statement, StatementKind};
 use transmute_core::ids::{ExprId, StmtId};
 use transmute_core::vec_map::VecMap;
 
-pub struct ImplicitRetConverter {
+pub struct ImplicitRetResolver {
     statements: VecMap<StmtId, Statement>,
     expressions: VecMap<ExprId, Expression>,
 }
@@ -13,7 +13,7 @@ pub struct Output {
     pub expressions: VecMap<ExprId, Expression>,
 }
 
-impl ImplicitRetConverter {
+impl ImplicitRetResolver {
     pub fn new() -> Self {
         Self {
             statements: Default::default(),
@@ -21,7 +21,7 @@ impl ImplicitRetConverter {
         }
     }
 
-    pub fn convert(
+    pub fn resolve(
         mut self,
         root_statements: &[StmtId],
         mut statements: VecMap<StmtId, Statement>,
@@ -256,7 +256,7 @@ impl ImplicitRetConverter {
             ExpressionKind::Block(stmts) if stmts.is_empty() => {
                 if depth > 0 {
                     // we're not the root block of a function, we don't want to insert an implicit
-                    // return. moreover, as the block is empty, is cannot always return. hence, we
+                    // return. moreover, as the block is empty, it cannot always return. hence, we
                     // just insert the expression, and return `false`...
 
                     self.expressions.insert(expression.id, expression);
@@ -408,7 +408,7 @@ impl ImplicitRetConverter {
     ) -> bool {
         if unreachable {
             // we don't visit unreachable expression, possibly missing implicit exit points. as the
-            // expressions are not reachable anyway, we ar safe
+            // expressions are not reachable anyway, we are safe
             self.statements.insert(statement.id, statement);
             return false;
         }
@@ -481,7 +481,7 @@ impl ImplicitRetConverter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::passes::implicit_ret_converter::ImplicitRetConverter;
+    use crate::passes::implicit_ret_converter::ImplicitRetResolver;
     use insta::assert_snapshot;
     use transmute_ast::lexer::Lexer;
     use transmute_ast::parser::Parser;
@@ -505,7 +505,7 @@ mod tests {
                 }
 
                 let explicit_rets =
-                    ImplicitRetConverter::new().convert(&ast.roots, statements, expressions);
+                    ImplicitRetResolver::new().resolve(&ast.roots, statements, expressions);
 
                 let expressions = explicit_rets.expressions;
                 let statements = explicit_rets.statements;

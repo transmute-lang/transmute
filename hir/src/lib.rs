@@ -4,8 +4,10 @@ use crate::expression::Expression;
 use crate::identifier::Identifier;
 use crate::identifier_ref::IdentifierRef;
 use crate::natives::{Natives, Type};
-use crate::passes::exit_points_resolver::ExitPointsResolver;
-use crate::passes::implicit_ret_converter::ImplicitRetConverter;
+use crate::passes::exit_points_resolver::{ExitPointsResolver, Output as ExitPointsResolverOutput};
+use crate::passes::implicit_ret_converter::{
+    ImplicitRetResolver, Output as ImplicitRetResolverOutput,
+};
 use crate::passes::operators_converter::OperatorsConverter;
 use crate::passes::resolver::Resolver;
 use crate::statement::{Field, Parameter, Return, Statement, TypeDef};
@@ -109,26 +111,35 @@ impl From<Ast> for UnresolvedHir {
         let identifiers = operator_free.identifiers;
         let identifier_refs = operator_free.identifier_refs;
 
-        // convert implicit ret to explicit ret
-        let explicit_rets =
-            ImplicitRetConverter::new().convert(&ast.roots, ast.statements, expressions);
-        let statements = explicit_rets.statements;
-        let expressions = explicit_rets.expressions;
+        // convert implicit return statements/expressions to `Ret(..., RetMode::Implicit)`
+        // statements
+        let ImplicitRetResolverOutput {
+            statements,
+            expressions,
+        } = ImplicitRetResolver::new().resolve(&ast.roots, ast.statements, expressions);
 
-        // compute exit points
+        // here, we have two kind of `Ret` statements:
+        //  - explicit, which are present in the source code (`ret x;`)
+        //  - implicit, which are not present in the source code but that happen to be the last
+        //    statements on their execution path in their function
+
+        // compute exit points, i.e. Ret statements (explicit or implicit) that are actually
+        // reachable. we also compute the set of unreachable expression.
         let mut exit_points = HashMap::new();
-        let mut unreachable = vec![];
+        let mut unreachable = Vec::new();
 
         for (_, stmt) in statements.iter() {
             if let &AstStatementKind::LetFn(_, _, _, _, expr_id) = &stmt.kind {
-                let mut output =
-                    ExitPointsResolver::new(&expressions, &statements).exit_points(expr_id);
+                let ExitPointsResolverOutput {
+                    exit_points: new_exit_points,
+                    unreachable: mut new_unreachable,
+                } = ExitPointsResolver::new(&expressions, &statements).resolve(expr_id);
 
                 #[cfg(test)]
-                println!("Computed exit points and unreachable for {expr_id:?}: {output:?}");
+                println!("Computed exit points={new_exit_points:?} and unreachable={new_unreachable:?} for {expr_id:?}");
 
-                exit_points.insert(expr_id, output.exit_points);
-                unreachable.append(&mut output.unreachable);
+                exit_points.insert(expr_id, new_exit_points);
+                unreachable.append(&mut new_unreachable);
             }
         }
 
@@ -172,5 +183,13 @@ impl ResolvedHir {
 
     pub fn expression_type(&self, id: ExprId) -> &Type {
         &self.types[self.expressions[id].resolved_type_id()]
+    }
+
+    pub fn void_type_id(&self) -> TypeId {
+        self.types
+            .iter()
+            .find(|(_, t)| matches!(t, Type::Void))
+            .unwrap()
+            .0
     }
 }

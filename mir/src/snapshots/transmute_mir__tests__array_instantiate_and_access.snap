@@ -109,14 +109,37 @@ Ok(
                 span: 2:17; [17, 51],
                 type_id: TypeId(2),
             },
+            ExprId(6) => Expression {
+                id: ExprId(6),
+                kind: Block(
+                    [
+                        StmtId(2),
+                        StmtId(3),
+                    ],
+                ),
+                span: 3:19; [37, 41],
+                type_id: TypeId(1),
+            },
         ],
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
+                kind: Expression(
+                    ExprId(6),
+                ),
+                span: 3:19; [37, 41],
+            },
+            StmtId(2) => Statement {
+                id: StmtId(2),
+                kind: Expression(
+                    ExprId(4),
+                ),
+                span: 3:19; [37, 41],
+            },
+            StmtId(3) => Statement {
+                id: StmtId(3),
                 kind: Ret(
-                    Some(
-                        ExprId(4),
-                    ),
+                    None,
                 ),
                 span: 3:19; [37, 41],
             },

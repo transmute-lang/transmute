@@ -26,6 +26,8 @@ pub enum StatementKind {
     Annotation(Identifier),
 }
 
+/// AST only produces `Ret` with `RetMode::Explicit` but having that information in the AST nodes
+/// helps in the hir transformations (see `ImplicitRetConverter::visit_expression`).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RetMode {
     Explicit,

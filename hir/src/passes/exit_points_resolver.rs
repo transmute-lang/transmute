@@ -77,7 +77,7 @@ impl<'a> ExitPointsResolver<'a> {
         }
     }
 
-    pub fn exit_points(&self, expr: ExprId) -> Output {
+    pub fn resolve(&self, expr: ExprId) -> Output {
         if !matches!(&self.expressions[expr].kind, ExpressionKind::Block(_)) {
             panic!("expected block got {:?}", &self.expressions[expr].kind)
         }
@@ -289,7 +289,7 @@ mod tests {
                             Some((
                                 expr_id,
                                 ExitPointsResolver::new(&ast.expressions, &ast.statements)
-                                    .exit_points(expr_id),
+                                    .resolve(expr_id),
                             ))
                         } else {
                             None

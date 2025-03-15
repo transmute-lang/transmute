@@ -1,5 +1,6 @@
 ---
 source: mir/src/lib.rs
+assertion_line: 1317
 expression: make_mir(hir)
 ---
 Ok(
@@ -96,17 +97,6 @@ Ok(
                 span: 1:9; [8, 26],
                 type_id: TypeId(2),
             },
-            ExprId(5) => Expression {
-                id: ExprId(5),
-                kind: Block(
-                    [
-                        StmtId(3),
-                        StmtId(4),
-                    ],
-                ),
-                span: 1:11; [10, 24],
-                type_id: TypeId(1),
-            },
         ],
         statements: [
             StmtId(0) => Statement {
@@ -118,22 +108,10 @@ Ok(
             },
             StmtId(1) => Statement {
                 id: StmtId(1),
-                kind: Expression(
-                    ExprId(5),
-                ),
-                span: 1:11; [10, 24],
-            },
-            StmtId(3) => Statement {
-                id: StmtId(3),
-                kind: Expression(
-                    ExprId(3),
-                ),
-                span: 1:11; [10, 24],
-            },
-            StmtId(4) => Statement {
-                id: StmtId(4),
                 kind: Ret(
-                    None,
+                    Some(
+                        ExprId(3),
+                    ),
                 ),
                 span: 1:11; [10, 24],
             },

@@ -1,5 +1,6 @@
 ---
 source: mir/src/lib.rs
+assertion_line: 1478
 expression: make_mir(hir)
 ---
 Ok(
@@ -8,13 +9,13 @@ Ok(
             FunctionId(0) => Function {
                 identifier: Identifier {
                     id: IdentId(0),
-                    span: 1:5; [4, 5],
+                    span: 2:13; [13, 14],
                 },
                 symbol_id: SymbolId(18),
                 parameters: [],
                 variables: {},
                 body: Some(
-                    ExprId(4),
+                    ExprId(5),
                 ),
                 ret: TypeId(1),
                 parent: None,
@@ -44,98 +45,81 @@ Ok(
                 id: ExprId(0),
                 kind: Literal(
                     Literal {
-                        kind: Boolean(
-                            true,
+                        kind: Number(
+                            1,
                         ),
-                        span: 1:14; [13, 17],
+                        span: 3:14; [32, 33],
                     },
                 ),
-                span: 1:14; [13, 17],
-                type_id: TypeId(3),
+                span: 3:14; [32, 33],
+                type_id: TypeId(4),
             },
             ExprId(1) => Expression {
                 id: ExprId(1),
                 kind: Literal(
                     Literal {
                         kind: Number(
-                            1,
+                            2,
                         ),
-                        span: 1:21; [20, 21],
+                        span: 3:17; [35, 36],
                     },
                 ),
-                span: 1:21; [20, 21],
+                span: 3:17; [35, 36],
                 type_id: TypeId(4),
             },
             ExprId(2) => Expression {
                 id: ExprId(2),
-                kind: Block(
+                kind: ArrayInstantiation(
                     [
-                        StmtId(0),
+                        ExprId(0),
+                        ExprId(1),
                     ],
                 ),
-                span: 1:19; [18, 24],
-                type_id: TypeId(4),
+                span: 3:13; [31, 37],
+                type_id: TypeId(11),
             },
             ExprId(3) => Expression {
                 id: ExprId(3),
-                kind: If(
-                    ExprId(0),
-                    ExprId(2),
-                    None,
+                kind: Literal(
+                    Literal {
+                        kind: Number(
+                            0,
+                        ),
+                        span: 3:20; [38, 39],
+                    },
                 ),
-                span: 1:11; [10, 24],
-                type_id: TypeId(1),
+                span: 3:20; [38, 39],
+                type_id: TypeId(4),
             },
             ExprId(4) => Expression {
                 id: ExprId(4),
-                kind: Block(
-                    [
-                        StmtId(1),
-                    ],
+                kind: ArrayAccess(
+                    ExprId(2),
+                    ExprId(3),
                 ),
-                span: 1:9; [8, 26],
-                type_id: TypeId(2),
+                span: 3:19; [37, 40],
+                type_id: TypeId(4),
             },
             ExprId(5) => Expression {
                 id: ExprId(5),
                 kind: Block(
                     [
-                        StmtId(3),
-                        StmtId(4),
+                        StmtId(0),
                     ],
                 ),
-                span: 1:11; [10, 24],
-                type_id: TypeId(1),
+                span: 2:17; [17, 51],
+                type_id: TypeId(2),
             },
         ],
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
-                kind: Expression(
-                    ExprId(1),
-                ),
-                span: 1:21; [20, 22],
-            },
-            StmtId(1) => Statement {
-                id: StmtId(1),
-                kind: Expression(
-                    ExprId(5),
-                ),
-                span: 1:11; [10, 24],
-            },
-            StmtId(3) => Statement {
-                id: StmtId(3),
-                kind: Expression(
-                    ExprId(3),
-                ),
-                span: 1:11; [10, 24],
-            },
-            StmtId(4) => Statement {
-                id: StmtId(4),
                 kind: Ret(
-                    None,
+                    Some(
+                        ExprId(4),
+                    ),
                 ),
-                span: 1:11; [10, 24],
+                span: 3:19; [37, 41],
             },
         ],
         symbols: [
@@ -402,6 +386,10 @@ Ok(
             TypeId(10) => Function(
                 [],
                 TypeId(1),
+            ),
+            TypeId(11) => Array(
+                TypeId(4),
+                2,
             ),
         ],
     },

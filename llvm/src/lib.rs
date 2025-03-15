@@ -2722,4 +2722,13 @@ mod tests {
         let f (s: S) {}
         "#
     );
+
+    gen!(
+        void_function,
+        r#"
+        let f() {
+            0;
+        }
+        "#
+    );
 }

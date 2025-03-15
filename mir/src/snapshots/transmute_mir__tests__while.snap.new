@@ -1,5 +1,6 @@
 ---
 source: mir/src/lib.rs
+assertion_line: 1310
 expression: make_mir(hir)
 ---
 Ok(
@@ -47,10 +48,10 @@ Ok(
                         kind: Boolean(
                             true,
                         ),
-                        span: 1:14; [13, 17],
+                        span: 1:17; [16, 20],
                     },
                 ),
-                span: 1:14; [13, 17],
+                span: 1:17; [16, 20],
                 type_id: TypeId(3),
             },
             ExprId(1) => Expression {
@@ -60,10 +61,10 @@ Ok(
                         kind: Number(
                             1,
                         ),
-                        span: 1:21; [20, 21],
+                        span: 1:24; [23, 24],
                     },
                 ),
-                span: 1:21; [20, 21],
+                span: 1:24; [23, 24],
                 type_id: TypeId(4),
             },
             ExprId(2) => Expression {
@@ -73,18 +74,17 @@ Ok(
                         StmtId(0),
                     ],
                 ),
-                span: 1:19; [18, 24],
+                span: 1:22; [21, 27],
                 type_id: TypeId(4),
             },
             ExprId(3) => Expression {
                 id: ExprId(3),
-                kind: If(
+                kind: While(
                     ExprId(0),
                     ExprId(2),
-                    None,
                 ),
-                span: 1:11; [10, 24],
-                type_id: TypeId(1),
+                span: 1:11; [10, 27],
+                type_id: TypeId(4),
             },
             ExprId(4) => Expression {
                 id: ExprId(4),
@@ -93,19 +93,8 @@ Ok(
                         StmtId(1),
                     ],
                 ),
-                span: 1:9; [8, 26],
+                span: 1:9; [8, 29],
                 type_id: TypeId(2),
-            },
-            ExprId(5) => Expression {
-                id: ExprId(5),
-                kind: Block(
-                    [
-                        StmtId(3),
-                        StmtId(4),
-                    ],
-                ),
-                span: 1:11; [10, 24],
-                type_id: TypeId(1),
             },
         ],
         statements: [
@@ -114,28 +103,16 @@ Ok(
                 kind: Expression(
                     ExprId(1),
                 ),
-                span: 1:21; [20, 22],
+                span: 1:24; [23, 25],
             },
             StmtId(1) => Statement {
                 id: StmtId(1),
-                kind: Expression(
-                    ExprId(5),
-                ),
-                span: 1:11; [10, 24],
-            },
-            StmtId(3) => Statement {
-                id: StmtId(3),
-                kind: Expression(
-                    ExprId(3),
-                ),
-                span: 1:11; [10, 24],
-            },
-            StmtId(4) => Statement {
-                id: StmtId(4),
                 kind: Ret(
-                    None,
+                    Some(
+                        ExprId(3),
+                    ),
                 ),
-                span: 1:11; [10, 24],
+                span: 1:11; [10, 27],
             },
         ],
         symbols: [
