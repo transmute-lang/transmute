@@ -961,7 +961,7 @@ impl<'s> Parser<'s> {
                     break token;
                 }
                 _ => {
-                    // fixme: struct S = { f1: number, f2: number } reports wrong error message
+                    // fixme:diagnostic struct S = { f1: number, f2: number } reports wrong error message
 
                     // we did find neither an identifier nor a closing bracket.
                     // we skip tokens to find one of them

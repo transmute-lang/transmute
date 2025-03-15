@@ -296,7 +296,7 @@ pub enum Type {
 
     Boolean,
     Number,
-    // todo: this is probably naive and must be generalized somehow: we don't want to have to
+    // todo:refactor:string: this is probably naive and must be generalized somehow: we don't want to have to
     //  `Type` for each type the std lib provides (think List, Map, etc.) some mechanism might be
     //  an annotation on structs defined in "transmute" in the stdlib. Something along the lines of
     //  `native struct String {};`. This would be parsed, but no emitted as LLVM-IR.

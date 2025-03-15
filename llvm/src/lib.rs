@@ -32,7 +32,7 @@ use transmute_mir::{
 use transmute_mir::{LiteralKind, SymbolKind, Target as AssignmentTarget};
 use transmute_mir::{NativeFnKind, Variable};
 
-// fixme this generates invalid IR:
+// fixme:llvm-ir this generates invalid IR:
 //  let main(n: number): number {f(); n;} let f() { [0]; }
 
 pub struct LlvmIrGen {
@@ -100,7 +100,7 @@ impl LlvmIr<'_> {
             .write_to_file(&self.module, FileType::Object, &tm_object_path)
             .unwrap();
 
-        // todo:ux parameterize cc
+        // todo:ux parameterize cc (or use cc crate)
         let mut command = Command::new("cc");
         command.arg(&tm_object_path);
 
@@ -1709,7 +1709,7 @@ enum Value<'ctx> {
     Never,
     None,
     Number(IntValue<'ctx>),
-    // todo remove and use NativeStruct instead
+    // todo:refactor:string remove and use NativeStruct instead
     String(PointerValue<'ctx>),
     Struct(PointerValue<'ctx>, BasicTypeEnum<'ctx>),
     NativeStruct(PointerValue<'ctx>),

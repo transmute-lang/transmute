@@ -4,7 +4,6 @@ use std::process::Command;
 use std::{env, fs};
 
 fn main() {
-    // todo:ux parameterize llvm-link
     let mut llvm_link_command = Command::new("llvm-link");
     llvm_link_command
         .arg("-o")

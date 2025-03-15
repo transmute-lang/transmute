@@ -30,7 +30,7 @@ type Function<T, B> = (
 // todo:refactoring this would deserve a reordering of functions, and that each `resolve_` method
 //   does the actual resolution instead of giving to its caller the information required to resolve
 
-// fixme: void functions with last expr being non-void are passed to llvm with a ret of the number
+// fixme:void-fn: void functions with last expr being non-void are passed to llvm with a ret of the number
 //  value
 
 pub struct Resolver {
@@ -936,7 +936,7 @@ impl Resolver {
             self.insert_structs(hir, &stmt_ids);
         }
 
-        // fixme manage duplicate functions (for whatever it means ... - at least same name same
+        // todo:feature manage duplicate functions (for whatever it means ... - at least same name same
         //   first parameter type)
 
         let symbol_id = *self
@@ -1061,7 +1061,7 @@ impl Resolver {
                         && (ret_type_id != self.void_type_id || explicit)
                     {
                         let expr_type = self.find_type_by_type_id(expr_type_id);
-                        // fixme the span is not accurate (in both cases)
+                        // fixme:span the span is not accurate (in both cases)
                         let span = if let Some(exit_expr_id) = exit_expr_id {
                             self.expressions[exit_expr_id].span.clone()
                         } else {

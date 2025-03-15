@@ -6,7 +6,7 @@ use std::str::Chars;
 use transmute_core::error::{Diagnostic, Diagnostics, Level};
 use transmute_core::span::Span;
 
-// fixme comments dont move spans (they behave as if the do not exist at all)
+// fixme:span comments dont move spans (they behave as if the do not exist at all)
 
 #[derive(Debug)]
 pub struct Lexer<'s> {

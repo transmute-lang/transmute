@@ -55,5 +55,5 @@ brew install llvm@18
 * Get clang 18 (on ubuntu: https://ubuntuhandbook.org/index.php/2023/09/how-to-install-clang-17-or-16-in-ubuntu-22-04-20-04/)
     * this install `clang-18`
 * Make sure:
-    * `clang` is in your PATH and points to clang-18
-    * `llvm-link` is in your PATH
+    * `clang` is in your `PATH` and points to clang-18
+    * `llvm-link` is in your `PATH`
