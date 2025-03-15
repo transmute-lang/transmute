@@ -48,8 +48,7 @@ impl<'s> Lexer<'s> {
         }
     }
 
-    #[allow(clippy::should_implement_trait)] // todo:refactor maybe rename to next_token()?
-    pub fn next(&mut self) -> Token {
+    pub fn next_token(&mut self) -> Token {
         self.skip_whitespaces_and_comments();
 
         let mut chars = self.remaining.chars();
@@ -515,9 +514,10 @@ impl<'s> PeekableLexer<'s> {
         }
     }
 
-    #[allow(clippy::should_implement_trait)] // todo:refactor maybe rename to next_token()?
-    pub fn next(&mut self) -> Token {
-        self.peeked.pop_front().unwrap_or_else(|| self.lexer.next())
+    pub fn next_token(&mut self) -> Token {
+        self.peeked
+            .pop_front()
+            .unwrap_or_else(|| self.lexer.next_token())
     }
 
     pub fn push_next(&mut self, token: Token) {
@@ -535,7 +535,7 @@ impl<'s> PeekableLexer<'s> {
         }
 
         while self.peeked.len() < n + 1 {
-            self.peeked.push_back(self.lexer.next());
+            self.peeked.push_back(self.lexer.next_token());
         }
         assert_eq!(self.peeked.len(), n + 1);
 
@@ -865,7 +865,7 @@ mod tests {
             #[test]
             fn $name() {
                 let mut lexer = Lexer::new($src);
-                let actual = lexer.next();
+                let actual = lexer.next_token();
 
                 assert!(lexer.diagnostics.is_empty());
                 assert_debug_snapshot!(actual);
@@ -876,7 +876,7 @@ mod tests {
             #[test]
             fn $name() {
                 let mut lexer = Lexer::new($src);
-                let actual = lexer.next();
+                let actual = lexer.next_token();
 
                 assert!(!lexer.diagnostics.is_empty());
                 assert_eq!(
@@ -946,10 +946,10 @@ mod tests {
     fn eof_after_tokens() {
         let mut lexer = Lexer::new("1");
         // consume 1
-        lexer.next();
+        lexer.next_token();
 
         for x in 0..2 {
-            let eof = lexer.next();
+            let eof = lexer.next_token();
             assert_eq!(
                 eof,
                 Token {
@@ -990,7 +990,7 @@ mod tests {
             }
         );
 
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(
             token,
             Token {
@@ -1008,7 +1008,7 @@ mod tests {
             }
         );
 
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(
             token,
             Token {
@@ -1040,7 +1040,7 @@ mod tests {
             }
         );
 
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(
             token,
             Token {
@@ -1049,7 +1049,7 @@ mod tests {
             }
         );
 
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(
             token,
             Token {
@@ -1077,7 +1077,7 @@ mod tests {
         let mut lexer = PeekableLexer::new(Lexer::new("1 2 3 4"), 2);
         let _ = lexer.peek_nth(2);
 
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(
             token,
             Token {
@@ -1090,45 +1090,45 @@ mod tests {
     #[test]
     fn span_let_let() {
         let mut lexer = PeekableLexer::new(Lexer::new("let let"), 1);
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(token.span.column, 1);
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(token.span.column, 5);
     }
 
     #[test]
     fn span_ident_ident() {
         let mut lexer = PeekableLexer::new(Lexer::new("ident ident"), 1);
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(token.span.column, 1);
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(token.span.column, 7);
     }
 
     #[test]
     fn span_let_ident() {
         let mut lexer = PeekableLexer::new(Lexer::new("let ident"), 1);
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(token.span.column, 1);
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(token.span.column, 5);
     }
 
     #[test]
     fn span_ident_let() {
         let mut lexer = PeekableLexer::new(Lexer::new("ident let"), 1);
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(token.span.column, 1);
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(token.span.column, 7);
     }
 
     #[test]
     fn span_ident_with_keyword_prefix_ident() {
         let mut lexer = PeekableLexer::new(Lexer::new("let123 let"), 1);
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(token.span.column, 1);
-        let token = lexer.next();
+        let token = lexer.next_token();
         assert_eq!(token.span.column, 8);
     }
 }

@@ -16,7 +16,7 @@ use transmute_core::error::Diagnostics;
 use transmute_core::error::{Diagnostic, Level};
 use transmute_core::ids::{id, ExprId, IdentId, IdentRefId, StmtId, TypeDefId};
 use transmute_core::span::Span;
-
+use transmute_core::vec_map::VecMap;
 // todo:ux review how diagnostics work. it would be nice to be able to keep tokens in a list
 //   to reports the missing token, together with what token it is supposed to close, even when other
 //   tokens can be expected. eg.: for `[a;` we can expect either `1`, etc., or `]` which closes the
@@ -28,10 +28,10 @@ type Statement = crate::statement::Statement;
 pub struct Parser<'s> {
     lexer: PeekableLexer<'s>,
     identifiers: HashMap<String, IdentId>,
-    identifier_refs: Vec<IdentifierRef>,
+    identifier_refs: VecMap<IdentRefId, IdentifierRef>,
     expressions: Vec<Expression>,
-    statements: Vec<Statement>,
-    type_defs: Vec<TypeDef>,
+    statements: VecMap<StmtId, Statement>,
+    type_defs: VecMap<TypeDefId, TypeDef>,
     diagnostics: Diagnostics,
     potential_tokens: HashSet<ExpectedToken>,
     eof: bool,
@@ -290,7 +290,7 @@ impl<'s> Parser<'s> {
         let mut token = self.lexer.peek();
 
         while token.kind == TokenKind::Semicolon {
-            let _semicolon = self.lexer.next();
+            let _semicolon = self.lexer.next_token();
             self.potential_tokens.clear();
             token = self.lexer.peek();
         }
@@ -307,9 +307,9 @@ impl<'s> Parser<'s> {
         let token = self.lexer.peek();
         match &token.kind {
             TokenKind::Let => {
-                let let_token = self.lexer.next();
+                let let_token = self.lexer.next_token();
                 self.potential_tokens.clear();
-                let identifier_token = self.lexer.next();
+                let identifier_token = self.lexer.next_token();
                 let identifier = match &identifier_token.kind {
                     TokenKind::Identifier => Identifier::new(
                         self.push_identifier(&identifier_token.span),
@@ -345,7 +345,7 @@ impl<'s> Parser<'s> {
                 }
 
                 // let ident '= expr ;
-                let token = self.lexer.next();
+                let token = self.lexer.next_token();
                 if token.kind != TokenKind::Equal {
                     report_missing_token_and_push_back!(self, token, TokenKind::Equal);
                 }
@@ -359,10 +359,10 @@ impl<'s> Parser<'s> {
                 let span = let_token.span.extend_to(&semicolon_span);
 
                 let id = self.push_statement(StatementKind::Let(identifier, expression), span);
-                Some(&self.statements[id!(id)])
+                Some(&self.statements[id])
             }
             TokenKind::Ret => {
-                let ret_token = self.lexer.next();
+                let ret_token = self.lexer.next_token();
                 self.potential_tokens.clear();
                 if !annotations.is_empty() {
                     self.diagnostics.report_err(
@@ -389,7 +389,7 @@ impl<'s> Parser<'s> {
 
                 let id =
                     self.push_statement(StatementKind::Ret(expression, RetMode::Explicit), span);
-                Some(&self.statements[id!(id)])
+                Some(&self.statements[id])
             }
             TokenKind::If | TokenKind::While => {
                 if !annotations.is_empty() {
@@ -412,7 +412,7 @@ impl<'s> Parser<'s> {
                     self.parse_semicolon();
                 }
 
-                Some(&self.statements[id!(id)])
+                Some(&self.statements[id])
             }
             TokenKind::False
             | TokenKind::Identifier
@@ -441,11 +441,11 @@ impl<'s> Parser<'s> {
                 let span = span.extend_to(&semicolon_span);
 
                 let id = self.push_statement(StatementKind::Expression(expression), span);
-                Some(&self.statements[id!(id)])
+                Some(&self.statements[id])
             }
             TokenKind::Struct => self.parse_struct(annotations),
             TokenKind::Annotation => {
-                let annotation_token = self.lexer.next();
+                let annotation_token = self.lexer.next_token();
                 self.potential_tokens.clear();
 
                 if !annotations.is_empty() {
@@ -459,7 +459,7 @@ impl<'s> Parser<'s> {
                     );
                 }
 
-                let identifier_token = self.lexer.next();
+                let identifier_token = self.lexer.next_token();
                 let identifier = match &identifier_token.kind {
                     TokenKind::Identifier => Identifier::new(
                         self.push_identifier(&identifier_token.span),
@@ -481,10 +481,10 @@ impl<'s> Parser<'s> {
                 let span = annotation_token.span.extend_to(&semicolon_span);
 
                 let id = self.push_statement(StatementKind::Annotation(identifier), span);
-                Some(&self.statements[id!(id)])
+                Some(&self.statements[id])
             }
             _ => {
-                let token = self.lexer.next();
+                let token = self.lexer.next_token();
                 report_unexpected_token!(
                     self,
                     token,
@@ -515,9 +515,9 @@ impl<'s> Parser<'s> {
 
     fn parse_annotation(&mut self) -> Option<Annotation> {
         if matches!(self.lexer.peek().kind, TokenKind::At) {
-            let at_token = self.lexer.next();
+            let at_token = self.lexer.next_token();
 
-            let identifier_token = self.lexer.next();
+            let identifier_token = self.lexer.next_token();
             let identifier = match &identifier_token.kind {
                 TokenKind::Identifier => Identifier::new(
                     self.push_identifier(&identifier_token.span),
@@ -558,7 +558,7 @@ impl<'s> Parser<'s> {
         identifier: Identifier,
     ) -> Option<&Statement> {
         // let name '( param , ... ): type = expr ;
-        let open_parenthesis_token = self.lexer.next();
+        let open_parenthesis_token = self.lexer.next_token();
         self.potential_tokens.clear();
 
         assert_eq!(open_parenthesis_token.kind, TokenKind::OpenParenthesis);
@@ -567,7 +567,7 @@ impl<'s> Parser<'s> {
         let mut next = TokenKind::Identifier;
 
         loop {
-            let token = self.lexer.next();
+            let token = self.lexer.next_token();
             match &token.kind {
                 TokenKind::CloseParenthesis => {
                     self.potential_tokens.clear();
@@ -585,7 +585,7 @@ impl<'s> Parser<'s> {
                     let ident =
                         Identifier::new(self.push_identifier(&token.span), token.span.clone());
 
-                    let colon = self.lexer.next();
+                    let colon = self.lexer.next_token();
                     let type_def_id = if !matches!(colon.kind, TokenKind::Colon) {
                         report_missing_token_and_push_back!(self, colon, TokenKind::Colon);
                         self.parse_type(false)
@@ -593,8 +593,7 @@ impl<'s> Parser<'s> {
                         self.parse_type(true)
                     };
 
-                    let parameter_span =
-                        ident.span.extend_to(&self.type_defs[id!(type_def_id)].span);
+                    let parameter_span = ident.span.extend_to(&self.type_defs[type_def_id].span);
 
                     parameters.push(Parameter::new(ident, type_def_id, parameter_span));
 
@@ -629,7 +628,7 @@ impl<'s> Parser<'s> {
         }
 
         let ty = if self.lexer.peek().kind == TokenKind::Colon {
-            self.lexer.next();
+            self.lexer.next_token();
             self.potential_tokens.clear();
             Return::some(self.parse_type(true))
         } else {
@@ -637,7 +636,7 @@ impl<'s> Parser<'s> {
         };
 
         // let name ( param , ... ): type '= expr ;
-        let token = self.lexer.next();
+        let token = self.lexer.next_token();
         match token.kind {
             TokenKind::Equal => {
                 self.potential_tokens.clear();
@@ -659,7 +658,7 @@ impl<'s> Parser<'s> {
 
         let (expr_id, end_span) = if self.lexer.peek().kind == TokenKind::OpenCurlyBracket {
             // let name ( param , ... ): type = '{ expr ; ... }
-            let open_curly_bracket = self.lexer.next();
+            let open_curly_bracket = self.lexer.next_token();
             self.potential_tokens.clear();
 
             let (statements, statements_span) = self.parse_statements(&open_curly_bracket.span);
@@ -693,27 +692,33 @@ impl<'s> Parser<'s> {
             span.extend_to(&end_span),
         );
 
-        Some(&self.statements[id!(stmt_id)])
+        Some(&self.statements[stmt_id])
     }
 
     fn parse_type(&mut self, mut report_err: bool) -> TypeDefId {
-        let token = self.lexer.next();
+        let token = self.lexer.next_token();
         match &token.kind {
             TokenKind::Identifier => {
                 let identifier =
                     Identifier::new(self.push_identifier(&token.span), token.span.clone());
                 let identifier_span = identifier.span.clone();
                 let ident_ref_id = self.push_identifier_ref(identifier);
-                self.type_defs.push(TypeDef {
-                    kind: TypeDefKind::Simple(ident_ref_id),
-                    span: identifier_span,
-                });
-                TypeDefId::from(self.type_defs.len() - 1)
+
+                let type_def_id = self.type_defs.create();
+                self.type_defs.insert(
+                    type_def_id,
+                    TypeDef {
+                        kind: TypeDefKind::Simple(ident_ref_id),
+                        span: identifier_span,
+                    },
+                );
+
+                type_def_id
             }
             TokenKind::OpenBracket => {
                 let base = self.parse_type(true);
 
-                let semi = self.lexer.next();
+                let semi = self.lexer.next_token();
 
                 if !matches!(semi.kind, TokenKind::Semicolon) {
                     report_unexpected_token!(self, semi, [expected_token!(TokenKind::Semicolon),]);
@@ -721,7 +726,7 @@ impl<'s> Parser<'s> {
                     self.lexer.push_next(semi);
                 }
 
-                let len = self.lexer.next();
+                let len = self.lexer.next_token();
                 let type_def_kind = if let TokenKind::Number(len) = len.kind {
                     TypeDefKind::Array(base, len as usize)
                 } else {
@@ -737,7 +742,7 @@ impl<'s> Parser<'s> {
                     TypeDefKind::Dummy
                 };
 
-                let close_bracket = self.lexer.next();
+                let close_bracket = self.lexer.next_token();
                 if !matches!(close_bracket.kind, TokenKind::CloseBracket) {
                     if report_err {
                         report_unexpected_token!(
@@ -758,18 +763,26 @@ impl<'s> Parser<'s> {
                         TokenKind::CloseParenthesis,
                     ]);
 
-                    self.type_defs.push(TypeDef {
-                        kind: TypeDefKind::Dummy,
-                        span: token.span,
-                    });
-                    return TypeDefId::from(self.type_defs.len() - 1);
+                    let type_def_id = self.type_defs.create();
+                    self.type_defs.insert(
+                        type_def_id,
+                        TypeDef {
+                            kind: TypeDefKind::Dummy,
+                            span: token.span,
+                        },
+                    );
+                    return type_def_id;
                 }
 
-                self.type_defs.push(TypeDef {
-                    kind: type_def_kind,
-                    span: token.span.extend_to(&close_bracket.span),
-                });
-                TypeDefId::from(self.type_defs.len() - 1)
+                let type_def_id = self.type_defs.create();
+                self.type_defs.insert(
+                    type_def_id,
+                    TypeDef {
+                        kind: type_def_kind,
+                        span: token.span.extend_to(&close_bracket.span),
+                    },
+                );
+                type_def_id
             }
             _ => {
                 if report_err {
@@ -797,8 +810,8 @@ impl<'s> Parser<'s> {
 
     fn parse_struct(&mut self, annotations: Vec<Annotation>) -> Option<&Statement> {
         // 'struct ident { ident : ident , ... }
-        let token_struct = self.lexer.next();
-        let identifier_token = self.lexer.next();
+        let token_struct = self.lexer.next_token();
+        let identifier_token = self.lexer.next_token();
         let identifier = match &identifier_token.kind {
             TokenKind::Identifier => Identifier::new(
                 self.push_identifier(&identifier_token.span),
@@ -816,7 +829,7 @@ impl<'s> Parser<'s> {
         };
 
         // struct ident '{ ident : ident , ... }
-        let token = self.lexer.next();
+        let token = self.lexer.next_token();
         if token.kind != TokenKind::OpenCurlyBracket {
             report_missing_token_and_push_back!(self, token, TokenKind::OpenCurlyBracket);
         }
@@ -826,7 +839,7 @@ impl<'s> Parser<'s> {
 
         let last_token = loop {
             // struct ident { ... , 'ident : ident , ... }
-            let token = self.lexer.next();
+            let token = self.lexer.next_token();
             match &token.kind {
                 TokenKind::CloseCurlyBracket => {
                     // struct ident { ... '}
@@ -854,7 +867,7 @@ impl<'s> Parser<'s> {
 
                     // struct ident { ... , ident ': ident , ... }
 
-                    let token = self.lexer.next();
+                    let token = self.lexer.next_token();
                     match &token.kind {
                         TokenKind::Colon => {}
                         _ => {
@@ -871,7 +884,7 @@ impl<'s> Parser<'s> {
                                 TokenKind::CloseCurlyBracket,
                             ]);
 
-                            let token = self.lexer.next();
+                            let token = self.lexer.next_token();
                             match &token.kind {
                                 TokenKind::Colon => {
                                     // we finally found a colon, we continue parsing the current
@@ -908,7 +921,7 @@ impl<'s> Parser<'s> {
                     // struct ident { ... , ident : 'ident , ... }
 
                     let type_def_id = self.parse_type(true);
-                    let field_span = ident.span.extend_to(&self.type_defs[id!(type_def_id)].span);
+                    let field_span = ident.span.extend_to(&self.type_defs[type_def_id].span);
 
                     fields.push(Field::new(ident, type_def_id, field_span));
 
@@ -916,7 +929,7 @@ impl<'s> Parser<'s> {
                     // processing the next field
                     let token = self.lexer.peek();
                     if token.kind == TokenKind::Comma {
-                        self.lexer.next();
+                        self.lexer.next_token();
                         expect_more = true
                     }
                 }
@@ -965,7 +978,7 @@ impl<'s> Parser<'s> {
                     self.take_until_one_of(vec![TokenKind::Comma, TokenKind::CloseCurlyBracket]);
                     let token = self.lexer.peek();
                     if token.kind == TokenKind::Comma {
-                        self.lexer.next();
+                        self.lexer.next_token();
                         expect_more = true
                     }
                 }
@@ -976,7 +989,7 @@ impl<'s> Parser<'s> {
             StatementKind::Struct(identifier, annotations, fields),
             token_struct.span.extend_to(&last_token.span),
         );
-        Some(&self.statements[id!(stmt_id)])
+        Some(&self.statements[stmt_id])
     }
 
     /// Parses the following:
@@ -1003,7 +1016,7 @@ impl<'s> Parser<'s> {
         allow_struct: bool,
         mut allow_assignment: bool,
     ) -> (&Expression, bool) {
-        let token = self.lexer.next();
+        let token = self.lexer.next_token();
 
         let mut expr_id = match token.kind {
             TokenKind::If => {
@@ -1105,7 +1118,7 @@ impl<'s> Parser<'s> {
                 let open_loc = token.span;
 
                 let expr_id = self.parse_expression(true, allow_assignment).0.id;
-                let token = self.lexer.next();
+                let token = self.lexer.next_token();
                 let span = if token.kind == TokenKind::CloseParenthesis {
                     &token.span
                 } else {
@@ -1191,13 +1204,13 @@ impl<'s> Parser<'s> {
             match &self.lexer.peek().kind {
                 TokenKind::Dot => {
                     // expr . 'identifier
-                    let _dot = self.lexer.next();
+                    let _dot = self.lexer.next_token();
                     self.potential_tokens.clear();
 
                     // todo:check is that useful?
                     need_semi = true;
 
-                    let token = self.lexer.next();
+                    let token = self.lexer.next_token();
                     match &token.kind {
                         TokenKind::Identifier => {
                             self.potential_tokens.clear();
@@ -1226,7 +1239,7 @@ impl<'s> Parser<'s> {
                 }
                 TokenKind::OpenBracket => {
                     // expr [ 'expression
-                    let open_bracket = self.lexer.next();
+                    let open_bracket = self.lexer.next_token();
                     self.potential_tokens.clear();
 
                     // todo:check is that useful?
@@ -1234,7 +1247,7 @@ impl<'s> Parser<'s> {
 
                     let index = self.parse_expression(true, false).0.id;
 
-                    let close_bracket = self.lexer.next();
+                    let close_bracket = self.lexer.next_token();
 
                     expr_id = self.push_expression(
                         ExpressionKind::ArrayAccess(expr_id, index),
@@ -1281,7 +1294,7 @@ impl<'s> Parser<'s> {
                 match &lhs.kind {
                     ExpressionKind::Literal(literal) => match &literal.kind {
                         LiteralKind::Identifier(ident_ref_id) => {
-                            self.lexer.next();
+                            self.lexer.next_token();
                             self.potential_tokens.clear();
                             need_semi = true;
                             allow_assignment = false;
@@ -1302,7 +1315,7 @@ impl<'s> Parser<'s> {
                         }
                     },
                     ExpressionKind::Access(_, _) | ExpressionKind::ArrayAccess(_, _) => {
-                        self.lexer.next();
+                        self.lexer.next_token();
                         self.potential_tokens.clear();
                         need_semi = true;
 
@@ -1353,7 +1366,7 @@ impl<'s> Parser<'s> {
         &mut self,
         precedence: Precedence,
     ) -> Option<BinaryOperator> {
-        let token = self.lexer.next();
+        let token = self.lexer.next_token();
 
         match &token.kind {
             TokenKind::EqualEqual => {
@@ -1500,7 +1513,7 @@ impl<'s> Parser<'s> {
         let condition = self.parse_expression(false, false).0.id;
 
         // if expr '{ expr ; ... } ...
-        let open_curly_bracket = self.lexer.next();
+        let open_curly_bracket = self.lexer.next_token();
         let open_curly_bracket_span = open_curly_bracket.span.clone();
 
         if open_curly_bracket.kind != TokenKind::OpenCurlyBracket {
@@ -1524,8 +1537,8 @@ impl<'s> Parser<'s> {
 
         // ... 'else if expr { expr ; ... } else { expr ; ... }
         let false_expr_id = if self.lexer.peek().kind == TokenKind::Else {
-            let _else_token = self.lexer.next();
-            let token = self.lexer.next();
+            let _else_token = self.lexer.next_token();
+            let token = self.lexer.next_token();
             let false_block = match &token.kind {
                 TokenKind::If => {
                     self.potential_tokens.clear();
@@ -1587,7 +1600,7 @@ impl<'s> Parser<'s> {
     fn parse_while_expression(&mut self, span: Span) -> &Expression {
         // while 'expr { expr ; ... }
         let condition = self.parse_expression(false, false).0.id;
-        let open_curly_bracket = self.lexer.next();
+        let open_curly_bracket = self.lexer.next_token();
         let open_curly_bracket_span = open_curly_bracket.span.clone();
 
         if open_curly_bracket.kind != TokenKind::OpenCurlyBracket {
@@ -1621,7 +1634,7 @@ impl<'s> Parser<'s> {
     fn parse_function_call(&mut self, identifier: Identifier) -> &Expression {
         // identifier '( expr , ... )
         self.potential_tokens.clear();
-        let open_parenthesis_token = self.lexer.next();
+        let open_parenthesis_token = self.lexer.next_token();
 
         assert_eq!(&open_parenthesis_token.kind, &TokenKind::OpenParenthesis);
 
@@ -1644,7 +1657,7 @@ impl<'s> Parser<'s> {
         let mut comma_seen = true;
 
         let span = loop {
-            let token = self.lexer.next();
+            let token = self.lexer.next_token();
             if &token.kind == &closing_token {
                 if arguments.len() < min_arguments_count {
                     if !comma_seen {
@@ -1771,7 +1784,7 @@ impl<'s> Parser<'s> {
 
     fn parse_struct_instantiation(&mut self, struct_identifier: Identifier) -> ExprId {
         // ident '{ ident : expr , ... }
-        let open_curly_bracket_token = self.lexer.next();
+        let open_curly_bracket_token = self.lexer.next_token();
         self.potential_tokens.clear();
 
         assert_eq!(&open_curly_bracket_token.kind, &TokenKind::OpenCurlyBracket);
@@ -1782,7 +1795,7 @@ impl<'s> Parser<'s> {
         let mut expect_more = false;
 
         let last_token = loop {
-            let token = self.lexer.next();
+            let token = self.lexer.next_token();
             match &token.kind {
                 TokenKind::CloseCurlyBracket => {
                     self.potential_tokens.clear();
@@ -1799,7 +1812,7 @@ impl<'s> Parser<'s> {
                     expect_more = false;
 
                     // ident { ... , ident ': expr , ... '}
-                    let token = self.lexer.next();
+                    let token = self.lexer.next_token();
                     match &token.kind {
                         TokenKind::Colon => {}
                         _ => {
@@ -1821,7 +1834,7 @@ impl<'s> Parser<'s> {
                                 TokenKind::CloseCurlyBracket,
                             ]);
 
-                            let token = self.lexer.next();
+                            let token = self.lexer.next_token();
                             match &token.kind {
                                 TokenKind::Colon => {
                                     self.potential_tokens.clear();
@@ -1860,7 +1873,7 @@ impl<'s> Parser<'s> {
                     // processing the next field
                     let token = self.lexer.peek();
                     if token.kind == TokenKind::Comma {
-                        self.lexer.next();
+                        self.lexer.next_token();
                         self.potential_tokens.clear();
                         expect_more = true
                     }
@@ -1908,7 +1921,7 @@ impl<'s> Parser<'s> {
                     self.take_until_one_of(vec![TokenKind::Comma, TokenKind::CloseCurlyBracket]);
                     let token = self.lexer.peek();
                     if token.kind == TokenKind::Comma {
-                        self.lexer.next();
+                        self.lexer.next_token();
                         expect_more = true
                     }
                 }
@@ -1927,14 +1940,14 @@ impl<'s> Parser<'s> {
     fn parse_semicolon(&mut self) -> Span {
         let token = self.lexer.peek();
         if token.kind == TokenKind::Semicolon {
-            let span = self.lexer.next().span.clone();
+            let span = self.lexer.next_token().span.clone();
             self.potential_tokens.clear();
             span
         } else {
-            let token = self.lexer.next();
+            let token = self.lexer.next_token();
             report_unexpected_token!(self, token, [expected_token!(TokenKind::Semicolon),]);
             self.take_until_one_of(vec![TokenKind::Semicolon]);
-            self.lexer.next().span.clone() // consume the semicolon, if it's there (otherwise, we have eof)
+            self.lexer.next_token().span.clone() // consume the semicolon, if it's there (otherwise, we have eof)
         }
     }
 
@@ -1960,7 +1973,7 @@ impl<'s> Parser<'s> {
             }
         }
 
-        let token = self.lexer.next();
+        let token = self.lexer.next_token();
         let span = token.span.clone();
         if token.kind != TokenKind::CloseCurlyBracket {
             report_missing_closing_token!(
@@ -1991,8 +2004,9 @@ impl<'s> Parser<'s> {
     }
 
     fn push_identifier_ref(&mut self, ident: Identifier) -> IdentRefId {
-        let id = IdentRefId::from(self.identifier_refs.len());
-        self.identifier_refs.push(IdentifierRef::new(id, ident));
+        let id = self.identifier_refs.create();
+        self.identifier_refs
+            .insert(id, IdentifierRef::new(id, ident));
         id
     }
 
@@ -2003,8 +2017,8 @@ impl<'s> Parser<'s> {
     }
 
     fn push_statement(&mut self, kind: StatementKind, span: Span) -> StmtId {
-        let id = StmtId::from(self.statements.len());
-        self.statements.push(Statement::new(id, kind, span));
+        let id = self.statements.create();
+        self.statements.insert(id, Statement::new(id, kind, span));
         id
     }
 
@@ -2025,7 +2039,7 @@ impl<'s> Parser<'s> {
         let mut skipped = 0;
         let mut token = self.lexer.peek();
         while f(&token.kind) {
-            self.lexer.next();
+            self.lexer.next_token();
             token = self.lexer.peek();
             skipped += 1;
         }

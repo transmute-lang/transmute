@@ -1545,7 +1545,7 @@ impl Resolver {
     }
 
     fn insert_symbol(&mut self, ident_id: IdentId, kind: SymbolKind, ty: TypeId) -> SymbolId {
-        let symbol_id = SymbolId::from(self.symbols.len());
+        let symbol_id = self.symbols.create();
 
         match &kind {
             SymbolKind::Parameter(_, stmt_id, index) | SymbolKind::Field(_, stmt_id, index) => {
@@ -1554,11 +1554,14 @@ impl Resolver {
             _ => (),
         };
 
-        self.symbols.push(Symbol {
-            id: symbol_id,
-            kind,
-            type_id: ty,
-        });
+        self.symbols.insert(
+            symbol_id,
+            Symbol {
+                id: symbol_id,
+                kind,
+                type_id: ty,
+            },
+        );
 
         self.scope_stack
             .last_mut()

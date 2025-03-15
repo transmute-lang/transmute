@@ -41,11 +41,11 @@ pub struct Ast {
 impl Ast {
     pub fn new(
         identifiers: Vec<String>,
-        identifier_refs: Vec<IdentifierRef>,
+        identifier_refs: VecMap<IdentRefId, IdentifierRef>,
         expressions: Vec<Expression>,
-        statements: Vec<Statement>,
+        statements: VecMap<StmtId, Statement>,
         roots: Vec<StmtId>,
-        type_defs: Vec<TypeDef>,
+        type_defs: VecMap<TypeDefId, TypeDef>,
     ) -> Self {
         Self {
             identifiers: identifiers.into(),

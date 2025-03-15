@@ -872,7 +872,7 @@ impl Transformer {
         assert!(mutated_symbol_ids.is_empty());
         assert!(variables.is_empty());
 
-        let assignment_expr_id = ExprId::from(self.expressions.len());
+        let assignment_expr_id = self.expressions.create();
         self.expressions.insert(
             assignment_expr_id,
             Expression {

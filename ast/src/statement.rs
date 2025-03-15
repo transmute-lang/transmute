@@ -114,21 +114,4 @@ impl Field {
             span,
         }
     }
-
-    // todo:refactor remove the following methods: they are not useful as all fields are pub
-    pub fn identifier(&self) -> &Identifier {
-        &self.identifier
-    }
-
-    pub fn take_identifier(self) -> Identifier {
-        self.identifier
-    }
-
-    pub fn type_def_id(&self) -> TypeDefId {
-        self.type_def_id
-    }
-
-    pub fn span(&self) -> &Span {
-        &self.span
-    }
 }

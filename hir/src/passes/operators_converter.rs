@@ -50,9 +50,9 @@ impl OperatorsConverter {
             ExpressionKind::Binary(lhs_id, op, rhs_id) => {
                 let ident_id = self.ident_id(op.kind.function_name());
                 let identifier = Identifier::new(ident_id, op.span.clone());
-                let ident_ref_id = IdentRefId::from(self.identifier_refs.len());
+                let ident_ref_id = self.identifier_refs.create();
                 self.identifier_refs
-                    .push(IdentifierRef::new(ident_ref_id, identifier));
+                    .insert(ident_ref_id, IdentifierRef::new(ident_ref_id, identifier));
 
                 Expression::new(
                     expression.id,
@@ -63,9 +63,9 @@ impl OperatorsConverter {
             ExpressionKind::Unary(op, expr_id) => {
                 let ident_id = self.ident_id(op.kind.function_name());
                 let identifier = Identifier::new(ident_id, op.span.clone());
-                let ident_ref_id = IdentRefId::from(self.identifier_refs.len());
+                let ident_ref_id = self.identifier_refs.create();
                 self.identifier_refs
-                    .push(IdentifierRef::new(ident_ref_id, identifier));
+                    .insert(ident_ref_id, IdentifierRef::new(ident_ref_id, identifier));
 
                 Expression::new(
                     expression.id,

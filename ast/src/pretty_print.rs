@@ -388,6 +388,7 @@ mod tests {
     use insta::assert_snapshot;
     use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId};
     use transmute_core::span::Span;
+    use transmute_core::vec_map::VecMap;
 
     macro_rules! identifiers {
     ($expr:expr) => {vec![$expr.to_string()]};
@@ -399,28 +400,28 @@ mod tests {
 }
 
     macro_rules! identifier_refs {
-    ($ident:expr) => {
-        identifier_refs!(0 => $ident)
-    };
-    ($ident:expr, $($tail:tt)*) => {
-        identifier_refs!(0 => $ident, $($tail)*)
-    };
-    ($ident_ref:expr => $ident:expr) => {
-        vec![IdentifierRef::new(
-            IdentRefId::from($ident_ref),
-            Identifier::new(IdentId::from($ident), Span::default())
-        )]
-    };
-    ($ident_ref:expr => $ident:expr, $($tail:tt)*) => {{
-        let mut v = identifier_refs!($ident_ref, $ident);
-        v.append(&mut identifier_refs!($ident_ref + 1 => $($tail)*));
-        v
-    }};
-}
+        ($ident:expr) => {{
+            let mut v = VecMap::new();
+            let id = v.create();
+            let id_ref = IdentifierRef::new(
+                IdentRefId::from($ident),
+                Identifier::new(IdentId::from($ident), Span::default()),
+            );
+            v.insert(id, id_ref);
+            v
+        }};
+    }
 
     #[test]
     fn literal_boolean() {
-        let ast = Ast::new(vec![], vec![], vec![], vec![], vec![], vec![]);
+        let ast = Ast::new(
+            vec![],
+            Default::default(),
+            vec![],
+            Default::default(),
+            vec![],
+            Default::default(),
+        );
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -436,7 +437,14 @@ mod tests {
 
     #[test]
     fn literal_number() {
-        let ast = Ast::new(vec![], vec![], vec![], vec![], vec![], vec![]);
+        let ast = Ast::new(
+            vec![],
+            Default::default(),
+            vec![],
+            Default::default(),
+            vec![],
+            Default::default(),
+        );
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -452,13 +460,25 @@ mod tests {
 
     #[test]
     fn literal_ident() {
+        // let mut ident_refs = VecMap::<IdentRefId, IdentifierRef>::new();
+        // let id = ident_refs.create();
+        // ident_refs.insert(
+        //     id,
+        //     IdentifierRef::new(
+        //         id,
+        //         Identifier {
+        //             id: IdentId::from(0),
+        //             span: Default::default(),
+        //         },
+        //     ),
+        // );
         let ast = Ast::new(
             identifiers!["ident"],
             identifier_refs!(0),
             vec![],
+            Default::default(),
             vec![],
-            vec![],
-            vec![],
+            Default::default(),
         );
 
         let mut ctx = PrettyPrintContext {
