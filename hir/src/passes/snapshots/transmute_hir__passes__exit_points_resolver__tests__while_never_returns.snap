@@ -6,7 +6,6 @@ expression: "(ast, block_exit_points)"
     Ast {
         identifiers: [
             IdentId(0) => "f",
-            IdentId(1) => "g",
         ],
         identifier_refs: [],
         expressions: [
@@ -15,80 +14,67 @@ expression: "(ast, block_exit_points)"
                 kind: Literal(
                     Literal {
                         kind: Boolean(true),
-                        span: 4:17; [49, 53],
+                        span: 3:15; [31, 35],
                     },
                 ),
-                span: 4:17; [49, 53],
+                span: 3:15; [31, 35],
             },
             ExprId(1) => Expression {
                 id: ExprId(1),
                 kind: Block(
-                    [
-                        StmtId(0),
-                    ],
+                    [],
                 ),
-                span: 3:17; [31, 64],
+                span: 3:20; [36, 39],
             },
             ExprId(2) => Expression {
                 id: ExprId(2),
-                kind: Literal(
-                    Literal {
-                        kind: Number(1),
-                        span: 6:13; [78, 79],
-                    },
+                kind: While(
+                    ExprId(0),
+                    ExprId(1),
                 ),
-                span: 6:13; [78, 79],
+                span: 3:9; [25, 39],
             },
             ExprId(3) => Expression {
                 id: ExprId(3),
+                kind: Literal(
+                    Literal {
+                        kind: Number(42),
+                        span: 4:13; [52, 54],
+                    },
+                ),
+                span: 4:13; [52, 54],
+            },
+            ExprId(4) => Expression {
+                id: ExprId(4),
                 kind: Block(
                     [
+                        StmtId(0),
                         StmtId(1),
-                        StmtId(2),
                     ],
                 ),
-                span: 2:13; [13, 86],
+                span: 2:15; [15, 61],
             },
         ],
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
-                kind: Ret(
-                    Some(
-                        ExprId(0),
-                    ),
-                    Explicit,
+                kind: Expression(
+                    ExprId(2),
                 ),
-                span: 4:13; [45, 54],
+                span: 3:9; [25, 39],
             },
             StmtId(1) => Statement {
                 id: StmtId(1),
-                kind: LetFn(
-                    Identifier {
-                        id: IdentId(1),
-                        span: 3:13; [27, 28],
-                    },
-                    [],
-                    [],
-                    Return {
-                        type_def_id: None,
-                    },
-                    ExprId(1),
-                ),
-                span: 3:9; [23, 64],
-            },
-            StmtId(2) => Statement {
-                id: StmtId(2),
                 kind: Ret(
                     Some(
-                        ExprId(2),
+                        ExprId(3),
                     ),
                     Explicit,
                 ),
-                span: 6:9; [74, 80],
+                span: 4:9; [48, 55],
             },
-            StmtId(3) => Statement {
-                id: StmtId(3),
+            StmtId(2) => Statement {
+                id: StmtId(2),
                 kind: LetFn(
                     Identifier {
                         id: IdentId(0),
@@ -99,37 +85,31 @@ expression: "(ast, block_exit_points)"
                     Return {
                         type_def_id: None,
                     },
-                    ExprId(3),
+                    ExprId(4),
                 ),
-                span: 2:5; [5, 86],
+                span: 2:5; [5, 61],
             },
         ],
         type_defs: [],
         roots: [
-            StmtId(3),
+            StmtId(2),
         ],
     },
     [
         (
             ExprId(1),
             Output {
-                exit_points: [
-                    Explicit(
-                        Some(
-                            ExprId(0),
-                        ),
-                    ),
-                ],
+                exit_points: [],
                 unreachable: [],
             },
         ),
         (
-            ExprId(3),
+            ExprId(4),
             Output {
                 exit_points: [
                     Explicit(
                         Some(
-                            ExprId(2),
+                            ExprId(3),
                         ),
                     ),
                 ],

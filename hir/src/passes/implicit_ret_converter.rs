@@ -487,12 +487,6 @@ mod tests {
     use transmute_ast::parser::Parser;
     use transmute_ast::pretty_print::Options;
 
-    // #[derive(Debug)]
-    // struct Result {
-    //     expressions: VecMap<ExprId, Expression>,
-    //     statements: VecMap<StmtId, Statement>,
-    // }
-
     macro_rules! t {
         ($name:ident, $src:expr) => {
             #[test]
@@ -529,10 +523,6 @@ mod tests {
                 options.display_implicit_ret = true;
                 ast.pretty_print(&options, &mut w).unwrap();
 
-                // assert_debug_snapshot!(Result {
-                //     expressions,
-                //     statements
-                // })
                 assert_snapshot!(w);
             }
         };

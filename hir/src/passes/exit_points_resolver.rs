@@ -275,597 +275,200 @@ mod tests {
     use transmute_ast::parser::Parser;
     use transmute_core::ids::ExprId;
 
-    #[test]
-    fn single_explicit_exit_point() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let f() = {
-                ret 42;
+    macro_rules! exit_points {
+        ($name:ident => $src:expr) => {
+            #[test]
+            fn $name() {
+                let ast = Parser::new(Lexer::new($src)).parse().unwrap();
+
+                let block_exit_points = ast
+                    .expressions
+                    .iter()
+                    .filter_map(|(expr_id, expression)| {
+                        if matches!(expression.kind, ExpressionKind::Block(_)) {
+                            Some((
+                                expr_id,
+                                ExitPointsResolver::new(&ast.expressions, &ast.statements)
+                                    .exit_points(expr_id),
+                            ))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<(ExprId, Output)>>();
+
+                assert_debug_snapshot!((ast, block_exit_points));
             }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(1);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let expected = vec![ExitPoint::Explicit(Some(ExprId::from(0)))];
-
-        assert_eq!(actual, expected);
+        };
     }
 
-    #[test]
-    fn multiple_explicit_exit_points_1() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let f() = if true {
-                ret 42;
-            }
-            else {
-                ret 43;
-            };"#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(6);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![
-            ExitPoint::Explicit(Some(ExprId::from(1))),
-            ExitPoint::Explicit(Some(ExprId::from(3))),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(single_explicit_exit_point => r#"
+    let f() = {
+        ret 42;
     }
+    "#);
 
-    #[test]
-    fn multiple_explicit_exit_points_2() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let f() = {
-                if true {
-                    ret 42;
-                }
-                else {
-                    ret 43;
-                }
-            }"#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(6);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![
-            ExitPoint::Explicit(Some(ExprId::from(1))),
-            ExitPoint::Explicit(Some(ExprId::from(3))),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(multiple_explicit_exit_points_1 => r#"
+    let f() = if true {
+        ret 42;
     }
+    else {
+        ret 43;
+    };
+    "#);
 
-    #[test]
-    fn multiple_explicit_exit_points_masking_later_exit_points() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let f() = {
-                if true {
-                    ret 42;
-                }
-                else {
-                    ret 43;
-                }
-                ret 44;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(7);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![
-            ExitPoint::Explicit(Some(ExprId::from(1))),
-            ExitPoint::Explicit(Some(ExprId::from(3))),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(multiple_explicit_exit_points_2 => r#"
+    let f() = {
+        if true {
+            ret 42;
+        }
+        else {
+            ret 43;
+        }
     }
+    "#);
 
-    #[test]
-    fn always_returns_from_if_condition() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let f() = {
-                if if true { ret 42; } else { ret 43; } {
-                    ret 44;
-                }
-                ret 45;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(10);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![
-            ExitPoint::Explicit(Some(ExprId::from(1))),
-            ExitPoint::Explicit(Some(ExprId::from(3))),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(multiple_explicit_exit_points_masking_later_exit_points => r#"
+    let f() = {
+        if true {
+            ret 42;
+        }
+        else {
+            ret 43;
+        }
+        ret 44;
     }
+    "#);
 
-    #[test]
-    fn always_returns_from_while() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let f() = {
-                while true {
-                    ret 42;
-                }
-                ret 43;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(5);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![ExitPoint::Explicit(Some(ExprId::from(1)))];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(always_returns_from_if_condition => r#"
+    let f() = {
+        if if true { ret 42; } else { ret 43; } {
+            ret 44;
+        }
+        ret 45;
     }
+    "#);
 
-    #[test]
-    fn while_never_returns() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let f() = {
-                while true { }
-                ret 42;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(4);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![ExitPoint::Explicit(Some(ExprId::from(3)))];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(always_returns_from_while => r#"
+    let f() = {
+        while true {
+            ret 42;
+        }
+        ret 43;
     }
+    "#);
 
-    #[test]
-    fn always_returns_from_while_condition() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let f() = {
-                while if true { ret 42; } else { ret 43; } {
-                    ret 44;
-                }
-                ret 45;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(10);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![
-            ExitPoint::Explicit(Some(ExprId::from(1))),
-            ExitPoint::Explicit(Some(ExprId::from(3))),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(while_never_returns => r#"
+    let f() = {
+        while true { }
+        ret 42;
     }
+    "#);
 
-    #[test]
-    fn assignment_always_returns() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let x() = {
-                let x = 0;
-                x = if true { ret 42; } else { ret 43; };
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(8);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![
-            ExitPoint::Explicit(Some(ExprId::from(2))),
-            ExitPoint::Explicit(Some(ExprId::from(4))),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(always_returns_from_while_condition => r#"
+    let f() = {
+        while if true { ret 42; } else { ret 43; } {
+            ret 44;
+        }
+        ret 45;
     }
+    "#);
 
-    #[test]
-    fn left_binary_always_returns() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let x() = {
-                let a = add(
-                    if true { ret 42; } else { ret 43; },
-                    if false { ret 44; } else { ret 45; }
-                );
-                ret 46;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-        let expr = ExprId::from(14);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![
-            ExitPoint::Explicit(Some(ExprId::from(1))),
-            ExitPoint::Explicit(Some(ExprId::from(3))),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(assignment_always_returns => r#"
+    let x() = {
+        let x = 0;
+        x = if true { ret 42; } else { ret 43; };
     }
+    "#);
 
-    #[test]
-    fn left_binary_sometimes_returns() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let x() = {
-                let a = add(
-                    if true { 42; } else { ret 43; },
-                    if false { ret 44; } else { ret 45; }
-                );
-                ret 46;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(14);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![
-            ExitPoint::Explicit(Some(ExprId::from(3))),
-            ExitPoint::Explicit(Some(ExprId::from(7))),
-            ExitPoint::Explicit(Some(ExprId::from(9))),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(left_binary_always_returns => r#"
+    let x() = {
+        let a = add(
+            if true { ret 42; } else { ret 43; },
+            if false { ret 44; } else { ret 45; }
+        );
+        ret 46;
     }
+    "#);
 
-    #[test]
-    fn right_binary_always_returns() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let x() = {
-                let a = add(42, if false { ret 43; } else { ret 44; });
-                ret 45;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(9);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![
-            ExitPoint::Explicit(Some(ExprId::from(2))),
-            ExitPoint::Explicit(Some(ExprId::from(4))),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(left_binary_sometimes_returns => r#"
+    let x() = {
+        let a = add(
+            if true { 42; } else { ret 43; },
+            if false { ret 44; } else { ret 45; }
+        );
+        ret 46;
     }
+    "#);
 
-    #[test]
-    fn binary_never_returns() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let x() = {
-                let a = add(42, 43);
-                ret 44;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(4);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![ExitPoint::Explicit(Some(ExprId::from(3)))];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(right_binary_always_returns =>r#"
+    let x() = {
+        let a = add(42, if false { ret 43; } else { ret 44; });
+        ret 45;
     }
+    "#);
 
-    #[test]
-    fn unary_always_returns() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let x() = {
-                let a = minus(if true { ret 42; } else { ret 43; });
-                ret 44;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(8);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![
-            ExitPoint::Explicit(Some(ExprId::from(1))),
-            ExitPoint::Explicit(Some(ExprId::from(3))),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(binary_never_returns =>r#"
+    let x() = {
+        let a = add(42, 43);
+        ret 44;
     }
+    "#);
 
-    #[test]
-    fn function_call_parameter_always_returns() {
-        let ast = Parser::new(Lexer::new(
-            r#"let x(a: number) = {
-                x(if true { ret 42; } else { ret 43; });
-                ret 44;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(8);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![
-            ExitPoint::Explicit(Some(ExprId::from(1))),
-            ExitPoint::Explicit(Some(ExprId::from(3))),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(unary_always_returns => r#"
+    let x() = {
+        let a = minus(if true { ret 42; } else { ret 43; });
+        ret 44;
     }
+    "#);
 
-    #[test]
-    fn if_unreachable() {
-        let ast = Parser::new(Lexer::new(
-            r#"let x(a: number) = {
-                if true {
-                    ret 44;
-                    43;
-                }
-                ret 44;
-                42;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
+    exit_points!(function_call_parameter_always_returns => r#"
+    let x(a: number) = {
+        x(if true { ret 42; } else { ret 43; });
+        ret 44;
+    }"#);
 
-        let expr = ExprId::from(7);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .unreachable;
-        let mut expected = vec![ExprId::from(2), ExprId::from(6)];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(if_unreachable => r#"
+    let x(a: number) = {
+        if true {
+            ret 44;
+            43;
+        }
+        ret 44;
+        42;
     }
+    "#);
 
-    #[test]
-    fn struct_always_returns() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            struct S { x: number, y: number}
-            let x(): number = {
-                S {
-                    x: if eq(1, 1) { ret 1; } else { ret 2; },
-                    y: 1
-                };
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(10);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .exit_points;
-        let mut expected = vec![
-            ExitPoint::Explicit(Some(ExprId::from(3))),
-            ExitPoint::Explicit(Some(ExprId::from(5))),
-        ];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(struct_always_returns => r#"
+    struct S { x: number, y: number}
+    let x(): number = {
+        S {
+            x: if eq(1, 1) { ret 1; } else { ret 2; },
+            y: 1
+        };
     }
+    "#);
 
-    #[test]
-    fn struct_unreachable() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            struct S { x: number, y: number}
-            let x(): number = {
-                S {
-                    x: if eq(1, 2) { ret 3; } else { ret 4; },
-                    y: 5
-                };
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let expr = ExprId::from(10);
-
-        let actual = ExitPointsResolver::new(&ast.expressions, &ast.statements)
-            .exit_points(expr)
-            .unreachable;
-        let mut expected = vec![ExprId::from(8)];
-        expected.sort();
-
-        assert_eq!(actual, expected);
+    exit_points!(nested_function => r#"
+    let f() {
+        let g() {
+            ret true;
+        };
+        ret 1;
     }
+    "#);
 
-    // todo:refactoring rewrite other tests so they look like this one
-    #[test]
-    fn nested_function() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let f() {
-                let g() {
-                    ret true;
-                };
-                ret 1;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let block_exit_points = ast
-            .expressions
-            .iter()
-            .filter_map(|(expr_id, expression)| {
-                if matches!(expression.kind, ExpressionKind::Block(_)) {
-                    Some((
-                        expr_id,
-                        ExitPointsResolver::new(&ast.expressions, &ast.statements)
-                            .exit_points(expr_id),
-                    ))
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<(ExprId, Output)>>();
-
-        assert_debug_snapshot!((ast, block_exit_points));
+    exit_points!(array_instantiation => r#"
+    let f() {
+        let a = [if true { ret 0; } else { ret 1; }];
+        ret 2;
     }
+    "#);
 
-    #[test]
-    fn array_instantiation() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let f() {
-                let a = [if true { ret 0; } else { ret 1; }];
-                ret 2;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let block_exit_points = ast
-            .expressions
-            .iter()
-            .filter_map(|(expr_id, expression)| {
-                if matches!(expression.kind, ExpressionKind::Block(_)) {
-                    Some((
-                        expr_id,
-                        ExitPointsResolver::new(&ast.expressions, &ast.statements)
-                            .exit_points(expr_id),
-                    ))
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<(ExprId, Output)>>();
-
-        assert_debug_snapshot!((ast, block_exit_points));
+    exit_points!(array_access => r#"
+    let f() {
+        let a = a[if true { ret 0; } else { ret 1; }];
+        ret 2;
     }
-
-    #[test]
-    fn array_access() {
-        let ast = Parser::new(Lexer::new(
-            r#"
-            let f() {
-                let a = a[if true { ret 0; } else { ret 1; }];
-                ret 2;
-            }
-            "#,
-        ))
-        .parse()
-        .unwrap();
-
-        let block_exit_points = ast
-            .expressions
-            .iter()
-            .filter_map(|(expr_id, expression)| {
-                if matches!(expression.kind, ExpressionKind::Block(_)) {
-                    Some((
-                        expr_id,
-                        ExitPointsResolver::new(&ast.expressions, &ast.statements)
-                            .exit_points(expr_id),
-                    ))
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<(ExprId, Output)>>();
-
-        assert_debug_snapshot!((ast, block_exit_points));
-    }
+    "#);
 }

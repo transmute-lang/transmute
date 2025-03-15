@@ -1,0 +1,80 @@
+---
+source: hir/src/passes/exit_points_resolver.rs
+expression: "(ast, block_exit_points)"
+---
+(
+    Ast {
+        identifiers: [
+            IdentId(0) => "f",
+        ],
+        identifier_refs: [],
+        expressions: [
+            ExprId(0) => Expression {
+                id: ExprId(0),
+                kind: Literal(
+                    Literal {
+                        kind: Number(42),
+                        span: 3:13; [29, 31],
+                    },
+                ),
+                span: 3:13; [29, 31],
+            },
+            ExprId(1) => Expression {
+                id: ExprId(1),
+                kind: Block(
+                    [
+                        StmtId(0),
+                    ],
+                ),
+                span: 2:15; [15, 38],
+            },
+        ],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Ret(
+                    Some(
+                        ExprId(0),
+                    ),
+                    Explicit,
+                ),
+                span: 3:9; [25, 32],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 2:9; [9, 10],
+                    },
+                    [],
+                    [],
+                    Return {
+                        type_def_id: None,
+                    },
+                    ExprId(1),
+                ),
+                span: 2:5; [5, 38],
+            },
+        ],
+        type_defs: [],
+        roots: [
+            StmtId(1),
+        ],
+    },
+    [
+        (
+            ExprId(1),
+            Output {
+                exit_points: [
+                    Explicit(
+                        Some(
+                            ExprId(0),
+                        ),
+                    ),
+                ],
+                unreachable: [],
+            },
+        ),
+    ],
+)

@@ -5,30 +5,39 @@ expression: "(ast, block_exit_points)"
 (
     Ast {
         identifiers: [
-            IdentId(0) => "f",
+            IdentId(0) => "x",
             IdentId(1) => "a",
+            IdentId(2) => "minus",
         ],
-        identifier_refs: [],
+        identifier_refs: [
+            IdentRefId(0) => IdentifierRef {
+                id: IdentRefId(0),
+                ident: Identifier {
+                    id: IdentId(2),
+                    span: 3:17; [33, 38],
+                },
+            },
+        ],
         expressions: [
             ExprId(0) => Expression {
                 id: ExprId(0),
                 kind: Literal(
                     Literal {
                         kind: Boolean(true),
-                        span: 3:21; [35, 39],
+                        span: 3:26; [42, 46],
                     },
                 ),
-                span: 3:21; [35, 39],
+                span: 3:26; [42, 46],
             },
             ExprId(1) => Expression {
                 id: ExprId(1),
                 kind: Literal(
                     Literal {
-                        kind: Number(0),
-                        span: 3:32; [46, 47],
+                        kind: Number(42),
+                        span: 3:37; [53, 55],
                     },
                 ),
-                span: 3:32; [46, 47],
+                span: 3:37; [53, 55],
             },
             ExprId(2) => Expression {
                 id: ExprId(2),
@@ -37,17 +46,17 @@ expression: "(ast, block_exit_points)"
                         StmtId(0),
                     ],
                 ),
-                span: 3:26; [40, 50],
+                span: 3:31; [47, 58],
             },
             ExprId(3) => Expression {
                 id: ExprId(3),
                 kind: Literal(
                     Literal {
-                        kind: Number(1),
-                        span: 3:48; [62, 63],
+                        kind: Number(43),
+                        span: 3:54; [70, 72],
                     },
                 ),
-                span: 3:48; [62, 63],
+                span: 3:54; [70, 72],
             },
             ExprId(4) => Expression {
                 id: ExprId(4),
@@ -56,7 +65,7 @@ expression: "(ast, block_exit_points)"
                         StmtId(1),
                     ],
                 ),
-                span: 3:42; [56, 66],
+                span: 3:48; [64, 75],
             },
             ExprId(5) => Expression {
                 id: ExprId(5),
@@ -67,26 +76,27 @@ expression: "(ast, block_exit_points)"
                         ExprId(4),
                     ),
                 ),
-                span: 3:18; [32, 66],
+                span: 3:23; [39, 75],
             },
             ExprId(6) => Expression {
                 id: ExprId(6),
-                kind: ArrayInstantiation(
+                kind: FunctionCall(
+                    IdentRefId(0),
                     [
                         ExprId(5),
                     ],
                 ),
-                span: 3:17; [31, 67],
+                span: 3:17; [33, 76],
             },
             ExprId(7) => Expression {
                 id: ExprId(7),
                 kind: Literal(
                     Literal {
-                        kind: Number(2),
-                        span: 4:13; [81, 82],
+                        kind: Number(44),
+                        span: 4:13; [90, 92],
                     },
                 ),
-                span: 4:13; [81, 82],
+                span: 4:13; [90, 92],
             },
             ExprId(8) => Expression {
                 id: ExprId(8),
@@ -96,7 +106,7 @@ expression: "(ast, block_exit_points)"
                         StmtId(3),
                     ],
                 ),
-                span: 2:13; [13, 89],
+                span: 2:15; [15, 99],
             },
         ],
         statements: [
@@ -108,7 +118,7 @@ expression: "(ast, block_exit_points)"
                     ),
                     Explicit,
                 ),
-                span: 3:28; [42, 48],
+                span: 3:33; [49, 56],
             },
             StmtId(1) => Statement {
                 id: StmtId(1),
@@ -118,18 +128,18 @@ expression: "(ast, block_exit_points)"
                     ),
                     Explicit,
                 ),
-                span: 3:44; [58, 64],
+                span: 3:50; [66, 73],
             },
             StmtId(2) => Statement {
                 id: StmtId(2),
                 kind: Let(
                     Identifier {
                         id: IdentId(1),
-                        span: 3:13; [27, 28],
+                        span: 3:13; [29, 30],
                     },
                     ExprId(6),
                 ),
-                span: 3:9; [23, 68],
+                span: 3:9; [25, 77],
             },
             StmtId(3) => Statement {
                 id: StmtId(3),
@@ -139,7 +149,7 @@ expression: "(ast, block_exit_points)"
                     ),
                     Explicit,
                 ),
-                span: 4:9; [77, 83],
+                span: 4:9; [86, 93],
             },
             StmtId(4) => Statement {
                 id: StmtId(4),
@@ -155,7 +165,7 @@ expression: "(ast, block_exit_points)"
                     },
                     ExprId(8),
                 ),
-                span: 2:5; [5, 89],
+                span: 2:5; [5, 99],
             },
         ],
         type_defs: [],
