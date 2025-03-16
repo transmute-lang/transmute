@@ -672,6 +672,18 @@ impl Resolver {
             *values.first().expect("array has at least one element"),
         );
 
+        if matches!(
+            self.types.get_by_left(&expected_type_id).unwrap(),
+            Type::Void
+        ) {
+            self.diagnostics.report_err(
+                "Void values cannot be used as array elements at index 0".to_string(),
+                self.expressions[*values.first().unwrap()].span.clone(),
+                (file!(), line!()),
+            );
+            return self.invalid_type_id;
+        }
+
         for (index, expr_id) in values.iter().enumerate().skip(1) {
             let type_id = self.resolve_expression(hir, *expr_id);
             if type_id != expected_type_id {
@@ -2637,5 +2649,14 @@ mod tests {
         "#,
         "Identifier 'unknown' not found",
         Span::new(2, 10, 10, 7)
+    );
+    test_type_error!(
+        void_in_arrays,
+        r#"
+        let main() { let a = [ f() ]; }
+        let f() {}
+        "#,
+        "Void values cannot be used as array elements at index 0",
+        Span::new(1, 32, 32, 3)
     );
 }

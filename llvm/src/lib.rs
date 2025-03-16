@@ -1624,22 +1624,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     Some(array_type) => array_type.as_basic_type_enum(),
                 }
             }
-            Type::Void => {
-                // fixme we can reach this with
-                //  let main(n: number): number {
-                //      f();
-                //      n;
-                //  }
-                //  let f() {
-                //      let a = [
-                //          f1(),
-                //      ];
-                //  }
-                //  let f1() {
-                //      [0, 1];
-                //  }
-                unreachable!("void is not a basic type")
-            }
+            Type::Void => unreachable!("void is not a basic type"),
             Type::None => unreachable!("none is not a basic type"),
         }
     }
