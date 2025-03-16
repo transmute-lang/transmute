@@ -89,6 +89,18 @@ const GC_TEST: [&str; 2] = ["-D", "GC_TEST"];
 #[cfg(not(feature = "gc-test"))]
 const GC_TEST: [&str; 0] = [];
 
+#[cfg(feature = "gc-cc-dbg")]
+const GC_DBG: [&str; 1] = ["-ggdb"];
+
+#[cfg(not(feature = "gc-cc-dbg"))]
+const GC_DBG: [&str; 0] = [];
+
+#[cfg(feature = "gc-pthread")]
+const GC_PTHREAD: [&str; 2] = ["-D", "GC_PTHREAD"];
+
+#[cfg(not(feature = "gc-pthread"))]
+const GC_PTHREAD: [&str; 0] = [];
+
 fn compile_to_llvm_ir(src: &Path, dst: &Path) {
     let output = Command::new("clang")
         .arg("-S")
@@ -96,10 +108,9 @@ fn compile_to_llvm_ir(src: &Path, dst: &Path) {
         .args(GC_LOGS)
         .args(GC_LOGS_STABLE)
         .args(GC_LOGS_COLOR)
-        .args(["-D", "GC_PTHREAD"])
+        .args(GC_PTHREAD)
         .arg("-emit-llvm")
-        // todo:ux move behind a feature
-        .arg("-ggdb")
+        .args(GC_DBG)
         .arg("-o")
         .arg(dst.as_os_str())
         .arg(src.as_os_str())
