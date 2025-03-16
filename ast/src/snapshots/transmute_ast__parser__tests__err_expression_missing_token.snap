@@ -9,10 +9,6 @@ Err(
                 message: "Unexpected `;`, expected one of (10) identifier, number, string, `true`, `false`, `if`, `while`, `(`, `-`, `[`",
                 span: 1:5; [4, 5],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    1143,
-                ),
             },
         ],
     },

@@ -831,7 +831,16 @@ impl<'s> Parser<'s> {
         // struct ident '{ ident : ident , ... }
         let token = self.lexer.next_token();
         if token.kind != TokenKind::OpenCurlyBracket {
-            report_missing_token_and_push_back!(self, token, TokenKind::OpenCurlyBracket);
+            if self.lexer.peek().kind == TokenKind::OpenCurlyBracket {
+                report_unexpected_token!(
+                    self,
+                    token,
+                    [expected_token!(TokenKind::OpenCurlyBracket),]
+                );
+                self.lexer.next_token();
+            } else {
+                report_missing_token_and_push_back!(self, token, TokenKind::OpenCurlyBracket);
+            }
         }
 
         let mut fields = Vec::new();
@@ -961,8 +970,6 @@ impl<'s> Parser<'s> {
                     break token;
                 }
                 _ => {
-                    // fixme:diagnostic struct S = { f1: number, f2: number } reports wrong error message
-
                     // we did find neither an identifier nor a closing bracket.
                     // we skip tokens to find one of them
                     report_unexpected_token!(
@@ -2166,6 +2173,7 @@ mod tests {
     test_syntax!(err_struct_instantiation_missing_second_field_value => "S { a: a, b: , c: a };");
     test_syntax!(err_struct_instantiation_missing_third_field_value => "S { a: a, b: a, c: };");
     test_syntax!(err_struct_instantiation_missing_semicolon => "S { a: a }");
+    test_syntax!(err_struct_wrong_equal => "struct S = { f1: number, f2: number }");
     test_syntax!(err_unprotected_struct_in_if_expression_1 => "if Point{} {}");
     test_syntax!(err_unprotected_struct_in_if_expression_2 => "if Point{} - 1 {}");
     test_syntax!(err_unprotected_struct_in_if_expression_3 => "if 1 - Point{} {}");

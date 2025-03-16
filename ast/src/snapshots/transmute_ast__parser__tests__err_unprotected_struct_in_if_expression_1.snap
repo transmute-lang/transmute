@@ -9,10 +9,6 @@ Err(
                 message: "Unexpected `{`, expected one of (22) identifier, number, `true`, `false`, `let`, `ret`, `if`, `while`, `.`, `(`, `=`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`, `[`",
                 span: 1:12; [11, 12],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    488,
-                ),
             },
         ],
     },

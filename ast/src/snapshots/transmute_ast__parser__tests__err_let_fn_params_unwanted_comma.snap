@@ -9,19 +9,11 @@ Err(
                 message: "Unexpected `,`, expected one of (1) `)`",
                 span: 1:7; [6, 7],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    617,
-                ),
             },
             Diagnostic {
                 message: "Unexpected `,`, expected one of (2) identifier, `)`",
                 span: 1:12; [11, 12],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    617,
-                ),
             },
         ],
     },

@@ -9,10 +9,6 @@ Err(
                 message: "Unexpected number(42), expected one of (2) `if`, `{`",
                 span: 1:18; [17, 19],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    1561,
-                ),
             },
         ],
     },

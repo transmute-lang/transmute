@@ -9,10 +9,6 @@ Err(
                 message: "Unexpected `]`, expected one of (1) number",
                 span: 1:28; [27, 28],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    734,
-                ),
             },
         ],
     },

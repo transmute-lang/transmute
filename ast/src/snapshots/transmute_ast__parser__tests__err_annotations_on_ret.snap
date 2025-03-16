@@ -9,10 +9,6 @@ Err(
                 message: "Annotations not supported on `ret` statements",
                 span: 1:11; [10, 17],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    374,
-                ),
             },
         ],
     },

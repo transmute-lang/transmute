@@ -9,10 +9,6 @@ Err(
                 message: "Expected `=`, got number",
                 span: 1:15; [14, 16],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    350,
-                ),
             },
         ],
     },

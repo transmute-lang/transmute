@@ -9,10 +9,6 @@ Err(
                 message: "Unexpected `@`, expected one of (1) identifier",
                 span: 1:12; [11, 12],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    469,
-                ),
             },
         ],
     },

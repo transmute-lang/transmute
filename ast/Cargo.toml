@@ -16,3 +16,4 @@ allow-any-root-kind = []
 # if enabled, prints the position where the expected token was put in the list
 debug-expected-token = []
 
+print_generated_at_in_diagnostic_debug = ["transmute-core/print_generated_at_in_diagnostic_debug"]

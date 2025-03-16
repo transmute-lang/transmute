@@ -9,10 +9,6 @@ Err(
                 message: "Unexpected `^`, expected one of (11) identifier, number, `true`, `false`, `let`, `ret`, `if`, `while`, `(`, `-`, `[`",
                 span: 1:1; [0, 1],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    488,
-                ),
             },
         ],
     },

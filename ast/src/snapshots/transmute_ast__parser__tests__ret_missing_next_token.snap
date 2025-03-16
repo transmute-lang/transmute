@@ -9,10 +9,6 @@ Err(
                 message: "Unexpected `eof`, expected one of (11) identifier, number, string, `true`, `false`, `if`, `while`, `;`, `(`, `-`, `[`",
                 span: 1:4; [3, 3],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    1143,
-                ),
             },
         ],
     },

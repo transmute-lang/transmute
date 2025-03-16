@@ -9,10 +9,6 @@ Err(
                 message: "Unexpected `eof`, expected one of (2) identifier, `)`",
                 span: 1:7; [6, 6],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    606,
-                ),
             },
         ],
     },

@@ -9,10 +9,6 @@ Err(
                 message: "Unexpected `=`, expected one of (1) identifier",
                 span: 1:5; [4, 5],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    319,
-                ),
             },
         ],
     },

@@ -9,10 +9,6 @@ Err(
                 message: "Unexpected `eof`, expected one of (15) `;`, `.`, `{`, `(`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`, `[`",
                 span: 1:18; [17, 17],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    1947,
-                ),
             },
         ],
     },

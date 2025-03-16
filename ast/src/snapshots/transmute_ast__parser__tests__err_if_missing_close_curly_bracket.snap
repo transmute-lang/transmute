@@ -9,10 +9,6 @@ Err(
                 message: "Expected `}` to close `{` at 1:9, got `eof`",
                 span: 1:10; [9, 9],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    1978,
-                ),
             },
         ],
     },

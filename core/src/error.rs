@@ -70,7 +70,7 @@ impl<'a> Iterator for DiagnosticsIterator<'a> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Diagnostic {
     pub message: String,
     pub span: Span,
@@ -100,6 +100,24 @@ impl Display for Diagnostic {
                 self.message, self.span.line, self.span.column
             )
         }
+    }
+}
+
+impl Debug for Diagnostic {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Diagnostic {{")?;
+        writeln!(f, "    message: {:?},", self.message)?;
+        writeln!(f, "    span: {:?},", self.span)?;
+        writeln!(f, "    level: {:?},", self.level)?;
+        #[cfg(feature = "print_generated_at_in_diagnostic_debug")]
+        {
+            writeln!(
+                f,
+                "    generated_at: {}:{},",
+                self.generated_at.0, self.generated_at.1
+            )?;
+        }
+        write!(f, "}}")
     }
 }
 

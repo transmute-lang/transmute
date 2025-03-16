@@ -9,10 +9,6 @@ Err(
                 message: "Expected `)` to close `(` at 1:1, got `;`",
                 span: 1:4; [3, 4],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    1125,
-                ),
             },
         ],
     },

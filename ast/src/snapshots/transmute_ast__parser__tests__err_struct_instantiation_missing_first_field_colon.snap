@@ -9,10 +9,6 @@ Err(
                 message: "Unexpected identifier(a), expected one of (1) `:`",
                 span: 1:7; [6, 7],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    1819,
-                ),
             },
         ],
     },

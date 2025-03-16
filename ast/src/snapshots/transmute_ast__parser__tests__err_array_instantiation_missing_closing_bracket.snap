@@ -9,10 +9,6 @@ Err(
                 message: "Unexpected `;`, expected one of (14) `,`, `.`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`, `]`, `[`",
                 span: 1:3; [2, 3],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    1721,
-                ),
             },
         ],
     },

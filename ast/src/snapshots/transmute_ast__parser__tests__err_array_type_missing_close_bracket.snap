@@ -9,10 +9,6 @@ Err(
                 message: "Unexpected `}`, expected one of (1) `]`",
                 span: 1:30; [29, 30],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    748,
-                ),
             },
         ],
     },

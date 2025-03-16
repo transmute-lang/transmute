@@ -3,3 +3,5 @@ name = "transmute-core"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+print_generated_at_in_diagnostic_debug = []

@@ -9,10 +9,6 @@ Err(
                 message: "Expected `{`, got identifier",
                 span: 1:10; [9, 10],
                 level: Error,
-                generated_at: (
-                    "ast/src/parser.rs",
-                    834,
-                ),
             },
         ],
     },
