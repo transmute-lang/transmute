@@ -37,8 +37,9 @@ pub struct Resolver {
     expressions: VecMap<ExprId, ResolvedExpression>,
     statements: VecMap<StmtId, ResolvedStatement>,
     types: BiHashMap<TypeId, Type>,
+    types_by_name: HashMap<&'static str, TypeId>,
     symbols: VecMap<SymbolId, Symbol>,
-    diagnostics: Diagnostics,
+    not_found_symbol_id: SymbolId,
 
     // work
     scope_stack: Vec<Scope>,
@@ -49,15 +50,7 @@ pub struct Resolver {
     annotation_symbols: HashMap<StmtId, SymbolId>,
     stmt_symbols: HashMap<(StmtId, usize), SymbolId>,
 
-    // cache
-    // todo:refactor instead of having default values, we might want to create a cache and pass it
-    //   along... or just drop the cache thing and use HashMaps..
-    invalid_type_id: TypeId,
-    void_type_id: TypeId,
-    none_type_id: TypeId,
-    boolean_type_id: TypeId,
-    number_type_id: TypeId,
-    not_found_symbol_id: SymbolId,
+    diagnostics: Diagnostics,
 }
 
 impl Resolver {
@@ -68,9 +61,9 @@ impl Resolver {
             expressions: Default::default(),
             statements: Default::default(),
             types: Default::default(),
+            types_by_name: Default::default(),
             symbols: Default::default(),
-
-            diagnostics: Default::default(),
+            not_found_symbol_id: Default::default(),
 
             scope_stack: Default::default(),
             function_symbols: Default::default(),
@@ -78,12 +71,7 @@ impl Resolver {
             annotation_symbols: Default::default(),
             stmt_symbols: Default::default(),
 
-            invalid_type_id: Default::default(),
-            void_type_id: Default::default(),
-            none_type_id: Default::default(),
-            boolean_type_id: Default::default(),
-            number_type_id: Default::default(),
-            not_found_symbol_id: Default::default(),
+            diagnostics: Default::default(),
         }
     }
 
@@ -115,20 +103,20 @@ impl Resolver {
 
         // init. types
         debug_assert!(hir.types.is_empty());
-        self.invalid_type_id = TypeId::from(self.types.len());
-        self.types.insert(self.invalid_type_id, Type::Invalid);
+        let invalid_type_id = TypeId::from(self.types.len());
+        self.types.insert(invalid_type_id, Type::Invalid);
 
-        self.void_type_id = TypeId::from(self.types.len());
-        self.types.insert(self.void_type_id, Type::Void);
+        let void_type_id = TypeId::from(self.types.len());
+        self.types.insert(void_type_id, Type::Void);
 
-        self.none_type_id = TypeId::from(self.types.len());
-        self.types.insert(self.none_type_id, Type::None);
+        let none_type_id = TypeId::from(self.types.len());
+        self.types.insert(none_type_id, Type::None);
 
-        self.boolean_type_id = TypeId::from(self.types.len());
-        self.types.insert(self.boolean_type_id, Type::Boolean);
+        let boolean_type_id = TypeId::from(self.types.len());
+        self.types.insert(boolean_type_id, Type::Boolean);
 
-        self.number_type_id = TypeId::from(self.types.len());
-        self.types.insert(self.number_type_id, Type::Number);
+        let number_type_id = TypeId::from(self.types.len());
+        self.types.insert(number_type_id, Type::Number);
 
         // init. symbols
         debug_assert!(hir.symbols.is_empty());
@@ -136,7 +124,7 @@ impl Resolver {
         self.symbols.push(Symbol {
             id: not_found_symbol_id,
             kind: SymbolKind::NotFound,
-            type_id: self.invalid_type_id,
+            type_id: self.find_type_id_by_type(&Type::Invalid),
         });
 
         // init. scope_stack
@@ -171,7 +159,7 @@ impl Resolver {
                     self.insert_symbol(
                         id,
                         SymbolKind::NativeType(id, native.ty.clone()),
-                        self.none_type_id,
+                        self.find_type_id_by_type(&Type::None),
                     );
                 }
             }
@@ -266,8 +254,10 @@ impl Resolver {
                 let lhs_type_id = self.resolve_expression(hir, *lhs_expr_id);
                 let rhs_type_id = self.resolve_expression(hir, *rhs_expr_id);
 
-                if lhs_type_id == self.invalid_type_id || rhs_type_id == self.invalid_type_id {
-                    self.invalid_type_id
+                if lhs_type_id == self.find_type_id_by_type(&Type::Invalid)
+                    || rhs_type_id == self.find_type_id_by_type(&Type::Invalid)
+                {
+                    self.find_type_id_by_type(&Type::Invalid)
                 } else if lhs_type_id != rhs_type_id {
                     self.diagnostics.report_err(
                         format!(
@@ -278,7 +268,7 @@ impl Resolver {
                         self.expressions[*rhs_expr_id].span.clone(),
                         (file!(), line!()),
                     );
-                    self.invalid_type_id
+                    self.find_type_id_by_type(&Type::Invalid)
                 } else {
                     lhs_type_id
                 }
@@ -288,8 +278,8 @@ impl Resolver {
             }
             ExpressionKind::Literal(literal) => {
                 match literal.kind {
-                    LiteralKind::Boolean(_) => self.boolean_type_id,
-                    LiteralKind::Number(_) => self.number_type_id,
+                    LiteralKind::Boolean(_) => self.find_type_id_by_type(&Type::Boolean),
+                    LiteralKind::Number(_) => self.find_type_id_by_type(&Type::Number),
                     LiteralKind::String(_) => self
                         .find_type_id_by_name("string")
                         .expect("string type exists"),
@@ -300,7 +290,7 @@ impl Resolver {
                         // todo:feature resolve function ref, see comment in visit_assignment
                         self.resolve_ident_ref(hir, ident_ref, None)
                             .map(|s| self.symbols[s].type_id)
-                            .unwrap_or(self.invalid_type_id)
+                            .unwrap_or(self.find_type_id_by_type(&Type::Invalid))
                     }
                 }
             }
@@ -343,7 +333,7 @@ impl Resolver {
                                     );
                                     let ident_ref = ident_ref.resolved(self.not_found_symbol_id);
                                     self.identifier_refs.insert(ident_ref.id, ident_ref);
-                                    self.invalid_type_id
+                                    self.find_type_id_by_type(&Type::Invalid)
                                 }
                             }
                         }
@@ -356,7 +346,7 @@ impl Resolver {
                                 expr.span.clone(),
                                 (file!(), line!()),
                             );
-                            self.invalid_type_id
+                            self.find_type_id_by_type(&Type::Invalid)
                         }
                         _ => panic!("struct expected"),
                     },
@@ -372,7 +362,7 @@ impl Resolver {
                         // (probably) fine...
                         let ident_ref = ident_ref.resolved(self.not_found_symbol_id);
                         self.identifier_refs.insert(ident_ref.id, ident_ref);
-                        self.invalid_type_id
+                        self.find_type_id_by_type(&Type::Invalid)
                     }
                 };
 
@@ -435,13 +425,13 @@ impl Resolver {
             //  (yet).
             .resolve_ident_ref(hir, ident_ref, None)
             .map(|s| self.symbols[s].type_id)
-            .unwrap_or(self.invalid_type_id);
+            .unwrap_or(self.find_type_id_by_type(&Type::Invalid));
 
-        if lhs_type_id == self.invalid_type_id {
+        if lhs_type_id == self.find_type_id_by_type(&Type::Invalid) {
             return lhs_type_id;
         }
 
-        if rhs_type_id == self.invalid_type_id {
+        if rhs_type_id == self.find_type_id_by_type(&Type::Invalid) {
             return rhs_type_id;
         }
 
@@ -455,7 +445,7 @@ impl Resolver {
                 self.expressions[expr].span.clone(),
                 (file!(), line!()),
             );
-            return self.invalid_type_id;
+            return self.find_type_id_by_type(&Type::Invalid);
         }
 
         rhs_type_id
@@ -470,7 +460,9 @@ impl Resolver {
     ) -> TypeId {
         let cond_type = self.resolve_expression(hir, cond);
 
-        if cond_type != self.boolean_type_id && cond_type != self.invalid_type_id {
+        if cond_type != self.find_type_id_by_type(&Type::Boolean)
+            && cond_type != self.find_type_id_by_type(&Type::Invalid)
+        {
             self.diagnostics.report_err(
                 format!(
                     "Condition expected to be of type {}, got {}",
@@ -484,7 +476,7 @@ impl Resolver {
 
         let true_branch_type_id = self.resolve_expression(hir, true_branch);
         let false_branch_type_id = match false_branch {
-            None => self.void_type_id,
+            None => self.find_type_id_by_type(&Type::Void),
             Some(e) => self.resolve_expression(hir, e),
         };
 
@@ -492,13 +484,13 @@ impl Resolver {
         let false_branch_type = self.find_type_by_type_id(false_branch_type_id);
 
         match (true_branch_type, false_branch_type) {
-            (Type::Invalid, _) | (_, Type::Invalid) => self.invalid_type_id,
+            (Type::Invalid, _) | (_, Type::Invalid) => self.find_type_id_by_type(&Type::Invalid),
             (Type::None, Type::None) => true_branch_type_id,
             // todo:test the following case is not well tested + implement proper error handing
             (Type::None, t) | (t, Type::None) => self.find_type_id_by_type(t),
             (_, Type::Void) | (Type::Void, _) => {
                 // todo:feature ifs with only one branch should return option<t>
-                self.void_type_id
+                self.find_type_id_by_type(&Type::Void)
             }
             (tt, ft) if tt == ft => true_branch_type_id,
             (tt, ft) => {
@@ -508,7 +500,7 @@ impl Resolver {
                     false_branch.span.clone(),
                     (file!(), line!()),
                 );
-                self.invalid_type_id
+                self.find_type_id_by_type(&Type::Invalid)
             }
         }
     }
@@ -519,7 +511,7 @@ impl Resolver {
         ident_ref: IdentRefId,
         params: &[ExprId],
     ) -> TypeId {
-        let invalid_type_id = self.invalid_type_id;
+        let invalid_type_id = self.find_type_id_by_type(&Type::Invalid);
 
         let mut param_types = Vec::with_capacity(params.len());
         for param in params {
@@ -531,26 +523,28 @@ impl Resolver {
         }
 
         if param_types.len() != params.len() {
-            return self.invalid_type_id;
+            return self.find_type_id_by_type(&Type::Invalid);
         }
 
         self.resolve_ident_ref(hir, ident_ref, Some(&param_types))
             .map(|s| match &self.symbols[s].kind {
                 SymbolKind::LetFn(_, _, _, ret_type) => *ret_type,
                 SymbolKind::Native(_, _, ret_type, _) => *ret_type,
-                SymbolKind::NotFound => self.invalid_type_id,
+                SymbolKind::NotFound => self.find_type_id_by_type(&Type::Invalid),
                 _ => {
                     // todo:ux better error (i.e. produce a diagnostic)
                     panic!("the resolved symbol was not a function")
                 }
             })
-            .unwrap_or(self.invalid_type_id)
+            .unwrap_or(self.find_type_id_by_type(&Type::Invalid))
     }
 
     fn resolve_while(&mut self, hir: &mut UnresolvedHir, cond: ExprId, expr: ExprId) -> TypeId {
         let cond_type = self.resolve_expression(hir, cond);
 
-        if cond_type != self.boolean_type_id && cond_type != self.invalid_type_id {
+        if cond_type != self.find_type_id_by_type(&Type::Boolean)
+            && cond_type != self.find_type_id_by_type(&Type::Invalid)
+        {
             self.diagnostics.report_err(
                 format!(
                     "Condition expected to be of type {}, got {}",
@@ -673,7 +667,7 @@ impl Resolver {
             self.find_type_id_by_identifier(struct_identifier.id)
                 .expect("type exists")
         } else {
-            self.invalid_type_id
+            self.find_type_id_by_type(&Type::Invalid)
         }
     }
 
@@ -696,7 +690,7 @@ impl Resolver {
                 self.expressions[*values.first().unwrap()].span.clone(),
                 (file!(), line!()),
             );
-            return self.invalid_type_id;
+            return self.find_type_id_by_type(&Type::Invalid);
         }
 
         for (index, expr_id) in values.iter().enumerate().skip(1) {
@@ -734,7 +728,7 @@ impl Resolver {
                     self.expressions[base_expr_id].span.clone(),
                     (file!(), line!()),
                 );
-                self.invalid_type_id
+                self.find_type_id_by_type(&Type::Invalid)
             }
         };
 
@@ -755,7 +749,7 @@ impl Resolver {
 
     // todo:refactoring think about passing the Statement directly
     fn resolve_statements(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId]) -> TypeId {
-        let mut ret_type = self.void_type_id;
+        let mut ret_type = self.find_type_id_by_type(&Type::Void);
 
         for &stmt_id in stmts {
             let stmt_type = if let Some(stmt) = hir.statements.remove(stmt_id) {
@@ -771,15 +765,15 @@ impl Resolver {
                         .get(*e)
                         .expect("expression was visited")
                         .resolved_type_id(),
-                    StatementKind::Let(..) => self.void_type_id,
-                    StatementKind::Ret(..) => self.none_type_id,
-                    StatementKind::LetFn(..) => self.void_type_id,
-                    StatementKind::Struct(..) => self.void_type_id,
-                    StatementKind::Annotation(..) => self.void_type_id,
+                    StatementKind::Let(..) => self.find_type_id_by_type(&Type::Void),
+                    StatementKind::Ret(..) => self.find_type_id_by_type(&Type::None),
+                    StatementKind::LetFn(..) => self.find_type_id_by_type(&Type::Void),
+                    StatementKind::Struct(..) => self.find_type_id_by_type(&Type::Void),
+                    StatementKind::Annotation(..) => self.find_type_id_by_type(&Type::Void),
                 }
             };
 
-            if ret_type != self.none_type_id {
+            if ret_type != self.find_type_id_by_type(&Type::None) {
                 ret_type = stmt_type
             }
         }
@@ -816,7 +810,7 @@ impl Resolver {
                     ),
                 );
 
-                self.void_type_id
+                self.find_type_id_by_type(&Type::Void)
             }
             StatementKind::Ret(expr, ret_mode) => {
                 if let Some(expr) = expr {
@@ -828,7 +822,7 @@ impl Resolver {
                     Statement::new(stmt_id, StatementKind::Ret(expr, ret_mode), span),
                 );
 
-                self.none_type_id
+                self.find_type_id_by_type(&Type::None)
             }
             StatementKind::LetFn(
                 ident,
@@ -862,7 +856,7 @@ impl Resolver {
                     );
                 }
 
-                self.void_type_id
+                self.find_type_id_by_type(&Type::Void)
             }
             #[cfg(debug_assertions)]
             StatementKind::LetFn(_, _, _, _, Implementation::Native(_)) => {
@@ -889,7 +883,7 @@ impl Resolver {
                     ),
                 );
 
-                self.void_type_id
+                self.find_type_id_by_type(&Type::Void)
             }
             StatementKind::Annotation(ident) => {
                 let ident = self.resolve_annotation(hir, stmt_id, ident);
@@ -899,7 +893,7 @@ impl Resolver {
                     Statement::new(stmt_id, StatementKind::Annotation(ident), span),
                 );
 
-                self.void_type_id
+                self.find_type_id_by_type(&Type::Void)
             }
         }
     }
@@ -913,7 +907,7 @@ impl Resolver {
     ) -> SymbolId {
         let expr_type_id = self.resolve_expression(hir, expr);
 
-        if expr_type_id == self.none_type_id {
+        if expr_type_id == self.find_type_id_by_type(&Type::None) {
             let expr = &self.expressions[expr];
             self.diagnostics.report_err(
                 format!("Expected some type, got {}", Type::None),
@@ -921,7 +915,7 @@ impl Resolver {
                 (file!(), line!()),
             );
         }
-        if expr_type_id == self.void_type_id {
+        if expr_type_id == self.find_type_id_by_type(&Type::Void) {
             let expr = &self.expressions[expr];
             self.diagnostics.report_err(
                 format!("Expected some type, got {}", Type::Void),
@@ -978,7 +972,7 @@ impl Resolver {
             ret_type = self.types.get_by_left(&ret_type_id).unwrap()
         );
 
-        let mut success = ret_type_id != self.invalid_type_id;
+        let mut success = ret_type_id != self.find_type_id_by_type(&Type::Invalid);
 
         let params_len = params.len();
         let parameters = params
@@ -1044,9 +1038,9 @@ impl Resolver {
         let expr_type_id = self.resolve_expression(hir, body_expr_id);
 
         if !is_native {
-            success = expr_type_id != self.invalid_type_id && success;
+            success = expr_type_id != self.find_type_id_by_type(&Type::Invalid) && success;
 
-            if ret_type_id != self.invalid_type_id {
+            if ret_type_id != self.find_type_id_by_type(&Type::Invalid) {
                 let exit_points = hir
                     .exit_points
                     .exit_points
@@ -1073,16 +1067,16 @@ impl Resolver {
                     };
 
                     let expr_type_id = match exit_expr_id {
-                        None => self.void_type_id,
+                        None => self.find_type_id_by_type(&Type::Void),
                         Some(exit_expr_id) => self.resolve_expression(hir, exit_expr_id),
                     };
 
-                    if expr_type_id == self.invalid_type_id {
+                    if expr_type_id == self.find_type_id_by_type(&Type::Invalid) {
                         // nothing to report, that was reported already
-                    } else if expr_type_id == self.none_type_id {
+                    } else if expr_type_id == self.find_type_id_by_type(&Type::None) {
                         panic!("functions must not return {}", Type::None)
                     } else if expr_type_id != ret_type_id
-                        && (ret_type_id != self.void_type_id || explicit)
+                        && (ret_type_id != self.find_type_id_by_type(&Type::Void) || explicit)
                     {
                         let expr_type = self.find_type_by_type_id(expr_type_id);
                         // fixme:span the span is not accurate (in both cases)
@@ -1172,7 +1166,7 @@ impl Resolver {
             .map(|field| {
                 let type_id = self
                     .find_type_id_by_type_def_id(hir, field.type_def_id)
-                    .unwrap_or(self.invalid_type_id);
+                    .unwrap_or(self.find_type_id_by_type(&Type::Invalid));
 
                 field.typed(type_id)
             })
@@ -1410,7 +1404,7 @@ impl Resolver {
                         .iter()
                         .map(|p| {
                             self.find_type_id_by_type_def_id(hir, p.type_def_id)
-                                .unwrap_or(self.invalid_type_id)
+                                .unwrap_or(self.find_type_id_by_type(&Type::Invalid))
                         })
                         .collect::<Vec<TypeId>>();
 
@@ -1419,9 +1413,9 @@ impl Resolver {
                         .as_ref()
                         .map(|type_def_id| {
                             self.find_type_id_by_type_def_id(hir, *type_def_id)
-                                .unwrap_or(self.invalid_type_id)
+                                .unwrap_or(self.find_type_id_by_type(&Type::Invalid))
                         })
-                        .unwrap_or(self.void_type_id);
+                        .unwrap_or(self.find_type_id_by_type(&Type::Void));
 
                     Some((
                         ident.clone(),
@@ -1639,10 +1633,18 @@ impl Resolver {
             })
     }
 
-    fn find_type_id_by_name(&self, name: &str) -> Option<TypeId> {
-        self.identifiers
+    fn find_type_id_by_name(&mut self, name: &'static str) -> Option<TypeId> {
+        if let Some(type_id) = self.types_by_name.get(name) {
+            return Some(*type_id);
+        }
+        let type_id = self
+            .identifiers
             .get_by_right(name)
-            .and_then(|ident_id| self.find_type_id_by_identifier(*ident_id))
+            .and_then(|ident_id| self.find_type_id_by_identifier(*ident_id));
+        if let Some(type_id) = type_id {
+            self.types_by_name.insert(name, type_id);
+        }
+        type_id
     }
 
     fn find_type_id_by_type(&self, ty: &Type) -> TypeId {
