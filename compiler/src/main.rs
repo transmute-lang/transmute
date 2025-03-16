@@ -18,6 +18,8 @@ fn main() {
         options.set_output_format(OutputFormat::LlvmIr);
     } else if args.output_assembly() {
         options.set_output_format(OutputFormat::Assembly);
+    } else if args.output_source() {
+        options.set_output_format(OutputFormat::Source);
     }
     options.set_optimize(args.optimize());
     if let Some(stdlib_path) = args.stdlib_path() {

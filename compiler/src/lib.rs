@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fs;
 use std::path::{Path, PathBuf};
 use transmute_ast::parse;
@@ -18,6 +19,7 @@ pub enum OutputFormat {
     Object,
     LlvmIr,
     Assembly,
+    Source,
 }
 
 impl Options {
@@ -39,38 +41,50 @@ pub fn compile_file<S: AsRef<Path>, D: AsRef<Path>>(
     dst: &D,
     options: &Options,
 ) -> Result<(), String> {
-    let source = if let Some(stdlib_path) = options.stdlib_path.as_ref() {
-        // println!("Reading {}", src.as_ref().display());
-        let mut source = fs::read_to_string(src)
-            .map_err(|e| format!("Could not read {}: {}", src.as_ref().display(), e))?;
+    let mut source = fs::read_to_string(src)
+        .map_err(|e| format!("Could not read {}: {}", src.as_ref().display(), e))?;
 
-        let stdlib_src = stdlib_path.join("src");
-        for entry in fs::read_dir(&stdlib_src).unwrap() {
-            let file = entry
-                .expect("dir entry exists")
-                .file_name()
-                .to_str()
-                .unwrap()
-                .to_string();
+    source.push_str(read_stdlib_src(options)?.as_ref());
 
-            let src = stdlib_src.join(&file);
-            if !src.extension().unwrap().eq("tm") {
-                continue;
-            }
+    #[cfg(feature = "gc-functions")]
+    source.push_str(include_str!("gc-functions.tm"));
 
-            // println!("Reading {}", src.display());
-            let src = fs::read_to_string(&src)
-                .map_err(|e| format!("Could not read {}: {}", src.display(), e))?;
-            source.push_str(&src);
-        }
-        source
+    if matches!(options.output_format, OutputFormat::Source) {
+        println!("{source}");
+        Ok(())
     } else {
-        // println!("Reading {}", src.display());
-        fs::read_to_string(src)
-            .map_err(|e| format!("Could not read {}: {}", src.as_ref().display(), e))?
-    };
+        compile_str(&source, dst, options)
+    }
+}
 
-    compile_str(&source, dst, options)
+fn read_stdlib_src(options: &Options) -> Result<Cow<str>, String> {
+    Ok(match options.stdlib_path.as_ref() {
+        None => Cow::Borrowed(""),
+        Some(stdlib_path) => {
+            let mut source = String::new();
+            let stdlib_src = stdlib_path.join("src");
+            for entry in fs::read_dir(&stdlib_src).unwrap() {
+                let file = entry
+                    .expect("dir entry exists")
+                    .file_name()
+                    .to_str()
+                    .unwrap()
+                    .to_string();
+
+                let src = stdlib_src.join(&file);
+                if !src.extension().unwrap().eq("tm") {
+                    continue;
+                }
+
+                // println!("Reading {}", src.display());
+                let src = fs::read_to_string(&src)
+                    .map_err(|e| format!("Could not read {}: {}", src.display(), e))?;
+                source.push_str(&format!("\n\n#-- {file} --------------------\n"));
+                source.push_str(&src);
+            }
+            Cow::Owned(source)
+        }
+    })
 }
 
 pub fn compile_str<S: AsRef<str>, D: AsRef<Path>>(
@@ -104,6 +118,9 @@ pub fn compile_str<S: AsRef<str>, D: AsRef<Path>>(
         OutputFormat::Assembly => {
             let dst = dst.as_ref().with_extension("s");
             llvm_ir.write_assembly(&dst).map_err(|d| d.to_string())?;
+        }
+        OutputFormat::Source => {
+            // already done
         }
     }
 

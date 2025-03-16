@@ -16,17 +16,21 @@ pub struct Args {
     #[arg(short, long)]
     output: Option<String>,
 
-    /// Outputs LLVM IR
+    /// Optimize
     #[arg(long)]
     optimize: bool,
 
     /// Outputs LLVM IR
-    #[arg(long, conflicts_with = "assembly")]
+    #[arg(long, conflicts_with_all = ["assembly", "source"])]
     llvm_ir: bool,
 
     /// Outputs Assembly
-    #[arg(long, conflicts_with = "llvm_ir")]
+    #[arg(long, conflicts_with_all = ["llvm_ir", "source"])]
     assembly: bool,
+
+    /// Outputs Source
+    #[arg(long, conflicts_with_all = ["assembly", "llvm_ir"])]
+    source: bool,
 
     /// Path to the stdlib library. If not provided, use `TRANSMUTE_STDLIB_PATH` env. variable if set.
     #[arg(long)]
@@ -57,6 +61,10 @@ impl Args {
 
     pub fn output_assembly(&self) -> bool {
         self.assembly
+    }
+
+    pub fn output_source(&self) -> bool {
+        self.source
     }
 
     pub fn stdlib_path(&self) -> Option<PathBuf> {

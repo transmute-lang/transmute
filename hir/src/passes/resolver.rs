@@ -15,6 +15,7 @@ use crate::{
 };
 use bimap::BiHashMap;
 use std::collections::HashMap;
+use std::mem;
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeDefId, TypeId};
 use transmute_core::span::Span;
@@ -81,14 +82,18 @@ impl Resolver {
         mut hir: UnresolvedHir,
     ) -> Result<ResolvedHir, Diagnostics> {
         // init. identifiers
-        // todo:refactoring find a way to skip cloning
-        self.identifiers =
-            BiHashMap::from_iter(hir.identifiers.iter().map(|(i, s)| (i, s.clone())));
+        self.identifiers = BiHashMap::from_iter(
+            mem::take(&mut hir.identifiers)
+                .into_iter()
+                .map(|(i, s)| (i, s)),
+        );
         for native_name in natives.names().into_iter() {
             // just append all native names, if they are missing
-            if !self.identifiers.contains_right(&native_name) {
-                self.identifiers
-                    .insert(IdentId::from(self.identifiers.len()), native_name);
+            if !self.identifiers.contains_right(native_name) {
+                self.identifiers.insert(
+                    IdentId::from(self.identifiers.len()),
+                    native_name.to_string(),
+                );
             }
         }
 
@@ -276,24 +281,17 @@ impl Resolver {
             ExpressionKind::If(cond, true_branch, false_branch) => {
                 self.resolve_if(hir, *cond, *true_branch, *false_branch)
             }
-            ExpressionKind::Literal(literal) => {
-                match literal.kind {
-                    LiteralKind::Boolean(_) => self.find_type_id_by_type(&Type::Boolean),
-                    LiteralKind::Number(_) => self.find_type_id_by_type(&Type::Number),
-                    LiteralKind::String(_) => self
-                        .find_type_id_by_name("string")
-                        .expect("string type exists"),
-                    LiteralKind::Identifier(ident_ref) => {
-                        // todo:check to check:
-                        //   - behaviour when target is let fn
-                        //   - behaviour when target is a native
-                        // todo:feature resolve function ref, see comment in visit_assignment
-                        self.resolve_ident_ref(hir, ident_ref, None)
-                            .map(|s| self.symbols[s].type_id)
-                            .unwrap_or(self.find_type_id_by_type(&Type::Invalid))
-                    }
-                }
-            }
+            ExpressionKind::Literal(literal) => match literal.kind {
+                LiteralKind::Boolean(_) => self.find_type_id_by_type(&Type::Boolean),
+                LiteralKind::Number(_) => self.find_type_id_by_type(&Type::Number),
+                LiteralKind::String(_) => self
+                    .find_type_id_by_name("string")
+                    .expect("string type exists"),
+                LiteralKind::Identifier(ident_ref) => self
+                    .resolve_ident_ref(hir, ident_ref, None)
+                    .map(|s| self.symbols[s].type_id)
+                    .unwrap_or(self.find_type_id_by_type(&Type::Invalid)),
+            },
             ExpressionKind::Access(expr_id, ident_ref_id) => {
                 let ident_ref = hir
                     .identifier_refs
@@ -414,12 +412,12 @@ impl Resolver {
         //
         // chooses the 2nd function as this is the one for which the type matches.
         //
-        // todo:check assign to a let fn
+        // todo:feature:fn-value implement the above...
 
         let rhs_type_id = self.resolve_expression(hir, expr);
 
         let lhs_type_id = self
-            // todo:feature to search for method, we need to extract the parameter types from the
+            // todo:feature:fn-value to search for method, we need to extract the parameter types from the
             //  expr_type, if it corresponds to a function type. We don't have this
             //  information yet and thus we cannot assign to a variable holding a function
             //  (yet).
@@ -1045,7 +1043,13 @@ impl Resolver {
                     .exit_points
                     .exit_points
                     .get(&body_expr_id)
-                    .expect("exit points is computed");
+                    .expect("exit points is computed")
+                    .iter()
+                    .map(|e| match e {
+                        ExitPoint::Explicit(e) => (*e, true),
+                        ExitPoint::Implicit(e) => (*e, false),
+                    })
+                    .collect::<Vec<_>>();
 
                 if exit_points.is_empty() {
                     panic!(
@@ -1059,13 +1063,7 @@ impl Resolver {
                     name = self.identifiers.get_by_left(&ident.id).unwrap(),
                 );
 
-                // todo:refactor can we avoid that clone?
-                for exit_point in exit_points.clone().iter() {
-                    let (exit_expr_id, explicit) = match exit_point {
-                        ExitPoint::Explicit(e) => (*e, true),
-                        ExitPoint::Implicit(e) => (*e, false),
-                    };
-
+                for (exit_expr_id, explicit) in exit_points {
                     let expr_type_id = match exit_expr_id {
                         None => self.find_type_id_by_type(&Type::Void),
                         Some(exit_expr_id) => self.resolve_expression(hir, exit_expr_id),
@@ -2357,11 +2355,6 @@ mod tests {
         }
         "#
     );
-    // todo:feature resolve function ref
-    // test_type_ok!(
-    //     assign_from_native,
-    //     "let n = add;"
-    // );
     test_type_ok!(nested_function_same_type, "let f() { let g() {} }");
     test_type_ok!(
         nested_function_different_types,

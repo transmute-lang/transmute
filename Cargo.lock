@@ -472,6 +472,7 @@ dependencies = [
  "insta",
  "paste",
  "test_dir",
+ "tmc",
  "transmute-ast",
  "transmute-hir",
  "transmute-llvm",

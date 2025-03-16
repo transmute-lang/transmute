@@ -36,6 +36,9 @@ macro_rules! exec {
                     source.push_str(&src);
                 }
 
+                #[cfg(feature = "gc-functions")]
+                source.push_str(include_str!("../src/gc-functions.tm"));
+
                 let output = common::compile(
                     &source,
                     &test_dir
@@ -87,6 +90,9 @@ macro_rules! exec_test_example {
                         .map_err(|e| format!("Could not read {}: {}", src.display(), e)).unwrap();
                     source.push_str(&src);
                 }
+
+                #[cfg(feature = "gc-functions")]
+                source.push_str(include_str!("../src/gc-functions.tm"));
 
                 let output = common::compile(
                     &source,

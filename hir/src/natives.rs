@@ -89,18 +89,6 @@ impl Natives {
             ty: Type::Void,
         });
 
-        #[cfg(feature = "gc-functions")]
-        {
-            natives.insert_fn(NativeFn {
-                name: "gc_run",
-                kind: NativeFnKind::GcRun,
-            });
-            natives.insert_fn(NativeFn {
-                name: "gc_stats",
-                kind: NativeFnKind::GcStats,
-            });
-        }
-
         natives
     }
 
@@ -123,18 +111,17 @@ impl Natives {
         self.types.push(native);
     }
 
-    pub fn names(&self) -> Vec<String> {
+    pub fn names(&self) -> Vec<&'static str> {
         let mut names = self
             .functions
             .keys()
-            .map(|s| s.to_string())
-            .chain(self.types.iter().map(|native| native.name.to_string()))
-            .collect::<Vec<String>>();
+            .chain(self.types.iter().map(|native| &native.name))
+            .map(|s| *s)
+            .collect::<Vec<_>>();
 
-        // todo:refactoring maybe do it somewhere else?
-        names.push(Type::Void.to_string());
-        names.push(Type::Boolean.to_string());
-        names.push(Type::Number.to_string());
+        names.push(Type::Void.identifier());
+        names.push(Type::Boolean.identifier());
+        names.push(Type::Number.identifier());
         names.sort();
         names.dedup();
         names
@@ -248,12 +235,6 @@ pub enum NativeFnKind {
     LeNumberNumber,
     EqBooleanBoolean,
     NeqBooleanBoolean,
-    //todo:feature is it still needed?
-    #[cfg(feature = "gc-functions")]
-    GcRun,
-    //todo:feature is it still needed?
-    #[cfg(feature = "gc-functions")]
-    GcStats,
 }
 
 impl NativeFnKind {
@@ -273,8 +254,6 @@ impl NativeFnKind {
             NativeFnKind::EqBooleanBoolean | NativeFnKind::NeqBooleanBoolean => {
                 (&[Type::Boolean, Type::Boolean], Type::Boolean)
             }
-            #[cfg(feature = "gc-functions")]
-            NativeFnKind::GcRun | NativeFnKind::GcStats => (&[], Type::Void),
         }
     }
 }

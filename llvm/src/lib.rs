@@ -186,7 +186,7 @@ struct Codegen<'ctx, 't> {
 
     llvm_gcroot: FunctionValue<'ctx>,
     malloc: FunctionValue<'ctx>,
-    #[cfg(any(test, feature = "gc-aggressive", feature = "gc-functions"))]
+    #[cfg(any(test, feature = "gc-aggressive"))]
     gc_run: FunctionValue<'ctx>,
     gc_mark: FunctionValue<'ctx>,
     tmc_check_array_index: FunctionValue<'ctx>,
@@ -247,7 +247,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
                 module.add_function("gc_malloc", malloc_fn_type, None)
             },
-            #[cfg(any(test, feature = "gc-aggressive", feature = "gc-functions"))]
+            #[cfg(any(test, feature = "gc-aggressive"))]
             gc_run: {
                 let gc_fn_type = void_type.fn_type(&[], false);
                 module.add_function("gc_run", gc_fn_type, None)
@@ -285,29 +285,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
     // todo:refactor only insert used functions
     pub fn gen(mut self, mir: &Mir, optimize: bool) -> Result<Module<'ctx>, Diagnostics> {
-        #[allow(unused_variables)] // because of #[cfg(feature = "gc-functions")]
-        for (symbol_id, symbol) in mir.symbols.iter() {
-            if let SymbolKind::Native(ident_id, parameters, _, native_kind) = &symbol.kind {
-                let fn_name = mangle_function_name(mir, *ident_id, parameters, None);
-                match native_kind {
-                    #[cfg(feature = "gc-functions")]
-                    NativeFnKind::GcRun => {
-                        self.functions.insert(symbol_id, self.gc_run);
-                    }
-                    #[cfg(feature = "gc-functions")]
-                    NativeFnKind::GcStats => {
-                        let gc_stats_fn_type = self.void_type.fn_type(&[], false);
-                        let gc_stats_fn =
-                            self.module.add_function(&fn_name, gc_stats_fn_type, None);
-                        self.functions.insert(symbol_id, gc_stats_fn);
-                    }
-                    _ => {
-                        // nothing to do
-                    }
-                }
-            }
-        }
-
         for (struct_id, struct_def) in mir.structs.iter() {
             self.gen_struct_signature(mir, struct_id, struct_def);
         }
@@ -1750,10 +1727,6 @@ impl LlvmImpl for NativeFnKind {
             NativeFnKind::LeNumberNumber => true,
             NativeFnKind::EqBooleanBoolean => true,
             NativeFnKind::NeqBooleanBoolean => true,
-            #[cfg(feature = "gc-functions")]
-            NativeFnKind::GcRun => false,
-            #[cfg(feature = "gc-functions")]
-            NativeFnKind::GcStats => false,
         }
     }
 
@@ -1897,10 +1870,6 @@ impl LlvmImpl for NativeFnKind {
                     .unwrap()
                     .into()
             }
-            #[cfg(feature = "gc-functions")]
-            NativeFnKind::GcRun => Value::None,
-            #[cfg(feature = "gc-functions")]
-            NativeFnKind::GcStats => Value::None,
         }
     }
 }
