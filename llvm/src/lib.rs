@@ -548,7 +548,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
             let array_type = self.llvm_type(mir, array_type);
 
-            // todo:refactor remove the unsafe once inkewell provides a safe alternative
+            // todo:unsafe:inkwell remove the unsafe once inkewell provides a safe alternative
             let element_ptr = unsafe {
                 // the first index is the array index, in a hypothetical array of arrays.
                 // the second index is the element's array
@@ -610,7 +610,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                         // structs and arrays are passed by pointer
                         BasicTypeEnum::PointerType(self.ptr_type).into()
                     }
-                    BasicTypeEnum::VectorType(_) => todo!(),
+                    BasicTypeEnum::VectorType(_) => unimplemented!(),
                 }
             })
             .collect::<Vec<BasicMetadataTypeEnum>>();
@@ -917,7 +917,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
 
                 match self.gen_expression(mir, &mir.expressions[*base_expr_id], false) {
                     Value::Array(array_ptr, array_type) => {
-                        // todo:refactor remove the unsafe once inkewell provides a safe alternative
+                        // todo:unsafe:inkwell remove the unsafe once inkewell provides a safe alternative
                         let element_ptr = unsafe {
                             // first index is the array index, in a hypothetical array of arrays. second
                             // index is the element's array
@@ -1239,7 +1239,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     Some(Value::NativeStruct(ret.into_pointer_value()))
                 }
                 Some(t @ BasicTypeEnum::StructType(_)) => {
-                    // fixme this must become a gcroot otherwise it will be GCed
+                    // fixme:gc this must become a gcroot otherwise it will be GCed
                     Some(Value::Struct(ret.into_pointer_value(), t))
                 }
                 Some(BasicTypeEnum::VectorType(_)) => todo!(),
@@ -1509,7 +1509,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     )
                     .unwrap();
 
-                // todo:refactor remove the unsafe once inkewell provides a safe alternative
+                // todo:unsafe:inkwell remove the unsafe once inkewell provides a safe alternative
                 let element_ptr = unsafe {
                     // the first index is the array index, in a hypothetical array of arrays.
                     // the second index is the element's array

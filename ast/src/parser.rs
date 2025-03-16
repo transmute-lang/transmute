@@ -1205,17 +1205,12 @@ impl<'s> Parser<'s> {
             }
         };
 
-        let mut need_semi = false;
-
         loop {
             match &self.lexer.peek().kind {
                 TokenKind::Dot => {
                     // expr . 'identifier
                     let _dot = self.lexer.next_token();
                     self.potential_tokens.clear();
-
-                    // todo:check is that useful?
-                    need_semi = true;
 
                     let token = self.lexer.next_token();
                     match &token.kind {
@@ -1248,9 +1243,6 @@ impl<'s> Parser<'s> {
                     // expr [ 'expression
                     let open_bracket = self.lexer.next_token();
                     self.potential_tokens.clear();
-
-                    // todo:check is that useful?
-                    need_semi = true;
 
                     let index = self.parse_expression(true, false).0.id;
 
@@ -1293,6 +1285,8 @@ impl<'s> Parser<'s> {
                 }
             }
         }
+
+        let mut need_semi = false;
 
         if allow_assignment {
             if self.lexer.peek().kind == TokenKind::Equal {

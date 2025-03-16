@@ -48,9 +48,6 @@ impl ImplicitRetResolver {
 
         // we may have skipped the visit of statements or expressions due to the fact that their
         // parent was unreachable, and thus its children were not visited... we transfer them now.
-        // todo:refactoring think about removing the unreachable from the lists. this potentially
-        //   allows us to get rid of (or simplify a lot) the ExitPointResolver (it's becomes matter
-        //   of extracting all the Ret's from the statements)
         statements.into_iter().for_each(|(stmt_id, stmt)| {
             self.statements.insert(stmt_id, stmt);
         });

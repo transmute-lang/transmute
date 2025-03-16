@@ -2464,7 +2464,6 @@ mod tests {
             [true, false];
         }
         "#,
-        // todo:ux have the base type in the error message
         "Function f expected to return type array[2], got array[2]",
         Span::new(3, 13, 44, 13)
     );

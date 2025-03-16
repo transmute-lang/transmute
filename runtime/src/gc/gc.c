@@ -32,8 +32,8 @@
 
 extern LlvmStackFrame *llvm_gc_root_chain;
 
-// todo:feature trigger actual GC only if some conditions hold
-// todo:feature keep track of freed blocks to return them instead of a full cycle of free/malloc syscalls
+// todo:feature:gc trigger actual GC only if some conditions hold
+// todo:feature:gc keep track of freed blocks to return them instead of a full cycle of free/malloc syscalls
 
 #define PANIC(msg)                                                       \
 do {                                                                     \
@@ -118,7 +118,7 @@ typedef enum GcBlockState {
     Unreachable = 0,
     Reachable   = 1,
     Owned       = 2,
-    // todo think about a new state "Root" (see the "mess" we do in env.c)
+    // todo:refactoring:gc think about a new state "Root" (see the "mess" we do in env.c)
 } GcBlockState;
 
 #if defined(GC_LOGS) || defined(GC_TEST)

@@ -107,7 +107,6 @@ where
     Annotation(Identifier<B>),
 }
 
-// todo:refactoring: does not really make sense in HIR
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RetMode {
     Explicit,
