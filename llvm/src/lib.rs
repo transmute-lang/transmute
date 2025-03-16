@@ -32,9 +32,6 @@ use transmute_mir::{
 use transmute_mir::{LiteralKind, SymbolKind, Target as AssignmentTarget};
 use transmute_mir::{NativeFnKind, Variable};
 
-// fixme:llvm-ir this generates invalid IR:
-//  let main(n: number): number {f(); n;} let f() { [0]; }
-
 pub struct LlvmIrGen {
     context: Context,
     target_triple: TargetTriple,
