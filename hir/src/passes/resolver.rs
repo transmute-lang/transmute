@@ -57,7 +57,6 @@ pub struct Resolver {
     none_type_id: TypeId,
     boolean_type_id: TypeId,
     number_type_id: TypeId,
-    string_type_id: TypeId,
     not_found_symbol_id: SymbolId,
 }
 
@@ -84,7 +83,6 @@ impl Resolver {
             none_type_id: Default::default(),
             boolean_type_id: Default::default(),
             number_type_id: Default::default(),
-            string_type_id: Default::default(),
             not_found_symbol_id: Default::default(),
         }
     }
@@ -131,9 +129,6 @@ impl Resolver {
 
         self.number_type_id = TypeId::from(self.types.len());
         self.types.insert(self.number_type_id, Type::Number);
-
-        self.string_type_id = TypeId::from(self.types.len());
-        self.types.insert(self.string_type_id, Type::String);
 
         // init. symbols
         debug_assert!(hir.symbols.is_empty());
@@ -207,22 +202,40 @@ impl Resolver {
 
         debug_assert!(
             !result.identifier_refs.has_holes(),
-            "identifier_refs has holes"
+            "identifier_refs has holes. missing: {:?}; identifiers: {:?}",
+            hir.identifier_refs,
+            result.identifiers
         );
-        debug_assert!(!result.expressions.has_holes(), "expressions has holes");
-        debug_assert!(!result.statements.has_holes(), "statements has holes");
-        debug_assert!(!result.symbols.has_holes(), "symbols has holes");
-        debug_assert!(!result.types.has_holes(), "types has holes");
+        debug_assert!(
+            !result.expressions.has_holes(),
+            "expressions has holes. missing: {:?}",
+            hir.expressions
+        );
+        debug_assert!(
+            !result.statements.has_holes(),
+            "statements has holes. missing: {:?}",
+            hir.statements
+        );
+        debug_assert!(
+            !result.symbols.has_holes(),
+            "symbols has holes. missing: {:?}",
+            hir.symbols
+        );
+        debug_assert!(
+            !result.types.has_holes(),
+            "types has holes. missing: {:?}",
+            hir.types
+        );
         debug_assert!(
             hir.identifier_refs.is_empty(),
             "identifier_refs is not empty"
         );
-        debug_assert!(hir.expressions.is_empty(), "expressions is not empty");
-        debug_assert!(hir.statements.is_empty(), "statements is not empty");
         debug_assert!(
             ident_ref_count <= result.identifier_refs.len(),
             "ident_ref count does not match"
         );
+        debug_assert!(hir.expressions.is_empty(), "expressions is not empty");
+        debug_assert!(hir.statements.is_empty(), "statements is not empty");
         debug_assert!(
             expr_count == result.expressions.len(),
             "expr count does not match"
@@ -277,7 +290,9 @@ impl Resolver {
                 match literal.kind {
                     LiteralKind::Boolean(_) => self.boolean_type_id,
                     LiteralKind::Number(_) => self.number_type_id,
-                    LiteralKind::String(_) => self.string_type_id,
+                    LiteralKind::String(_) => self
+                        .find_type_id_by_name("string")
+                        .expect("string type exists"),
                     LiteralKind::Identifier(ident_ref) => {
                         // todo:check to check:
                         //   - behaviour when target is let fn
@@ -1624,6 +1639,12 @@ impl Resolver {
             })
     }
 
+    fn find_type_id_by_name(&self, name: &str) -> Option<TypeId> {
+        self.identifiers
+            .get_by_right(name)
+            .and_then(|ident_id| self.find_type_id_by_identifier(*ident_id))
+    }
+
     fn find_type_id_by_type(&self, ty: &Type) -> TypeId {
         *self.types.get_by_right(ty).unwrap()
     }
@@ -2657,5 +2678,17 @@ mod tests {
         "#,
         "Void values cannot be used as array elements at index 0",
         Span::new(1, 32, 32, 3)
+    );
+    test_type_ok!(
+        native_struct_can_be_used,
+        r#"
+        annotation native;
+        @native struct string {}
+        @native let print(s: string) {}
+        let main() {
+            let hello = "hello";
+            print(hello);
+        }
+        "#
     );
 }

@@ -25,23 +25,23 @@ entry:
   unreachable
 }
 
-define i64 @_TM0_1f1s6Struct(ptr %"s#param#sym22#") gc "shadow-stack" {
+define i64 @_TM0_1f1s6Struct(ptr %"s#param#sym21#") gc "shadow-stack" {
 entry:
-  %"s#param#sym22#.field#idx0#sym21#1" = load i64, ptr %"s#param#sym22#", align 4
-  ret i64 %"s#param#sym22#.field#idx0#sym21#1"
+  %"s#param#sym21#.field#idx0#sym20#1" = load i64, ptr %"s#param#sym21#", align 4
+  ret i64 %"s#param#sym21#.field#idx0#sym20#1"
 }
 
 define i64 @_TM0_1g0() gc "shadow-stack" {
 entry:
-  %"s#local#sym23#" = alloca ptr, align 8
-  store ptr null, ptr %"s#local#sym23#", align 8
-  call void @llvm.gcroot(ptr nonnull %"s#local#sym23#", ptr null)
+  %"s#local#sym22#" = alloca ptr, align 8
+  store ptr null, ptr %"s#local#sym22#", align 8
+  call void @llvm.gcroot(ptr nonnull %"s#local#sym22#", ptr null)
   %"heap#struct#Struct#id0#" = call ptr @gc_malloc(i64 8, i64 8, ptr null)
   store i64 1, ptr %"heap#struct#Struct#id0#", align 4
-  store ptr %"heap#struct#Struct#id0#", ptr %"s#local#sym23#", align 8
+  store ptr %"heap#struct#Struct#id0#", ptr %"s#local#sym22#", align 8
   call void @gc_run()
-  %"s#local#sym23#1" = load ptr, ptr %"s#local#sym23#", align 8
-  %"f#res#" = call i64 @_TM0_1f1s6Struct(ptr %"s#local#sym23#1")
+  %"s#local#sym22#1" = load ptr, ptr %"s#local#sym22#", align 8
+  %"f#res#" = call i64 @_TM0_1f1s6Struct(ptr %"s#local#sym22#1")
   ret i64 %"f#res#"
 }
 

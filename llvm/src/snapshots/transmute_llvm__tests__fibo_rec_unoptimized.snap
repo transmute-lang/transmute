@@ -23,18 +23,18 @@ entry:
   unreachable
 }
 
-define i64 @_TM0_1f1n(i64 %"n#param#sym19#") gc "shadow-stack" {
+define i64 @_TM0_1f1n(i64 %"n#param#sym18#") gc "shadow-stack" {
 entry:
-  %"le#" = icmp sle i64 %"n#param#sym19#", 1
+  %"le#" = icmp sle i64 %"n#param#sym18#", 1
   br i1 %"le#", label %true_branch, label %end_if
 
 true_branch:                                      ; preds = %entry
-  ret i64 %"n#param#sym19#"
+  ret i64 %"n#param#sym18#"
 
 end_if:                                           ; preds = %entry
-  %"sub#" = sub i64 %"n#param#sym19#", 1
+  %"sub#" = sub i64 %"n#param#sym18#", 1
   %"f#res#" = call i64 @_TM0_1f1n(i64 %"sub#")
-  %"sub#1" = sub i64 %"n#param#sym19#", 2
+  %"sub#1" = sub i64 %"n#param#sym18#", 2
   %"f#res#2" = call i64 @_TM0_1f1n(i64 %"sub#1")
   %"add#" = add i64 %"f#res#", %"f#res#2"
   ret i64 %"add#"

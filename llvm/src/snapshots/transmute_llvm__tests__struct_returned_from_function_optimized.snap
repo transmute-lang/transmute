@@ -27,15 +27,15 @@ entry:
 
 define i64 @_TM0_1f0() gc "shadow-stack" {
 entry:
-  %"s#local#sym22#" = alloca ptr, align 8
-  store ptr null, ptr %"s#local#sym22#", align 8
-  call void @llvm.gcroot(ptr nonnull %"s#local#sym22#", ptr null)
+  %"s#local#sym21#" = alloca ptr, align 8
+  store ptr null, ptr %"s#local#sym21#", align 8
+  call void @llvm.gcroot(ptr nonnull %"s#local#sym21#", ptr null)
   %"g#res#" = call ptr @_TM0_1g0()
-  store ptr %"g#res#", ptr %"s#local#sym22#", align 8
+  store ptr %"g#res#", ptr %"s#local#sym21#", align 8
   call void @gc_run()
-  %"s#local#sym22#1" = load ptr, ptr %"s#local#sym22#", align 8
-  %"s#local#sym22#1.field#idx0#sym21#2" = load i64, ptr %"s#local#sym22#1", align 4
-  ret i64 %"s#local#sym22#1.field#idx0#sym21#2"
+  %"s#local#sym21#1" = load ptr, ptr %"s#local#sym21#", align 8
+  %"s#local#sym21#1.field#idx0#sym20#2" = load i64, ptr %"s#local#sym21#1", align 4
+  ret i64 %"s#local#sym21#1.field#idx0#sym20#2"
 }
 
 define ptr @_TM0_1g0() gc "shadow-stack" {

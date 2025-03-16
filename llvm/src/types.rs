@@ -9,7 +9,6 @@ impl Allocation for Type {
         match self {
             Type::Boolean => false,
             Type::Number => false,
-            Type::String => true,
             Type::Function(_, _) => todo!(),
             Type::Struct(_, _) => true,
             Type::Array(_, _) => true,

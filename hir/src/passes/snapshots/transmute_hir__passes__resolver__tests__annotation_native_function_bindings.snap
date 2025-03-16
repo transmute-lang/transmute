@@ -105,7 +105,7 @@ Hir {
                 [],
                 TypeId(1),
             ),
-            type_id: TypeId(6),
+            type_id: TypeId(5),
         },
     ],
     types: [
@@ -114,8 +114,7 @@ Hir {
         TypeId(2) => None,
         TypeId(3) => Boolean,
         TypeId(4) => Number,
-        TypeId(5) => String,
-        TypeId(6) => Function(
+        TypeId(5) => Function(
             [],
             TypeId(1),
         ),

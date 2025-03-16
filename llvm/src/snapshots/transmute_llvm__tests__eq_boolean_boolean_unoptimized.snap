@@ -23,9 +23,9 @@ entry:
   unreachable
 }
 
-define i1 @_TM0_1f2bb(i1 %"l#param#sym19#", i1 %"r#param#sym20#") gc "shadow-stack" {
+define i1 @_TM0_1f2bb(i1 %"l#param#sym18#", i1 %"r#param#sym19#") gc "shadow-stack" {
 entry:
-  %"eq#" = icmp eq i1 %"l#param#sym19#", %"r#param#sym20#"
+  %"eq#" = icmp eq i1 %"l#param#sym18#", %"r#param#sym19#"
   ret i1 %"eq#"
 }
 

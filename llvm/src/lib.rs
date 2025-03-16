@@ -408,9 +408,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             Type::Number => {
                 // no GC involved for numbers
             }
-            Type::String => {
-                // the callbacks are handled by the stdlib
-            }
             Type::Function(_, _) => {}
             Type::Struct(symbol_id, struct_id) => {
                 if let Some(callbacks) = self.gen_struct_gc_callbacks(mir, *symbol_id, *struct_id) {
@@ -619,7 +616,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         let fn_type = match resolved_ret_type {
             Type::Boolean => self.bool_type.fn_type(&parameters_types, false),
             Type::Number => self.i64_type.fn_type(&parameters_types, false),
-            Type::String => self.ptr_type.fn_type(&parameters_types, false),
             Type::Function(_, _) => todo!(),
             Type::Struct(_, _) | Type::Array(_, _) => {
                 // are returned by ref
@@ -672,10 +668,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 Value::Number(val) => {
                     self.builder.build_return(Some(&val)).unwrap();
                 }
-                Value::Struct(val, _)
-                | Value::NativeStruct(val)
-                | Value::Array(val, _)
-                | Value::String(val) => {
+                Value::Struct(val, _) | Value::NativeStruct(val) | Value::Array(val, _) => {
                     self.builder.build_return(Some(&val)).unwrap();
                 }
             };
@@ -1071,12 +1064,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                         .into_pointer_value(),
                     llvm_type,
                 ),
-                Type::String => Value::String(
-                    self.builder
-                        .build_load(self.ptr_type, *variable, &name)
-                        .unwrap()
-                        .into_pointer_value(),
-                ),
                 _ => Value::from(
                     self.builder
                         .build_load(llvm_type, *variable, &name)
@@ -1189,7 +1176,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             }
             SymbolKind::Native(_, _, return_type, _) | SymbolKind::LetFn(_, return_type) => {
                 match mir.types[*return_type] {
-                    Type::Boolean | Type::Number | Type::Struct(_, _) | Type::String => {
+                    Type::Boolean | Type::Number | Type::Struct(_, _) => {
                         Some(self.llvm_type(mir, *return_type))
                     }
                     Type::Array(_, _) => todo!(),
@@ -1206,10 +1193,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 |e| match self.gen_expression(mir, &mir.expressions[*e], true) {
                     Value::None | Value::Never => panic!(),
                     Value::Number(val) => BasicMetadataValueEnum::IntValue(val),
-                    Value::Struct(val, _)
-                    | Value::NativeStruct(val)
-                    | Value::Array(val, _)
-                    | Value::String(val) => BasicMetadataValueEnum::PointerValue(val),
+                    Value::Struct(val, _) | Value::NativeStruct(val) | Value::Array(val, _) => {
+                        BasicMetadataValueEnum::PointerValue(val)
+                    }
                 },
             )
             .collect::<Vec<BasicMetadataValueEnum>>();
@@ -1308,7 +1294,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             self.builder.build_store(gcroot, string_ptr).unwrap();
         }
 
-        Value::String(string_ptr)
+        Value::NativeStruct(string_ptr)
     }
 
     fn gen_struct_instantiation(
@@ -1327,7 +1313,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                     Value::Struct(pointer_value, _) => pointer_value.into(),
                     Value::NativeStruct(pointer_value) => pointer_value.into(),
                     Value::Array(pointer_value, _) => pointer_value.into(),
-                    Value::String(pointer_value) => pointer_value.into(),
                     Value::Never | Value::None => panic!("value expected"),
                 },
             )
@@ -1605,7 +1590,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         match &mir.types[type_id] {
             Type::Number => self.i64_type.as_basic_type_enum(),
             Type::Boolean => self.bool_type.as_basic_type_enum(),
-            Type::String => self.ptr_type.as_basic_type_enum(),
             Type::Function(_, _) => todo!(),
             Type::Struct(_, struct_id) => {
                 BasicTypeEnum::StructType(*self.struct_types.get(struct_id).unwrap())
@@ -1633,7 +1617,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         match &mir.types[type_id] {
             Type::Boolean => false,
             Type::Number => false,
-            Type::String => true,
             Type::Function(_, _) => todo!(),
             Type::Struct(_, _) => true,
             Type::Array(_, _) => true,
@@ -1691,8 +1674,6 @@ enum Value<'ctx> {
     Never,
     None,
     Number(IntValue<'ctx>),
-    // todo:refactor:string remove and use NativeStruct instead
-    String(PointerValue<'ctx>),
     Struct(PointerValue<'ctx>, BasicTypeEnum<'ctx>),
     NativeStruct(PointerValue<'ctx>),
     Array(PointerValue<'ctx>, BasicTypeEnum<'ctx>),
@@ -1724,10 +1705,7 @@ impl<'ctx> From<Value<'ctx>> for BasicValueEnum<'ctx> {
         match value {
             Value::Never | Value::None => panic!(),
             Value::Number(val) => val.into(),
-            Value::Struct(val, _)
-            | Value::NativeStruct(val)
-            | Value::Array(val, _)
-            | Value::String(val) => val.into(),
+            Value::Struct(val, _) | Value::NativeStruct(val) | Value::Array(val, _) => val.into(),
         }
     }
 }
@@ -1738,7 +1716,6 @@ impl<'ctx> From<Value<'ctx>> for IntValue<'ctx> {
             Value::Never => panic!(),
             Value::None => panic!(),
             Value::Number(val) => val,
-            Value::String(_) => panic!(),
             Value::Struct(_, _) => panic!(),
             Value::NativeStruct(_) => panic!(),
             Value::Array(_, _) => panic!(),
@@ -2666,6 +2643,7 @@ mod tests {
         print_string_direct,
         r#"
         annotation native;
+        @native struct string {}
         @native let print(s: string) {}
         let f() {
             print("hello");
@@ -2677,6 +2655,7 @@ mod tests {
         print_string_indirect,
         r#"
         annotation native;
+        @native struct string {}
         @native let print(s: string) {}
         let f() {
             let hello = "hello";

@@ -30,14 +30,14 @@ entry:
   %"gcroot#heap#struct#Struct#id0#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#struct#Struct#id0#", align 8
   call void @llvm.gcroot(ptr %"gcroot#heap#struct#Struct#id0#", ptr null)
-  %"s#local#sym21#" = alloca i64, align 8
+  %"s#local#sym20#" = alloca i64, align 8
   %"heap#struct#Struct#id0#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"Struct#id0", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"Struct#id0" }, ptr null, i64 0, i32 1) to i64), ptr null)
   store ptr %"heap#struct#Struct#id0#", ptr %"gcroot#heap#struct#Struct#id0#", align 8
-  %"heap#struct#Struct#id0#.field#idx0#sym20" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
-  store i64 1, ptr %"heap#struct#Struct#id0#.field#idx0#sym20", align 4
-  %"heap#struct#Struct#id0#.field#idx0#sym20#" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
-  %"heap#struct#Struct#id0#.field#idx0#sym20#1" = load i64, ptr %"heap#struct#Struct#id0#.field#idx0#sym20#", align 4
-  store i64 %"heap#struct#Struct#id0#.field#idx0#sym20#1", ptr %"s#local#sym21#", align 4
+  %"heap#struct#Struct#id0#.field#idx0#sym19" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
+  store i64 1, ptr %"heap#struct#Struct#id0#.field#idx0#sym19", align 4
+  %"heap#struct#Struct#id0#.field#idx0#sym19#" = getelementptr inbounds %"Struct#id0", ptr %"heap#struct#Struct#id0#", i32 0, i32 0
+  %"heap#struct#Struct#id0#.field#idx0#sym19#1" = load i64, ptr %"heap#struct#Struct#id0#.field#idx0#sym19#", align 4
+  store i64 %"heap#struct#Struct#id0#.field#idx0#sym19#1", ptr %"s#local#sym20#", align 4
   call void @gc_run()
   ret void
 }

@@ -25,9 +25,9 @@ entry:
   unreachable
 }
 
-define i64 @_TM0_1f2nn(i64 %"l#param#sym19#", i64 %"r#param#sym20#") gc "shadow-stack" {
+define i64 @_TM0_1f2nn(i64 %"l#param#sym18#", i64 %"r#param#sym19#") gc "shadow-stack" {
 entry:
-  %"add#" = add i64 %"r#param#sym20#", %"l#param#sym19#"
+  %"add#" = add i64 %"r#param#sym19#", %"l#param#sym18#"
   ret i64 %"add#"
 }
 

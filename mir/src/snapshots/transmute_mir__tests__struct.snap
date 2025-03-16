@@ -11,7 +11,7 @@ Ok(
                     id: IdentId(0),
                     span: 1:8; [7, 13],
                 },
-                symbol_id: SymbolId(18),
+                symbol_id: SymbolId(17),
                 fields: Some(
                     [
                         Field {
@@ -20,7 +20,7 @@ Ok(
                                 span: 1:17; [16, 21],
                             },
                             index: 0,
-                            symbol_id: SymbolId(19),
+                            symbol_id: SymbolId(18),
                             type_id: TypeId(4),
                         },
                     ],
@@ -43,9 +43,8 @@ Ok(
             IdentId(11) => "mul",
             IdentId(12) => "neg",
             IdentId(13) => "neq",
-            IdentId(14) => "string",
-            IdentId(15) => "sub",
-            IdentId(16) => "void",
+            IdentId(14) => "sub",
+            IdentId(15) => "void",
         ],
         expressions: [],
         statements: [
@@ -54,23 +53,14 @@ Ok(
             SymbolId(1) => Symbol {
                 id: SymbolId(1),
                 kind: NativeType(
-                    IdentId(16),
+                    IdentId(15),
                     Void,
                 ),
                 type_id: TypeId(2),
-                ident_id: IdentId(16),
+                ident_id: IdentId(15),
             },
             SymbolId(2) => Symbol {
                 id: SymbolId(2),
-                kind: NativeType(
-                    IdentId(14),
-                    String,
-                ),
-                type_id: TypeId(2),
-                ident_id: IdentId(14),
-            },
-            SymbolId(3) => Symbol {
-                id: SymbolId(3),
                 kind: NativeType(
                     IdentId(2),
                     Number,
@@ -78,8 +68,8 @@ Ok(
                 type_id: TypeId(2),
                 ident_id: IdentId(2),
             },
-            SymbolId(4) => Symbol {
-                id: SymbolId(4),
+            SymbolId(3) => Symbol {
+                id: SymbolId(3),
                 kind: NativeType(
                     IdentId(4),
                     Boolean,
@@ -87,10 +77,10 @@ Ok(
                 type_id: TypeId(2),
                 ident_id: IdentId(4),
             },
-            SymbolId(5) => Symbol {
-                id: SymbolId(5),
+            SymbolId(4) => Symbol {
+                id: SymbolId(4),
                 kind: Native(
-                    IdentId(15),
+                    IdentId(14),
                     [
                         TypeId(4),
                         TypeId(4),
@@ -98,11 +88,11 @@ Ok(
                     TypeId(4),
                     SubNumberNumber,
                 ),
-                type_id: TypeId(6),
-                ident_id: IdentId(15),
+                type_id: TypeId(5),
+                ident_id: IdentId(14),
             },
-            SymbolId(6) => Symbol {
-                id: SymbolId(6),
+            SymbolId(5) => Symbol {
+                id: SymbolId(5),
                 kind: Native(
                     IdentId(13),
                     [
@@ -112,11 +102,11 @@ Ok(
                     TypeId(3),
                     NeqNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(6),
                 ident_id: IdentId(13),
             },
-            SymbolId(7) => Symbol {
-                id: SymbolId(7),
+            SymbolId(6) => Symbol {
+                id: SymbolId(6),
                 kind: Native(
                     IdentId(13),
                     [
@@ -126,11 +116,11 @@ Ok(
                     TypeId(3),
                     NeqBooleanBoolean,
                 ),
-                type_id: TypeId(8),
+                type_id: TypeId(7),
                 ident_id: IdentId(13),
             },
-            SymbolId(8) => Symbol {
-                id: SymbolId(8),
+            SymbolId(7) => Symbol {
+                id: SymbolId(7),
                 kind: Native(
                     IdentId(12),
                     [
@@ -139,11 +129,11 @@ Ok(
                     TypeId(4),
                     NegNumber,
                 ),
-                type_id: TypeId(9),
+                type_id: TypeId(8),
                 ident_id: IdentId(12),
             },
-            SymbolId(9) => Symbol {
-                id: SymbolId(9),
+            SymbolId(8) => Symbol {
+                id: SymbolId(8),
                 kind: Native(
                     IdentId(11),
                     [
@@ -153,11 +143,11 @@ Ok(
                     TypeId(4),
                     MulNumberNumber,
                 ),
-                type_id: TypeId(6),
+                type_id: TypeId(5),
                 ident_id: IdentId(11),
             },
-            SymbolId(10) => Symbol {
-                id: SymbolId(10),
+            SymbolId(9) => Symbol {
+                id: SymbolId(9),
                 kind: Native(
                     IdentId(10),
                     [
@@ -167,11 +157,11 @@ Ok(
                     TypeId(3),
                     LtNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(6),
                 ident_id: IdentId(10),
             },
-            SymbolId(11) => Symbol {
-                id: SymbolId(11),
+            SymbolId(10) => Symbol {
+                id: SymbolId(10),
                 kind: Native(
                     IdentId(9),
                     [
@@ -181,11 +171,11 @@ Ok(
                     TypeId(3),
                     LeNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(6),
                 ident_id: IdentId(9),
             },
-            SymbolId(12) => Symbol {
-                id: SymbolId(12),
+            SymbolId(11) => Symbol {
+                id: SymbolId(11),
                 kind: Native(
                     IdentId(8),
                     [
@@ -195,11 +185,11 @@ Ok(
                     TypeId(3),
                     GtNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(6),
                 ident_id: IdentId(8),
             },
-            SymbolId(13) => Symbol {
-                id: SymbolId(13),
+            SymbolId(12) => Symbol {
+                id: SymbolId(12),
                 kind: Native(
                     IdentId(7),
                     [
@@ -209,11 +199,11 @@ Ok(
                     TypeId(3),
                     GeNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(6),
                 ident_id: IdentId(7),
             },
-            SymbolId(14) => Symbol {
-                id: SymbolId(14),
+            SymbolId(13) => Symbol {
+                id: SymbolId(13),
                 kind: Native(
                     IdentId(6),
                     [
@@ -223,11 +213,11 @@ Ok(
                     TypeId(3),
                     EqNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(6),
                 ident_id: IdentId(6),
             },
-            SymbolId(15) => Symbol {
-                id: SymbolId(15),
+            SymbolId(14) => Symbol {
+                id: SymbolId(14),
                 kind: Native(
                     IdentId(6),
                     [
@@ -237,11 +227,11 @@ Ok(
                     TypeId(3),
                     EqBooleanBoolean,
                 ),
-                type_id: TypeId(8),
+                type_id: TypeId(7),
                 ident_id: IdentId(6),
             },
-            SymbolId(16) => Symbol {
-                id: SymbolId(16),
+            SymbolId(15) => Symbol {
+                id: SymbolId(15),
                 kind: Native(
                     IdentId(5),
                     [
@@ -251,11 +241,11 @@ Ok(
                     TypeId(4),
                     DivNumberNumber,
                 ),
-                type_id: TypeId(6),
+                type_id: TypeId(5),
                 ident_id: IdentId(5),
             },
-            SymbolId(17) => Symbol {
-                id: SymbolId(17),
+            SymbolId(16) => Symbol {
+                id: SymbolId(16),
                 kind: Native(
                     IdentId(3),
                     [
@@ -265,17 +255,17 @@ Ok(
                     TypeId(4),
                     AddNumberNumber,
                 ),
-                type_id: TypeId(6),
+                type_id: TypeId(5),
                 ident_id: IdentId(3),
+            },
+            SymbolId(17) => Symbol {
+                id: SymbolId(17),
+                kind: Struct,
+                type_id: TypeId(9),
+                ident_id: IdentId(0),
             },
             SymbolId(18) => Symbol {
                 id: SymbolId(18),
-                kind: Struct,
-                type_id: TypeId(10),
-                ident_id: IdentId(0),
-            },
-            SymbolId(19) => Symbol {
-                id: SymbolId(19),
                 kind: Field(
                     IdentId(1),
                     0,
@@ -289,36 +279,35 @@ Ok(
             TypeId(2) => None,
             TypeId(3) => Boolean,
             TypeId(4) => Number,
-            TypeId(5) => String,
+            TypeId(5) => Function(
+                [
+                    TypeId(4),
+                    TypeId(4),
+                ],
+                TypeId(4),
+            ),
             TypeId(6) => Function(
                 [
                     TypeId(4),
                     TypeId(4),
                 ],
-                TypeId(4),
+                TypeId(3),
             ),
             TypeId(7) => Function(
                 [
-                    TypeId(4),
-                    TypeId(4),
+                    TypeId(3),
+                    TypeId(3),
                 ],
                 TypeId(3),
             ),
             TypeId(8) => Function(
                 [
-                    TypeId(3),
-                    TypeId(3),
-                ],
-                TypeId(3),
-            ),
-            TypeId(9) => Function(
-                [
                     TypeId(4),
                 ],
                 TypeId(4),
             ),
-            TypeId(10) => Struct(
-                SymbolId(18),
+            TypeId(9) => Struct(
+                SymbolId(17),
                 StructId(0),
             ),
         ],

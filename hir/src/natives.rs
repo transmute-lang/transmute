@@ -88,10 +88,6 @@ impl Natives {
             name: Type::Void.identifier(),
             ty: Type::Void,
         });
-        natives.insert_type(NativeType {
-            name: Type::String.identifier(),
-            ty: Type::String,
-        });
 
         #[cfg(feature = "gc-functions")]
         {
@@ -296,11 +292,6 @@ pub enum Type {
 
     Boolean,
     Number,
-    // todo:refactor:string: this is probably naive and must be generalized somehow: we don't want to have to
-    //  `Type` for each type the std lib provides (think List, Map, etc.) some mechanism might be
-    //  an annotation on structs defined in "transmute" in the stdlib. Something along the lines of
-    //  `native struct String {};`. This would be parsed, but no emitted as LLVM-IR.
-    String,
 
     Function(Vec<TypeId>, TypeId),
 
@@ -327,7 +318,6 @@ impl Type {
             | Type::Array(..) => unimplemented!(),
             Type::Boolean => "boolean",
             Type::Number => "number",
-            Type::String => "string",
             Type::Void => "void",
         }
     }
@@ -338,7 +328,6 @@ impl Display for Type {
         match self {
             Type::Boolean => write!(f, "boolean"),
             Type::Number => write!(f, "number"),
-            Type::String => write!(f, "string"),
             Type::Function(..) => write!(f, "function"),
             Type::Struct(..) => write!(f, "struct"),
             Type::Array(_, len) => write!(f, "array[{len}]"),
@@ -356,7 +345,6 @@ impl TryFrom<&str> for Type {
         match value {
             "boolean" => Ok(Type::Boolean),
             "number" => Ok(Type::Number),
-            "string" => Ok(Type::String),
             "void" => Ok(Type::Void),
             &_ => Err(format!("'{}' is not a known type", value)),
         }

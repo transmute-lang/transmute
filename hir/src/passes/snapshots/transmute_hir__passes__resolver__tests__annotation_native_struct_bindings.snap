@@ -79,7 +79,7 @@ Hir {
                 IdentId(1),
                 StmtId(1),
             ),
-            type_id: TypeId(6),
+            type_id: TypeId(5),
         },
     ],
     types: [
@@ -88,8 +88,7 @@ Hir {
         TypeId(2) => None,
         TypeId(3) => Boolean,
         TypeId(4) => Number,
-        TypeId(5) => String,
-        TypeId(6) => Struct(
+        TypeId(5) => Struct(
             StmtId(1),
         ),
     ],

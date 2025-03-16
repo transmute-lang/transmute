@@ -25,12 +25,12 @@ entry:
   unreachable
 }
 
-define i64 @_TM0_1f1n(i64 %"n#param#sym19#") gc "shadow-stack" {
+define i64 @_TM0_1f1n(i64 %"n#param#sym18#") gc "shadow-stack" {
 entry:
-  %"ne#.not" = icmp eq i64 %"n#param#sym19#", 42
+  %"ne#.not" = icmp eq i64 %"n#param#sym18#", 42
   %0 = xor i1 %"ne#.not", true
   call void @llvm.assume(i1 %0)
-  ret i64 %"n#param#sym19#"
+  ret i64 %"n#param#sym18#"
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write)

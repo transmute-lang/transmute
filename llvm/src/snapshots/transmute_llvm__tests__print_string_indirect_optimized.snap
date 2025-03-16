@@ -28,7 +28,7 @@ entry:
   unreachable
 }
 
-declare void @_TM0_5print1s(ptr)
+declare void @_TM0_5print1s6string(ptr)
 
 define void @_TM0_1f0() gc "shadow-stack" {
 entry:
@@ -45,9 +45,9 @@ entry:
   store ptr %new_str1, ptr %"world#local#sym23#", align 8
   call void @gc_run()
   %"hello#local#sym22#2" = load ptr, ptr %"hello#local#sym22#", align 8
-  call void @_TM0_5print1s(ptr %"hello#local#sym22#2")
+  call void @_TM0_5print1s6string(ptr %"hello#local#sym22#2")
   %"world#local#sym23#3" = load ptr, ptr %"world#local#sym23#", align 8
-  call void @_TM0_5print1s(ptr %"world#local#sym23#3")
+  call void @_TM0_5print1s6string(ptr %"world#local#sym23#3")
   ret void
 }
 

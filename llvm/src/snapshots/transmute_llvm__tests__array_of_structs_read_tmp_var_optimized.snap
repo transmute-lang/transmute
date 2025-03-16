@@ -52,27 +52,27 @@ entry:
   %"gcroot#heap#struct#S#id0#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#struct#S#id0#", align 8
   call void @llvm.gcroot(ptr nonnull %"gcroot#heap#struct#S#id0#", ptr null)
-  %"b#local#sym22#" = alloca ptr, align 8
-  %"a#local#sym21#" = alloca ptr, align 8
-  store ptr null, ptr %"a#local#sym21#", align 8
-  call void @llvm.gcroot(ptr nonnull %"a#local#sym21#", ptr null)
-  store ptr null, ptr %"b#local#sym22#", align 8
-  call void @llvm.gcroot(ptr nonnull %"b#local#sym22#", ptr null)
+  %"b#local#sym21#" = alloca ptr, align 8
+  %"a#local#sym20#" = alloca ptr, align 8
+  store ptr null, ptr %"a#local#sym20#", align 8
+  call void @llvm.gcroot(ptr nonnull %"a#local#sym20#", ptr null)
+  store ptr null, ptr %"b#local#sym21#", align 8
+  call void @llvm.gcroot(ptr nonnull %"b#local#sym21#", ptr null)
   %"heap#struct#S#id0#" = call ptr @gc_malloc(i64 8, i64 8, ptr null)
   store ptr %"heap#struct#S#id0#", ptr %"gcroot#heap#struct#S#id0#", align 8
   store i64 0, ptr %"heap#struct#S#id0#", align 4
   %"heap#array#" = call ptr @gc_malloc(i64 8, i64 8, ptr nonnull @"gc_callbacks#a1s1S")
   store ptr %"heap#struct#S#id0#", ptr %"heap#array#", align 8
-  store ptr %"heap#array#", ptr %"a#local#sym21#", align 8
+  store ptr %"heap#array#", ptr %"a#local#sym20#", align 8
   call void @gc_run()
-  %"a#local#sym21#2" = load ptr, ptr %"a#local#sym21#", align 8
+  %"a#local#sym20#2" = load ptr, ptr %"a#local#sym20#", align 8
   call void @tmc_check_array_index(i64 0, i64 1, i64 7, i64 23)
-  %"array[?]#3" = load ptr, ptr %"a#local#sym21#2", align 8
-  store ptr %"array[?]#3", ptr %"b#local#sym22#", align 8
+  %"array[?]#3" = load ptr, ptr %"a#local#sym20#2", align 8
+  store ptr %"array[?]#3", ptr %"b#local#sym21#", align 8
   call void @gc_run()
-  %"b#local#sym22#4" = load ptr, ptr %"b#local#sym22#", align 8
-  %"b#local#sym22#4.field#idx0#sym20#5" = load i64, ptr %"b#local#sym22#4", align 4
-  ret i64 %"b#local#sym22#4.field#idx0#sym20#5"
+  %"b#local#sym21#4" = load ptr, ptr %"b#local#sym21#", align 8
+  %"b#local#sym21#4.field#idx0#sym19#5" = load i64, ptr %"b#local#sym21#4", align 4
+  ret i64 %"b#local#sym21#4.field#idx0#sym19#5"
 }
 
 attributes #0 = { nounwind }

@@ -140,7 +140,6 @@ impl Transformer {
                                         HirType::Struct(_) => todo!(),
                                         HirType::Array(_, _) => todo!(),
                                         HirType::Number => Type::Number,
-                                        HirType::String => Type::String,
                                         HirType::Void => Type::Void,
                                         HirType::None => Type::None,
                                     },
@@ -170,7 +169,6 @@ impl Transformer {
                         Some((type_id, Type::Array(value_type_id, len)))
                     }
                     HirType::Number => Some((type_id, Type::Number)),
-                    HirType::String => Some((type_id, Type::String)),
                     HirType::Void => Some((type_id, Type::Void)),
                     HirType::None => Some((type_id, Type::None)),
                 })
@@ -1197,7 +1195,6 @@ pub enum StatementKind {
 pub enum Type {
     Boolean,
     Number,
-    String,
 
     Function(Vec<TypeId>, TypeId),
 

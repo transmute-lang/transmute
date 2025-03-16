@@ -25,12 +25,12 @@ entry:
   unreachable
 }
 
-define i1 @_TM0_1f1n(i64 %"n#param#sym19#") gc "shadow-stack" {
+define i1 @_TM0_1f1n(i64 %"n#param#sym18#") gc "shadow-stack" {
 entry:
   br label %cond
 
 cond:                                             ; preds = %cond, %entry
-  %"lt#" = icmp slt i64 %"n#param#sym19#", 42
+  %"lt#" = icmp slt i64 %"n#param#sym18#", 42
   br i1 %"lt#", label %cond, label %end_while
 
 end_while:                                        ; preds = %cond

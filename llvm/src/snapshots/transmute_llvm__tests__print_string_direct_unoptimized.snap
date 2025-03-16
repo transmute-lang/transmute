@@ -26,7 +26,7 @@ entry:
   unreachable
 }
 
-declare void @_TM0_5print1s(ptr)
+declare void @_TM0_5print1s6string(ptr)
 
 define void @_TM0_1f0() gc "shadow-stack" {
 entry:
@@ -38,10 +38,10 @@ entry:
   call void @llvm.gcroot(ptr %"gcroot#new_str", ptr null)
   %new_str = call ptr @tmc_stdlib_string_new(ptr @str, i64 5)
   store ptr %new_str, ptr %"gcroot#new_str", align 8
-  call void @_TM0_5print1s(ptr %new_str)
+  call void @_TM0_5print1s6string(ptr %new_str)
   %new_str1 = call ptr @tmc_stdlib_string_new(ptr @str.1, i64 5)
   store ptr %new_str1, ptr %"gcroot#new_str2", align 8
-  call void @_TM0_5print1s(ptr %new_str1)
+  call void @_TM0_5print1s6string(ptr %new_str1)
   ret void
 }
 

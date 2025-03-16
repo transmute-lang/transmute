@@ -8,7 +8,7 @@
 
 #include "../../stdlib/src/stdlib/bindings.h"
 // print(string) -> _TM0_5print1s
-void _TM0_5print1s(Str *str);
+void _TM0_5print1s6string(Str *str);
 
 void array3_mark(void *object) {
     void **array3 = object;
@@ -68,8 +68,8 @@ int main(int argc, char **argv) {
     array3[0] = str;
     PAUSE();
 
-    printf("\n--- _TM0_5print1s -------------+\n");
-    _TM0_5print1s(str);
+    printf("\n--- _TM0_5print1s6string ------+\n");
+    _TM0_5print1s6string(str);
     PAUSE();
 
     printf("\n--- stdlib_list_new() ---------+\n");

@@ -27,16 +27,16 @@ entry:
 
 define i64 @_TM0_1f0() gc "shadow-stack" {
 entry:
-  %"s#local#sym21#" = alloca ptr, align 8
-  store ptr null, ptr %"s#local#sym21#", align 8
-  call void @llvm.gcroot(ptr nonnull %"s#local#sym21#", ptr null)
+  %"s#local#sym20#" = alloca ptr, align 8
+  store ptr null, ptr %"s#local#sym20#", align 8
+  call void @llvm.gcroot(ptr nonnull %"s#local#sym20#", ptr null)
   %"heap#struct#Struct#id0#" = call ptr @gc_malloc(i64 8, i64 8, ptr null)
   store i64 1, ptr %"heap#struct#Struct#id0#", align 4
-  store ptr %"heap#struct#Struct#id0#", ptr %"s#local#sym21#", align 8
+  store ptr %"heap#struct#Struct#id0#", ptr %"s#local#sym20#", align 8
   call void @gc_run()
-  %"s#local#sym21#1" = load ptr, ptr %"s#local#sym21#", align 8
-  %"s#local#sym21#1.field#idx0#sym20#2" = load i64, ptr %"s#local#sym21#1", align 4
-  ret i64 %"s#local#sym21#1.field#idx0#sym20#2"
+  %"s#local#sym20#1" = load ptr, ptr %"s#local#sym20#", align 8
+  %"s#local#sym20#1.field#idx0#sym19#2" = load i64, ptr %"s#local#sym20#1", align 4
+  ret i64 %"s#local#sym20#1.field#idx0#sym19#2"
 }
 
 attributes #0 = { nounwind }
