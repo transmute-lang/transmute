@@ -119,8 +119,8 @@ impl LlvmIr<'_> {
         };
 
         if let Some(stdlib_path) = stdlib_path {
-            let stdlib_path = stdlib_path.join("libtransmute_stdlib.a");
-            command.arg(stdlib_path);
+            // let stdlib_path = stdlib_path.join("libtransmute_stdlib.a");
+            // command.arg(stdlib_path);
 
             // todo:ux check linked libraries
             command.arg("-lpthread");
@@ -130,8 +130,12 @@ impl LlvmIr<'_> {
             // command.arg("-lcrypto");
         }
 
+        command.arg("-o").arg(&path);
+
+        command.arg(format!("-L{}/", stdlib_path.unwrap().display())).arg("-ltransmute_stdlib");
+
         println!("Generating {}", path.display());
-        match command.arg("-o").arg(&path).output() {
+        match command.output() {
             Ok(o) => {
                 if !o.status.success() {
                     eprintln!("{command:?} returned:");

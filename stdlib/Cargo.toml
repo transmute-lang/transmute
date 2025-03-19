@@ -8,7 +8,7 @@ crate-type = [
     "staticlib",
     # fixme: not currently supported on macos (it requires the runtime to be linked together)
     #  https://users.rust-lang.org/t/building-cdylib-as-plugin-failure-on-mac-with-missing-host-symbols-works-on-linux/28297
-    # "cdylib"
+    "cdylib"
 ]
 
 [dependencies]

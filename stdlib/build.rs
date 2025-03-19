@@ -4,6 +4,9 @@ use std::env::current_dir;
 use std::fs;
 
 fn main() {
+    #[cfg(target_os = "macos")]
+        println!("cargo:rustc-link-arg=-Wl,-undefined,dynamic_lookup");
+
     #[cfg(feature = "stdc")]
     {
         let src_dir = current_dir().unwrap().join("src").join("stdlib");
