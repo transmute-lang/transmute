@@ -146,8 +146,8 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
                     _ => panic!(),
                 }
             }
-            ExpressionKind::FunctionCall(ident, arguments) => {
-                self.visit_function_call(ident, arguments)
+            ExpressionKind::FunctionCall(expr_id, arguments) => {
+                self.visit_function_call(*expr_id, arguments)
             }
             ExpressionKind::Assignment(Target::Direct(ident), expr) => {
                 self.visit_assignment(ident, expr)
@@ -288,8 +288,17 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
         }
     }
 
-    fn visit_function_call(&mut self, ident: &IdentRefId, arguments: &[ExprId]) -> Val {
-        match &self.hir.symbol_by_ident_ref_id(*ident).kind {
+    fn visit_function_call(&mut self, expr_id: ExprId, arguments: &[ExprId]) -> Val {
+        let expression = &self.hir.expressions[expr_id];
+        let ident = match &expression.kind {
+            ExpressionKind::Literal(lit) => match &lit.kind {
+                LiteralKind::Identifier(ident) => *ident,
+                _ => panic!("Literal(IdentRefId) expected, got {expression:?}"),
+            },
+            _ => panic!("Literal(Literal) expected, got {expression:?}"),
+        };
+
+        match &self.hir.symbol_by_ident_ref_id(ident).kind {
             SymbolKind::LetFn(ident_id, stmt, _, _) => {
                 let stmt = &self.hir.statements[*stmt];
                 match &stmt.kind {

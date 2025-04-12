@@ -1,6 +1,6 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser::new(Lexer::new(\"times_two(21);\")).parse()"
+expression: "Parser :: new(Lexer :: new(\"times_two(21);\")).parse()"
 ---
 Ok(
     Ast {
@@ -21,18 +21,28 @@ Ok(
                 id: ExprId(0),
                 kind: Literal(
                     Literal {
+                        kind: IdentRefId(0),
+                        span: 1:1; [0, 9],
+                    },
+                ),
+                span: 1:1; [0, 9],
+            },
+            ExprId(1) => Expression {
+                id: ExprId(1),
+                kind: Literal(
+                    Literal {
                         kind: Number(21),
                         span: 1:11; [10, 12],
                     },
                 ),
                 span: 1:11; [10, 12],
             },
-            ExprId(1) => Expression {
-                id: ExprId(1),
+            ExprId(2) => Expression {
+                id: ExprId(2),
                 kind: FunctionCall(
-                    IdentRefId(0),
+                    ExprId(0),
                     [
-                        ExprId(0),
+                        ExprId(1),
                     ],
                 ),
                 span: 1:1; [0, 13],
@@ -42,7 +52,7 @@ Ok(
             StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: Expression(
-                    ExprId(1),
+                    ExprId(2),
                 ),
                 span: 1:1; [0, 14],
             },

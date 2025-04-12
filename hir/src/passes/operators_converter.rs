@@ -2,12 +2,15 @@ use bimap::BiMap;
 use transmute_ast::expression::{Expression, ExpressionKind};
 use transmute_ast::identifier::Identifier;
 use transmute_ast::identifier_ref::IdentifierRef;
+use transmute_ast::literal::{Literal, LiteralKind};
 use transmute_core::ids::{ExprId, IdentId, IdentRefId};
+use transmute_core::span::Span;
 use transmute_core::vec_map::VecMap;
 
 pub struct OperatorsConverter {
     identifiers: BiMap<IdentId, String>,
     identifier_refs: VecMap<IdentRefId, IdentifierRef>,
+    expressions: VecMap<ExprId, Expression>,
 }
 
 pub struct Output {
@@ -24,14 +27,16 @@ impl OperatorsConverter {
         Self {
             identifiers: identifiers.into_iter().collect::<BiMap<IdentId, String>>(),
             identifier_refs,
+            expressions: VecMap::new(),
         }
     }
 
     pub fn convert(mut self, expressions: VecMap<ExprId, Expression>) -> Output {
-        let expressions = expressions
-            .into_iter()
-            .map(|(expr_ir, expr)| (expr_ir, self.convert_expression(expr)))
-            .collect::<VecMap<ExprId, Expression>>();
+        self.expressions.resize(expressions.len());
+
+        for (_, expression) in expressions {
+            self.convert_expression(expression);
+        }
 
         let identifiers = self
             .identifiers
@@ -41,40 +46,64 @@ impl OperatorsConverter {
         Output {
             identifiers,
             identifier_refs: self.identifier_refs,
-            expressions,
+            expressions: self.expressions,
         }
     }
 
-    fn convert_expression(&mut self, expression: Expression) -> Expression {
-        match &expression.kind {
+    fn convert_expression(&mut self, expression: Expression) {
+        let (expr_id, expression) = match &expression.kind {
             ExpressionKind::Binary(lhs_id, op, rhs_id) => {
-                let ident_id = self.ident_id(op.kind.function_name());
-                let identifier = Identifier::new(ident_id, op.span.clone());
-                let ident_ref_id = self.identifier_refs.create();
-                self.identifier_refs
-                    .insert(ident_ref_id, IdentifierRef::new(ident_ref_id, identifier));
+                let ident_expr_id =
+                    self.gen_fn_ident_ref_expression(&op.span, op.kind.function_name());
 
-                Expression::new(
+                (
                     expression.id,
-                    ExpressionKind::FunctionCall(ident_ref_id, vec![*lhs_id, *rhs_id]),
-                    expression.span.clone(),
+                    Expression::new(
+                        expression.id,
+                        ExpressionKind::FunctionCall(ident_expr_id, vec![*lhs_id, *rhs_id]),
+                        expression.span.clone(),
+                    ),
                 )
             }
             ExpressionKind::Unary(op, expr_id) => {
-                let ident_id = self.ident_id(op.kind.function_name());
-                let identifier = Identifier::new(ident_id, op.span.clone());
-                let ident_ref_id = self.identifier_refs.create();
-                self.identifier_refs
-                    .insert(ident_ref_id, IdentifierRef::new(ident_ref_id, identifier));
+                let ident_expr_id =
+                    self.gen_fn_ident_ref_expression(&op.span, op.kind.function_name());
 
-                Expression::new(
+                (
                     expression.id,
-                    ExpressionKind::FunctionCall(ident_ref_id, vec![*expr_id]),
-                    expression.span.clone(),
+                    Expression::new(
+                        expression.id,
+                        ExpressionKind::FunctionCall(ident_expr_id, vec![*expr_id]),
+                        expression.span.clone(),
+                    ),
                 )
             }
-            _ => expression,
-        }
+            _ => (expression.id, expression),
+        };
+
+        self.expressions.insert(expr_id, expression);
+    }
+
+    fn gen_fn_ident_ref_expression(&mut self, span: &Span, function_name: &'static str) -> ExprId {
+        let ident_id = self.ident_id(function_name);
+        let identifier = Identifier::new(ident_id, span.clone());
+        let ident_ref_id = self.identifier_refs.create();
+        self.identifier_refs
+            .insert(ident_ref_id, IdentifierRef::new(ident_ref_id, identifier));
+
+        let ident_expr_id = self.expressions.next_index();
+        self.expressions.insert(
+            ident_expr_id,
+            Expression {
+                id: ident_expr_id,
+                kind: ExpressionKind::Literal(Literal {
+                    kind: LiteralKind::Identifier(ident_ref_id),
+                    span: span.clone(),
+                }),
+                span: span.clone(),
+            },
+        );
+        ident_expr_id
     }
 
     fn ident_id(&mut self, function_name: &'static str) -> IdentId {

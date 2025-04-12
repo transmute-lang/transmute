@@ -57,33 +57,33 @@ Hir {
         IdentRefId(4) => IdentifierRef {
             id: IdentRefId(4),
             ident: Identifier {
-                id: IdentId(1),
-                span: 6:22; [136, 137],
-                bound: Bound(18),
-            },
-        },
-        IdentRefId(5) => IdentifierRef {
-            id: IdentRefId(5),
-            ident: Identifier {
                 id: IdentId(0),
                 span: 6:17; [131, 135],
                 bound: Bound(17),
             },
         },
+        IdentRefId(5) => IdentifierRef {
+            id: IdentRefId(5),
+            ident: Identifier {
+                id: IdentId(1),
+                span: 6:22; [136, 137],
+                bound: Bound(18),
+            },
+        },
         IdentRefId(6) => IdentifierRef {
             id: IdentRefId(6),
             ident: Identifier {
-                id: IdentId(1),
-                span: 6:36; [150, 151],
-                bound: Bound(18),
+                id: IdentId(0),
+                span: 6:31; [145, 149],
+                bound: Bound(17),
             },
         },
         IdentRefId(7) => IdentifierRef {
             id: IdentRefId(7),
             ident: Identifier {
-                id: IdentId(0),
-                span: 6:31; [145, 149],
-                bound: Bound(17),
+                id: IdentId(1),
+                span: 6:36; [150, 151],
+                bound: Bound(18),
             },
         },
         IdentRefId(8) => IdentifierRef {
@@ -145,7 +145,7 @@ Hir {
         ExprId(2) => Expression {
             id: ExprId(2),
             kind: FunctionCall(
-                IdentRefId(8),
+                ExprId(18),
                 [
                     ExprId(0),
                     ExprId(1),
@@ -190,14 +190,25 @@ Hir {
             kind: Literal(
                 Literal {
                     kind: IdentRefId(4),
+                    span: 6:17; [131, 135],
+                },
+            ),
+            span: 6:17; [131, 135],
+            typed: Typed(8),
+        },
+        ExprId(7) => Expression {
+            id: ExprId(7),
+            kind: Literal(
+                Literal {
+                    kind: IdentRefId(5),
                     span: 6:22; [136, 137],
                 },
             ),
             span: 6:22; [136, 137],
             typed: Typed(4),
         },
-        ExprId(7) => Expression {
-            id: ExprId(7),
+        ExprId(8) => Expression {
+            id: ExprId(8),
             kind: Literal(
                 Literal {
                     kind: Number(1),
@@ -207,42 +218,53 @@ Hir {
             span: 6:26; [140, 141],
             typed: Typed(4),
         },
-        ExprId(8) => Expression {
-            id: ExprId(8),
+        ExprId(9) => Expression {
+            id: ExprId(9),
             kind: FunctionCall(
-                IdentRefId(9),
+                ExprId(19),
                 [
-                    ExprId(6),
                     ExprId(7),
+                    ExprId(8),
                 ],
             ),
             span: 6:22; [136, 141],
             typed: Typed(4),
         },
-        ExprId(9) => Expression {
-            id: ExprId(9),
+        ExprId(10) => Expression {
+            id: ExprId(10),
             kind: FunctionCall(
-                IdentRefId(5),
+                ExprId(6),
                 [
-                    ExprId(8),
+                    ExprId(9),
                 ],
             ),
             span: 6:17; [131, 142],
             typed: Typed(4),
         },
-        ExprId(10) => Expression {
-            id: ExprId(10),
+        ExprId(11) => Expression {
+            id: ExprId(11),
             kind: Literal(
                 Literal {
                     kind: IdentRefId(6),
+                    span: 6:31; [145, 149],
+                },
+            ),
+            span: 6:31; [145, 149],
+            typed: Typed(8),
+        },
+        ExprId(12) => Expression {
+            id: ExprId(12),
+            kind: Literal(
+                Literal {
+                    kind: IdentRefId(7),
                     span: 6:36; [150, 151],
                 },
             ),
             span: 6:36; [150, 151],
             typed: Typed(4),
         },
-        ExprId(11) => Expression {
-            id: ExprId(11),
+        ExprId(13) => Expression {
+            id: ExprId(13),
             kind: Literal(
                 Literal {
                     kind: Number(2),
@@ -252,43 +274,43 @@ Hir {
             span: 6:40; [154, 155],
             typed: Typed(4),
         },
-        ExprId(12) => Expression {
-            id: ExprId(12),
+        ExprId(14) => Expression {
+            id: ExprId(14),
             kind: FunctionCall(
-                IdentRefId(10),
+                ExprId(20),
                 [
-                    ExprId(10),
-                    ExprId(11),
+                    ExprId(12),
+                    ExprId(13),
                 ],
             ),
             span: 6:36; [150, 155],
             typed: Typed(4),
         },
-        ExprId(13) => Expression {
-            id: ExprId(13),
+        ExprId(15) => Expression {
+            id: ExprId(15),
             kind: FunctionCall(
-                IdentRefId(7),
+                ExprId(11),
                 [
-                    ExprId(12),
+                    ExprId(14),
                 ],
             ),
             span: 6:31; [145, 156],
             typed: Typed(4),
         },
-        ExprId(14) => Expression {
-            id: ExprId(14),
+        ExprId(16) => Expression {
+            id: ExprId(16),
             kind: FunctionCall(
-                IdentRefId(11),
+                ExprId(21),
                 [
-                    ExprId(9),
-                    ExprId(13),
+                    ExprId(10),
+                    ExprId(15),
                 ],
             ),
             span: 6:17; [131, 156],
             typed: Typed(4),
         },
-        ExprId(15) => Expression {
-            id: ExprId(15),
+        ExprId(17) => Expression {
+            id: ExprId(17),
             kind: Block(
                 [
                     StmtId(1),
@@ -297,6 +319,50 @@ Hir {
             ),
             span: 2:41; [41, 171],
             typed: Typed(2),
+        },
+        ExprId(18) => Expression {
+            id: ExprId(18),
+            kind: Literal(
+                Literal {
+                    kind: IdentRefId(8),
+                    span: 3:22; [64, 65],
+                },
+            ),
+            span: 3:22; [64, 65],
+            typed: Typed(6),
+        },
+        ExprId(19) => Expression {
+            id: ExprId(19),
+            kind: Literal(
+                Literal {
+                    kind: IdentRefId(9),
+                    span: 6:24; [138, 139],
+                },
+            ),
+            span: 6:24; [138, 139],
+            typed: Typed(5),
+        },
+        ExprId(20) => Expression {
+            id: ExprId(20),
+            kind: Literal(
+                Literal {
+                    kind: IdentRefId(10),
+                    span: 6:38; [152, 153],
+                },
+            ),
+            span: 6:38; [152, 153],
+            typed: Typed(5),
+        },
+        ExprId(21) => Expression {
+            id: ExprId(21),
+            kind: Literal(
+                Literal {
+                    kind: IdentRefId(11),
+                    span: 6:29; [143, 144],
+                },
+            ),
+            span: 6:29; [143, 144],
+            typed: Typed(5),
         },
     ],
     statements: [
@@ -321,7 +387,7 @@ Hir {
             id: StmtId(2),
             kind: Ret(
                 Some(
-                    ExprId(14),
+                    ExprId(16),
                 ),
                 Implicit,
             ),
@@ -355,7 +421,7 @@ Hir {
                     typed: Typed(4),
                 },
                 Provided(
-                    ExprId(15),
+                    ExprId(17),
                 ),
             ),
             span: 2:13; [13, 171],
@@ -634,7 +700,7 @@ Hir {
     ],
     exit_points: ExitPoints {
         exit_points: {
-            ExprId(15): [
+            ExprId(17): [
                 Explicit(
                     Some(
                         ExprId(3),
@@ -642,7 +708,7 @@ Hir {
                 ),
                 Implicit(
                     Some(
-                        ExprId(14),
+                        ExprId(16),
                     ),
                 ),
             ],

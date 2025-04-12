@@ -25,7 +25,7 @@ pub enum ExpressionKind {
     Binary(ExprId, BinaryOperator, ExprId),
     Unary(UnaryOperator, ExprId),
     Access(ExprId, IdentRefId),
-    FunctionCall(IdentRefId, Vec<ExprId>),
+    FunctionCall(ExprId, Vec<ExprId>),
     While(ExprId, ExprId),
     Block(Vec<StmtId>),
     StructInstantiation(IdentRefId, Vec<(IdentRefId, ExprId)>),

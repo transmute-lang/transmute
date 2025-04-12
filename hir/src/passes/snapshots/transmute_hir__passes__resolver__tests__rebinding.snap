@@ -86,7 +86,7 @@ Hir {
         ExprId(4) => Expression {
             id: ExprId(4),
             kind: FunctionCall(
-                IdentRefId(1),
+                ExprId(5),
                 [
                     ExprId(2),
                     ExprId(3),
@@ -94,6 +94,17 @@ Hir {
             ),
             span: 1:26; [25, 30],
             typed: Typed(4),
+        },
+        ExprId(5) => Expression {
+            id: ExprId(5),
+            kind: Literal(
+                Literal {
+                    kind: IdentRefId(1),
+                    span: 1:28; [27, 28],
+                },
+            ),
+            span: 1:28; [27, 28],
+            typed: Typed(5),
         },
     ],
     statements: [

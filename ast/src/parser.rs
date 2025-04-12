@@ -17,10 +17,12 @@ use transmute_core::error::{Diagnostic, Level};
 use transmute_core::ids::{id, ExprId, IdentId, IdentRefId, StmtId, TypeDefId};
 use transmute_core::span::Span;
 use transmute_core::vec_map::VecMap;
-// todo:ux review how diagnostics work. it would be nice to be able to keep tokens in a list
-//   to reports the missing token, together with what token it is supposed to close, even when other
-//   tokens can be expected. eg.: for `[a;` we can expect either `1`, etc., or `]` which closes the
-//   `]`. the current diagnostic mechanism is not flexible enough.
+// todo:ux review how diagnostics work. some ideas:
+//   - keep tokens in a list to reports the missing token, together with what token it is supposed
+//     to close, even when other tokens can be expected. eg.: for `[a;` we can expect either `1`,
+//     etc., or `]` which closes the `]`.
+//   - the last expression cal "tell" what token can come after. eg.: for `a` we can accept `(`,
+//     `+`, etc. but for `1` we cannot accept `(`.
 
 type Expression = crate::expression::Expression;
 type Statement = crate::statement::Statement;
@@ -1041,8 +1043,6 @@ impl<'s> Parser<'s> {
                     Identifier::new(self.push_identifier(&token.span), token.span.clone());
 
                 match &self.lexer.peek().kind {
-                    // ident '( ...
-                    TokenKind::OpenParenthesis => self.parse_function_call(identifier).id,
                     // ident '{ ...
                     TokenKind::OpenCurlyBracket if allow_struct => {
                         allow_assignment = false;
@@ -1050,8 +1050,6 @@ impl<'s> Parser<'s> {
                     }
                     // ident '= ...
                     _ => {
-                        self.potential_tokens
-                            .insert(expected_token!(TokenKind::OpenParenthesis));
                         if allow_struct {
                             self.potential_tokens
                                 .insert(expected_token!(TokenKind::OpenCurlyBracket));
@@ -1171,7 +1169,9 @@ impl<'s> Parser<'s> {
                     | TokenKind::CloseBracket
                     | TokenKind::CloseParenthesis
                     | TokenKind::CloseCurlyBracket
+                    | TokenKind::OpenParenthesis
                     | TokenKind::OpenCurlyBracket
+                    | TokenKind::Dot
                     | TokenKind::Comma
                     | TokenKind::EqualEqual
                     | TokenKind::ExclaimEqual
@@ -1271,9 +1271,14 @@ impl<'s> Parser<'s> {
                                 expected_token!(TokenKind::Star),
                                 expected_token!(TokenKind::Dot),
                                 expected_token!(TokenKind::OpenBracket),
+                                expected_token!(TokenKind::OpenParenthesis),
                             ]
                         );
                     }
+                }
+                TokenKind::OpenParenthesis => {
+                    expr_id = self.parse_function_call(expr_id).id;
+                    allow_assignment = false;
                 }
                 _ => {
                     // ignore and keep parsing
@@ -1281,6 +1286,8 @@ impl<'s> Parser<'s> {
                         .insert(expected_token!(TokenKind::Dot));
                     self.potential_tokens
                         .insert(expected_token!(TokenKind::OpenBracket));
+                    self.potential_tokens
+                        .insert(expected_token!(TokenKind::OpenParenthesis));
                     break;
                 }
             }
@@ -1632,7 +1639,7 @@ impl<'s> Parser<'s> {
     /// ```raw
     /// identifier ( expr , ... )
     /// ```
-    fn parse_function_call(&mut self, identifier: Identifier) -> &Expression {
+    fn parse_function_call(&mut self, expr_id: ExprId) -> &Expression {
         // identifier '( expr , ... )
         self.potential_tokens.clear();
         let open_parenthesis_token = self.lexer.next_token();
@@ -1640,11 +1647,10 @@ impl<'s> Parser<'s> {
         assert_eq!(&open_parenthesis_token.kind, &TokenKind::OpenParenthesis);
 
         let (arguments, span) = self.parse_arguments(0, TokenKind::CloseParenthesis);
-        let span = identifier.span.extend_to(&span);
+        let span = self.expressions[id!(expr_id)].span.extend_to(&span);
 
         // identifier ( expr , ... ) '
-        let ident_ref = self.push_identifier_ref(identifier);
-        let id = self.push_expression(ExpressionKind::FunctionCall(ident_ref, arguments), span);
+        let id = self.push_expression(ExpressionKind::FunctionCall(expr_id, arguments), span);
 
         &self.expressions[id!(id)]
     }

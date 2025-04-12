@@ -120,8 +120,9 @@ impl PrettyPrint for Expression {
                 write!(f, ".")?;
                 write!(f, "{ident}", ident = ctx.identifier_ref(*ident_ref_id))
             }
-            ExpressionKind::FunctionCall(ident_ref_id, param_ids) => {
-                write!(f, "{ident}(", ident = ctx.identifier_ref(*ident_ref_id))?;
+            ExpressionKind::FunctionCall(expr_id, param_ids) => {
+                ctx.pretty_print_expression(*expr_id, opts, f)?;
+                write!(f, "(")?;
                 for (i, param) in param_ids.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
@@ -564,7 +565,7 @@ mod tests {
     #[test]
     fn expression_function_call_0() {
         let ast = Parser::new(Lexer::new("f();")).parse().unwrap();
-        let expr = &ast.expressions[ExprId::from(0)];
+        let expr = &ast.expressions[ExprId::from(1)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -580,7 +581,7 @@ mod tests {
     #[test]
     fn expression_function_call_1() {
         let ast = Parser::new(Lexer::new("f(1);")).parse().unwrap();
-        let expr = &ast.expressions[ExprId::from(1)];
+        let expr = &ast.expressions[ExprId::from(2)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -596,7 +597,7 @@ mod tests {
     #[test]
     fn expression_function_call_2() {
         let ast = Parser::new(Lexer::new("f(1,2);")).parse().unwrap();
-        let expr = &ast.expressions[ExprId::from(2)];
+        let expr = &ast.expressions[ExprId::from(3)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -995,7 +996,7 @@ mod tests {
     }
 
     #[test]
-    fn dot_acces_array_access() {
+    fn dot_access_array_access() {
         let ast = Parser::new(Lexer::new("a.b[1];")).parse().unwrap();
 
         let mut w = String::new();

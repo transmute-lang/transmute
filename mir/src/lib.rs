@@ -320,16 +320,17 @@ impl Transformer {
                 ident_ref_id,
                 remove_implicit_rets,
             ),
-            HirExpressionKind::FunctionCall(ident_ref_id, params) => self.transform_function_call(
-                hir,
-                parent,
-                expression.id,
-                expression.span,
-                type_id,
-                ident_ref_id,
-                params,
-                remove_implicit_rets,
-            ),
+            HirExpressionKind::FunctionCall(callee_expr_id, params) => self
+                .transform_function_call(
+                    hir,
+                    parent,
+                    expression.id,
+                    expression.span,
+                    type_id,
+                    callee_expr_id,
+                    params,
+                    remove_implicit_rets,
+                ),
             HirExpressionKind::While(cond_expr_id, body_expr_id) => self.transform_while(
                 hir,
                 parent,
@@ -586,14 +587,33 @@ impl Transformer {
         expr_id: ExprId,
         span: Span,
         type_id: TypeId,
-        ident_ref_id: IdentRefId,
+        callee_expr_id: ExprId,
         params: Vec<ExprId>,
         remove_implicit_rets: bool,
     ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
-        let mut mutated_symbol_ids = Vec::new();
-        let mut variables = BTreeMap::new();
+        // let mut mutated_symbol_ids = Vec::new();
+        // let mut variables = BTreeMap::new();
 
-        let symbol_id = hir.identifier_refs[ident_ref_id].resolved_symbol_id();
+        let expr = hir.expressions.remove(callee_expr_id).unwrap();
+        let (mut mutated_symbol_ids, mut variables) =
+            self.transform_expression(hir, parent, expr, remove_implicit_rets);
+
+        let expression = &self.expressions[callee_expr_id];
+        let symbol_id = match &expression.kind {
+            ExpressionKind::Literal(lit) => match &lit.kind {
+                LiteralKind::Identifier(symbol_id) => *symbol_id,
+                _ => panic!("Literal(Identifier) expected, got {expression:?}"),
+            },
+            _ => panic!("Literal(Literal) expected, got {expression:?}"),
+        };
+
+        // let expr = hir.expressions.remove(true_expr_id).unwrap();
+        // let (new_mutated_symbols_ids, new_variables) =
+        //     self.transform_expression(hir, parent, expr, remove_implicit_rets);
+        // mutated_symbols_ids.extend(new_mutated_symbols_ids);
+        // variables.extend(new_variables);
+
+        // let symbol_id = hir.identifier_refs[ident_ref_id].resolved_symbol_id();
 
         for expr_id in params.iter() {
             let expression = hir.expressions.remove(*expr_id).unwrap();

@@ -116,7 +116,7 @@ impl Natives {
             .functions
             .keys()
             .chain(self.types.iter().map(|native| &native.name))
-            .map(|s| *s)
+            .copied()
             .collect::<Vec<_>>();
 
         names.push(Type::Void.identifier());

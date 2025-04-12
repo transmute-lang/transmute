@@ -6,7 +6,7 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Unexpected `;`, expected one of (14) `,`, `.`, `)`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`, `[`",
+                message: "Unexpected `;`, expected one of (15) `,`, `.`, `)`, `(`, `*`, `/`, `-`, `+`, `==`, `!=`, `>`, `>=`, `<`, `<=`, `[`",
                 span: 1:5; [4, 5],
                 level: Error,
             },

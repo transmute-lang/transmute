@@ -47,8 +47,8 @@ impl From<AstExpression> for Expression<Untyped> {
                 AstExpressionKind::Access(expr_id, ident_ref_id) => {
                     ExpressionKind::Access(expr_id, ident_ref_id)
                 }
-                AstExpressionKind::FunctionCall(ident_ref_id, expr_ids) => {
-                    ExpressionKind::FunctionCall(ident_ref_id, expr_ids)
+                AstExpressionKind::FunctionCall(expr_id, expr_ids) => {
+                    ExpressionKind::FunctionCall(expr_id, expr_ids)
                 }
                 AstExpressionKind::While(cond, expr_id) => ExpressionKind::While(cond, expr_id),
                 AstExpressionKind::Block(expr_ids) => ExpressionKind::Block(expr_ids),
@@ -84,7 +84,7 @@ pub enum ExpressionKind {
     If(ExprId, ExprId, Option<ExprId>),
     Literal(Literal),
     Access(ExprId, IdentRefId),
-    FunctionCall(IdentRefId, Vec<ExprId>),
+    FunctionCall(ExprId, Vec<ExprId>),
     While(ExprId, ExprId),
     Block(Vec<StmtId>),
     StructInstantiation(IdentRefId, Vec<(IdentRefId, ExprId)>),

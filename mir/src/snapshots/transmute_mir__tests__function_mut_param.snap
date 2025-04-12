@@ -111,6 +111,19 @@ Ok(
             },
             ExprId(5) => Expression {
                 id: ExprId(5),
+                kind: Literal(
+                    Literal {
+                        kind: Identifier(
+                            SymbolId(16),
+                        ),
+                        span: 1:26; [25, 26],
+                    },
+                ),
+                span: 1:26; [25, 26],
+                type_id: TypeId(5),
+            },
+            ExprId(6) => Expression {
+                id: ExprId(6),
                 kind: Block(
                     [
                         StmtId(2),
@@ -125,7 +138,7 @@ Ok(
             StmtId(0) => Statement {
                 id: StmtId(0),
                 kind: Expression(
-                    ExprId(5),
+                    ExprId(6),
                 ),
                 span: 1:20; [19, 29],
             },

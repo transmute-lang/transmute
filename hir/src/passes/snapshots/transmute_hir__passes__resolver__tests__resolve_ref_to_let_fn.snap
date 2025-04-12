@@ -43,8 +43,19 @@ Hir {
         },
         ExprId(1) => Expression {
             id: ExprId(1),
+            kind: Literal(
+                Literal {
+                    kind: IdentRefId(0),
+                    span: 1:15; [14, 15],
+                },
+            ),
+            span: 1:15; [14, 15],
+            typed: Typed(9),
+        },
+        ExprId(2) => Expression {
+            id: ExprId(2),
             kind: FunctionCall(
-                IdentRefId(0),
+                ExprId(1),
                 [],
             ),
             span: 1:15; [14, 17],
@@ -75,7 +86,7 @@ Hir {
         StmtId(1) => Statement {
             id: StmtId(1),
             kind: Expression(
-                ExprId(1),
+                ExprId(2),
             ),
             span: 1:15; [14, 18],
         },

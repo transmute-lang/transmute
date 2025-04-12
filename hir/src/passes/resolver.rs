@@ -82,11 +82,8 @@ impl Resolver {
         mut hir: UnresolvedHir,
     ) -> Result<ResolvedHir, Diagnostics> {
         // init. identifiers
-        self.identifiers = BiHashMap::from_iter(
-            mem::take(&mut hir.identifiers)
-                .into_iter()
-                .map(|(i, s)| (i, s)),
-        );
+        self.identifiers = BiHashMap::from_iter(mem::take(&mut hir.identifiers));
+
         for native_name in natives.names().into_iter() {
             // just append all native names, if they are missing
             if !self.identifiers.contains_right(native_name) {
@@ -366,8 +363,8 @@ impl Resolver {
 
                 field_type_id
             }
-            ExpressionKind::FunctionCall(ident_ref, params) => {
-                self.resolve_function_call(hir, *ident_ref, params.clone().as_slice())
+            ExpressionKind::FunctionCall(expr_id, params) => {
+                self.resolve_function_call(hir, *expr_id, params.clone().as_slice())
             }
             ExpressionKind::While(cond, expr) => self.resolve_while(hir, *cond, *expr),
             ExpressionKind::Block(stmts) => self.resolve_block(hir, &stmts.clone()),
@@ -506,7 +503,7 @@ impl Resolver {
     fn resolve_function_call(
         &mut self,
         hir: &mut UnresolvedHir,
-        ident_ref: IdentRefId,
+        expr_id: ExprId,
         params: &[ExprId],
     ) -> TypeId {
         let invalid_type_id = self.find_type_id_by_type(&Type::Invalid);
@@ -524,7 +521,21 @@ impl Resolver {
             return self.find_type_id_by_type(&Type::Invalid);
         }
 
-        self.resolve_ident_ref(hir, ident_ref, Some(&param_types))
+        // todo:refactor this is not amazing: we extract the identifier ref, then we resolve it,
+        //  and finally we resolve the expression. this needs to be reworked when we add support
+        //  for "anonymous functions"
+
+        let expression = &hir.expressions[expr_id];
+        let ident_ref_id = match &expression.kind {
+            ExpressionKind::Literal(lit) => match lit.kind {
+                LiteralKind::Identifier(ident_ref) => ident_ref,
+                _ => panic!("Identifier(IdentRefId) expected, got {expression:?}"),
+            },
+            _ => panic!("Literal(Literal) expected, got {expression:?}"),
+        };
+
+        let type_id = self
+            .resolve_ident_ref(hir, ident_ref_id, Some(&param_types))
             .map(|s| match &self.symbols[s].kind {
                 SymbolKind::LetFn(_, _, _, ret_type) => *ret_type,
                 SymbolKind::Native(_, _, ret_type, _) => *ret_type,
@@ -534,7 +545,11 @@ impl Resolver {
                     panic!("the resolved symbol was not a function")
                 }
             })
-            .unwrap_or(self.find_type_id_by_type(&Type::Invalid))
+            .unwrap_or(self.find_type_id_by_type(&Type::Invalid));
+
+        self.resolve_expression(hir, expr_id);
+
+        type_id
     }
 
     fn resolve_while(&mut self, hir: &mut UnresolvedHir, cond: ExprId, expr: ExprId) -> TypeId {
