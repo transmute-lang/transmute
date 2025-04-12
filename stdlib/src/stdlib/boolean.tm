@@ -1,2 +1,4 @@
 
-@native let print(b: boolean) {}
+#-- boolean.tm --------------------
+@native
+let print(b: boolean) {}

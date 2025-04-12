@@ -1,4 +1,5 @@
 
+#-- number.tm --------------------
 @native
 let print(n: number) {}
 

@@ -25,7 +25,7 @@ macro_rules! exec {
                         .to_string();
 
                     let src = stdlib_src.join(&file);
-                    if !src.extension().unwrap().eq("tm") {
+                    if !src.extension().map(|ext| ext.eq("tm")).unwrap_or(false) {
                         continue;
                     }
 
