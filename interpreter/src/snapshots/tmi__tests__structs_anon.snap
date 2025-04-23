@@ -5,10 +5,20 @@ info:
   args:
     - "../examples/structs_anon.tm"
     - "9"
+  env:
+    TRANSMUTE_STDLIB_PATH: /Users/cpollet/Development/transmute/target/debug/transmute-stdlib
 ---
 success: true
 exit_code: 0
 ----- stdout -----
+Parse core
+Parse file      /Users/cpollet/Development/transmute/target/debug/transmute-stdlib/src/stdlib.tm
+Parse internal  
+Parse file      /Users/cpollet/Development/transmute/target/debug/transmute-stdlib/src/stdlib/str.tm
+Parse file      /Users/cpollet/Development/transmute/target/debug/transmute-stdlib/src/stdlib/numbers.tm
+Parse file      /Users/cpollet/Development/transmute/target/debug/transmute-stdlib/src/stdlib/list.tm
+Parse file      /Users/cpollet/Development/transmute/target/debug/transmute-stdlib/src/stdlib/env.tm
+Parse file      /Users/cpollet/Development/transmute/target/debug/transmute-stdlib/src/stdlib/booleans.tm
 18
 
 ----- stderr -----

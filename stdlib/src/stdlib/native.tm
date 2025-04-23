@@ -1,3 +1,0 @@
-
-#-- native.tm --------------------
-annotation native;

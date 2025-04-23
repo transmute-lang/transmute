@@ -1,0 +1,77 @@
+---
+source: ast/src/parser.rs
+expression: compilation_unit.into_ast()
+---
+Ok(
+    Ast {
+        identifiers: [
+            IdentId(0) => "<root>",
+            IdentId(1) => "ns",
+            IdentId(2) => "f",
+        ],
+        identifier_refs: [],
+        expressions: [
+            ExprId(0) => Expression {
+                id: ExprId(0),
+                kind: Block(
+                    [],
+                ),
+                span: 1:24; [23, 25],
+            },
+        ],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(2),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(2),
+                        span: 1:20; [19, 20],
+                    },
+                    [],
+                    [],
+                    Return {
+                        type_def_id: None,
+                    },
+                    ExprId(0),
+                ),
+                span: 1:16; [15, 25],
+            },
+            StmtId(2) => Statement {
+                id: StmtId(2),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(1),
+                        span: 1:11; [10, 12],
+                    },
+                    Some(
+                        StmtId(0),
+                    ),
+                    InputId(0),
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 1:27; [26, 27],
+            },
+        ],
+        type_defs: [],
+        roots: [
+            StmtId(0),
+        ],
+    },
+)

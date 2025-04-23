@@ -10,7 +10,7 @@ use transmute_ast::statement::Statement as AstStatement;
 use transmute_ast::statement::StatementKind as AstStatementKind;
 use transmute_ast::statement::TypeDef as AstTypeDef;
 use transmute_ast::statement::TypeDefKind as AstTypeDefKind;
-use transmute_core::ids::{ExprId, IdentRefId, StmtId, SymbolId, TypeDefId, TypeId};
+use transmute_core::ids::{ExprId, IdentRefId, InputId, StmtId, SymbolId, TypeDefId, TypeId};
 use transmute_core::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -78,6 +78,14 @@ impl From<AstStatement> for Statement<Untyped, Unbound> {
                 AstStatementKind::Annotation(identifier) => {
                     StatementKind::Annotation(Identifier::from(identifier))
                 }
+                AstStatementKind::Namespace(identifier, parent, input_id, statements) => {
+                    StatementKind::Namespace(
+                        Identifier::from(identifier),
+                        parent,
+                        input_id,
+                        statements,
+                    )
+                }
             },
         }
     }
@@ -105,6 +113,16 @@ where
         Implementation<Vec<Field<T, B>>>,
     ),
     Annotation(Identifier<B>),
+    Namespace(
+        /// Namespace identifier
+        Identifier<B>,
+        /// Statement ID of the parent namespace definition. `None` the namespace is the root one
+        Option<StmtId>,
+        /// `InputId` this namespace is coming from
+        InputId,
+        /// Statements included in this namespace
+        Vec<StmtId>,
+    ),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -151,15 +169,15 @@ pub struct TypeDef {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeDefKind {
-    Simple(IdentRefId),
+    Simple(Vec<IdentRefId>),
     Array(TypeDefId, usize),
 }
 
 impl From<AstTypeDef> for TypeDef {
     fn from(value: AstTypeDef) -> Self {
         match value.kind {
-            AstTypeDefKind::Simple(ident_ref_id) => TypeDef {
-                kind: TypeDefKind::Simple(ident_ref_id),
+            AstTypeDefKind::Simple(ident_ref_ids) => TypeDef {
+                kind: TypeDefKind::Simple(ident_ref_ids),
                 span: value.span,
             },
             AstTypeDefKind::Array(type_def_id, len) => TypeDef {
@@ -173,14 +191,14 @@ impl From<AstTypeDef> for TypeDef {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Annotation {
-    pub ident_ref_id: IdentRefId,
+    pub ident_ref_ids: Vec<IdentRefId>,
     pub span: Span,
 }
 
 impl From<AstAnnotation> for Annotation {
     fn from(value: AstAnnotation) -> Self {
         Annotation {
-            ident_ref_id: value.ident_ref_id,
+            ident_ref_ids: value.ident_ref_ids,
             span: value.span,
         }
     }

@@ -31,26 +31,37 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
     }
 
     pub fn start(&mut self) {
-        let expr_id = self
-            .hir
-            .roots
-            .iter()
-            .filter_map(|stmt_id| {
-                if let StatementKind::LetFn(ident, _, _, _, implementation) =
-                    &self.hir.statements[*stmt_id].kind
-                {
-                    if &self.hir.identifiers[ident.id] == "main" {
-                        return Some(*implementation);
-                    }
-                }
-                None
-            })
-            .filter_map(|implementation| match implementation {
-                Implementation::Provided(expr_id) => Some(expr_id),
-                _ => None,
-            })
-            .next()
-            .expect("main function exists");
+        // todo:refactor DISGUSTING
+        let expr_id = match &self.hir.statements[self.hir.roots[0]].kind {
+            StatementKind::Namespace(ident, _, _, _) => {
+                let symbols = self.hir.symbols[ident.resolved_symbol_id()]
+                    .as_namespace()
+                    .1;
+                symbols
+                    .keys()
+                    .filter(|&ident_id| &self.hir.identifiers[*ident_id] == "main")
+                    .find_map(|ident_id| {
+                        let main_symbol_id = symbols.get(ident_id).unwrap()[0];
+                        match &self.hir.symbols[main_symbol_id].kind {
+                            SymbolKind::LetFn(_, stmt_id, _, _) => {
+                                match &self.hir.statements[*stmt_id].kind {
+                                    StatementKind::LetFn(
+                                        _,
+                                        _,
+                                        _,
+                                        _,
+                                        Implementation::Provided(main_expr_id),
+                                    ) => Some(*main_expr_id),
+                                    _ => None,
+                                }
+                            }
+                            _ => None,
+                        }
+                    })
+            }
+            _ => None,
+        }
+        .expect("main function exists");
 
         let val = match &self.hir.expressions[expr_id].kind {
             ExpressionKind::Block(stmts) => {
@@ -125,6 +136,7 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
             }
             StatementKind::Struct(_, _, _) => Val::none(),
             StatementKind::Annotation(_) => Val::none(),
+            StatementKind::Namespace(_, _, _, _) => Val::none(),
         }
     }
 
@@ -295,6 +307,7 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
                 LiteralKind::Identifier(ident) => *ident,
                 _ => panic!("Literal(IdentRefId) expected, got {expression:?}"),
             },
+            ExpressionKind::Access(_, ident_ref_id) => *ident_ref_id,
             _ => panic!("Literal(Literal) expected, got {expression:?}"),
         };
 
@@ -572,6 +585,8 @@ mod tests {
     use crate::interpreter::Interpreter;
     use transmute_ast::lexer::Lexer;
     use transmute_ast::parser::Parser;
+    use transmute_ast::CompilationUnit;
+    use transmute_core::ids::InputId;
     use transmute_hir::natives::Natives;
     use transmute_hir::UnresolvedHir;
 
@@ -579,7 +594,15 @@ mod tests {
         ($name:ident, $src:expr => $value:expr) => {
             #[test]
             fn $name() {
-                let hir = UnresolvedHir::from(Parser::new(Lexer::new($src)).parse().unwrap())
+                let mut compilation_unit = CompilationUnit::default();
+                Parser::new(
+                    &mut compilation_unit,
+                    None,
+                    Lexer::new(InputId::from(0), &format!("{}\nnamespace core {{}}", $src)),
+                )
+                .parse();
+
+                let hir = UnresolvedHir::from(compilation_unit.into_ast().unwrap())
                     .resolve(Natives::default())
                     .unwrap();
                 let context = crate::natives::InterpreterNatives::new(&[]);

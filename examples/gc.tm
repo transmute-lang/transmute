@@ -9,7 +9,7 @@ struct Rect {
 }
 
 let main() {
-    let n = number_parse(list_get(args(), 1));
+    let n = std.numbers.number_parse(std.list.list_get(std.env.args(), 1));
 
     let origin = origin();
 
@@ -57,7 +57,7 @@ let main() {
     # trigger gc
     let a = 0;
 
-    print(a1 + a2);
+    std.numbers.print(a1 + a2);
 }
 
 let origin(): Point {

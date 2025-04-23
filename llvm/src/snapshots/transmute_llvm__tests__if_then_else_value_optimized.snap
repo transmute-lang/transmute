@@ -25,11 +25,11 @@ entry:
   unreachable
 }
 
-define i1 @_TM0_1f2nb(i64 %"n#param#sym18#", i1 %"c#param#sym19#") gc "shadow-stack" {
+define i1 @_TM0_1f2nb(i64 %"n#param#sym20#", i1 %"c#param#sym21#") gc "shadow-stack" {
 entry:
-  %"sub#" = add i64 %"n#param#sym18#", -1
-  %"add#" = add i64 %"n#param#sym18#", 1
-  %if_result = select i1 %"c#param#sym19#", i64 %"sub#", i64 %"add#"
+  %"sub#" = add i64 %"n#param#sym20#", -1
+  %"add#" = add i64 %"n#param#sym20#", 1
+  %if_result = select i1 %"c#param#sym21#", i64 %"sub#", i64 %"add#"
   call void @gc_run()
   %"eq#" = icmp eq i64 %if_result, 42
   ret i1 %"eq#"

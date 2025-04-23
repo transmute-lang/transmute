@@ -4,7 +4,7 @@ struct Point {
 }
 
 let main() {
-    let n = number_parse(list_get(args(), 1));
+    let n = std.numbers.number_parse(std.list.list_get(std.env.args(), 1));
 
     let origin = origin();
 
@@ -13,7 +13,7 @@ let main() {
         y: n,
     });
 
-    print(a);
+    std.numbers.print(a);
 }
 
 let origin(): Point {

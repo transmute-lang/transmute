@@ -8,15 +8,14 @@ use crate::operators::{
     BinaryOperator, BinaryOperatorKind, Precedence, UnaryOperator, UnaryOperatorKind,
 };
 use crate::statement::{Field, Parameter, RetMode, Return, StatementKind, TypeDef, TypeDefKind};
-use crate::Ast;
+use crate::CompilationUnit;
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
-use transmute_core::error::Diagnostics;
+use std::collections::HashSet;
 #[cfg(all(not(test), not(feature = "allow-any-root-kind")))]
 use transmute_core::error::{Diagnostic, Level};
 use transmute_core::ids::{id, ExprId, IdentId, IdentRefId, StmtId, TypeDefId};
 use transmute_core::span::Span;
-use transmute_core::vec_map::VecMap;
+
 // todo:ux review how diagnostics work. some ideas:
 //   - keep tokens in a list to reports the missing token, together with what token it is supposed
 //     to close, even when other tokens can be expected. eg.: for `[a;` we can expect either `1`,
@@ -27,14 +26,10 @@ use transmute_core::vec_map::VecMap;
 type Expression = crate::expression::Expression;
 type Statement = crate::statement::Statement;
 
-pub struct Parser<'s> {
+pub struct Parser<'s, 'c> {
     lexer: PeekableLexer<'s>,
-    identifiers: HashMap<String, IdentId>,
-    identifier_refs: VecMap<IdentRefId, IdentifierRef>,
-    expressions: Vec<Expression>,
-    statements: VecMap<StmtId, Statement>,
-    type_defs: VecMap<TypeDefId, TypeDef>,
-    diagnostics: Diagnostics,
+    compilation_unit: &'c mut CompilationUnit,
+    parent_namespace: StmtId,
     potential_tokens: HashSet<ExpectedToken>,
     eof: bool,
 }
@@ -91,7 +86,7 @@ macro_rules! report_unexpected_token {
             } else {
                 $token.kind.to_string()
             };
-            $self.diagnostics.report_err(
+            $self.compilation_unit.diagnostics.report_err(
                 format!(
                     "Unexpected {}, expected one of ({}) {}",
                     token_desc,
@@ -133,7 +128,7 @@ macro_rules! report_missing_token_and_push_back {
             } else {
                 $token.kind.to_string()
             };
-            $self.diagnostics.report_err(
+            $self.compilation_unit.diagnostics.report_err(
                 format!(
                     "Unexpected {}, expected one of ({}) {}",
                     token_desc,
@@ -158,7 +153,7 @@ macro_rules! report_missing_token_and_push_back {
     };
     ($self:ident, $token:ident, $expected:expr) => {
         if !$self.eof {
-            $self.diagnostics.report_err(
+            $self.compilation_unit.diagnostics.report_err(
                 format!(
                     "Expected {}, got {}",
                     $expected.description(),
@@ -183,7 +178,7 @@ macro_rules! report_missing_token_and_push_back {
 macro_rules! report_missing_closing_token {
     ($self:ident, $token:ident, $expected:expr, $open_token:expr, $open_span:expr) => {
         if !$self.eof {
-            $self.diagnostics.report_err(
+            $self.compilation_unit.diagnostics.report_err(
                 format!(
                     "Expected {} to close {} at {}:{}, got {}",
                     $expected.description(),
@@ -205,42 +200,53 @@ macro_rules! report_missing_closing_token {
     };
 }
 
-impl<'s> Parser<'s> {
-    pub fn new(lexer: Lexer<'s>) -> Self {
+impl<'s, 'c> Parser<'s, 'c> {
+    pub fn new(
+        compilation_unit: &'c mut CompilationUnit,
+        parent_namespace: Option<StmtId>,
+        lexer: Lexer<'s>,
+    ) -> Self {
         Self {
             lexer: PeekableLexer::new(lexer, 1),
-            identifiers: Default::default(),
-            identifier_refs: Default::default(),
-            expressions: Default::default(),
-            statements: Default::default(),
-            type_defs: Default::default(),
-            diagnostics: Default::default(),
+            parent_namespace: parent_namespace.unwrap_or_else(|| compilation_unit.root_namespace()),
+            compilation_unit,
             potential_tokens: Default::default(),
             eof: false,
         }
     }
 
-    pub fn parse(mut self) -> Result<Ast, Diagnostics> {
-        let mut statements = Vec::new();
+    pub fn parse(mut self) {
+        let (namespace, mut statements) = self
+            .compilation_unit
+            .statements
+            .remove(self.parent_namespace)
+            .map(|stmt| match stmt.kind {
+                StatementKind::Namespace(identifier, parent, input, statements) => {
+                    ((stmt.id, stmt.span, identifier, parent, input), statements)
+                }
+                _ => panic!("Namespace expected, got {stmt:?}"),
+            })
+            .expect("Parent namespace exists");
 
         while let Some(statement) = self.parse_statement() {
             match &statement.kind {
                 StatementKind::LetFn(_, _, _, _, _)
                 | StatementKind::Struct(_, _, _)
-                | StatementKind::Annotation(_) => statements.push(statement.id),
+                | StatementKind::Annotation(_)
+                | StatementKind::Namespace(_, _, _, _) => statements.push(statement.id),
                 StatementKind::Expression(_)
                 | StatementKind::Let(_, _)
                 | StatementKind::Ret(_, _) => {
-                    // when testing we are fine with having any statement as top level... while not
-                    // perfect, this eases things a lot
+                    // when testing we are fine with having any statement as top level... while
+                    // not perfect, this eases things a lot
                     #[cfg(any(test, feature = "allow-any-root-kind"))]
                     statements.push(statement.id);
 
                     #[cfg(all(not(test), not(feature = "allow-any-root-kind")))]
                     {
                         let span = statement.span.clone();
-                        self.diagnostics.push(Diagnostic::new(
-                            "Only functions and structs are allowed at top level",
+                        self.compilation_unit.diagnostics.push(Diagnostic::new(
+                            "Only namespaces, functions and structs are allowed at top level",
                             span,
                             Level::Error,
                             (file!(), line!()),
@@ -250,32 +256,19 @@ impl<'s> Parser<'s> {
             }
         }
 
-        let mut identifiers = self
-            .identifiers
-            .into_iter()
-            .collect::<Vec<(String, IdentId)>>();
+        let (stmt_id, span, identifier, parent, input) = namespace;
+        self.compilation_unit.statements.insert(
+            stmt_id,
+            Statement {
+                id: stmt_id,
+                kind: StatementKind::Namespace(identifier, parent, input, statements),
+                span,
+            },
+        );
 
-        identifiers.sort_by(|(_, id1), (_, id2)| id1.cmp(id2));
-
-        let identifiers = identifiers
-            .into_iter()
-            .map(|(ident, _)| ident)
-            .collect::<Vec<String>>();
-
-        self.diagnostics.append(self.lexer.diagnostics());
-
-        if self.diagnostics.is_empty() {
-            Ok(Ast::new(
-                identifiers,
-                self.identifier_refs,
-                self.expressions,
-                self.statements,
-                statements,
-                self.type_defs,
-            ))
-        } else {
-            Err(self.diagnostics)
-        }
+        self.compilation_unit
+            .diagnostics
+            .append(self.lexer.diagnostics());
     }
 
     /// Parses the following:
@@ -336,7 +329,7 @@ impl<'s> Parser<'s> {
                 }
 
                 if !annotations.is_empty() {
-                    self.diagnostics.report_err(
+                    self.compilation_unit.diagnostics.report_err(
                         "Annotations not supported on non `let`-function statements",
                         annotations
                             .first()?
@@ -361,13 +354,13 @@ impl<'s> Parser<'s> {
                 let span = let_token.span.extend_to(&semicolon_span);
 
                 let id = self.push_statement(StatementKind::Let(identifier, expression), span);
-                Some(&self.statements[id])
+                Some(&self.compilation_unit.statements[id])
             }
             TokenKind::Ret => {
                 let ret_token = self.lexer.next_token();
                 self.potential_tokens.clear();
                 if !annotations.is_empty() {
-                    self.diagnostics.report_err(
+                    self.compilation_unit.diagnostics.report_err(
                         "Annotations not supported on `ret` statements",
                         annotations
                             .first()?
@@ -391,11 +384,11 @@ impl<'s> Parser<'s> {
 
                 let id =
                     self.push_statement(StatementKind::Ret(expression, RetMode::Explicit), span);
-                Some(&self.statements[id])
+                Some(&self.compilation_unit.statements[id])
             }
             TokenKind::If | TokenKind::While => {
                 if !annotations.is_empty() {
-                    self.diagnostics.report_err(
+                    self.compilation_unit.diagnostics.report_err(
                         "Annotations not supported on expressions",
                         annotations
                             .first()?
@@ -414,7 +407,7 @@ impl<'s> Parser<'s> {
                     self.parse_semicolon();
                 }
 
-                Some(&self.statements[id])
+                Some(&self.compilation_unit.statements[id])
             }
             TokenKind::False
             | TokenKind::Identifier
@@ -425,7 +418,7 @@ impl<'s> Parser<'s> {
             | TokenKind::OpenBracket
             | TokenKind::True => {
                 if !annotations.is_empty() {
-                    self.diagnostics.report_err(
+                    self.compilation_unit.diagnostics.report_err(
                         "Annotations not supported on expressions",
                         annotations
                             .first()?
@@ -443,15 +436,16 @@ impl<'s> Parser<'s> {
                 let span = span.extend_to(&semicolon_span);
 
                 let id = self.push_statement(StatementKind::Expression(expression), span);
-                Some(&self.statements[id])
+                Some(&self.compilation_unit.statements[id])
             }
             TokenKind::Struct => self.parse_struct(annotations),
             TokenKind::Annotation => {
+                // todo:feature remove the possibility to define annotations inside functions
                 let annotation_token = self.lexer.next_token();
                 self.potential_tokens.clear();
 
                 if !annotations.is_empty() {
-                    self.diagnostics.report_err(
+                    self.compilation_unit.diagnostics.report_err(
                         "Annotations not supported on annotations",
                         annotations
                             .first()?
@@ -483,7 +477,72 @@ impl<'s> Parser<'s> {
                 let span = annotation_token.span.extend_to(&semicolon_span);
 
                 let id = self.push_statement(StatementKind::Annotation(identifier), span);
-                Some(&self.statements[id])
+                Some(&self.compilation_unit.statements[id])
+            }
+            TokenKind::Namespace => {
+                // todo:feature remove the possibility to define namespaces inside functions
+                let mod_token = self.lexer.next_token();
+                self.potential_tokens.clear();
+
+                let identifier_token = self.lexer.next_token();
+                let identifier = match &identifier_token.kind {
+                    TokenKind::Identifier => Identifier::new(
+                        self.push_identifier(&identifier_token.span),
+                        identifier_token.span.clone(),
+                    ),
+                    _ => {
+                        report_unexpected_token!(
+                            self,
+                            identifier_token,
+                            [expected_token!(TokenKind::Identifier),]
+                        );
+                        self.take_until_one_of(vec![TokenKind::Semicolon]);
+                        return None;
+                    }
+                };
+
+                let next = self.lexer.next_token();
+                let (span, statements, from_file) = match next.kind {
+                    TokenKind::OpenCurlyBracket => {
+                        let (statements, span) = self.parse_statements(&next.span);
+                        // parse_statements consumes the closing bracket
+                        (span, statements, false)
+                    }
+                    TokenKind::Semicolon => {
+                        (mod_token.span.extend_to(&next.span), Vec::new(), true)
+                    }
+                    _ => {
+                        report_unexpected_token!(
+                            self,
+                            next,
+                            [
+                                expected_token!(TokenKind::Semicolon),
+                                expected_token!(TokenKind::OpenCurlyBracket),
+                            ]
+                        );
+                        self.take_until_one_of(vec![
+                            TokenKind::Semicolon,
+                            TokenKind::CloseCurlyBracket,
+                        ]);
+                        return None;
+                    }
+                };
+
+                let id = self.push_statement(
+                    StatementKind::Namespace(
+                        identifier,
+                        Some(self.parent_namespace),
+                        self.lexer.input_id(),
+                        statements,
+                    ),
+                    span,
+                );
+
+                if from_file {
+                    self.compilation_unit.namespaces.push(id);
+                }
+
+                Some(&self.compilation_unit.statements[id])
             }
             _ => {
                 let token = self.lexer.next_token();
@@ -519,28 +578,41 @@ impl<'s> Parser<'s> {
         if matches!(self.lexer.peek().kind, TokenKind::At) {
             let at_token = self.lexer.next_token();
 
-            let identifier_token = self.lexer.next_token();
-            let identifier = match &identifier_token.kind {
-                TokenKind::Identifier => Identifier::new(
-                    self.push_identifier(&identifier_token.span),
-                    identifier_token.span.clone(),
-                ),
-                _ => {
-                    report_unexpected_token!(
-                        self,
-                        identifier_token,
-                        [expected_token!(TokenKind::Identifier),]
-                    );
-                    self.lexer.push_next(identifier_token);
-                    return None;
-                }
-            };
+            let mut fq_identifier = Vec::new();
+            loop {
+                let identifier_token = self.lexer.next_token();
+                let identifier = match &identifier_token.kind {
+                    TokenKind::Identifier => Identifier::new(
+                        self.push_identifier(&identifier_token.span),
+                        identifier_token.span.clone(),
+                    ),
+                    _ => {
+                        report_unexpected_token!(
+                            self,
+                            identifier_token,
+                            [expected_token!(TokenKind::Identifier),]
+                        );
+                        self.lexer.push_next(identifier_token);
+                        return None;
+                    }
+                };
+                fq_identifier.push(identifier);
 
-            let span = at_token.span.extend_to(&identifier.span);
-            let ident_ref = self.push_identifier_ref(identifier);
+                if !matches!(self.lexer.peek().kind, TokenKind::Dot) {
+                    break;
+                }
+                // consume the `.`
+                self.lexer.next_token();
+            }
+
+            let span = at_token.span.extend_to(&fq_identifier.last().unwrap().span);
+            let ident_ref_ids = fq_identifier
+                .into_iter()
+                .map(|identifier| self.push_identifier_ref(identifier))
+                .collect::<Vec<_>>();
 
             return Some(Annotation {
-                ident_ref_id: ident_ref,
+                ident_ref_ids,
                 span,
             });
         }
@@ -595,7 +667,9 @@ impl<'s> Parser<'s> {
                         self.parse_type(true)
                     };
 
-                    let parameter_span = ident.span.extend_to(&self.type_defs[type_def_id].span);
+                    let parameter_span = ident
+                        .span
+                        .extend_to(&self.compilation_unit.type_defs[type_def_id].span);
 
                     parameters.push(Parameter::new(ident, type_def_id, parameter_span));
 
@@ -694,24 +768,56 @@ impl<'s> Parser<'s> {
             span.extend_to(&end_span),
         );
 
-        Some(&self.statements[stmt_id])
+        Some(&self.compilation_unit.statements[stmt_id])
     }
 
     fn parse_type(&mut self, mut report_err: bool) -> TypeDefId {
         let token = self.lexer.next_token();
         match &token.kind {
             TokenKind::Identifier => {
-                let identifier =
-                    Identifier::new(self.push_identifier(&token.span), token.span.clone());
-                let identifier_span = identifier.span.clone();
-                let ident_ref_id = self.push_identifier_ref(identifier);
+                let mut token = token;
+                let mut fq_identifier = Vec::new();
+                loop {
+                    let identifier = match &token.kind {
+                        TokenKind::Identifier => {
+                            Identifier::new(self.push_identifier(&token.span), token.span.clone())
+                        }
+                        _ => {
+                            report_unexpected_token!(
+                                self,
+                                token,
+                                [expected_token!(TokenKind::Identifier),]
+                            );
+                            self.lexer.push_next(token);
+                            break;
+                        }
+                    };
+                    fq_identifier.push(identifier);
 
-                let type_def_id = self.type_defs.create();
-                self.type_defs.insert(
+                    if !matches!(self.lexer.peek().kind, TokenKind::Dot) {
+                        break;
+                    }
+                    // consume the `.`
+                    self.lexer.next_token();
+                    token = self.lexer.next_token();
+                }
+
+                let span = fq_identifier
+                    .first()
+                    .unwrap()
+                    .span
+                    .extend_to(&fq_identifier.last().unwrap().span);
+                let ident_ref_ids = fq_identifier
+                    .into_iter()
+                    .map(|identifier| self.push_identifier_ref(identifier))
+                    .collect::<Vec<_>>();
+
+                let type_def_id = self.compilation_unit.type_defs.create();
+                self.compilation_unit.type_defs.insert(
                     type_def_id,
                     TypeDef {
-                        kind: TypeDefKind::Simple(ident_ref_id),
-                        span: identifier_span,
+                        kind: TypeDefKind::Simple(ident_ref_ids),
+                        span,
                     },
                 );
 
@@ -765,8 +871,8 @@ impl<'s> Parser<'s> {
                         TokenKind::CloseParenthesis,
                     ]);
 
-                    let type_def_id = self.type_defs.create();
-                    self.type_defs.insert(
+                    let type_def_id = self.compilation_unit.type_defs.create();
+                    self.compilation_unit.type_defs.insert(
                         type_def_id,
                         TypeDef {
                             kind: TypeDefKind::Dummy,
@@ -776,8 +882,8 @@ impl<'s> Parser<'s> {
                     return type_def_id;
                 }
 
-                let type_def_id = self.type_defs.create();
-                self.type_defs.insert(
+                let type_def_id = self.compilation_unit.type_defs.create();
+                self.compilation_unit.type_defs.insert(
                     type_def_id,
                     TypeDef {
                         kind: type_def_kind,
@@ -798,14 +904,20 @@ impl<'s> Parser<'s> {
                     );
                 }
 
-                self.type_defs.push(TypeDef {
+                self.compilation_unit.type_defs.push(TypeDef {
                     kind: TypeDefKind::Dummy,
-                    span: Span::new(token.span.line, token.span.column, token.span.start, 0),
+                    span: Span::new(
+                        self.lexer.input_id(),
+                        token.span.line,
+                        token.span.column,
+                        token.span.start,
+                        0,
+                    ),
                 });
 
                 self.lexer.push_next(token);
 
-                TypeDefId::from(self.type_defs.len() - 1)
+                TypeDefId::from(self.compilation_unit.type_defs.len() - 1)
             }
         }
     }
@@ -932,7 +1044,9 @@ impl<'s> Parser<'s> {
                     // struct ident { ... , ident : 'ident , ... }
 
                     let type_def_id = self.parse_type(true);
-                    let field_span = ident.span.extend_to(&self.type_defs[type_def_id].span);
+                    let field_span = ident
+                        .span
+                        .extend_to(&self.compilation_unit.type_defs[type_def_id].span);
 
                     fields.push(Field::new(ident, type_def_id, field_span));
 
@@ -998,7 +1112,7 @@ impl<'s> Parser<'s> {
             StatementKind::Struct(identifier, annotations, fields),
             token_struct.span.extend_to(&last_token.span),
         );
-        Some(&self.statements[stmt_id])
+        Some(&self.compilation_unit.statements[stmt_id])
     }
 
     /// Parses the following:
@@ -1140,7 +1254,7 @@ impl<'s> Parser<'s> {
 
                 // we need to alter the expression's span to account for open and close
                 // parenthesis
-                let expression = &mut self.expressions[id!(expr_id)];
+                let expression = &mut self.compilation_unit.expressions[id!(expr_id)];
                 expression.span = open_loc.extend_to(&expression.span).extend_to(span);
                 expression.id
             }
@@ -1184,8 +1298,13 @@ impl<'s> Parser<'s> {
                     | TokenKind::SmallerEqual
                     | TokenKind::Star => {
                         // insert a dummy expression
-                        let span =
-                            Span::new(token.span.line, token.span.column, token.span.start, 0);
+                        let span = Span::new(
+                            self.lexer.input_id(),
+                            token.span.line,
+                            token.span.column,
+                            token.span.start,
+                            0,
+                        );
                         // let's keep parsing with the token that becomes legit thanks to the
                         // insertion of the dummy expression
                         self.lexer.push_next(token);
@@ -1222,7 +1341,9 @@ impl<'s> Parser<'s> {
                             );
                             let identifier_ref = self.push_identifier_ref(identifier);
 
-                            let span = self.expressions[id!(expr_id)].span.extend_to(&token.span);
+                            let span = self.compilation_unit.expressions[id!(expr_id)]
+                                .span
+                                .extend_to(&token.span);
 
                             expr_id = self.push_expression(
                                 ExpressionKind::Access(expr_id, identifier_ref),
@@ -1293,12 +1414,14 @@ impl<'s> Parser<'s> {
             }
         }
 
+        // x.y.z[a][b].a[1].b
+
         let mut need_semi = false;
 
         if allow_assignment {
             if self.lexer.peek().kind == TokenKind::Equal {
                 // ... '= ...
-                let lhs = self.expressions.pop().unwrap();
+                let lhs = self.compilation_unit.expressions.pop().unwrap();
                 match &lhs.kind {
                     ExpressionKind::Literal(literal) => match &literal.kind {
                         LiteralKind::Identifier(ident_ref_id) => {
@@ -1319,7 +1442,7 @@ impl<'s> Parser<'s> {
                         _ => {
                             self.potential_tokens
                                 .insert(expected_token!(TokenKind::Identifier));
-                            self.expressions.push(lhs);
+                            self.compilation_unit.expressions.push(lhs);
                         }
                     },
                     ExpressionKind::Access(_, _) | ExpressionKind::ArrayAccess(_, _) => {
@@ -1330,7 +1453,7 @@ impl<'s> Parser<'s> {
                         let lhs_id = lhs.id;
                         let lhs_span = lhs.span.clone();
 
-                        self.expressions.push(lhs);
+                        self.compilation_unit.expressions.push(lhs);
 
                         let rhs = self.parse_expression(allow_struct, allow_assignment).0;
                         let span = lhs_span.extend_to(&rhs.span);
@@ -1342,7 +1465,7 @@ impl<'s> Parser<'s> {
                         );
                     }
                     _ => {
-                        self.expressions.push(lhs);
+                        self.compilation_unit.expressions.push(lhs);
                     }
                 }
             } else {
@@ -1358,7 +1481,7 @@ impl<'s> Parser<'s> {
                 .id;
         }
 
-        (&self.expressions[id!(expr_id)], need_semi)
+        (&self.compilation_unit.expressions[id!(expr_id)], need_semi)
     }
 
     fn parse_array_instantiation(&mut self, start_span: Span) -> ExprId {
@@ -1492,7 +1615,7 @@ impl<'s> Parser<'s> {
         allow_struct: bool,
         allow_assignment: bool,
     ) -> &Expression {
-        let left_span = self.expressions[id!(left)].span.clone();
+        let left_span = self.compilation_unit.expressions[id!(left)].span.clone();
 
         let right = self
             .parse_expression_with_precedence(
@@ -1507,7 +1630,7 @@ impl<'s> Parser<'s> {
         let id = right.id;
         let id = self.push_expression(ExpressionKind::Binary(left, operator, id), span);
 
-        &self.expressions[id!(id)]
+        &self.compilation_unit.expressions[id!(id)]
     }
 
     /// Parses the following (the `if` keyword is already consumed):
@@ -1602,7 +1725,7 @@ impl<'s> Parser<'s> {
             full_span,
         );
 
-        &self.expressions[id!(id)]
+        &self.compilation_unit.expressions[id!(id)]
     }
 
     fn parse_while_expression(&mut self, span: Span) -> &Expression {
@@ -1632,7 +1755,7 @@ impl<'s> Parser<'s> {
             span.extend_to(&statements_span),
         );
 
-        &self.expressions[id!(id)]
+        &self.compilation_unit.expressions[id!(id)]
     }
 
     /// Parses the following:
@@ -1647,12 +1770,14 @@ impl<'s> Parser<'s> {
         assert_eq!(&open_parenthesis_token.kind, &TokenKind::OpenParenthesis);
 
         let (arguments, span) = self.parse_arguments(0, TokenKind::CloseParenthesis);
-        let span = self.expressions[id!(expr_id)].span.extend_to(&span);
+        let span = self.compilation_unit.expressions[id!(expr_id)]
+            .span
+            .extend_to(&span);
 
         // identifier ( expr , ... ) '
         let id = self.push_expression(ExpressionKind::FunctionCall(expr_id, arguments), span);
 
-        &self.expressions[id!(id)]
+        &self.compilation_unit.expressions[id!(id)]
     }
 
     fn parse_arguments(
@@ -2000,31 +2125,38 @@ impl<'s> Parser<'s> {
 
     fn push_identifier(&mut self, span: &Span) -> IdentId {
         let ident = self.lexer.span(span);
-        if let Some(id) = self.identifiers.get(ident) {
+        if let Some(id) = self.compilation_unit.identifiers.get_by_left(ident) {
             *id
         } else {
-            let id = IdentId::from(self.identifiers.len());
-            self.identifiers.insert(ident.to_string(), id);
+            let id = IdentId::from(self.compilation_unit.identifiers.len());
+            self.compilation_unit
+                .identifiers
+                .insert(ident.to_string(), id);
             id
         }
     }
 
     fn push_identifier_ref(&mut self, ident: Identifier) -> IdentRefId {
-        let id = self.identifier_refs.create();
-        self.identifier_refs
+        let id = self.compilation_unit.identifier_refs.create();
+        self.compilation_unit
+            .identifier_refs
             .insert(id, IdentifierRef::new(id, ident));
         id
     }
 
     fn push_expression(&mut self, kind: ExpressionKind, span: Span) -> ExprId {
-        let id = ExprId::from(self.expressions.len());
-        self.expressions.push(Expression::new(id, kind, span));
+        let id = ExprId::from(self.compilation_unit.expressions.len());
+        self.compilation_unit
+            .expressions
+            .push(Expression::new(id, kind, span));
         id
     }
 
     fn push_statement(&mut self, kind: StatementKind, span: Span) -> StmtId {
-        let id = self.statements.create();
-        self.statements.insert(id, Statement::new(id, kind, span));
+        let id = self.compilation_unit.statements.create();
+        self.compilation_unit
+            .statements
+            .insert(id, Statement::new(id, kind, span));
         id
     }
 
@@ -2057,12 +2189,20 @@ impl<'s> Parser<'s> {
 mod tests {
     use super::*;
     use insta::assert_debug_snapshot;
+    use transmute_core::ids::InputId;
 
     macro_rules! test_syntax {
         ($name:ident => $src:expr) => {
             #[test]
             fn $name() {
-                assert_debug_snapshot!(Parser::new(Lexer::new($src)).parse());
+                let mut compilation_unit: CompilationUnit = Default::default();
+                Parser::new(
+                    &mut compilation_unit,
+                    None,
+                    Lexer::new(InputId::from(0), $src),
+                )
+                .parse();
+                assert_debug_snapshot!(compilation_unit.into_ast());
             }
         };
     }
@@ -2087,6 +2227,7 @@ mod tests {
     test_syntax!(function_statements => "let times_two(a: number) = { a * 2; }");
     test_syntax!(function_statements_without_equal => "let times_two(a: number) { a * 2; }");
     test_syntax!(function_call => "times_two(21);");
+    test_syntax!(function_call_in_deep_nested_namespace => "ns1.ns2.times_two(21);");
     test_syntax!(ret => "ret 42;");
     test_syntax!(ret_void => "ret;");
     test_syntax!(ret_missing_next_token => "ret");
@@ -2206,6 +2347,7 @@ mod tests {
     test_syntax!(annotation_on_fn => "@a let f() {}");
     test_syntax!(annotations_on_fn => "@a1 @a2 let f() {}");
     test_syntax!(annotation_on_struct => "@a struct S {}");
+    test_syntax!(annotation_in_deep_namespace_on_fn => "@namespace1.namespace2.a struct S {}");
     test_syntax!(err_annotations_on_let => "let f() { @a1 @a2 let a = 1; }");
     test_syntax!(err_annotations_on_ret => "let f() { @a1 @a2 ret 1; }");
     test_syntax!(err_annotations_on_if => "let f() { @a1 if true {} }");
@@ -2216,4 +2358,23 @@ mod tests {
     test_syntax!(err_define_annotation_with_at => "annotation @a;");
     test_syntax!(err_define_annotation_missing_name => "annotation ;");
     test_syntax!(err_define_annotation_missing_semi => "annotation a");
+    test_syntax!(define_namespace => "namespace ns;");
+    test_syntax!(define_namespace_inline => "namespace ns {}");
+    test_syntax!(define_namespace_inline_with_content => "namespace ns { let f() {} }");
+    test_syntax!(define_namespace_inline_with_content_and_nested_function => r#"
+        namespace root {
+            let f() {}
+            namespace ns1 {
+                namespace ns2 {
+                    let g() {}
+                }
+                let h() {
+                    let i() {}
+                }
+            }
+        }
+    "#);
+    test_syntax!(err_define_namespace_no_semi_no_open_curlybracket => "namespace ns invalid");
+    test_syntax!(err_define_namespace_no_close_curlybracket => "namespace ns {");
+    test_syntax!(nested_type => "let c(): ns1.ns2.type {}");
 }

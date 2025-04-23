@@ -10,6 +10,7 @@ pub fn mangle_function_name(
     parameters: &[TypeId],
     parent: Option<FunctionId>,
 ) -> String {
+    // fixme add support for namespaces
     mangle_function_name_internal(mir, ident_id, parameters, parent, 0)
 }
 

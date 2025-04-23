@@ -1,0 +1,81 @@
+---
+source: ast/src/parser.rs
+expression: compilation_unit.into_ast()
+---
+Ok(
+    Ast {
+        identifiers: [
+            IdentId(0) => "<root>",
+            IdentId(1) => "namespace1",
+            IdentId(2) => "namespace2",
+            IdentId(3) => "a",
+            IdentId(4) => "S",
+        ],
+        identifier_refs: [
+            IdentRefId(0) => IdentifierRef {
+                id: IdentRefId(0),
+                ident: Identifier {
+                    id: IdentId(1),
+                    span: 1:2; [1, 11],
+                },
+            },
+            IdentRefId(1) => IdentifierRef {
+                id: IdentRefId(1),
+                ident: Identifier {
+                    id: IdentId(2),
+                    span: 1:13; [12, 22],
+                },
+            },
+            IdentRefId(2) => IdentifierRef {
+                id: IdentRefId(2),
+                ident: Identifier {
+                    id: IdentId(3),
+                    span: 1:24; [23, 24],
+                },
+            },
+        ],
+        expressions: [],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: Struct(
+                    Identifier {
+                        id: IdentId(4),
+                        span: 1:33; [32, 33],
+                    },
+                    [
+                        Annotation {
+                            ident_ref_ids: [
+                                IdentRefId(0),
+                                IdentRefId(1),
+                                IdentRefId(2),
+                            ],
+                            span: 1:1; [0, 24],
+                        },
+                    ],
+                    [],
+                ),
+                span: 1:26; [25, 36],
+            },
+        ],
+        type_defs: [],
+        roots: [
+            StmtId(0),
+        ],
+    },
+)

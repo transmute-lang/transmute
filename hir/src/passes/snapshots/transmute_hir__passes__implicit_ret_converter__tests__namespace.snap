@@ -1,0 +1,9 @@
+---
+source: hir/src/passes/implicit_ret_converter.rs
+expression: w
+---
+namespace name {
+  let f(): number = {
+    ret 1;
+  }
+}

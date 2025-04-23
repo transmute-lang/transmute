@@ -1,6 +1,6 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser ::\nnew(Lexer :: new(\"struct S { a: number, b number, c: number }\")).parse()"
+expression: compilation_unit.into_ast()
 ---
 Err(
     Diagnostics {
@@ -11,5 +11,6 @@ Err(
                 level: Error,
             },
         ],
+        inputs: (),
     },
 )

@@ -1,7 +1,7 @@
 
 #-- list.tm --------------------
-@native
+@std.native
 struct List {}
 
-@native
-let list_get(list: List, index: number): string {}
+@std.native
+let list_get(list: List, index: number): std.str.string {}

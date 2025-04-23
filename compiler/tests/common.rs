@@ -2,7 +2,8 @@ use std::env;
 use std::path::PathBuf;
 use std::process::Command;
 use test_dir::{DirBuilder, TestDir};
-use tmc::{compile_str, Options};
+use tmc::{compile_inputs, Options};
+use transmute_core::input::Input;
 
 #[allow(unused_macros)]
 macro_rules! exec {
@@ -12,35 +13,21 @@ macro_rules! exec {
             fn [< test_ $name >]() {
                 let test_dir = test_dir::DirBuilder::create(test_dir::TestDir::temp(), ".", test_dir::FileType::Dir);
 
-                let stdlib_src = std::path::PathBuf::from(std::env::var("TRANSMUTE_STDLIB_PATH").expect("TRANSMUTE_STDLIB_PATH is not set"));
-                let stdlib_src = stdlib_src.join("src");
+                let mut stdlib_src = std::path::PathBuf::from(std::env::var("TRANSMUTE_STDLIB_PATH").expect("TRANSMUTE_STDLIB_PATH is not set"));
+                stdlib_src.push("src");
+                stdlib_src.push("stdlib.tm");
 
-                let mut source = include_str!(concat!("../../examples/", $name, ".tm")).to_string();
-                for entry in std::fs::read_dir(&stdlib_src).unwrap() {
-                    let file = entry
-                        .unwrap()
-                        .file_name()
-                        .to_str()
-                        .unwrap()
-                        .to_string();
-
-                    let src = stdlib_src.join(&file);
-                    if !src.extension().map(|ext| ext.eq("tm")).unwrap_or(false) {
-                        continue;
-                    }
-
-                    // println!("Reading {}", src.display());
-
-                    let src = std::fs::read_to_string(&src)
-                        .map_err(|e| format!("Could not read {}: {}", src.display(), e)).unwrap();
-                    source.push_str(&src);
-                }
+                let mut inputs = vec![
+                    transmute_core::input::Input::core(),
+                    transmute_core::input::Input::try_from(std::path::PathBuf::from(concat!("../examples/", $name, ".tm"))).unwrap(),
+                    transmute_core::input::Input::try_from(stdlib_src).unwrap()
+                ];
 
                 #[cfg(feature = "gc-functions")]
-                source.push_str(include_str!("../src/gc-functions.tm"));
+                inputs.push(transmute_core::input::Input::from(("gc-functions", include_str!("../src/gc-functions.tm"))));
 
                 let output = common::compile(
-                    &source,
+                    inputs,
                     &test_dir
                 )
                 .arg($arg)
@@ -67,35 +54,21 @@ macro_rules! exec_test_example {
             fn [< test_ $name >]() {
                 let test_dir = test_dir::DirBuilder::create(test_dir::TestDir::temp(), ".", test_dir::FileType::Dir);
 
-                let stdlib_src = std::path::PathBuf::from(std::env::var("TRANSMUTE_STDLIB_PATH").expect("TRANSMUTE_STDLIB_PATH is not set"));
-                let stdlib_src = stdlib_src.join("src");
+                let mut stdlib_src = std::path::PathBuf::from(std::env::var("TRANSMUTE_STDLIB_PATH").expect("TRANSMUTE_STDLIB_PATH is not set"));
+                stdlib_src.push("src");
+                stdlib_src.push("stdlib.tm");
 
-                let mut source = include_str!(concat!("examples/", $name, ".tm")).to_string();
-                for entry in std::fs::read_dir(&stdlib_src).unwrap() {
-                    let file = entry
-                        .unwrap()
-                        .file_name()
-                        .to_str()
-                        .unwrap()
-                        .to_string();
-
-                    let src = stdlib_src.join(&file);
-                    if !src.extension().unwrap().eq("tm") {
-                        continue;
-                    }
-
-                    // println!("Reading {}", src.display());
-
-                    let src = std::fs::read_to_string(&src)
-                        .map_err(|e| format!("Could not read {}: {}", src.display(), e)).unwrap();
-                    source.push_str(&src);
-                }
+                let mut inputs = vec![
+                    transmute_core::input::Input::core(),
+                    transmute_core::input::Input::try_from(std::path::PathBuf::from(concat!("tests/examples/", $name, ".tm"))).unwrap(),
+                    transmute_core::input::Input::try_from(stdlib_src).unwrap()
+                ];
 
                 #[cfg(feature = "gc-functions")]
-                source.push_str(include_str!("../src/gc-functions.tm"));
+                inputs.push(transmute_core::input::Input::from(("gc-functions", include_str!("../src/gc-functions.tm"))));
 
                 let output = common::compile(
-                    &source,
+                    inputs,
                     &test_dir
                 )
                 .arg($arg)
@@ -120,7 +93,7 @@ pub(crate) use exec;
 #[allow(unused_imports)]
 pub(crate) use exec_test_example;
 
-pub fn compile(src: &str, test_dir: &TestDir) -> Command {
+pub fn compile(inputs: Vec<Input>, test_dir: &TestDir) -> Command {
     let bin_path = test_dir.path("a.out");
 
     let mut options = Options::default();
@@ -128,7 +101,7 @@ pub fn compile(src: &str, test_dir: &TestDir) -> Command {
         PathBuf::from(env::var("TRANSMUTE_STDLIB_PATH").expect("TRANSMUTE_STDLIB_PATH is not set"));
     options.set_stdlib_path(stdlib_path);
 
-    match compile_str(src, &bin_path, &options) {
+    match compile_inputs(inputs, &bin_path, &options) {
         Ok(_) => {
             let mut command = Command::new(bin_path);
             command.env("GC_LOG_LEVEL", "2");

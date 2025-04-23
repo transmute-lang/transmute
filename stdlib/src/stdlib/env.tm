@@ -1,4 +1,4 @@
 
 #-- env.tm --------------------
-@native
-let args(): List {}
+@std.native
+let args(): std.list.List {}

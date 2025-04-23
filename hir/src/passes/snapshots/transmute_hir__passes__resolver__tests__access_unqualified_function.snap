@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: "UnresolvedHir ::\nfrom(compilation_unit.into_ast().unwrap()).resolve(Natives :: new())"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "No function 'f' found for parameters of types ()",
+                span: 6:13; [89, 90],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

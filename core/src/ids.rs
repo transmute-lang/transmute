@@ -58,6 +58,8 @@ make_id!(TypeId);
 make_id!(FunctionId);
 make_id!(StructId);
 make_id!(TypeDefId);
+make_id!(InputId);
+make_id!(NamespaceId);
 
 #[macro_export]
 macro_rules! id {

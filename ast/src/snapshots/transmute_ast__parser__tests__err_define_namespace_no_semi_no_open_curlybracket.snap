@@ -1,0 +1,16 @@
+---
+source: ast/src/parser.rs
+expression: compilation_unit.into_ast()
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected identifier(invalid), expected one of (2) `;`, `{`",
+                span: 1:14; [13, 20],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

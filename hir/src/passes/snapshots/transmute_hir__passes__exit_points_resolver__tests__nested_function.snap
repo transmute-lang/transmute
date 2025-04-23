@@ -5,8 +5,9 @@ expression: "(ast, block_exit_points)"
 (
     Ast {
         identifiers: [
-            IdentId(0) => "f",
-            IdentId(1) => "g",
+            IdentId(0) => "<root>",
+            IdentId(1) => "f",
+            IdentId(2) => "g",
         ],
         identifier_refs: [],
         expressions: [
@@ -24,7 +25,7 @@ expression: "(ast, block_exit_points)"
                 id: ExprId(1),
                 kind: Block(
                     [
-                        StmtId(0),
+                        StmtId(1),
                     ],
                 ),
                 span: 3:17; [31, 64],
@@ -43,8 +44,8 @@ expression: "(ast, block_exit_points)"
                 id: ExprId(3),
                 kind: Block(
                     [
-                        StmtId(1),
                         StmtId(2),
+                        StmtId(3),
                     ],
                 ),
                 span: 2:13; [13, 86],
@@ -53,6 +54,21 @@ expression: "(ast, block_exit_points)"
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(4),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
                 kind: Ret(
                     Some(
                         ExprId(0),
@@ -61,11 +77,11 @@ expression: "(ast, block_exit_points)"
                 ),
                 span: 4:13; [45, 54],
             },
-            StmtId(1) => Statement {
-                id: StmtId(1),
+            StmtId(2) => Statement {
+                id: StmtId(2),
                 kind: LetFn(
                     Identifier {
-                        id: IdentId(1),
+                        id: IdentId(2),
                         span: 3:13; [27, 28],
                     },
                     [],
@@ -77,8 +93,8 @@ expression: "(ast, block_exit_points)"
                 ),
                 span: 3:9; [23, 64],
             },
-            StmtId(2) => Statement {
-                id: StmtId(2),
+            StmtId(3) => Statement {
+                id: StmtId(3),
                 kind: Ret(
                     Some(
                         ExprId(2),
@@ -87,11 +103,11 @@ expression: "(ast, block_exit_points)"
                 ),
                 span: 6:9; [74, 80],
             },
-            StmtId(3) => Statement {
-                id: StmtId(3),
+            StmtId(4) => Statement {
+                id: StmtId(4),
                 kind: LetFn(
                     Identifier {
-                        id: IdentId(0),
+                        id: IdentId(1),
                         span: 2:9; [9, 10],
                     },
                     [],
@@ -106,7 +122,7 @@ expression: "(ast, block_exit_points)"
         ],
         type_defs: [],
         roots: [
-            StmtId(3),
+            StmtId(0),
         ],
     },
     [

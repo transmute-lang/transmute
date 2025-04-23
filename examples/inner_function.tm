@@ -3,7 +3,7 @@ let fibo(n: number): number {
 }
 
 let main() {
-    let n = number_parse(list_get(args(), 1));
+    let n = std.numbers.number_parse(std.list.list_get(std.env.args(), 1));
 
     let fibo(n: number): number {
         if n < 2 {
@@ -12,5 +12,5 @@ let main() {
         fibo(n - 1) + fibo(n - 2);
     }
 
-    print(fibo(n));
+    std.numbers.print(fibo(n));
 }

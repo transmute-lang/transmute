@@ -1,14 +1,32 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser::new(Lexer::new(\";\")).parse()"
+expression: compilation_unit.into_ast()
 ---
 Ok(
     Ast {
-        identifiers: [],
+        identifiers: [
+            IdentId(0) => "<root>",
+        ],
         identifier_refs: [],
         expressions: [],
-        statements: [],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [],
+                ),
+                span: 0:0; [0, 0],
+            },
+        ],
         type_defs: [],
-        roots: [],
+        roots: [
+            StmtId(0),
+        ],
     },
 )

@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Expected a to be a type",
+                span: 3:18; [41, 42],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

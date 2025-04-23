@@ -1,33 +1,34 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser::new(Lexer::new(\"S { x: 1, y: 2 };\")).parse()"
+expression: compilation_unit.into_ast()
 ---
 Ok(
     Ast {
         identifiers: [
-            IdentId(0) => "S",
-            IdentId(1) => "x",
-            IdentId(2) => "y",
+            IdentId(0) => "<root>",
+            IdentId(1) => "S",
+            IdentId(2) => "x",
+            IdentId(3) => "y",
         ],
         identifier_refs: [
             IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
-                    id: IdentId(1),
+                    id: IdentId(2),
                     span: 1:5; [4, 5],
                 },
             },
             IdentRefId(1) => IdentifierRef {
                 id: IdentRefId(1),
                 ident: Identifier {
-                    id: IdentId(2),
+                    id: IdentId(3),
                     span: 1:11; [10, 11],
                 },
             },
             IdentRefId(2) => IdentifierRef {
                 id: IdentRefId(2),
                 ident: Identifier {
-                    id: IdentId(0),
+                    id: IdentId(1),
                     span: 1:1; [0, 1],
                 },
             },
@@ -74,6 +75,21 @@ Ok(
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
                 kind: Expression(
                     ExprId(2),
                 ),

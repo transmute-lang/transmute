@@ -1,6 +1,6 @@
 use crate::annotation::Annotation;
 use crate::identifier::Identifier;
-use transmute_core::ids::{ExprId, IdentRefId, StmtId, TypeDefId};
+use transmute_core::ids::{ExprId, IdentRefId, InputId, StmtId, TypeDefId};
 use transmute_core::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -14,6 +14,15 @@ impl Statement {
     pub fn new(id: StmtId, kind: StatementKind, span: Span) -> Self {
         Self { id, kind, span }
     }
+
+    pub fn as_namespace(&self) -> (&Identifier, Option<StmtId>, InputId, &[StmtId]) {
+        match &self.kind {
+            StatementKind::Namespace(identifier, parent, input_id, stmts) => {
+                (identifier, *parent, *input_id, stmts)
+            }
+            _ => panic!("{:?} is not a namespace", self),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -24,6 +33,17 @@ pub enum StatementKind {
     LetFn(Identifier, Vec<Annotation>, Vec<Parameter>, Return, ExprId),
     Struct(Identifier, Vec<Annotation>, Vec<Field>),
     Annotation(Identifier),
+    Namespace(
+        /// Namespace identifier
+        Identifier,
+        /// Statement ID of the parent namespace definition. `None` the namespace is the root one
+        // todo remove, probably not useful
+        Option<StmtId>,
+        /// `InputId` this namespace is coming from
+        InputId,
+        /// Statements included in this namespace
+        Vec<StmtId>,
+    ),
 }
 
 /// AST only produces `Ret` with `RetMode::Explicit` but having that information in the AST nodes
@@ -50,9 +70,9 @@ pub struct TypeDef {
 }
 
 impl TypeDef {
-    pub fn identifier_ref_id(&self) -> IdentRefId {
+    pub fn identifier_ref_id(&self) -> &[IdentRefId] {
         match &self.kind {
-            TypeDefKind::Simple(ident_ref_id) => *ident_ref_id,
+            TypeDefKind::Simple(ident_ref_id) => ident_ref_id,
             TypeDefKind::Array(_, _) => todo!(),
             _ => panic!("no identifier_ref_id for TypeDefKind::Dummy"),
         }
@@ -61,7 +81,7 @@ impl TypeDef {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeDefKind {
-    Simple(IdentRefId),
+    Simple(Vec<IdentRefId>),
     Array(TypeDefId, usize),
     /// A dummy type kind, inserted by the parser when the type could not be parsed
     Dummy,

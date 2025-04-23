@@ -1,22 +1,33 @@
 ---
 source: hir/src/passes/resolver.rs
-expression: "&hir"
+expression: hir
 ---
 Hir {
     identifiers: [
-        IdentId(0) => "native",
-        IdentId(1) => "f",
-        IdentId(2) => "boolean",
-        IdentId(3) => "number",
-        IdentId(4) => "void",
+        IdentId(0) => "<root>",
+        IdentId(1) => "std",
+        IdentId(2) => "native",
+        IdentId(3) => "f",
+        IdentId(4) => "core",
+        IdentId(5) => "boolean",
+        IdentId(6) => "number",
+        IdentId(7) => "void",
     ],
     identifier_refs: [
         IdentRefId(0) => IdentifierRef {
             id: IdentRefId(0),
             ident: Identifier {
-                id: IdentId(0),
-                span: 1:21; [20, 26],
-                bound: Bound(1),
+                id: IdentId(1),
+                span: 1:39; [38, 41],
+                bound: Bound(2),
+            },
+        },
+        IdentRefId(1) => IdentifierRef {
+            id: IdentRefId(1),
+            ident: Identifier {
+                id: IdentId(2),
+                span: 1:43; [42, 48],
+                bound: Bound(3),
             },
         },
     ],
@@ -25,37 +36,76 @@ Hir {
             id: ExprId(0),
             kind: Block(
                 [
-                    StmtId(2),
+                    StmtId(5),
                 ],
             ),
-            span: 1:36; [35, 37],
+            span: 1:58; [57, 59],
             typed: Typed(2),
         },
     ],
     statements: [
         StmtId(0) => Statement {
             id: StmtId(0),
-            kind: Annotation(
+            kind: Namespace(
                 Identifier {
                     id: IdentId(0),
-                    span: 1:12; [11, 17],
+                    span: 0:0; [0, 0],
                     bound: Bound(1),
                 },
+                None,
+                InputId(0),
+                [
+                    StmtId(2),
+                    StmtId(3),
+                    StmtId(4),
+                ],
             ),
-            span: 1:1; [0, 18],
+            span: 0:0; [0, 0],
         },
         StmtId(1) => Statement {
             id: StmtId(1),
-            kind: LetFn(
+            kind: Annotation(
+                Identifier {
+                    id: IdentId(2),
+                    span: 1:28; [27, 33],
+                    bound: Bound(3),
+                },
+            ),
+            span: 1:17; [16, 34],
+        },
+        StmtId(2) => Statement {
+            id: StmtId(2),
+            kind: Namespace(
                 Identifier {
                     id: IdentId(1),
-                    span: 1:32; [31, 32],
+                    span: 1:11; [10, 13],
                     bound: Bound(2),
+                },
+                Some(
+                    StmtId(0),
+                ),
+                InputId(0),
+                [
+                    StmtId(1),
+                ],
+            ),
+            span: 1:36; [35, 36],
+        },
+        StmtId(3) => Statement {
+            id: StmtId(3),
+            kind: LetFn(
+                Identifier {
+                    id: IdentId(3),
+                    span: 1:54; [53, 54],
+                    bound: Bound(5),
                 },
                 [
                     Annotation {
-                        ident_ref_id: IdentRefId(0),
-                        span: 1:20; [19, 26],
+                        ident_ref_ids: [
+                            IdentRefId(0),
+                            IdentRefId(1),
+                        ],
+                        span: 1:38; [37, 48],
                     },
                 ],
                 [],
@@ -67,21 +117,36 @@ Hir {
                     ExprId(0),
                 ),
             ),
-            span: 1:28; [27, 37],
+            span: 1:50; [49, 59],
         },
-        StmtId(2) => Statement {
-            id: StmtId(2),
+        StmtId(4) => Statement {
+            id: StmtId(4),
+            kind: Namespace(
+                Identifier {
+                    id: IdentId(4),
+                    span: 2:11; [70, 74],
+                    bound: Bound(4),
+                },
+                Some(
+                    StmtId(0),
+                ),
+                InputId(0),
+                [],
+            ),
+            span: 2:17; [76, 77],
+        },
+        StmtId(5) => Statement {
+            id: StmtId(5),
             kind: Ret(
                 None,
                 Implicit,
             ),
-            span: 1:36; [35, 37],
+            span: 1:58; [57, 59],
         },
     ],
     type_defs: [],
     roots: [
         StmtId(0),
-        StmtId(1),
     ],
     symbols: [
         SymbolId(0) => Symbol {
@@ -91,17 +156,65 @@ Hir {
         },
         SymbolId(1) => Symbol {
             id: SymbolId(1),
-            kind: Annotation(
+            kind: Namespace(
                 IdentId(0),
-                StmtId(0),
+                None,
+                {},
+                {
+                    IdentId(1): [
+                        SymbolId(2),
+                    ],
+                    IdentId(3): [
+                        SymbolId(5),
+                    ],
+                    IdentId(4): [
+                        SymbolId(4),
+                    ],
+                },
             ),
             type_id: TypeId(1),
         },
         SymbolId(2) => Symbol {
             id: SymbolId(2),
-            kind: LetFn(
+            kind: Namespace(
                 IdentId(1),
+                Some(
+                    SymbolId(1),
+                ),
+                {},
+                {
+                    IdentId(2): [
+                        SymbolId(3),
+                    ],
+                },
+            ),
+            type_id: TypeId(1),
+        },
+        SymbolId(3) => Symbol {
+            id: SymbolId(3),
+            kind: Annotation(
+                IdentId(2),
                 StmtId(1),
+            ),
+            type_id: TypeId(1),
+        },
+        SymbolId(4) => Symbol {
+            id: SymbolId(4),
+            kind: Namespace(
+                IdentId(4),
+                Some(
+                    SymbolId(1),
+                ),
+                {},
+                {},
+            ),
+            type_id: TypeId(1),
+        },
+        SymbolId(5) => Symbol {
+            id: SymbolId(5),
+            kind: LetFn(
+                IdentId(3),
+                StmtId(3),
                 [],
                 TypeId(1),
             ),

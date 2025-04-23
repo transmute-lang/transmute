@@ -1,0 +1,16 @@
+---
+source: ast/src/parser.rs
+expression: compilation_unit.into_ast()
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Expected `}` to close `{` at 1:14, got `eof`",
+                span: 1:15; [14, 14],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

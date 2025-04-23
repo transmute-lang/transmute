@@ -1,5 +1,5 @@
 
 let main() {
     let a = [0];
-    print(a[1]);
+    std.numbers.print(a[1]);
 }

@@ -1,0 +1,125 @@
+---
+source: ast/src/lib.rs
+expression: ast.unwrap()
+---
+Ast {
+    identifiers: [
+        IdentId(0) => "<root>",
+        IdentId(1) => "child",
+        IdentId(2) => "root_fn",
+        IdentId(3) => "child_fn1",
+        IdentId(4) => "child_fn2",
+    ],
+    identifier_refs: [],
+    expressions: [
+        ExprId(0) => Expression {
+            id: ExprId(0),
+            kind: Block(
+                [],
+            ),
+            span: 4:15; [33, 35],
+        },
+        ExprId(1) => Expression {
+            id: ExprId(1),
+            kind: Block(
+                [],
+            ),
+            span: 2:17; [17, 19],
+        },
+        ExprId(2) => Expression {
+            id: ExprId(2),
+            kind: Block(
+                [],
+            ),
+            span: 3:17; [36, 38],
+        },
+    ],
+    statements: [
+        StmtId(0) => Statement {
+            id: StmtId(0),
+            kind: Namespace(
+                Identifier {
+                    id: IdentId(0),
+                    span: 0:0; [0, 0],
+                },
+                None,
+                InputId(0),
+                [
+                    StmtId(1),
+                    StmtId(2),
+                ],
+            ),
+            span: 0:0; [0, 0],
+        },
+        StmtId(1) => Statement {
+            id: StmtId(1),
+            kind: Namespace(
+                Identifier {
+                    id: IdentId(1),
+                    span: 2:11; [11, 16],
+                },
+                Some(
+                    StmtId(0),
+                ),
+                InputId(0),
+                [
+                    StmtId(3),
+                    StmtId(4),
+                ],
+            ),
+            span: 2:1; [1, 17],
+        },
+        StmtId(2) => Statement {
+            id: StmtId(2),
+            kind: LetFn(
+                Identifier {
+                    id: IdentId(2),
+                    span: 4:5; [23, 30],
+                },
+                [],
+                [],
+                Return {
+                    type_def_id: None,
+                },
+                ExprId(0),
+            ),
+            span: 4:1; [19, 35],
+        },
+        StmtId(3) => Statement {
+            id: StmtId(3),
+            kind: LetFn(
+                Identifier {
+                    id: IdentId(3),
+                    span: 2:5; [5, 14],
+                },
+                [],
+                [],
+                Return {
+                    type_def_id: None,
+                },
+                ExprId(1),
+            ),
+            span: 2:1; [1, 19],
+        },
+        StmtId(4) => Statement {
+            id: StmtId(4),
+            kind: LetFn(
+                Identifier {
+                    id: IdentId(4),
+                    span: 3:5; [24, 33],
+                },
+                [],
+                [],
+                Return {
+                    type_def_id: None,
+                },
+                ExprId(2),
+            ),
+            span: 3:1; [20, 38],
+        },
+    ],
+    type_defs: [],
+    roots: [
+        StmtId(0),
+    ],
+}

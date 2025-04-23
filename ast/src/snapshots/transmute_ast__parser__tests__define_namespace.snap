@@ -1,0 +1,50 @@
+---
+source: ast/src/parser.rs
+expression: compilation_unit.into_ast()
+---
+Ok(
+    Ast {
+        identifiers: [
+            IdentId(0) => "<root>",
+            IdentId(1) => "ns",
+        ],
+        identifier_refs: [],
+        expressions: [],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(1),
+                        span: 1:11; [10, 12],
+                    },
+                    Some(
+                        StmtId(0),
+                    ),
+                    InputId(0),
+                    [],
+                ),
+                span: 1:1; [0, 13],
+            },
+        ],
+        type_defs: [],
+        roots: [
+            StmtId(0),
+        ],
+    },
+)

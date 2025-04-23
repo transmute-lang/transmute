@@ -7,6 +7,6 @@ expression: w
 let f() = {
 }
 @c
-@d
+@d.e.f
 struct S {
 }

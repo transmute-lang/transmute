@@ -1,0 +1,732 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Ok(
+    Hir {
+        identifiers: [
+            IdentId(0) => "<root>",
+            IdentId(1) => "a",
+            IdentId(2) => "fa",
+            IdentId(3) => "b",
+            IdentId(4) => "B",
+            IdentId(5) => "A",
+            IdentId(6) => "fb",
+            IdentId(7) => "core",
+            IdentId(8) => "add",
+            IdentId(9) => "boolean",
+            IdentId(10) => "div",
+            IdentId(11) => "eq",
+            IdentId(12) => "ge",
+            IdentId(13) => "gt",
+            IdentId(14) => "le",
+            IdentId(15) => "lt",
+            IdentId(16) => "mul",
+            IdentId(17) => "neg",
+            IdentId(18) => "neq",
+            IdentId(19) => "number",
+            IdentId(20) => "sub",
+            IdentId(21) => "void",
+        ],
+        identifier_refs: [
+            IdentRefId(0) => IdentifierRef {
+                id: IdentRefId(0),
+                ident: Identifier {
+                    id: IdentId(3),
+                    span: 3:23; [45, 46],
+                    bound: Bound(4),
+                },
+            },
+            IdentRefId(1) => IdentifierRef {
+                id: IdentRefId(1),
+                ident: Identifier {
+                    id: IdentId(4),
+                    span: 3:25; [47, 48],
+                    bound: Bound(5),
+                },
+            },
+            IdentRefId(2) => IdentifierRef {
+                id: IdentRefId(2),
+                ident: Identifier {
+                    id: IdentId(1),
+                    span: 7:23; [131, 132],
+                    bound: Bound(2),
+                },
+            },
+            IdentRefId(3) => IdentifierRef {
+                id: IdentRefId(3),
+                ident: Identifier {
+                    id: IdentId(5),
+                    span: 7:25; [133, 134],
+                    bound: Bound(3),
+                },
+            },
+        ],
+        expressions: [
+            ExprId(0) => Expression {
+                id: ExprId(0),
+                kind: Block(
+                    [
+                        StmtId(8),
+                    ],
+                ),
+                span: 3:28; [50, 52],
+                typed: Typed(2),
+            },
+            ExprId(1) => Expression {
+                id: ExprId(1),
+                kind: Block(
+                    [
+                        StmtId(9),
+                    ],
+                ),
+                span: 7:28; [136, 138],
+                typed: Typed(2),
+            },
+        ],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                        bound: Bound(1),
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(3),
+                        StmtId(6),
+                        StmtId(7),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(2),
+                        span: 3:17; [39, 41],
+                        bound: Bound(23),
+                    },
+                    [],
+                    [
+                        Parameter {
+                            identifier: Identifier {
+                                id: IdentId(3),
+                                span: 3:20; [42, 43],
+                                bound: Bound(25),
+                            },
+                            type_def_id: TypeDefId(0),
+                            span: 3:20; [42, 48],
+                            typed: Typed(6),
+                        },
+                    ],
+                    Return {
+                        type_def_id: None,
+                        typed: Typed(1),
+                    },
+                    Provided(
+                        ExprId(0),
+                    ),
+                ),
+                span: 3:13; [35, 52],
+            },
+            StmtId(2) => Statement {
+                id: StmtId(2),
+                kind: Struct(
+                    Identifier {
+                        id: IdentId(5),
+                        span: 4:20; [72, 73],
+                        bound: Bound(3),
+                    },
+                    [],
+                    Provided(
+                        [],
+                    ),
+                ),
+                span: 4:13; [65, 76],
+            },
+            StmtId(3) => Statement {
+                id: StmtId(3),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(1),
+                        span: 2:19; [19, 20],
+                        bound: Bound(2),
+                    },
+                    Some(
+                        StmtId(0),
+                    ),
+                    InputId(0),
+                    [
+                        StmtId(1),
+                        StmtId(2),
+                    ],
+                ),
+                span: 5:9; [85, 86],
+            },
+            StmtId(4) => Statement {
+                id: StmtId(4),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(6),
+                        span: 7:17; [125, 127],
+                        bound: Bound(24),
+                    },
+                    [],
+                    [
+                        Parameter {
+                            identifier: Identifier {
+                                id: IdentId(1),
+                                span: 7:20; [128, 129],
+                                bound: Bound(26),
+                            },
+                            type_def_id: TypeDefId(1),
+                            span: 7:20; [128, 134],
+                            typed: Typed(5),
+                        },
+                    ],
+                    Return {
+                        type_def_id: None,
+                        typed: Typed(1),
+                    },
+                    Provided(
+                        ExprId(1),
+                    ),
+                ),
+                span: 7:13; [121, 138],
+            },
+            StmtId(5) => Statement {
+                id: StmtId(5),
+                kind: Struct(
+                    Identifier {
+                        id: IdentId(4),
+                        span: 8:20; [158, 159],
+                        bound: Bound(5),
+                    },
+                    [],
+                    Provided(
+                        [],
+                    ),
+                ),
+                span: 8:13; [151, 162],
+            },
+            StmtId(6) => Statement {
+                id: StmtId(6),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(3),
+                        span: 6:19; [105, 106],
+                        bound: Bound(4),
+                    },
+                    Some(
+                        StmtId(0),
+                    ),
+                    InputId(0),
+                    [
+                        StmtId(4),
+                        StmtId(5),
+                    ],
+                ),
+                span: 9:9; [171, 172],
+            },
+            StmtId(7) => Statement {
+                id: StmtId(7),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(7),
+                        span: 11:11; [192, 196],
+                        bound: Bound(6),
+                    },
+                    Some(
+                        StmtId(0),
+                    ),
+                    InputId(0),
+                    [],
+                ),
+                span: 11:17; [198, 199],
+            },
+            StmtId(8) => Statement {
+                id: StmtId(8),
+                kind: Ret(
+                    None,
+                    Implicit,
+                ),
+                span: 3:28; [50, 52],
+            },
+            StmtId(9) => Statement {
+                id: StmtId(9),
+                kind: Ret(
+                    None,
+                    Implicit,
+                ),
+                span: 7:28; [136, 138],
+            },
+        ],
+        type_defs: [
+            TypeDefId(0) => TypeDef {
+                kind: Simple(
+                    [
+                        IdentRefId(0),
+                        IdentRefId(1),
+                    ],
+                ),
+                span: 3:23; [45, 48],
+            },
+            TypeDefId(1) => TypeDef {
+                kind: Simple(
+                    [
+                        IdentRefId(2),
+                        IdentRefId(3),
+                    ],
+                ),
+                span: 7:23; [131, 134],
+            },
+        ],
+        roots: [
+            StmtId(0),
+        ],
+        symbols: [
+            SymbolId(0) => Symbol {
+                id: SymbolId(0),
+                kind: NotFound,
+                type_id: TypeId(0),
+            },
+            SymbolId(1) => Symbol {
+                id: SymbolId(1),
+                kind: Namespace(
+                    IdentId(0),
+                    None,
+                    {},
+                    {
+                        IdentId(1): [
+                            SymbolId(2),
+                        ],
+                        IdentId(3): [
+                            SymbolId(4),
+                        ],
+                        IdentId(7): [
+                            SymbolId(6),
+                        ],
+                    },
+                ),
+                type_id: TypeId(1),
+            },
+            SymbolId(2) => Symbol {
+                id: SymbolId(2),
+                kind: Namespace(
+                    IdentId(1),
+                    Some(
+                        SymbolId(1),
+                    ),
+                    {},
+                    {
+                        IdentId(2): [
+                            SymbolId(23),
+                        ],
+                        IdentId(5): [
+                            SymbolId(3),
+                        ],
+                    },
+                ),
+                type_id: TypeId(1),
+            },
+            SymbolId(3) => Symbol {
+                id: SymbolId(3),
+                kind: Struct(
+                    IdentId(5),
+                    StmtId(2),
+                ),
+                type_id: TypeId(5),
+            },
+            SymbolId(4) => Symbol {
+                id: SymbolId(4),
+                kind: Namespace(
+                    IdentId(3),
+                    Some(
+                        SymbolId(1),
+                    ),
+                    {},
+                    {
+                        IdentId(4): [
+                            SymbolId(5),
+                        ],
+                        IdentId(6): [
+                            SymbolId(24),
+                        ],
+                    },
+                ),
+                type_id: TypeId(1),
+            },
+            SymbolId(5) => Symbol {
+                id: SymbolId(5),
+                kind: Struct(
+                    IdentId(4),
+                    StmtId(5),
+                ),
+                type_id: TypeId(6),
+            },
+            SymbolId(6) => Symbol {
+                id: SymbolId(6),
+                kind: Namespace(
+                    IdentId(7),
+                    Some(
+                        SymbolId(1),
+                    ),
+                    {},
+                    {
+                        IdentId(8): [
+                            SymbolId(22),
+                        ],
+                        IdentId(9): [
+                            SymbolId(9),
+                        ],
+                        IdentId(10): [
+                            SymbolId(21),
+                        ],
+                        IdentId(11): [
+                            SymbolId(19),
+                            SymbolId(20),
+                        ],
+                        IdentId(12): [
+                            SymbolId(18),
+                        ],
+                        IdentId(13): [
+                            SymbolId(17),
+                        ],
+                        IdentId(14): [
+                            SymbolId(16),
+                        ],
+                        IdentId(15): [
+                            SymbolId(15),
+                        ],
+                        IdentId(16): [
+                            SymbolId(14),
+                        ],
+                        IdentId(17): [
+                            SymbolId(13),
+                        ],
+                        IdentId(18): [
+                            SymbolId(11),
+                            SymbolId(12),
+                        ],
+                        IdentId(19): [
+                            SymbolId(8),
+                        ],
+                        IdentId(20): [
+                            SymbolId(10),
+                        ],
+                        IdentId(21): [
+                            SymbolId(7),
+                        ],
+                    },
+                ),
+                type_id: TypeId(1),
+            },
+            SymbolId(7) => Symbol {
+                id: SymbolId(7),
+                kind: NativeType(
+                    IdentId(21),
+                    Void,
+                ),
+                type_id: TypeId(2),
+            },
+            SymbolId(8) => Symbol {
+                id: SymbolId(8),
+                kind: NativeType(
+                    IdentId(19),
+                    Number,
+                ),
+                type_id: TypeId(2),
+            },
+            SymbolId(9) => Symbol {
+                id: SymbolId(9),
+                kind: NativeType(
+                    IdentId(9),
+                    Boolean,
+                ),
+                type_id: TypeId(2),
+            },
+            SymbolId(10) => Symbol {
+                id: SymbolId(10),
+                kind: Native(
+                    IdentId(20),
+                    [
+                        TypeId(4),
+                        TypeId(4),
+                    ],
+                    TypeId(4),
+                    SubNumberNumber,
+                ),
+                type_id: TypeId(7),
+            },
+            SymbolId(11) => Symbol {
+                id: SymbolId(11),
+                kind: Native(
+                    IdentId(18),
+                    [
+                        TypeId(4),
+                        TypeId(4),
+                    ],
+                    TypeId(3),
+                    NeqNumberNumber,
+                ),
+                type_id: TypeId(8),
+            },
+            SymbolId(12) => Symbol {
+                id: SymbolId(12),
+                kind: Native(
+                    IdentId(18),
+                    [
+                        TypeId(3),
+                        TypeId(3),
+                    ],
+                    TypeId(3),
+                    NeqBooleanBoolean,
+                ),
+                type_id: TypeId(9),
+            },
+            SymbolId(13) => Symbol {
+                id: SymbolId(13),
+                kind: Native(
+                    IdentId(17),
+                    [
+                        TypeId(4),
+                    ],
+                    TypeId(4),
+                    NegNumber,
+                ),
+                type_id: TypeId(10),
+            },
+            SymbolId(14) => Symbol {
+                id: SymbolId(14),
+                kind: Native(
+                    IdentId(16),
+                    [
+                        TypeId(4),
+                        TypeId(4),
+                    ],
+                    TypeId(4),
+                    MulNumberNumber,
+                ),
+                type_id: TypeId(7),
+            },
+            SymbolId(15) => Symbol {
+                id: SymbolId(15),
+                kind: Native(
+                    IdentId(15),
+                    [
+                        TypeId(4),
+                        TypeId(4),
+                    ],
+                    TypeId(3),
+                    LtNumberNumber,
+                ),
+                type_id: TypeId(8),
+            },
+            SymbolId(16) => Symbol {
+                id: SymbolId(16),
+                kind: Native(
+                    IdentId(14),
+                    [
+                        TypeId(4),
+                        TypeId(4),
+                    ],
+                    TypeId(3),
+                    LeNumberNumber,
+                ),
+                type_id: TypeId(8),
+            },
+            SymbolId(17) => Symbol {
+                id: SymbolId(17),
+                kind: Native(
+                    IdentId(13),
+                    [
+                        TypeId(4),
+                        TypeId(4),
+                    ],
+                    TypeId(3),
+                    GtNumberNumber,
+                ),
+                type_id: TypeId(8),
+            },
+            SymbolId(18) => Symbol {
+                id: SymbolId(18),
+                kind: Native(
+                    IdentId(12),
+                    [
+                        TypeId(4),
+                        TypeId(4),
+                    ],
+                    TypeId(3),
+                    GeNumberNumber,
+                ),
+                type_id: TypeId(8),
+            },
+            SymbolId(19) => Symbol {
+                id: SymbolId(19),
+                kind: Native(
+                    IdentId(11),
+                    [
+                        TypeId(4),
+                        TypeId(4),
+                    ],
+                    TypeId(3),
+                    EqNumberNumber,
+                ),
+                type_id: TypeId(8),
+            },
+            SymbolId(20) => Symbol {
+                id: SymbolId(20),
+                kind: Native(
+                    IdentId(11),
+                    [
+                        TypeId(3),
+                        TypeId(3),
+                    ],
+                    TypeId(3),
+                    EqBooleanBoolean,
+                ),
+                type_id: TypeId(9),
+            },
+            SymbolId(21) => Symbol {
+                id: SymbolId(21),
+                kind: Native(
+                    IdentId(10),
+                    [
+                        TypeId(4),
+                        TypeId(4),
+                    ],
+                    TypeId(4),
+                    DivNumberNumber,
+                ),
+                type_id: TypeId(7),
+            },
+            SymbolId(22) => Symbol {
+                id: SymbolId(22),
+                kind: Native(
+                    IdentId(8),
+                    [
+                        TypeId(4),
+                        TypeId(4),
+                    ],
+                    TypeId(4),
+                    AddNumberNumber,
+                ),
+                type_id: TypeId(7),
+            },
+            SymbolId(23) => Symbol {
+                id: SymbolId(23),
+                kind: LetFn(
+                    IdentId(2),
+                    StmtId(1),
+                    [
+                        TypeId(6),
+                    ],
+                    TypeId(1),
+                ),
+                type_id: TypeId(11),
+            },
+            SymbolId(24) => Symbol {
+                id: SymbolId(24),
+                kind: LetFn(
+                    IdentId(6),
+                    StmtId(4),
+                    [
+                        TypeId(5),
+                    ],
+                    TypeId(1),
+                ),
+                type_id: TypeId(12),
+            },
+            SymbolId(25) => Symbol {
+                id: SymbolId(25),
+                kind: Parameter(
+                    IdentId(3),
+                    StmtId(1),
+                    0,
+                ),
+                type_id: TypeId(6),
+            },
+            SymbolId(26) => Symbol {
+                id: SymbolId(26),
+                kind: Parameter(
+                    IdentId(1),
+                    StmtId(4),
+                    0,
+                ),
+                type_id: TypeId(5),
+            },
+        ],
+        types: [
+            TypeId(0) => Invalid,
+            TypeId(1) => Void,
+            TypeId(2) => None,
+            TypeId(3) => Boolean,
+            TypeId(4) => Number,
+            TypeId(5) => Struct(
+                StmtId(2),
+            ),
+            TypeId(6) => Struct(
+                StmtId(5),
+            ),
+            TypeId(7) => Function(
+                [
+                    TypeId(4),
+                    TypeId(4),
+                ],
+                TypeId(4),
+            ),
+            TypeId(8) => Function(
+                [
+                    TypeId(4),
+                    TypeId(4),
+                ],
+                TypeId(3),
+            ),
+            TypeId(9) => Function(
+                [
+                    TypeId(3),
+                    TypeId(3),
+                ],
+                TypeId(3),
+            ),
+            TypeId(10) => Function(
+                [
+                    TypeId(4),
+                ],
+                TypeId(4),
+            ),
+            TypeId(11) => Function(
+                [
+                    TypeId(6),
+                ],
+                TypeId(1),
+            ),
+            TypeId(12) => Function(
+                [
+                    TypeId(5),
+                ],
+                TypeId(1),
+            ),
+        ],
+        exit_points: ExitPoints {
+            exit_points: {
+                ExprId(0): [
+                    Implicit(
+                        None,
+                    ),
+                ],
+                ExprId(1): [
+                    Implicit(
+                        None,
+                    ),
+                ],
+            },
+            unreachable: [],
+        },
+    },
+)

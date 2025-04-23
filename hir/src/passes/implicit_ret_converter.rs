@@ -3,6 +3,7 @@ use transmute_ast::statement::{RetMode, Statement, StatementKind};
 use transmute_core::ids::{ExprId, StmtId};
 use transmute_core::vec_map::VecMap;
 
+#[derive(Default)]
 pub struct ImplicitRetResolver {
     statements: VecMap<StmtId, Statement>,
     expressions: VecMap<ExprId, Expression>,
@@ -15,10 +16,7 @@ pub struct Output {
 
 impl ImplicitRetResolver {
     pub fn new() -> Self {
-        Self {
-            statements: Default::default(),
-            expressions: Default::default(),
-        }
+        Self::default()
     }
 
     pub fn resolve(
@@ -471,6 +469,14 @@ impl ImplicitRetResolver {
                 self.statements.insert(statement.id, statement);
                 false
             }
+            StatementKind::Namespace(_, _, _, stmts) => {
+                for stmt in stmts {
+                    let statement = statements.remove(*stmt).unwrap();
+                    self.visit_statement(statements, expressions, statement, 0, false, false);
+                }
+                self.statements.insert(statement.id, statement);
+                false
+            }
         }
     }
 }
@@ -483,12 +489,22 @@ mod tests {
     use transmute_ast::lexer::Lexer;
     use transmute_ast::parser::Parser;
     use transmute_ast::pretty_print::Options;
+    use transmute_ast::CompilationUnit;
+    use transmute_core::ids::InputId;
 
     macro_rules! t {
         ($name:ident, $src:expr) => {
             #[test]
             fn $name() {
-                let mut ast = Parser::new(Lexer::new($src)).parse().unwrap();
+                let mut compilation_unit = CompilationUnit::default();
+
+                Parser::new(
+                    &mut compilation_unit,
+                    None,
+                    Lexer::new(InputId::from(0), $src),
+                )
+                .parse();
+                let mut ast = compilation_unit.into_ast().unwrap();
 
                 // move out of ast without taking owership
                 let mut statements = VecMap::new();
@@ -661,4 +677,5 @@ mod tests {
         array_access_ret,
         "let f() { a[ if true { ret 1; } else { ret 2; } ]; }"
     );
+    t!(namespace, "namespace name { let f(): number { 1; } }");
 }

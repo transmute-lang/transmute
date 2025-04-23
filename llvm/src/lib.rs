@@ -39,7 +39,7 @@ pub struct LlvmIrGen {
 }
 
 impl LlvmIrGen {
-    pub fn gen(&self, mir: &Mir) -> Result<LlvmIr, Diagnostics> {
+    pub fn gen(&self, mir: &Mir) -> Result<LlvmIr, Diagnostics<()>> {
         Target::initialize_all(&InitializationConfig::default());
         let target = Target::from_triple(&self.target_triple).unwrap();
         let target_machine = target
@@ -88,7 +88,7 @@ impl LlvmIr<'_> {
         runtime: &[u8],
         path: P,
         stdlib_path: Option<&Path>,
-    ) -> Result<(), Diagnostics> {
+    ) -> Result<(), Diagnostics<()>> {
         let path = path.into();
 
         let tm_object_path = path.clone().with_extension("o");
@@ -160,13 +160,13 @@ impl LlvmIr<'_> {
         Ok(())
     }
 
-    pub fn write_ir<P: AsRef<Path>>(&self, path: P) -> Result<(), Diagnostics> {
+    pub fn write_ir<P: AsRef<Path>>(&self, path: P) -> Result<(), Diagnostics<()>> {
         let str = self.module.to_string();
         fs::write(path, &str).unwrap();
         Ok(())
     }
 
-    pub fn write_assembly<P: AsRef<Path>>(&self, path: P) -> Result<(), Diagnostics> {
+    pub fn write_assembly<P: AsRef<Path>>(&self, path: P) -> Result<(), Diagnostics<()>> {
         self.target_machine
             .write_to_file(&self.module, FileType::Assembly, path.as_ref())
             .unwrap();
@@ -284,7 +284,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
     }
 
     // todo:refactor only insert used functions
-    pub fn gen(mut self, mir: &Mir, optimize: bool) -> Result<Module<'ctx>, Diagnostics> {
+    pub fn gen(mut self, mir: &Mir, optimize: bool) -> Result<Module<'ctx>, Diagnostics<()>> {
         for (struct_id, struct_def) in mir.structs.iter() {
             self.gen_struct_signature(mir, struct_id, struct_def);
         }
@@ -1883,6 +1883,8 @@ mod tests {
     use insta::assert_snapshot;
     use transmute_ast::lexer::Lexer;
     use transmute_ast::parser::Parser;
+    use transmute_ast::CompilationUnit;
+    use transmute_core::ids::InputId;
     use transmute_hir::natives::Natives;
     use transmute_hir::UnresolvedHir;
     use transmute_mir::make_mir;
@@ -1894,7 +1896,9 @@ mod tests {
             paste::paste! {
                 #[test]
                 fn [< $name _unoptimized >]() {
-                    let ast = Parser::new(Lexer::new($src)).parse().unwrap();
+                    let mut compilation_unit = CompilationUnit::default();
+                    Parser::new(&mut compilation_unit, None, Lexer::new(InputId::from(0), &format!("{}\nnamespace core {{}}", $src))).parse();
+                    let ast = compilation_unit.into_ast().unwrap();
                     let hir = UnresolvedHir::from(ast).resolve(Natives::new()).unwrap();
                     let mir = make_mir(hir).unwrap();
 
@@ -1924,7 +1928,9 @@ mod tests {
 
                 #[test]
                 fn [< $name _optimized >]() {
-                    let ast = Parser::new(Lexer::new($src)).parse().unwrap();
+                    let mut compilation_unit = CompilationUnit::default();
+                    Parser::new(&mut compilation_unit, None, Lexer::new(InputId::from(0), &format!("{}\nnamespace core {{}}", $src))).parse();
+                    let ast = compilation_unit.into_ast().unwrap();
                     let hir = UnresolvedHir::from(ast).resolve(Natives::new()).unwrap();
                     let mir = make_mir(hir).unwrap();
 
@@ -1982,9 +1988,11 @@ mod tests {
     gen!(
         print,
         r#"
-        annotation native;
-        @native let print(n: number) {}
-        let a(n: number) {
+        namespace std {
+            annotation native;
+        }
+        @std.native let print(n: core.number) {}
+        let a(n: core.number) {
             print(n);
         }
         "#
@@ -2611,9 +2619,14 @@ mod tests {
     gen!(
         print_string_direct,
         r#"
-        annotation native;
-        @native struct string {}
-        @native let print(s: string) {}
+        namespace std {
+            annotation native;
+            namespace str {
+                @std.native struct string {}
+            }
+        }
+        @std.native
+        let print(s: std.str.string) {}
         let f() {
             print("hello");
             print("world");
@@ -2623,9 +2636,13 @@ mod tests {
     gen!(
         print_string_indirect,
         r#"
-        annotation native;
-        @native struct string {}
-        @native let print(s: string) {}
+        namespace std {
+            annotation native;
+            namespace str {
+                @std.native struct string {}
+            }
+        }
+        @std.native let print(s: std.str.string) {}
         let f() {
             let hello = "hello";
             let world = "world";
@@ -2638,9 +2655,11 @@ mod tests {
     gen!(
         native_function,
         r#"
-        annotation native;
-        @native
-        let native(a: number): number {}
+        namespace std {
+            annotation native;
+        }
+        @std.native
+        let native(a: core.number): core.number {}
         "#
     );
     gen!(

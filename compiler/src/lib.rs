@@ -1,9 +1,9 @@
-use std::borrow::Cow;
-use std::fs;
 use std::path::{Path, PathBuf};
 use transmute_ast::parse;
+use transmute_core::error::Diagnostics;
+use transmute_core::input::Input;
 use transmute_hir::resolve;
-use transmute_llvm::LlvmIrGen;
+use transmute_llvm::{LlvmIr, LlvmIrGen};
 use transmute_mir::make_mir;
 
 #[derive(Debug, Default)]
@@ -41,88 +41,66 @@ pub fn compile_file<S: AsRef<Path>, D: AsRef<Path>>(
     dst: &D,
     options: &Options,
 ) -> Result<(), String> {
-    let mut source = fs::read_to_string(src)
-        .map_err(|e| format!("Could not read {}: {}", src.as_ref().display(), e))?;
-
-    source.push_str(read_stdlib_src(options)?.as_ref());
+    #[cfg(not(feature = "gc-functions"))]
+    let mut inputs = vec![Input::core(), Input::try_from(PathBuf::from(src.as_ref()))?];
 
     #[cfg(feature = "gc-functions")]
-    source.push_str(include_str!("gc-functions.tm"));
+    let mut inputs = vec![
+        Input::core(),
+        Input::from(("gc-functions", include_str!("gc-functions.tm"))),
+        Input::try_from(PathBuf::from(src.as_ref()))?,
+    ];
+
+    if let Some(stdlib_path) = &options.stdlib_path {
+        let mut stdlib_path = PathBuf::from(stdlib_path);
+        stdlib_path.push("src");
+        stdlib_path.push("stdlib.tm");
+        inputs.push(Input::try_from(stdlib_path)?);
+    }
 
     if matches!(options.output_format, OutputFormat::Source) {
-        println!("{source}");
+        println!("{inputs:?}");
         Ok(())
     } else {
-        compile_str(&source, dst, options)
+        compile_inputs(inputs, dst, options)
     }
 }
 
-fn read_stdlib_src(options: &Options) -> Result<Cow<str>, String> {
-    Ok(match options.stdlib_path.as_ref() {
-        None => Cow::Borrowed(""),
-        Some(stdlib_path) => {
-            let mut source = String::new();
-            let stdlib_src = stdlib_path.join("src");
-            for entry in fs::read_dir(&stdlib_src).unwrap() {
-                let file = entry
-                    .expect("dir entry exists")
-                    .file_name()
-                    .to_str()
-                    .unwrap()
-                    .to_string();
-
-                let src = stdlib_src.join(&file);
-                if !src.extension().unwrap().eq("tm") {
-                    continue;
-                }
-
-                // println!("Reading {}", src.display());
-                let src = fs::read_to_string(&src)
-                    .map_err(|e| format!("Could not read {}: {}", src.display(), e))?;
-                source.push_str(&format!("\n\n#-- {file} --------------------\n"));
-                source.push_str(&src);
-            }
-            Cow::Owned(source)
-        }
-    })
-}
-
-pub fn compile_str<S: AsRef<str>, D: AsRef<Path>>(
-    src: S,
+pub fn compile_inputs<D: AsRef<Path>>(
+    src: Vec<Input>,
     dst: D,
     options: &Options,
 ) -> Result<(), String> {
     let mut ir_gen = LlvmIrGen::default();
     ir_gen.set_optimize(options.optimize);
 
-    let llvm_ir = parse(src.as_ref())
+    let (inputs, result) = parse(src);
+    result
         .and_then(resolve)
         .and_then(make_mir)
         .and_then(|mir| ir_gen.gen(&mir))
-        .map_err(|d| d.to_string())?;
+        .and_then(|ir| produce_output(ir, dst.as_ref(), options))
+        .map_err(|d| d.with_inputs(inputs).to_string())
+}
 
+fn produce_output(llvm_ir: LlvmIr, dst: &Path, options: &Options) -> Result<(), Diagnostics<()>> {
     match options.output_format {
-        OutputFormat::Object => {
-            llvm_ir
-                .build_bin(
-                    transmute_runtime::get_runtime(),
-                    dst.as_ref(),
-                    options.stdlib_path.as_deref(),
-                )
-                .map_err(|d| d.to_string())?;
-        }
+        OutputFormat::Object => llvm_ir.build_bin(
+            transmute_runtime::get_runtime(),
+            dst,
+            options.stdlib_path.as_deref(),
+        ),
         OutputFormat::LlvmIr => {
-            let dst = dst.as_ref().with_extension("ll");
-            llvm_ir.write_ir(&dst).map_err(|d| d.to_string())?;
+            let dst = dst.with_extension("ll");
+            llvm_ir.write_ir(&dst)
         }
         OutputFormat::Assembly => {
-            let dst = dst.as_ref().with_extension("s");
-            llvm_ir.write_assembly(&dst).map_err(|d| d.to_string())?;
+            let dst = dst.with_extension("s");
+            llvm_ir.write_assembly(&dst)
         }
         OutputFormat::Source => {
             // already done
+            Ok(())
         }
     }
-
-    Ok(())
 }

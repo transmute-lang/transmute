@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+source setenv
+
 cargo run \
   --features transmute-runtime/gc-test \
   --features transmute-llvm/gc-aggressive \

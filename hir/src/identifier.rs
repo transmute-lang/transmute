@@ -15,6 +15,14 @@ where
 }
 
 impl Identifier<Unbound> {
+    pub fn new(id: IdentId, span: Span) -> Self {
+        Self {
+            id,
+            span,
+            bound: Unbound,
+        }
+    }
+
     pub fn bind(self, symbol_id: SymbolId) -> Identifier<Bound> {
         Identifier::<Bound> {
             id: self.id,

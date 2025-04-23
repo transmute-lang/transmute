@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+transmute-core = { path = "../core" }
 transmute-ast = { path = "../ast" }
 transmute-hir = { path = "../hir" }
 transmute-mir = { path = "../mir" }

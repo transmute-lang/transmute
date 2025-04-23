@@ -1,14 +1,13 @@
 use crate::interpreter::Interpreter;
 use crate::value::{Ref, Value};
 use std::collections::HashMap;
+use std::env;
 use std::path::PathBuf;
-use std::{env, fs};
-use transmute_ast::lexer::Lexer;
-use transmute_ast::parser::Parser;
+use transmute_ast::parse;
 use transmute_ast::pretty_print::Options;
 use transmute_core::ids::IdentId;
-use transmute_hir::natives::Natives;
-use transmute_hir::UnresolvedHir;
+use transmute_core::input::Input;
+use transmute_hir::resolve;
 
 mod interpreter;
 pub mod natives;
@@ -18,33 +17,20 @@ pub type Stack = Vec<HashMap<IdentId, Ref>>;
 pub type Heap = Vec<Value>;
 
 pub fn exec<S: Into<String>, C: NativeContext>(source: S, print_ast: bool, context: C) {
-    let mut source = source.into();
-
     let mut stdlib_src =
         PathBuf::from(env::var("TRANSMUTE_STDLIB_PATH").expect("TRANSMUTE_STDLIB_PATH is defined"));
     stdlib_src.push("src");
+    stdlib_src.push("stdlib.tm");
 
-    for entry in fs::read_dir(&stdlib_src).unwrap() {
-        let file = entry
-            .expect("dir entry exists")
-            .file_name()
-            .to_str()
-            .unwrap()
-            .to_string();
+    let inputs = vec![
+        Input::core(),
+        Input::try_from(stdlib_src).unwrap(),
+        // fixme
+        Input::from(("", source.into().leak() as &str)),
+    ];
 
-        let src = stdlib_src.join(&file);
-        if !src.extension().unwrap().eq("tm") {
-            continue;
-        }
-
-        let src = fs::read_to_string(&src)
-            .map_err(|e| format!("Could not read {}: {}", src.display(), e))
-            .unwrap();
-        source.push_str(&src);
-    }
-
-    let result = Parser::new(Lexer::new(&source))
-        .parse()
+    let (inputs, result) = parse(inputs);
+    if let Err(err) = result
         .peek(|ast| {
             if print_ast {
                 let mut w = String::new();
@@ -52,12 +38,11 @@ pub fn exec<S: Into<String>, C: NativeContext>(source: S, print_ast: bool, conte
                 print!("Parsed AST:\n{w}\n");
             }
         })
-        .map(UnresolvedHir::from)
-        .and_then(|hir| hir.resolve(Natives::new()))
-        .map(|ast| Interpreter::new(&ast, context).start());
-
-    if let Err(err) = result {
-        print!("Errors:\n{}", err)
+        .and_then(resolve)
+        .map(|hir| Interpreter::new(&hir, context).start())
+        .map_err(|d| d.with_inputs(inputs).to_string())
+    {
+        eprintln!("{err}")
     }
 }
 
@@ -87,6 +72,7 @@ pub trait NativeContext {
 #[cfg(test)]
 mod tests {
     use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
+    use std::env;
     use std::process::Command;
 
     macro_rules! exec {
@@ -95,6 +81,11 @@ mod tests {
             fn $name() {
                 // todo:test this requires that the binary already exists
                 assert_cmd_snapshot!(Command::new(get_cargo_bin("tmi"))
+                    .env(
+                        "TRANSMUTE_STDLIB_PATH",
+                        env::var("TRANSMUTE_STDLIB_PATH")
+                            .expect("TRANSMUTE_STDLIB_PATH is defined")
+                    )
                     .arg(concat!("../examples/", stringify!($name), ".tm"))
                     .arg("9"));
             }

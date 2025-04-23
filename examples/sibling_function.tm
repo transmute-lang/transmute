@@ -1,5 +1,5 @@
 let main() {
-    print(fibo(number_parse(list_get(args(), 1))));
+    std.numbers.print(fibo(std.numbers.number_parse(std.list.list_get(std.env.args(), 1))));
 }
 
 let fibo(n: number): number {

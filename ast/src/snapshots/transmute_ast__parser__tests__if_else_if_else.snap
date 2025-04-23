@@ -1,10 +1,12 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser::new(Lexer::new(\"if true { 42; } else if false { 43; } else { 44; }\")).parse()"
+expression: compilation_unit.into_ast()
 ---
 Ok(
     Ast {
-        identifiers: [],
+        identifiers: [
+            IdentId(0) => "<root>",
+        ],
         identifier_refs: [],
         expressions: [
             ExprId(0) => Expression {
@@ -31,7 +33,7 @@ Ok(
                 id: ExprId(2),
                 kind: Block(
                     [
-                        StmtId(0),
+                        StmtId(1),
                     ],
                 ),
                 span: 1:9; [8, 15],
@@ -60,7 +62,7 @@ Ok(
                 id: ExprId(5),
                 kind: Block(
                     [
-                        StmtId(1),
+                        StmtId(2),
                     ],
                 ),
                 span: 1:31; [30, 37],
@@ -79,7 +81,7 @@ Ok(
                 id: ExprId(7),
                 kind: Block(
                     [
-                        StmtId(2),
+                        StmtId(3),
                     ],
                 ),
                 span: 1:44; [43, 50],
@@ -99,7 +101,7 @@ Ok(
                 id: ExprId(9),
                 kind: Block(
                     [
-                        StmtId(3),
+                        StmtId(4),
                     ],
                 ),
                 span: 1:22; [21, 50],
@@ -119,34 +121,49 @@ Ok(
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(5),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
                 kind: Expression(
                     ExprId(1),
                 ),
                 span: 1:11; [10, 13],
             },
-            StmtId(1) => Statement {
-                id: StmtId(1),
+            StmtId(2) => Statement {
+                id: StmtId(2),
                 kind: Expression(
                     ExprId(4),
                 ),
                 span: 1:33; [32, 35],
             },
-            StmtId(2) => Statement {
-                id: StmtId(2),
+            StmtId(3) => Statement {
+                id: StmtId(3),
                 kind: Expression(
                     ExprId(6),
                 ),
                 span: 1:46; [45, 48],
             },
-            StmtId(3) => Statement {
-                id: StmtId(3),
+            StmtId(4) => Statement {
+                id: StmtId(4),
                 kind: Expression(
                     ExprId(8),
                 ),
                 span: 1:22; [21, 50],
             },
-            StmtId(4) => Statement {
-                id: StmtId(4),
+            StmtId(5) => Statement {
+                id: StmtId(5),
                 kind: Expression(
                     ExprId(10),
                 ),
@@ -155,7 +172,7 @@ Ok(
         ],
         type_defs: [],
         roots: [
-            StmtId(4),
+            StmtId(0),
         ],
     },
 )

@@ -1,0 +1,189 @@
+---
+source: ast/src/parser.rs
+expression: compilation_unit.into_ast()
+---
+Ok(
+    Ast {
+        identifiers: [
+            IdentId(0) => "<root>",
+            IdentId(1) => "root",
+            IdentId(2) => "f",
+            IdentId(3) => "ns1",
+            IdentId(4) => "ns2",
+            IdentId(5) => "g",
+            IdentId(6) => "h",
+            IdentId(7) => "i",
+        ],
+        identifier_refs: [],
+        expressions: [
+            ExprId(0) => Expression {
+                id: ExprId(0),
+                kind: Block(
+                    [],
+                ),
+                span: 3:21; [46, 48],
+            },
+            ExprId(1) => Expression {
+                id: ExprId(1),
+                kind: Block(
+                    [],
+                ),
+                span: 6:29; [137, 139],
+            },
+            ExprId(2) => Expression {
+                id: ExprId(2),
+                kind: Block(
+                    [],
+                ),
+                span: 9:29; [212, 214],
+            },
+            ExprId(3) => Expression {
+                id: ExprId(3),
+                kind: Block(
+                    [
+                        StmtId(4),
+                    ],
+                ),
+                span: 8:25; [182, 232],
+            },
+        ],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(7),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(2),
+                        span: 3:17; [42, 43],
+                    },
+                    [],
+                    [],
+                    Return {
+                        type_def_id: None,
+                    },
+                    ExprId(0),
+                ),
+                span: 3:13; [38, 48],
+            },
+            StmtId(2) => Statement {
+                id: StmtId(2),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(5),
+                        span: 6:25; [133, 134],
+                    },
+                    [],
+                    [],
+                    Return {
+                        type_def_id: None,
+                    },
+                    ExprId(1),
+                ),
+                span: 6:21; [129, 139],
+            },
+            StmtId(3) => Statement {
+                id: StmtId(3),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(4),
+                        span: 5:27; [103, 106],
+                    },
+                    Some(
+                        StmtId(0),
+                    ),
+                    InputId(0),
+                    [
+                        StmtId(2),
+                    ],
+                ),
+                span: 7:17; [156, 157],
+            },
+            StmtId(4) => Statement {
+                id: StmtId(4),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(7),
+                        span: 9:25; [208, 209],
+                    },
+                    [],
+                    [],
+                    Return {
+                        type_def_id: None,
+                    },
+                    ExprId(2),
+                ),
+                span: 9:21; [204, 214],
+            },
+            StmtId(5) => Statement {
+                id: StmtId(5),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(6),
+                        span: 8:21; [178, 179],
+                    },
+                    [],
+                    [],
+                    Return {
+                        type_def_id: None,
+                    },
+                    ExprId(3),
+                ),
+                span: 8:17; [174, 232],
+            },
+            StmtId(6) => Statement {
+                id: StmtId(6),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(3),
+                        span: 4:23; [71, 74],
+                    },
+                    Some(
+                        StmtId(0),
+                    ),
+                    InputId(0),
+                    [
+                        StmtId(3),
+                        StmtId(5),
+                    ],
+                ),
+                span: 11:13; [245, 246],
+            },
+            StmtId(7) => Statement {
+                id: StmtId(7),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(1),
+                        span: 2:19; [19, 23],
+                    },
+                    Some(
+                        StmtId(0),
+                    ),
+                    InputId(0),
+                    [
+                        StmtId(1),
+                        StmtId(6),
+                    ],
+                ),
+                span: 12:9; [255, 256],
+            },
+        ],
+        type_defs: [],
+        roots: [
+            StmtId(0),
+        ],
+    },
+)

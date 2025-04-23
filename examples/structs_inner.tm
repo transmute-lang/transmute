@@ -21,5 +21,5 @@ let area(n: number): number = {
 }
 
 let main() {
-    print(area(number_parse(list_get(args(), 1))));
+    std.numbers.print(area(std.numbers.number_parse(std.list.list_get(std.env.args(), 1))));
 }

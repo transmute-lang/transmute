@@ -249,6 +249,7 @@ impl<'a> ExitPointsResolver<'a> {
             StatementKind::LetFn(_, _, _, _, _) => (Collected::default(), false),
             StatementKind::Struct(_, _, _) => (Collected::default(), false),
             StatementKind::Annotation(_) => (Collected::default(), false),
+            StatementKind::Namespace(_, _, _, _) => todo!(),
         }
     }
 }
@@ -273,13 +274,23 @@ mod tests {
     use insta::assert_debug_snapshot;
     use transmute_ast::lexer::Lexer;
     use transmute_ast::parser::Parser;
+    use transmute_ast::CompilationUnit;
     use transmute_core::ids::ExprId;
+    use transmute_core::ids::InputId;
 
     macro_rules! exit_points {
         ($name:ident => $src:expr) => {
             #[test]
             fn $name() {
-                let ast = Parser::new(Lexer::new($src)).parse().unwrap();
+                let mut compilation_unit = CompilationUnit::default();
+
+                Parser::new(
+                    &mut compilation_unit,
+                    None,
+                    Lexer::new(InputId::from(0), $src),
+                )
+                .parse();
+                let ast = compilation_unit.into_ast().unwrap();
 
                 let block_exit_points = ast
                     .expressions

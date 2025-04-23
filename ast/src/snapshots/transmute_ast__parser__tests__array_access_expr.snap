@@ -1,25 +1,26 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser::new(Lexer::new(\"a[i + 1];\")).parse()"
+expression: compilation_unit.into_ast()
 ---
 Ok(
     Ast {
         identifiers: [
-            IdentId(0) => "a",
-            IdentId(1) => "i",
+            IdentId(0) => "<root>",
+            IdentId(1) => "a",
+            IdentId(2) => "i",
         ],
         identifier_refs: [
             IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
-                    id: IdentId(0),
+                    id: IdentId(1),
                     span: 1:1; [0, 1],
                 },
             },
             IdentRefId(1) => IdentifierRef {
                 id: IdentRefId(1),
                 ident: Identifier {
-                    id: IdentId(1),
+                    id: IdentId(2),
                     span: 1:3; [2, 3],
                 },
             },
@@ -79,6 +80,21 @@ Ok(
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
                 kind: Expression(
                     ExprId(4),
                 ),

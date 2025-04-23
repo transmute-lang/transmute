@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: "UnresolvedHir ::\nfrom(compilation_unit.into_ast().unwrap()).resolve(Natives :: new())"
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Identifier 'b' not found",
+                span: 5:10; [68, 69],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

@@ -1,12 +1,12 @@
 let main() {
-    let n = number_parse(
-        list_get(
-            args(),
+    let n = std.numbers.number_parse(
+        std.list.list_get(
+            std.env.args(),
             1
         )
     );
     let f = fibo(n);
-    print(f);
+    std.numbers.print(f);
 }
 
 let fibo(n: number): number {

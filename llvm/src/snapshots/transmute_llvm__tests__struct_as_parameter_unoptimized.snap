@@ -25,11 +25,11 @@ entry:
   unreachable
 }
 
-define i64 @_TM0_1f1s6Struct(ptr %"s#param#sym20#") gc "shadow-stack" {
+define i64 @_TM0_1f1s6Struct(ptr %"s#param#sym22#") gc "shadow-stack" {
 entry:
-  %"s#param#sym20#.field#idx0#sym19#" = getelementptr inbounds %"Struct#id0", ptr %"s#param#sym20#", i32 0, i32 0
-  %"s#param#sym20#.field#idx0#sym19#1" = load i64, ptr %"s#param#sym20#.field#idx0#sym19#", align 4
-  ret i64 %"s#param#sym20#.field#idx0#sym19#1"
+  %"s#param#sym22#.field#idx0#sym21#" = getelementptr inbounds %"Struct#id0", ptr %"s#param#sym22#", i32 0, i32 0
+  %"s#param#sym22#.field#idx0#sym21#1" = load i64, ptr %"s#param#sym22#.field#idx0#sym21#", align 4
+  ret i64 %"s#param#sym22#.field#idx0#sym21#1"
 }
 
 attributes #0 = { nounwind }

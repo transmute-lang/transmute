@@ -30,22 +30,22 @@ declare void @_TM0_5print1s6string(ptr)
 
 define void @_TM0_1f0() gc "shadow-stack" {
 entry:
-  %"world#local#sym23#" = alloca ptr, align 8
-  %"hello#local#sym22#" = alloca ptr, align 8
-  store ptr null, ptr %"hello#local#sym22#", align 8
-  call void @llvm.gcroot(ptr %"hello#local#sym22#", ptr null)
-  store ptr null, ptr %"world#local#sym23#", align 8
-  call void @llvm.gcroot(ptr %"world#local#sym23#", ptr null)
+  %"world#local#sym27#" = alloca ptr, align 8
+  %"hello#local#sym26#" = alloca ptr, align 8
+  store ptr null, ptr %"hello#local#sym26#", align 8
+  call void @llvm.gcroot(ptr %"hello#local#sym26#", ptr null)
+  store ptr null, ptr %"world#local#sym27#", align 8
+  call void @llvm.gcroot(ptr %"world#local#sym27#", ptr null)
   %new_str = call ptr @tmc_stdlib_string_new(ptr @str, i64 5)
-  store ptr %new_str, ptr %"hello#local#sym22#", align 8
+  store ptr %new_str, ptr %"hello#local#sym26#", align 8
   call void @gc_run()
   %new_str1 = call ptr @tmc_stdlib_string_new(ptr @str.1, i64 5)
-  store ptr %new_str1, ptr %"world#local#sym23#", align 8
+  store ptr %new_str1, ptr %"world#local#sym27#", align 8
   call void @gc_run()
-  %"hello#local#sym22#2" = load ptr, ptr %"hello#local#sym22#", align 8
-  call void @_TM0_5print1s6string(ptr %"hello#local#sym22#2")
-  %"world#local#sym23#3" = load ptr, ptr %"world#local#sym23#", align 8
-  call void @_TM0_5print1s6string(ptr %"world#local#sym23#3")
+  %"hello#local#sym26#2" = load ptr, ptr %"hello#local#sym26#", align 8
+  call void @_TM0_5print1s6string(ptr %"hello#local#sym26#2")
+  %"world#local#sym27#3" = load ptr, ptr %"world#local#sym27#", align 8
+  call void @_TM0_5print1s6string(ptr %"world#local#sym27#3")
   ret void
 }
 

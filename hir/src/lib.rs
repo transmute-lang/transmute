@@ -13,10 +13,10 @@ use crate::passes::resolver::Resolver;
 use crate::statement::{Field, Parameter, Return, Statement, TypeDef};
 use crate::symbol::Symbol;
 use crate::typed::{Typed, TypedState, Untyped};
-use std::collections::HashMap;
 use transmute_ast::statement::StatementKind as AstStatementKind;
 use transmute_ast::Ast;
 use transmute_core::error::Diagnostics;
+use transmute_core::id_map::IdMap;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeDefId, TypeId};
 use transmute_core::vec_map::VecMap;
 
@@ -43,7 +43,7 @@ pub type ResolvedParameter = Parameter<Typed, Bound>;
 pub type ResolvedReturn = Return<Typed>;
 pub type ResolvedField = Field<Typed, Bound>;
 
-pub fn resolve(ast: Ast) -> Result<ResolvedHir, Diagnostics> {
+pub fn resolve(ast: Ast) -> Result<ResolvedHir, Diagnostics<()>> {
     UnresolvedHir::from(ast).resolve(Natives::default())
 }
 
@@ -64,6 +64,7 @@ where
     /// Types
     pub type_defs: VecMap<TypeDefId, TypeDef>,
     /// Root statements
+    // todo:refactor must be a single StmtId
     pub roots: Vec<StmtId>,
     /// All symbols
     pub symbols: VecMap<SymbolId, Symbol>,
@@ -74,35 +75,15 @@ where
 }
 
 impl UnresolvedHir {
-    pub fn resolve(self, natives: Natives) -> Result<ResolvedHir, Diagnostics> {
-        #[cfg(debug_assertions)]
-        let (expressions_count, statements_count) = (self.expressions.len(), self.statements.len());
-
-        let resolved_hir = Resolver::new().resolve(natives, self)?;
-
-        #[cfg(debug_assertions)]
-        {
-            debug_assert!(
-                expressions_count == resolved_hir.expressions.len(),
-                "expr count don't match ({} != {})",
-                expressions_count,
-                resolved_hir.expressions.len()
-            );
-
-            debug_assert!(
-                statements_count == resolved_hir.statements.len(),
-                "expr count don't match ({} != {})",
-                statements_count,
-                resolved_hir.statements.len()
-            );
-        }
-
-        Ok(resolved_hir)
+    pub fn resolve(self, natives: Natives) -> Result<ResolvedHir, Diagnostics<()>> {
+        Resolver::new().resolve(natives, self)
     }
 }
 
 impl From<Ast> for UnresolvedHir {
     fn from(ast: Ast) -> Self {
+        debug_assert_eq!(ast.roots.len(), 1);
+
         // convert operators to function calls
         let operator_free =
             OperatorsConverter::new(ast.identifiers, ast.identifier_refs).convert(ast.expressions);
@@ -125,7 +106,7 @@ impl From<Ast> for UnresolvedHir {
 
         // compute exit points, i.e. Ret statements (explicit or implicit) that are actually
         // reachable. we also compute the set of unreachable expression.
-        let mut exit_points = HashMap::new();
+        let mut exit_points = IdMap::new();
         let mut unreachable = Vec::new();
 
         for (_, stmt) in statements.iter() {
@@ -136,7 +117,7 @@ impl From<Ast> for UnresolvedHir {
                 } = ExitPointsResolver::new(&expressions, &statements).resolve(expr_id);
 
                 #[cfg(test)]
-                println!("Computed exit points={new_exit_points:?} and unreachable={new_unreachable:?} for {expr_id:?}");
+                println!("{}:{}: Computed exit points={new_exit_points:?} and unreachable={new_unreachable:?} for {expr_id:?}", file!(), line!());
 
                 exit_points.insert(expr_id, new_exit_points);
                 unreachable.append(&mut new_unreachable);
@@ -192,4 +173,13 @@ impl ResolvedHir {
             .unwrap()
             .0
     }
+}
+
+trait FindSymbol {
+    fn find(
+        &self,
+        all_symbols: &VecMap<SymbolId, Symbol>,
+        ident: IdentId,
+        param_types: Option<&[TypeId]>,
+    ) -> Option<SymbolId>;
 }

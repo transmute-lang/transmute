@@ -1,0 +1,31 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Symbol 'C' not found",
+                span: 7:21; [121, 122],
+                level: Error,
+            },
+            Diagnostic {
+                message: "Symbol 'D' not found",
+                span: 8:23; [148, 149],
+                level: Error,
+            },
+            Diagnostic {
+                message: "Symbol C not found in a",
+                span: 7:21; [121, 122],
+                level: Error,
+            },
+            Diagnostic {
+                message: "Symbol D not found in a.b",
+                span: 8:23; [148, 149],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

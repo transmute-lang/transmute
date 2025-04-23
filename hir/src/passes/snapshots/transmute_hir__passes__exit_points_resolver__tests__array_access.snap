@@ -5,14 +5,15 @@ expression: "(ast, block_exit_points)"
 (
     Ast {
         identifiers: [
-            IdentId(0) => "f",
-            IdentId(1) => "a",
+            IdentId(0) => "<root>",
+            IdentId(1) => "f",
+            IdentId(2) => "a",
         ],
         identifier_refs: [
             IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
-                    id: IdentId(1),
+                    id: IdentId(2),
                     span: 3:17; [31, 32],
                 },
             },
@@ -52,7 +53,7 @@ expression: "(ast, block_exit_points)"
                 id: ExprId(3),
                 kind: Block(
                     [
-                        StmtId(0),
+                        StmtId(1),
                     ],
                 ),
                 span: 3:27; [41, 51],
@@ -71,7 +72,7 @@ expression: "(ast, block_exit_points)"
                 id: ExprId(5),
                 kind: Block(
                     [
-                        StmtId(1),
+                        StmtId(2),
                     ],
                 ),
                 span: 3:43; [57, 67],
@@ -109,8 +110,8 @@ expression: "(ast, block_exit_points)"
                 id: ExprId(9),
                 kind: Block(
                     [
-                        StmtId(2),
                         StmtId(3),
+                        StmtId(4),
                     ],
                 ),
                 span: 2:13; [13, 90],
@@ -119,6 +120,21 @@ expression: "(ast, block_exit_points)"
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(5),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
                 kind: Ret(
                     Some(
                         ExprId(2),
@@ -127,8 +143,8 @@ expression: "(ast, block_exit_points)"
                 ),
                 span: 3:29; [43, 49],
             },
-            StmtId(1) => Statement {
-                id: StmtId(1),
+            StmtId(2) => Statement {
+                id: StmtId(2),
                 kind: Ret(
                     Some(
                         ExprId(4),
@@ -137,19 +153,19 @@ expression: "(ast, block_exit_points)"
                 ),
                 span: 3:45; [59, 65],
             },
-            StmtId(2) => Statement {
-                id: StmtId(2),
+            StmtId(3) => Statement {
+                id: StmtId(3),
                 kind: Let(
                     Identifier {
-                        id: IdentId(1),
+                        id: IdentId(2),
                         span: 3:13; [27, 28],
                     },
                     ExprId(7),
                 ),
                 span: 3:9; [23, 69],
             },
-            StmtId(3) => Statement {
-                id: StmtId(3),
+            StmtId(4) => Statement {
+                id: StmtId(4),
                 kind: Ret(
                     Some(
                         ExprId(8),
@@ -158,11 +174,11 @@ expression: "(ast, block_exit_points)"
                 ),
                 span: 4:9; [78, 84],
             },
-            StmtId(4) => Statement {
-                id: StmtId(4),
+            StmtId(5) => Statement {
+                id: StmtId(5),
                 kind: LetFn(
                     Identifier {
-                        id: IdentId(0),
+                        id: IdentId(1),
                         span: 2:9; [9, 10],
                     },
                     [],
@@ -177,7 +193,7 @@ expression: "(ast, block_exit_points)"
         ],
         type_defs: [],
         roots: [
-            StmtId(4),
+            StmtId(0),
         ],
     },
     [

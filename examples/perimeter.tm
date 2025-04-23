@@ -9,7 +9,7 @@ struct Square {
 }
 
 let main() = {
-    let n = number_parse(list_get(args(), 1));
+    let n = std.numbers.number_parse(std.list.list_get(std.env.args(), 1));
 
     let square = Square {
         a: Point {
@@ -25,5 +25,5 @@ let main() = {
     let width = square.b.x - square.a.x;
     let height = square.b.y - square.a.y;
 
-    print(width * 2 + height * 2);
+    std.numbers.print(width * 2 + height * 2);
 }

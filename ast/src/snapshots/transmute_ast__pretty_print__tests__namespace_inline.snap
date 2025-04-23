@@ -1,0 +1,9 @@
+---
+source: ast/src/pretty_print.rs
+expression: w
+---
+namespace ns {
+  let f(): number = {
+    1;
+  }
+}

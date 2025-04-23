@@ -1,8 +1,8 @@
 
 let main() {
-    let n = number_parse(list_get(args(), 1));
+    let n = std.numbers.number_parse(std.list.list_get(std.env.args(), 1));
 
-    print(n);
-    print(n == 0);
-    print("hello, world");
+    std.numbers.print(n);
+    std.booleans.print(n == 0);
+    std.str.print("hello, world");
 }

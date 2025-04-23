@@ -1,0 +1,6 @@
+---
+source: ast/src/pretty_print.rs
+expression: w
+---
+namespace ns {
+}

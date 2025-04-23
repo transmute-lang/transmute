@@ -23,25 +23,25 @@ entry:
   unreachable
 }
 
-define i1 @_TM0_1f2nb(i64 %"n#param#sym18#", i1 %"c#param#sym19#") gc "shadow-stack" {
+define i1 @_TM0_1f2nb(i64 %"n#param#sym20#", i1 %"c#param#sym21#") gc "shadow-stack" {
 entry:
-  %"m#local#sym20#" = alloca i64, align 8
-  br i1 %"c#param#sym19#", label %true_branch, label %false_branch
+  %"m#local#sym22#" = alloca i64, align 8
+  br i1 %"c#param#sym21#", label %true_branch, label %false_branch
 
 true_branch:                                      ; preds = %entry
-  %"sub#" = sub i64 %"n#param#sym18#", 1
+  %"sub#" = sub i64 %"n#param#sym20#", 1
   br label %end_if
 
 false_branch:                                     ; preds = %entry
-  %"add#" = add i64 %"n#param#sym18#", 1
+  %"add#" = add i64 %"n#param#sym20#", 1
   br label %end_if
 
 end_if:                                           ; preds = %false_branch, %true_branch
   %if_result = phi i64 [ %"sub#", %true_branch ], [ %"add#", %false_branch ]
-  store i64 %if_result, ptr %"m#local#sym20#", align 4
+  store i64 %if_result, ptr %"m#local#sym22#", align 4
   call void @gc_run()
-  %"m#local#sym20#1" = load i64, ptr %"m#local#sym20#", align 4
-  %"eq#" = icmp eq i64 %"m#local#sym20#1", 42
+  %"m#local#sym22#1" = load i64, ptr %"m#local#sym22#", align 4
+  %"eq#" = icmp eq i64 %"m#local#sym22#1", 42
   ret i1 %"eq#"
 }
 

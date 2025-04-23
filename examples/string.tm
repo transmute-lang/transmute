@@ -1,5 +1,5 @@
 let main() {
     let who = "world";
-    print("hello, ");
-    print(who);
+    std.str.print("hello, ");
+    std.str.print(who);
 }

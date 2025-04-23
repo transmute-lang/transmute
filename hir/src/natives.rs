@@ -3,6 +3,12 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use transmute_core::ids::{StmtId, TypeId};
 
+// todo rethink the whole native idea: should it be parsed as everything else instead of being
+//  defined here? this would allow the creation of a root `core` namespace where to put the
+//  definitions. Once done:
+//   - rename std.numbers to std.number (or to core.numbers?)
+//   - rename std.booleans to std.boolean (or to core.booleans?)
+//   - move std.native to core.native
 pub struct Natives {
     functions: HashMap<&'static str, Vec<NativeFn>>,
     types: Vec<NativeType>,
@@ -298,6 +304,21 @@ impl Type {
             Type::Boolean => "boolean",
             Type::Number => "number",
             Type::Void => "void",
+        }
+    }
+
+    pub fn is_valid_return_type(&self) -> bool {
+        matches!(self, Type::Void) || self.is_assignable()
+    }
+
+    pub fn is_assignable(&self) -> bool {
+        match self {
+            Type::Boolean
+            | Type::Number
+            | Type::Function(_, _)
+            | Type::Struct(_)
+            | Type::Array(_, _) => true,
+            _ => false,
         }
     }
 }

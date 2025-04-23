@@ -16,7 +16,7 @@ let perimeter(square: Square): number {
 }
 
 let main() = {
-    let n = number_parse(list_get(args(), 1));
+    let n = std.numbers.number_parse(std.list.list_get(std.env.args(), 1));
 
     let square = Square {
         a: Point {
@@ -29,5 +29,5 @@ let main() = {
         },
     };
 
-    print(perimeter(square));
+    std.numbers.print(perimeter(square));
 }

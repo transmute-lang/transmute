@@ -4,7 +4,7 @@ struct Point {
 }
 
 let main() {
-    let n = number_parse(list_get(args(), 1));
+    let n = std.numbers.number_parse(std.list.list_get(std.env.args(), 1));
 
     let p1 = Point {
         xy: [0, 0],
@@ -20,5 +20,5 @@ let main() {
 
     let area = (p2.xy[0] - p1xy[0]) * (p2.xy[1] - p1xy[1]);
 
-    print(area);
+    std.numbers.print(area);
 }

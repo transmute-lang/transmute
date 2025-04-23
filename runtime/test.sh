@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 
-mkdir -p ../target/debug/transmute-stdlib/src
+mkdir -p "$TRANSMUTE_STDLIB_PATH"
 
 pushd ../stdlib || exit 1
 cargo build
 popd || exit 1
 
-cp ../target/debug/libtransmute_stdlib.a ../target/debug/transmute-stdlib/
-cp ../stdlib/src/stdlib/*.tm ../target/debug/transmute-stdlib/src/
+cp ../target/debug/libtransmute_stdlib.a "$TRANSMUTE_STDLIB_PATH"
 
 mkdir -p target
 

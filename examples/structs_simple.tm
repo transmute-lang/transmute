@@ -3,7 +3,7 @@ struct Struct {
 }
 
 let main() = {
-    let n = number_parse(list_get(args(), 1));
+    let n = std.numbers.number_parse(std.list.list_get(std.env.args(), 1));
 
     let s = Struct {
         field: n * 2,
@@ -11,5 +11,5 @@ let main() = {
 
     s.field = s.field + 1;
 
-    print(s.field);
+    std.numbers.print(s.field);
 }

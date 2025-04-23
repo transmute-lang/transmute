@@ -1,33 +1,34 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser ::\nnew(Lexer :: new(\"let times_two(a: number): number = a * 2;\")).parse()"
+expression: compilation_unit.into_ast()
 ---
 Ok(
     Ast {
         identifiers: [
-            IdentId(0) => "times_two",
-            IdentId(1) => "a",
-            IdentId(2) => "number",
+            IdentId(0) => "<root>",
+            IdentId(1) => "times_two",
+            IdentId(2) => "a",
+            IdentId(3) => "number",
         ],
         identifier_refs: [
             IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
-                    id: IdentId(2),
+                    id: IdentId(3),
                     span: 1:18; [17, 23],
                 },
             },
             IdentRefId(1) => IdentifierRef {
                 id: IdentRefId(1),
                 ident: Identifier {
-                    id: IdentId(2),
+                    id: IdentId(3),
                     span: 1:27; [26, 32],
                 },
             },
             IdentRefId(2) => IdentifierRef {
                 id: IdentRefId(2),
                 ident: Identifier {
-                    id: IdentId(1),
+                    id: IdentId(2),
                     span: 1:36; [35, 36],
                 },
             },
@@ -69,7 +70,7 @@ Ok(
                 id: ExprId(3),
                 kind: Block(
                     [
-                        StmtId(0),
+                        StmtId(1),
                     ],
                 ),
                 span: 1:36; [35, 41],
@@ -78,23 +79,38 @@ Ok(
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(2),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
                 kind: Expression(
                     ExprId(2),
                 ),
                 span: 1:36; [35, 41],
             },
-            StmtId(1) => Statement {
-                id: StmtId(1),
+            StmtId(2) => Statement {
+                id: StmtId(2),
                 kind: LetFn(
                     Identifier {
-                        id: IdentId(0),
+                        id: IdentId(1),
                         span: 1:5; [4, 13],
                     },
                     [],
                     [
                         Parameter {
                             identifier: Identifier {
-                                id: IdentId(1),
+                                id: IdentId(2),
                                 span: 1:15; [14, 15],
                             },
                             type_def_id: TypeDefId(0),
@@ -114,19 +130,23 @@ Ok(
         type_defs: [
             TypeDefId(0) => TypeDef {
                 kind: Simple(
-                    IdentRefId(0),
+                    [
+                        IdentRefId(0),
+                    ],
                 ),
                 span: 1:18; [17, 23],
             },
             TypeDefId(1) => TypeDef {
                 kind: Simple(
-                    IdentRefId(1),
+                    [
+                        IdentRefId(1),
+                    ],
                 ),
                 span: 1:27; [26, 32],
             },
         ],
         roots: [
-            StmtId(1),
+            StmtId(0),
         ],
     },
 )

@@ -1,5 +1,7 @@
 
 #-- str.tm --------------------
-@native struct string {}
+@std.native
+struct string {}
 
-@native let print(s: string) {}
+@std.native
+let print(s: string) {}

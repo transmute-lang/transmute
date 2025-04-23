@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 use std::marker::PhantomData;
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 
 #[derive(PartialEq)]
 pub struct VecMap<I, T> {
@@ -118,6 +118,14 @@ where
         }
     }
 
+    /// Returns a mutable reference to the value at index.
+    pub fn get_mut(&mut self, index: I) -> Option<&mut T> {
+        match self.vec.get_mut(index.into()) {
+            None => None,
+            Some(e) => e.as_mut(),
+        }
+    }
+
     /// Removes an element from the vector, returning the value at the index if the index was
     /// previously occupied.
     pub fn remove(&mut self, index: I) -> Option<T> {
@@ -191,6 +199,19 @@ where
     fn index(&self, index: I) -> &Self::Output {
         let index = index.into();
         match &self.vec[index] {
+            None => panic!("Index {index} is not not set"),
+            Some(e) => e,
+        }
+    }
+}
+
+impl<I, T> IndexMut<I> for VecMap<I, T>
+where
+    I: Into<usize>,
+{
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
+        let index = index.into();
+        match &mut self.vec[index] {
             None => panic!("Index {index} is not not set"),
             Some(e) => e,
         }

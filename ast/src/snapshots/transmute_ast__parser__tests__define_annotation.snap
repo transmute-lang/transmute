@@ -1,20 +1,36 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser :: new(Lexer :: new(\"annotation a;\")).parse()"
+expression: compilation_unit.into_ast()
 ---
 Ok(
     Ast {
         identifiers: [
-            IdentId(0) => "a",
+            IdentId(0) => "<root>",
+            IdentId(1) => "a",
         ],
         identifier_refs: [],
         expressions: [],
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
-                kind: Annotation(
+                kind: Namespace(
                     Identifier {
                         id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: Annotation(
+                    Identifier {
+                        id: IdentId(1),
                         span: 1:12; [11, 12],
                     },
                 ),

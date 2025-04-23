@@ -38,7 +38,7 @@ entry:
   ret i64 %"f#res#"
 }
 
-define i64 @_TM0_1f1a2n(ptr %"p#param#sym19#") gc "shadow-stack" {
+define i64 @_TM0_1f1a2n(ptr %"p#param#sym21#") gc "shadow-stack" {
 entry:
   ret i64 1
 }

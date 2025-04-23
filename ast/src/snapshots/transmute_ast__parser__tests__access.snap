@@ -1,25 +1,26 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser::new(Lexer::new(\"forty . two ;\")).parse()"
+expression: compilation_unit.into_ast()
 ---
 Ok(
     Ast {
         identifiers: [
-            IdentId(0) => "forty",
-            IdentId(1) => "two",
+            IdentId(0) => "<root>",
+            IdentId(1) => "forty",
+            IdentId(2) => "two",
         ],
         identifier_refs: [
             IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
-                    id: IdentId(0),
+                    id: IdentId(1),
                     span: 1:1; [0, 5],
                 },
             },
             IdentRefId(1) => IdentifierRef {
                 id: IdentRefId(1),
                 ident: Identifier {
-                    id: IdentId(1),
+                    id: IdentId(2),
                     span: 1:9; [8, 11],
                 },
             },
@@ -47,6 +48,21 @@ Ok(
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
                 kind: Expression(
                     ExprId(1),
                 ),

@@ -1,18 +1,19 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser :: new(Lexer :: new(\"@a let f() {}\")).parse()"
+expression: compilation_unit.into_ast()
 ---
 Ok(
     Ast {
         identifiers: [
-            IdentId(0) => "a",
-            IdentId(1) => "f",
+            IdentId(0) => "<root>",
+            IdentId(1) => "a",
+            IdentId(2) => "f",
         ],
         identifier_refs: [
             IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
-                    id: IdentId(0),
+                    id: IdentId(1),
                     span: 1:2; [1, 2],
                 },
             },
@@ -29,14 +30,31 @@ Ok(
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
                 kind: LetFn(
                     Identifier {
-                        id: IdentId(1),
+                        id: IdentId(2),
                         span: 1:8; [7, 8],
                     },
                     [
                         Annotation {
-                            ident_ref_id: IdentRefId(0),
+                            ident_ref_ids: [
+                                IdentRefId(0),
+                            ],
                             span: 1:1; [0, 2],
                         },
                     ],

@@ -474,6 +474,7 @@ dependencies = [
  "test_dir",
  "tmc",
  "transmute-ast",
+ "transmute-core",
  "transmute-hir",
  "transmute-llvm",
  "transmute-mir",
@@ -496,6 +497,7 @@ dependencies = [
 name = "transmute-ast"
 version = "0.1.0"
 dependencies = [
+ "bimap",
  "insta",
  "transmute-core",
 ]

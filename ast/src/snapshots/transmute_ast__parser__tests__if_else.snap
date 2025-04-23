@@ -1,10 +1,12 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser::new(Lexer::new(\"if true { 42; } else { 43; }\")).parse()"
+expression: compilation_unit.into_ast()
 ---
 Ok(
     Ast {
-        identifiers: [],
+        identifiers: [
+            IdentId(0) => "<root>",
+        ],
         identifier_refs: [],
         expressions: [
             ExprId(0) => Expression {
@@ -31,7 +33,7 @@ Ok(
                 id: ExprId(2),
                 kind: Block(
                     [
-                        StmtId(0),
+                        StmtId(1),
                     ],
                 ),
                 span: 1:9; [8, 15],
@@ -50,7 +52,7 @@ Ok(
                 id: ExprId(4),
                 kind: Block(
                     [
-                        StmtId(1),
+                        StmtId(2),
                     ],
                 ),
                 span: 1:22; [21, 28],
@@ -70,20 +72,35 @@ Ok(
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(3),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
                 kind: Expression(
                     ExprId(1),
                 ),
                 span: 1:11; [10, 13],
             },
-            StmtId(1) => Statement {
-                id: StmtId(1),
+            StmtId(2) => Statement {
+                id: StmtId(2),
                 kind: Expression(
                     ExprId(3),
                 ),
                 span: 1:24; [23, 26],
             },
-            StmtId(2) => Statement {
-                id: StmtId(2),
+            StmtId(3) => Statement {
+                id: StmtId(3),
                 kind: Expression(
                     ExprId(5),
                 ),
@@ -92,7 +109,7 @@ Ok(
         ],
         type_defs: [],
         roots: [
-            StmtId(2),
+            StmtId(0),
         ],
     },
 )

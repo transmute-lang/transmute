@@ -5,7 +5,7 @@ struct Point {
 }
 
 let main() {
-    let n = number_parse(list_get(args(), 1));
+    let n = std.numbers.number_parse(std.list.list_get(std.env.args(), 1));
 
     let square = [
         Point {
@@ -25,5 +25,5 @@ let main() {
 
     let area = (square[1].x - s0.x) * (square[1].y - s0.y);
 
-    print(area);
+    std.numbers.print(area);
 }

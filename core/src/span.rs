@@ -1,8 +1,10 @@
+use crate::ids::InputId;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 
 #[derive(Default, Clone, Eq)]
 pub struct Span {
+    pub input_id: InputId,
     pub line: usize,
     pub column: usize,
     pub start: usize,
@@ -10,10 +12,11 @@ pub struct Span {
 }
 
 impl Span {
-    pub fn new(line: usize, column: usize, start: usize, len: usize) -> Self {
+    pub fn new(input_id: InputId, line: usize, column: usize, start: usize, len: usize) -> Self {
         assert!(line >= 1);
         assert!(column >= 1);
         Self {
+            input_id,
             line,
             column,
             start,
@@ -22,10 +25,13 @@ impl Span {
     }
 
     pub fn extend_to(&self, other: &Span) -> Self {
+        debug_assert_eq!(self.input_id, other.input_id);
+
         let self_end = self.start + self.len;
         let other_end = other.start + other.len;
         let diff = other_end - self_end;
         Self {
+            input_id: self.input_id,
             line: self.line,
             column: self.column,
             start: self.start,
@@ -35,6 +41,7 @@ impl Span {
 
     pub fn extend(&self, len: usize) -> Self {
         Self {
+            input_id: self.input_id,
             line: self.line,
             column: self.column,
             start: self.start,
@@ -76,6 +83,7 @@ impl Ord for Span {
 
 impl Debug for Span {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // todo add input_id
         write!(
             f,
             "{}:{}; [{}, {}]",

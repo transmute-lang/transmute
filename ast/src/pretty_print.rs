@@ -201,6 +201,28 @@ impl PrettyPrint for Statement {
                     writeln!(f)
                 }
             }
+            StatementKind::Namespace(ident, parent, _, stmts) => {
+                if parent.is_some() {
+                    writeln!(
+                        f,
+                        "{indent}namespace {ident} {{",
+                        indent = ctx.indent(),
+                        ident = ctx.identifier(ident.id)
+                    )?;
+                    ctx.level += 1;
+                }
+
+                for stmt in stmts {
+                    ctx.pretty_print_statement(*stmt, opts, f)?;
+                }
+
+                if parent.is_some() {
+                    ctx.level -= 1;
+                    writeln!(f, "{indent}}}", indent = ctx.indent(),)?;
+                }
+
+                Ok(())
+            }
             StatementKind::Let(ident, expr_id) => {
                 write!(
                     f,
@@ -241,7 +263,12 @@ impl PrettyPrint for Statement {
                     writeln!(
                         f,
                         "{indent}@{ident}",
-                        ident = ctx.identifier_ref(annotation.ident_ref_id)
+                        ident = annotation
+                            .ident_ref_ids
+                            .iter()
+                            .map(|ident_ref_id| ctx.identifier_ref(*ident_ref_id))
+                            .collect::<Vec<_>>()
+                            .join("."),
                     )?;
                 }
                 write!(f, "{indent}let {ident}(", ident = ctx.identifier(ident.id))?;
@@ -275,7 +302,12 @@ impl PrettyPrint for Statement {
                     writeln!(
                         f,
                         "{indent}@{ident}",
-                        ident = ctx.identifier_ref(annotation.ident_ref_id)
+                        ident = annotation
+                            .ident_ref_ids
+                            .iter()
+                            .map(|ident_ref| ctx.identifier_ref(*ident_ref))
+                            .collect::<Vec<_>>()
+                            .join(".")
                     )?;
                 }
                 writeln!(
@@ -312,9 +344,17 @@ impl PrettyPrint for TypeDefId {
     where
         W: Write,
     {
-        match ctx.ast.type_defs[*self].kind {
-            TypeDefKind::Simple(ident_ref_id) => {
-                write!(f, "{}", ctx.identifier_ref(ident_ref_id))
+        match &ctx.ast.type_defs[*self].kind {
+            TypeDefKind::Simple(ident_ref_ids) => {
+                write!(
+                    f,
+                    "{}",
+                    ident_ref_ids
+                        .iter()
+                        .map(|ident_ref| ctx.identifier_ref(*ident_ref))
+                        .collect::<Vec<_>>()
+                        .join(".")
+                )
             }
             TypeDefKind::Array(base, len) => {
                 write!(f, "[")?;
@@ -385,8 +425,9 @@ mod tests {
     use crate::literal::{Literal, LiteralKind};
     use crate::parser::Parser;
     use crate::pretty_print::{Options, PrettyPrint, PrettyPrintContext};
-    use crate::Ast;
+    use crate::{Ast, CompilationUnit};
     use insta::assert_snapshot;
+    use transmute_core::ids::InputId;
     use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId};
     use transmute_core::span::Span;
     use transmute_core::vec_map::VecMap;
@@ -500,7 +541,14 @@ mod tests {
 
     #[test]
     fn expression_assignment() {
-        let ast = Parser::new(Lexer::new("a = true;")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "a = true;"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let expr = &ast.expressions[ExprId::from(1)];
 
         let mut ctx = PrettyPrintContext {
@@ -516,7 +564,14 @@ mod tests {
 
     #[test]
     fn expression_assignment_indirect() {
-        let ast = Parser::new(Lexer::new("a.b.c = true;")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "a.b.c = true;"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let expr = &ast.expressions[ExprId::from(ast.expressions.len() - 1)];
 
         let mut ctx = PrettyPrintContext {
@@ -532,7 +587,14 @@ mod tests {
 
     #[test]
     fn expression_unary() {
-        let ast = Parser::new(Lexer::new("-a;")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "-a;"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let expr = &ast.expressions[ExprId::from(1)];
 
         let mut ctx = PrettyPrintContext {
@@ -548,7 +610,14 @@ mod tests {
 
     #[test]
     fn expression_binary() {
-        let ast = Parser::new(Lexer::new("a+b;")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "a+b;"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let expr = &ast.expressions[ExprId::from(2)];
 
         let mut ctx = PrettyPrintContext {
@@ -564,7 +633,14 @@ mod tests {
 
     #[test]
     fn expression_function_call_0() {
-        let ast = Parser::new(Lexer::new("f();")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "f();"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let expr = &ast.expressions[ExprId::from(1)];
 
         let mut ctx = PrettyPrintContext {
@@ -580,7 +656,14 @@ mod tests {
 
     #[test]
     fn expression_function_call_1() {
-        let ast = Parser::new(Lexer::new("f(1);")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "f(1);"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let expr = &ast.expressions[ExprId::from(2)];
 
         let mut ctx = PrettyPrintContext {
@@ -596,7 +679,14 @@ mod tests {
 
     #[test]
     fn expression_function_call_2() {
-        let ast = Parser::new(Lexer::new("f(1,2);")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "f(1,2);"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let expr = &ast.expressions[ExprId::from(3)];
 
         let mut ctx = PrettyPrintContext {
@@ -612,9 +702,14 @@ mod tests {
 
     #[test]
     fn expression_while() {
-        let ast = Parser::new(Lexer::new("while true { 1; }"))
-            .parse()
-            .unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "while true { 1; }"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let expr = &ast.expressions[ExprId::from(3)];
 
         let mut ctx = PrettyPrintContext {
@@ -635,7 +730,14 @@ mod tests {
 
     #[test]
     fn expression_if() {
-        let ast = Parser::new(Lexer::new("if true { 1; }")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "if true { 1; }"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let expr = &ast.expressions[ExprId::from(3)];
 
         let mut ctx = PrettyPrintContext {
@@ -656,9 +758,14 @@ mod tests {
 
     #[test]
     fn expression_if_else() {
-        let ast = Parser::new(Lexer::new("if true { 1; } else { 2; }"))
-            .parse()
-            .unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "if true { 1; } else { 2; }"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let expr = &ast.expressions[ExprId::from(5)];
 
         let mut ctx = PrettyPrintContext {
@@ -682,9 +789,14 @@ mod tests {
 
     #[test]
     fn expression_if_else_if() {
-        let ast = Parser::new(Lexer::new("if true { 1; } else if b { 2; }"))
-            .parse()
-            .unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "if true { 1; } else if b { 2; }"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let expr = &ast.expressions[ExprId::from(8)];
 
         let mut ctx = PrettyPrintContext {
@@ -710,9 +822,17 @@ mod tests {
 
     #[test]
     fn expression_if_else_if_else() {
-        let ast = Parser::new(Lexer::new("if true { 1; } else if b { 2; } else { 3; }"))
-            .parse()
-            .unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(
+                InputId::from(0),
+                "if true { 1; } else if b { 2; } else { 3; }",
+            ),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let expr = &ast.expressions[ExprId::from(10)];
 
         let mut ctx = PrettyPrintContext {
@@ -741,7 +861,14 @@ mod tests {
 
     #[test]
     fn statement_expression() {
-        let ast = Parser::new(Lexer::new("1;")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "1;"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let stmt = &ast.statements[StmtId::from(0)];
 
         let mut ctx = PrettyPrintContext {
@@ -757,7 +884,14 @@ mod tests {
 
     #[test]
     fn statement_let() {
-        let ast = Parser::new(Lexer::new("let a = 1;")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "let a = 1;"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let stmt = &ast.statements[StmtId::from(0)];
 
         let mut ctx = PrettyPrintContext {
@@ -773,7 +907,14 @@ mod tests {
 
     #[test]
     fn statement_ret_explicit() {
-        let ast = Parser::new(Lexer::new("ret a;")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "ret a;"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
         let stmt = &ast.statements[StmtId::from(0)];
 
         let mut ctx = PrettyPrintContext {
@@ -789,8 +930,15 @@ mod tests {
 
     #[test]
     fn statement_ret_implicit() {
-        let ast = Parser::new(Lexer::new("let f() = { a; }")).parse().unwrap();
-        let stmt = &ast.statements[StmtId::from(0)];
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "let f() = { a; }"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
+        let stmt = &ast.statements[StmtId::from(1)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -805,8 +953,15 @@ mod tests {
 
     #[test]
     fn statement_let_fn() {
-        let ast = Parser::new(Lexer::new("let f() = { a; }")).parse().unwrap();
-        let stmt = &ast.statements[StmtId::from(1)];
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "let f() = { a; }"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
+        let stmt = &ast.statements[StmtId::from(2)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -827,10 +982,15 @@ mod tests {
 
     #[test]
     fn statement_let_fn_ret_type() {
-        let ast = Parser::new(Lexer::new("let f(): number = { a; }"))
-            .parse()
-            .unwrap();
-        let stmt = &ast.statements[StmtId::from(1)];
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "let f(): number = { a; }"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
+        let stmt = &ast.statements[StmtId::from(2)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -851,10 +1011,15 @@ mod tests {
 
     #[test]
     fn statement_let_fn_param_1() {
-        let ast = Parser::new(Lexer::new("let f(x: number) = { a; }"))
-            .parse()
-            .unwrap();
-        let stmt = &ast.statements[StmtId::from(1)];
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "let f(x: number) = { a; }"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
+        let stmt = &ast.statements[StmtId::from(2)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -875,10 +1040,15 @@ mod tests {
 
     #[test]
     fn statement_let_fn_param_2() {
-        let ast = Parser::new(Lexer::new("let f(x: number, y: number) = { a; }"))
-            .parse()
-            .unwrap();
-        let stmt = &ast.statements[StmtId::from(1)];
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "let f(x: number, y: number) = { a; }"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
+        let stmt = &ast.statements[StmtId::from(2)];
 
         let mut ctx = PrettyPrintContext {
             ast: &ast,
@@ -899,11 +1069,14 @@ mod tests {
 
     #[test]
     fn fibonacci_rec() {
-        let ast = Parser::new(Lexer::new(
-            "let f(n: number): number = { if n <= 1 { ret n; } f(n - 1) + f(n - 2); } f(9) + 8;",
-        ))
-        .parse()
-        .unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "let f(n: number): number = { if n <= 1 { ret n; } f(n - 1) + f(n - 2); } f(9) + 8;"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
 
         let mut w = String::new();
 
@@ -914,9 +1087,14 @@ mod tests {
 
     #[test]
     fn fibonacci_iter() {
-        let ast = Parser::new(Lexer::new("let f(n: number): number = {if n == 0 { ret 0; }if n == 1 { ret 1; }let prev_prev = 0;let prev = 1;let current = 0;while n > 1 {current = prev_prev + prev;prev_prev = prev;prev = current;n = n - 1;}current;}f(9) + 8;"))
-            .parse()
-            .unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "let f(n: number): number = {if n == 0 { ret 0; }if n == 1 { ret 1; }let prev_prev = 0;let prev = 1;let current = 0;while n > 1 {current = prev_prev + prev;prev_prev = prev;prev = current;n = n - 1;}current;}f(9) + 8;"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
 
         let mut w = String::new();
 
@@ -927,9 +1105,14 @@ mod tests {
 
     #[test]
     fn struct_declaration() {
-        let ast = Parser::new(Lexer::new("struct Point { x: number, y: number }"))
-            .parse()
-            .unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "struct Point { x: number, y: number }"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
 
         let mut w = String::new();
 
@@ -940,9 +1123,14 @@ mod tests {
 
     #[test]
     fn struct_instantiation() {
-        let ast = Parser::new(Lexer::new("Point { x: 1, y: 2 };"))
-            .parse()
-            .unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "Point { x: 1, y: 2 };"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
 
         let mut w = String::new();
 
@@ -953,7 +1141,14 @@ mod tests {
 
     #[test]
     fn struct_nested_access() {
-        let ast = Parser::new(Lexer::new("s.f.g;")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "s.f.g;"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
 
         let mut w = String::new();
 
@@ -964,7 +1159,14 @@ mod tests {
 
     #[test]
     fn array_instantiation() {
-        let ast = Parser::new(Lexer::new("[1, 2, 3];")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "[1, 2, 3];"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
 
         let mut w = String::new();
 
@@ -975,7 +1177,14 @@ mod tests {
 
     #[test]
     fn array_access() {
-        let ast = Parser::new(Lexer::new("a[1];")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "a[1];"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
 
         let mut w = String::new();
 
@@ -986,7 +1195,14 @@ mod tests {
 
     #[test]
     fn array_access_dot_access() {
-        let ast = Parser::new(Lexer::new("a[1].b;")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "a[1].b;"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
 
         let mut w = String::new();
 
@@ -997,7 +1213,14 @@ mod tests {
 
     #[test]
     fn dot_access_array_access() {
-        let ast = Parser::new(Lexer::new("a.b[1];")).parse().unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "a.b[1];"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
 
         let mut w = String::new();
 
@@ -1008,9 +1231,68 @@ mod tests {
 
     #[test]
     fn annotations() {
-        let ast = Parser::new(Lexer::new("@a @b let f() {} @c @d struct S {}"))
-            .parse()
-            .unwrap();
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "@a @b let f() {} @c @d.e.f struct S {}"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_snapshot!(w);
+    }
+
+    #[test]
+    fn nested_type() {
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "let f(p: a.b.c): ns1.ns2.type {}"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_snapshot!(w);
+    }
+
+    #[test]
+    fn namespace() {
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "namespace ns;"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_snapshot!(w);
+    }
+
+    #[test]
+    fn namespace_inline() {
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "namespace ns { let f(): number { 1; } }"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
 
         let mut w = String::new();
 

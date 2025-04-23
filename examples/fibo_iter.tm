@@ -1,8 +1,8 @@
 let main() = {
-    let n = number_parse(list_get(args(), 1));
+    let n = std.numbers.number_parse(std.list.list_get(std.env.args(), 1));
 
-    if n == 0 { print(0); ret; }
-    if n == 1 { print(1); ret; }
+    if n == 0 { std.numbers.print(0); ret; }
+    if n == 1 { std.numbers.print(1); ret; }
 
     let prev_prev = 0;
     let prev = 1;
@@ -15,5 +15,5 @@ let main() = {
         n = n - 1;
     }
 
-    print(current);
+    std.numbers.print(current);
 }

@@ -1,0 +1,97 @@
+---
+source: ast/src/parser.rs
+expression: compilation_unit.into_ast()
+---
+Ok(
+    Ast {
+        identifiers: [
+            IdentId(0) => "<root>",
+            IdentId(1) => "c",
+            IdentId(2) => "ns1",
+            IdentId(3) => "ns2",
+            IdentId(4) => "type",
+        ],
+        identifier_refs: [
+            IdentRefId(0) => IdentifierRef {
+                id: IdentRefId(0),
+                ident: Identifier {
+                    id: IdentId(2),
+                    span: 1:10; [9, 12],
+                },
+            },
+            IdentRefId(1) => IdentifierRef {
+                id: IdentRefId(1),
+                ident: Identifier {
+                    id: IdentId(3),
+                    span: 1:14; [13, 16],
+                },
+            },
+            IdentRefId(2) => IdentifierRef {
+                id: IdentRefId(2),
+                ident: Identifier {
+                    id: IdentId(4),
+                    span: 1:18; [17, 21],
+                },
+            },
+        ],
+        expressions: [
+            ExprId(0) => Expression {
+                id: ExprId(0),
+                kind: Block(
+                    [],
+                ),
+                span: 1:23; [22, 24],
+            },
+        ],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(1),
+                        span: 1:5; [4, 5],
+                    },
+                    [],
+                    [],
+                    Return {
+                        type_def_id: Some(
+                            TypeDefId(0),
+                        ),
+                    },
+                    ExprId(0),
+                ),
+                span: 1:1; [0, 24],
+            },
+        ],
+        type_defs: [
+            TypeDefId(0) => TypeDef {
+                kind: Simple(
+                    [
+                        IdentRefId(0),
+                        IdentRefId(1),
+                        IdentRefId(2),
+                    ],
+                ),
+                span: 1:10; [9, 21],
+            },
+        ],
+        roots: [
+            StmtId(0),
+        ],
+    },
+)

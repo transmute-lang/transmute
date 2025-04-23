@@ -127,12 +127,21 @@ mod tests {
     use transmute_ast::parser::Parser;
     use transmute_ast::pretty_print::Options;
     use transmute_ast::Ast;
+    use transmute_ast::CompilationUnit;
+    use transmute_core::ids::InputId;
 
     macro_rules! op {
         ($name: ident, $src:expr) => {
             #[test]
             fn $name() {
-                let ast = Parser::new(Lexer::new($src)).parse().unwrap();
+                let mut compilation_unit = CompilationUnit::default();
+                Parser::new(
+                    &mut compilation_unit,
+                    None,
+                    Lexer::new(InputId::from(0), $src),
+                )
+                .parse();
+                let ast = compilation_unit.into_ast().unwrap();
                 let output = OperatorsConverter::new(ast.identifiers, ast.identifier_refs)
                     .convert(ast.expressions);
 

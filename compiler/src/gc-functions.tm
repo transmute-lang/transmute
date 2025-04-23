@@ -1,4 +1,4 @@
 
 #-- gc-functions.tm --------------------
-@native let gc_run() {}
-@native let gc_stats() {}
+@std.native let gc_run() {}
+@std.native let gc_stats() {}

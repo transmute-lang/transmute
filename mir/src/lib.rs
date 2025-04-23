@@ -23,7 +23,7 @@ pub use transmute_hir::statement::Implementation;
 
 // todo:refactor:style get rid of the `#[allow(clippy::too_many_arguments)]`
 
-pub fn make_mir(hir: Hir) -> Result<Mir, Diagnostics> {
+pub fn make_mir(hir: Hir) -> Result<Mir, Diagnostics<()>> {
     Mir::try_from(hir)
 }
 
@@ -47,31 +47,20 @@ impl Transformer {
         }
     }
 
-    pub fn transform(mut self, mut hir: Hir) -> Result<Mir, Diagnostics> {
+    pub fn transform(mut self, mut hir: Hir) -> Result<Mir, Diagnostics<()>> {
         self.expressions.resize(hir.expressions.len());
         self.statements.resize(hir.statements.len());
+
+        debug_assert_eq!(hir.roots.len(), 1);
 
         for stmt_id in hir.roots.clone().into_iter() {
             let stmt = hir.statements.remove(stmt_id).unwrap();
 
             match stmt.kind {
-                HirStatementKind::LetFn(identifier, _, parameters, ret_type, implementation) => {
-                    self.transform_function(
-                        &mut hir,
-                        None,
-                        identifier,
-                        parameters,
-                        ret_type,
-                        implementation,
-                    )
+                HirStatementKind::Namespace(_ident_id, _parent, _input, statements) => {
+                    self.transform_namespace(&mut hir, statements)
                 }
-                HirStatementKind::Struct(identifier, _, implementation) => {
-                    self.transform_struct(None, stmt_id, identifier, implementation)
-                }
-                HirStatementKind::Annotation(_) => {
-                    self.statements.remove(stmt_id);
-                }
-                kind => panic!("function or struct expected, got {:?}", kind),
+                kind => panic!("namespace expected, got {:?}", kind),
             }
         }
 
@@ -90,6 +79,7 @@ impl Transformer {
                 .filter_map(|(symbol_id, symbol)| {
                     if matches!(&symbol.kind, &HirSymbolKind::NotFound)
                         || matches!(&symbol.kind, &HirSymbolKind::Annotation(_, _))
+                        || matches!(&symbol.kind, &HirSymbolKind::Namespace(..))
                     {
                         return None;
                     }
@@ -104,6 +94,7 @@ impl Transformer {
                         HirSymbolKind::NativeType(ident_id, _) => ident_id,
                         HirSymbolKind::Native(ident_id, _, _, _) => ident_id,
                         HirSymbolKind::Annotation(ident_id, _) => ident_id,
+                        HirSymbolKind::Namespace(ident_id, ..) => ident_id,
                     };
 
                     Some((
@@ -113,7 +104,9 @@ impl Transformer {
                             type_id: symbol.type_id,
                             ident_id: *ident_id,
                             kind: match symbol.kind {
-                                HirSymbolKind::NotFound | HirSymbolKind::Annotation(_, _) => {
+                                HirSymbolKind::NotFound
+                                | HirSymbolKind::Annotation(_, _)
+                                | HirSymbolKind::Namespace(..) => {
                                     unreachable!()
                                 }
                                 HirSymbolKind::Let(_, _) => SymbolKind::Let,
@@ -174,6 +167,34 @@ impl Transformer {
                 })
                 .collect::<VecMap<TypeId, Type>>(),
         })
+    }
+
+    fn transform_namespace(&mut self, hir: &mut Hir, stmt_ids: Vec<StmtId>) {
+        for stmt_id in stmt_ids.into_iter() {
+            let stmt = hir.statements.remove(stmt_id).unwrap();
+            match stmt.kind {
+                HirStatementKind::Namespace(_ident_id, _parent, _input, statements) => {
+                    self.transform_namespace(hir, statements)
+                }
+                HirStatementKind::LetFn(identifier, _, parameters, ret_type, implementation) => {
+                    self.transform_function(
+                        hir,
+                        None,
+                        identifier,
+                        parameters,
+                        ret_type,
+                        implementation,
+                    )
+                }
+                HirStatementKind::Struct(identifier, _, implementation) => {
+                    self.transform_struct(None, stmt_id, identifier, implementation)
+                }
+                HirStatementKind::Annotation(_) => {
+                    self.statements.remove(stmt_id);
+                }
+                kind => panic!("annotation, function or struct expected, got {:?}", kind),
+            }
+        }
     }
 
     fn transform_function(
@@ -591,9 +612,6 @@ impl Transformer {
         params: Vec<ExprId>,
         remove_implicit_rets: bool,
     ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
-        // let mut mutated_symbol_ids = Vec::new();
-        // let mut variables = BTreeMap::new();
-
         let expr = hir.expressions.remove(callee_expr_id).unwrap();
         let (mut mutated_symbol_ids, mut variables) =
             self.transform_expression(hir, parent, expr, remove_implicit_rets);
@@ -604,16 +622,13 @@ impl Transformer {
                 LiteralKind::Identifier(symbol_id) => *symbol_id,
                 _ => panic!("Literal(Identifier) expected, got {expression:?}"),
             },
+            ExpressionKind::Access(_, symbol_id) => {
+                // todo add support for non-symbolic function calls (i.e. functions as values):
+                //  if x { f1; } else { f2; }(...)
+                *symbol_id
+            }
             _ => panic!("Literal(Literal) expected, got {expression:?}"),
         };
-
-        // let expr = hir.expressions.remove(true_expr_id).unwrap();
-        // let (new_mutated_symbols_ids, new_variables) =
-        //     self.transform_expression(hir, parent, expr, remove_implicit_rets);
-        // mutated_symbols_ids.extend(new_mutated_symbols_ids);
-        // variables.extend(new_variables);
-
-        // let symbol_id = hir.identifier_refs[ident_ref_id].resolved_symbol_id();
 
         for expr_id in params.iter() {
             let expression = hir.expressions.remove(*expr_id).unwrap();
@@ -737,6 +752,7 @@ impl Transformer {
                 HirStatementKind::Annotation(_) => {
                     // nothing
                 }
+                HirStatementKind::Namespace(..) => todo!(),
             }
         }
 
@@ -1072,7 +1088,7 @@ pub struct Mir {
 }
 
 impl TryFrom<Hir> for Mir {
-    type Error = Diagnostics;
+    type Error = Diagnostics<()>;
 
     fn try_from(hir: Hir) -> Result<Self, Self::Error> {
         Transformer::new().transform(hir)
@@ -1256,192 +1272,76 @@ pub enum SymbolKind {
 mod tests {
     use crate::make_mir;
     use insta::assert_debug_snapshot;
+    use transmute_ast::lexer::Lexer;
+    use transmute_ast::parser::Parser;
+    use transmute_ast::CompilationUnit;
+    use transmute_core::ids::InputId;
 
-    #[test]
-    fn test_main() {
-        let ast = transmute_ast::parse("let main() {}").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
+    macro_rules! t {
+        ($name:ident => $src:expr) => {
+            #[test]
+            fn $name() {
+                let mut compilation_unit: CompilationUnit = Default::default();
+
+                Parser::new(
+                    &mut compilation_unit,
+                    None,
+                    Lexer::new(InputId::from(0), &format!("{}\nnamespace core {{}}", $src)),
+                )
+                .parse();
+
+                let hir = transmute_hir::resolve(compilation_unit.into_ast().unwrap()).unwrap();
+                assert_debug_snapshot!(make_mir(hir));
+            }
+        };
     }
 
-    #[test]
-    fn test_function_non_mut_param() {
-        let ast = transmute_ast::parse("let f(a: number) {}").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_function_mut_param() {
-        let ast = transmute_ast::parse("let f(a: number) { a = a + 1; }").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_function_local() {
-        let ast = transmute_ast::parse("let f() { let a = 0; }").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_function_local2() {
-        let ast = transmute_ast::parse("let f() { let a = 0; let b = 1 ; }").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_function_native() {
-        let ast = transmute_ast::parse("annotation native; @native let f() { }").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_struct_native() {
-        let ast = transmute_ast::parse("annotation native; @native struct S { }").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_function_mut_local() {
-        let ast = transmute_ast::parse("let f() { let a = 0; a = 1; }").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_function_mut_local_shadow_param() {
-        let ast = transmute_ast::parse("let f(a: number) { let a = 0; a = 1; }").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_if() {
-        let ast = transmute_ast::parse("let f() { if true { } else { } }").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_while() {
-        let ast = transmute_ast::parse("let f() { while true { 1; } }").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_expression_in_block() {
-        let ast = transmute_ast::parse("let f() { if true { 1; } }").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_inner_function() {
-        let ast =
-            transmute_ast::parse("let f(): number { let g(): boolean { true; }; 1; }").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_struct() {
-        let ast = transmute_ast::parse("struct Struct { field: number }").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_inner_struct() {
-        let ast = transmute_ast::parse("let f() { struct Struct { field: number } }").unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_structs_same_field_names() {
-        let ast = transmute_ast::parse(
-            r#"
-            struct Inner { field: number }
-            struct Outer { field: Inner }
-        "#,
-        )
-        .unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_struct_instantiation() {
-        let ast = transmute_ast::parse(
-            r#"
-                struct Struct { field: number }
-                let f() {
-                    let s = Struct { field: 1 };
-                }
-                "#,
-        )
-        .unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_struct_instantiation_nested() {
-        let ast = transmute_ast::parse(
-            r#"
-                struct Inner { field: number };
-                struct Outer { inner: Inner };
-                let f() {
-                    let s = Outer { inner: Inner { field: 1 } };
-                }
-                "#,
-        )
-        .unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_struct_instantiation_fields_out_of_order() {
-        let ast = transmute_ast::parse(
-            r#"
-                struct Struct { field1: number, field2: boolean }
-                let f() {
-                    let s = Struct { field2: true, field1: 1 };
-                }
-                "#,
-        )
-        .unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_struct_field_read() {
-        let ast = transmute_ast::parse(
-            r#"
+    t!(test_main => "let main() {}");
+    t!(test_function_non_mut_param => "let f(a: number) {}");
+    t!(test_function_mut_param => "let f(a: number) { a = a + 1; }");
+    t!(test_function_local => "let f() { let a = 0; }");
+    t!(test_function_local2 => "let f() { let a = 0; let b = 1 ; }");
+    t!(test_function_native => "namespace std { annotation native; } @std.native let f() { }");
+    t!(test_struct_native => "namespace std { annotation native; } @std.native struct S { }");
+    t!(test_function_mut_local => "let f() { let a = 0; a = 1; }");
+    t!(test_function_mut_local_shadow_param => "let f(a: number) { let a = 0; a = 1; }");
+    t!(test_if => "let f() { if true { } else { } }");
+    t!(test_while => "let f() { while true { 1; } }");
+    t!(test_expression_in_block => "let f() { if true { 1; } }");
+    t!(test_inner_function => "let f(): number { let g(): boolean { true; }; 1; }");
+    t!(test_struct => "struct Struct { field: number }");
+    t!(test_inner_struct => "let f() { struct Struct { field: number } }");
+    t!(test_structs_same_field_names => r#"
+        struct Inner { field: number }
+        struct Outer { field: Inner }
+    "#);
+    t!(test_struct_instantiation => r#"
+        struct Struct { field: number }
+        let f() {
+            let s = Struct { field: 1 };
+        }
+    "#);
+    t!(test_struct_instantiation_nested => r#"
+        struct Inner { field: number };
+        struct Outer { inner: Inner };
+        let f() {
+            let s = Outer { inner: Inner { field: 1 } };
+        }
+    "#);
+    t!(test_struct_instantiation_fields_out_of_order => r#"
+        struct Struct { field1: number, field2: boolean }
+        let f() {
+            let s = Struct { field2: true, field1: 1 };
+        }
+    "#);
+    t!(test_struct_field_read => r#"
         struct Struct { field: number }
         let f(): number {
             let s = Struct { field: 1 };
             s.field;
         }
-        "#,
-        )
-        .unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_struct_field_write() {
-        let ast = transmute_ast::parse(
-            r#"
+    "#);
+    t!(test_struct_field_write => r#"
         struct Struct { field: number }
         let f(): number {
             let s = Struct {
@@ -1452,53 +1352,29 @@ mod tests {
 
             1;
         }
-        "#,
-        )
-        .unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_array_instantiate() {
-        let ast = transmute_ast::parse(
-            r#"
+    "#);
+    t!(test_array_instantiate => r#"
         let f() {
             let a = [1, 2];
         }
-        "#,
-        )
-        .unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_array_access() {
-        let ast = transmute_ast::parse(
-            r#"
+    "#);
+    t!(test_array_access => r#"
         let f() {
             let a = [1, 2];
             let b = a[0];
         }
-        "#,
-        )
-        .unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
-
-    #[test]
-    fn test_array_instantiate_and_access() {
-        let ast = transmute_ast::parse(
-            r#"
+    "#);
+    t!(test_array_instantiate_and_access => r#"
         let f() {
             [1, 2][0];
         }
-        "#,
-        )
-        .unwrap();
-        let hir = transmute_hir::resolve(ast).unwrap();
-        assert_debug_snapshot!(make_mir(hir));
-    }
+    "#);
+    t!(test_namespaced_function_call => r#"
+        namespace ns {
+            let f() {}
+        }
+        let main() {
+            ns.f();
+        }
+    "#);
 }

@@ -1,0 +1,113 @@
+---
+source: ast/src/parser.rs
+expression: compilation_unit.into_ast()
+---
+Ok(
+    Ast {
+        identifiers: [
+            IdentId(0) => "<root>",
+            IdentId(1) => "ns1",
+            IdentId(2) => "ns2",
+            IdentId(3) => "times_two",
+        ],
+        identifier_refs: [
+            IdentRefId(0) => IdentifierRef {
+                id: IdentRefId(0),
+                ident: Identifier {
+                    id: IdentId(1),
+                    span: 1:1; [0, 3],
+                },
+            },
+            IdentRefId(1) => IdentifierRef {
+                id: IdentRefId(1),
+                ident: Identifier {
+                    id: IdentId(2),
+                    span: 1:5; [4, 7],
+                },
+            },
+            IdentRefId(2) => IdentifierRef {
+                id: IdentRefId(2),
+                ident: Identifier {
+                    id: IdentId(3),
+                    span: 1:9; [8, 17],
+                },
+            },
+        ],
+        expressions: [
+            ExprId(0) => Expression {
+                id: ExprId(0),
+                kind: Literal(
+                    Literal {
+                        kind: IdentRefId(0),
+                        span: 1:1; [0, 3],
+                    },
+                ),
+                span: 1:1; [0, 3],
+            },
+            ExprId(1) => Expression {
+                id: ExprId(1),
+                kind: Access(
+                    ExprId(0),
+                    IdentRefId(1),
+                ),
+                span: 1:1; [0, 7],
+            },
+            ExprId(2) => Expression {
+                id: ExprId(2),
+                kind: Access(
+                    ExprId(1),
+                    IdentRefId(2),
+                ),
+                span: 1:1; [0, 17],
+            },
+            ExprId(3) => Expression {
+                id: ExprId(3),
+                kind: Literal(
+                    Literal {
+                        kind: Number(21),
+                        span: 1:19; [18, 20],
+                    },
+                ),
+                span: 1:19; [18, 20],
+            },
+            ExprId(4) => Expression {
+                id: ExprId(4),
+                kind: FunctionCall(
+                    ExprId(2),
+                    [
+                        ExprId(3),
+                    ],
+                ),
+                span: 1:1; [0, 21],
+            },
+        ],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: Expression(
+                    ExprId(4),
+                ),
+                span: 1:1; [0, 22],
+            },
+        ],
+        type_defs: [],
+        roots: [
+            StmtId(0),
+        ],
+    },
+)

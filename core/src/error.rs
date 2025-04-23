@@ -1,12 +1,14 @@
+use crate::input::Inputs;
 use crate::span::Span;
 use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug, Default, PartialEq)]
-pub struct Diagnostics {
+pub struct Diagnostics<I> {
     diagnostics: Vec<Diagnostic>,
+    inputs: I,
 }
 
-impl Diagnostics {
+impl<I> Diagnostics<I> {
     pub fn len(&self) -> usize {
         self.diagnostics.len()
     }
@@ -15,7 +17,7 @@ impl Diagnostics {
         self.diagnostics.is_empty()
     }
 
-    pub fn iter(&self) -> DiagnosticsIterator {
+    pub fn iter(&self) -> DiagnosticsIterator<I> {
         DiagnosticsIterator {
             diagnostics: self,
             index: 0,
@@ -40,7 +42,16 @@ impl Diagnostics {
     }
 }
 
-impl Display for Diagnostics {
+impl Diagnostics<()> {
+    pub fn with_inputs(self, inputs: Inputs) -> Diagnostics<Inputs> {
+        Diagnostics {
+            diagnostics: self.diagnostics,
+            inputs,
+        }
+    }
+}
+
+impl Display for Diagnostics<()> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut diagnostics = self.diagnostics.to_vec();
         diagnostics.sort_by(|a, b| a.span.cmp(&b.span));
@@ -52,12 +63,24 @@ impl Display for Diagnostics {
     }
 }
 
-pub struct DiagnosticsIterator<'a> {
-    diagnostics: &'a Diagnostics,
+impl Display for Diagnostics<Inputs> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut diagnostics = self.diagnostics.to_vec();
+        diagnostics.sort_by(|a, b| a.span.cmp(&b.span));
+
+        for diagnostic in diagnostics {
+            writeln!(f, " - {}", diagnostic.format(&self.inputs))?;
+        }
+        Ok(())
+    }
+}
+
+pub struct DiagnosticsIterator<'a, I> {
+    diagnostics: &'a Diagnostics<I>,
     index: usize,
 }
 
-impl<'a> Iterator for DiagnosticsIterator<'a> {
+impl<'a, I> Iterator for DiagnosticsIterator<'a, I> {
     type Item = &'a Diagnostic;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -78,26 +101,53 @@ pub struct Diagnostic {
     pub generated_at: (&'static str, u32),
 }
 
+impl Diagnostic {
+    pub fn format(&self, inputs: &Inputs) -> String {
+        #[cfg(debug_assertions)]
+        {
+            format!(
+                "[{generated_at_file}:{generated_at_line}] {source}:{line}:{column}: {message}",
+                generated_at_file = self.generated_at.0,
+                generated_at_line = self.generated_at.1,
+                message = self.message,
+                source = inputs[self.span.input_id].name(),
+                line = self.span.line,
+                column = self.span.column
+            )
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            format!(
+                "{}:{}:{}: {}",
+                self.message,
+                inputs[self.span.input_id].name(),
+                self.span.line,
+                self.span.column
+            )
+        }
+    }
+}
+
 impl Display for Diagnostic {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         #[cfg(debug_assertions)]
         {
             write!(
                 f,
-                "[{}:{}] {} at {}:{}",
-                self.generated_at.0,
-                self.generated_at.1,
-                self.message,
-                self.span.line,
-                self.span.column
+                "[{generated_at_file}:{generated_at_line}] {line}:{column}: {message}",
+                generated_at_file = self.generated_at.0,
+                generated_at_line = self.generated_at.1,
+                message = self.message,
+                line = self.span.line,
+                column = self.span.column
             )
         }
         #[cfg(not(debug_assertions))]
         {
             write!(
                 f,
-                "{} at {}:{}",
-                self.message, self.span.line, self.span.column
+                "{}:{}: {}",
+                self.span.line, self.span.column, self.message
             )
         }
     }

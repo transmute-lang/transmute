@@ -1,20 +1,37 @@
 ---
 source: ast/src/parser.rs
-expression: "Parser :: new(Lexer :: new(\"struct S { } struct S { }\")).parse()"
+expression: compilation_unit.into_ast()
 ---
 Ok(
     Ast {
         identifiers: [
-            IdentId(0) => "S",
+            IdentId(0) => "<root>",
+            IdentId(1) => "S",
         ],
         identifier_refs: [],
         expressions: [],
         statements: [
             StmtId(0) => Statement {
                 id: StmtId(0),
-                kind: Struct(
+                kind: Namespace(
                     Identifier {
                         id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    None,
+                    InputId(0),
+                    [
+                        StmtId(1),
+                        StmtId(2),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: Struct(
+                    Identifier {
+                        id: IdentId(1),
                         span: 1:8; [7, 8],
                     },
                     [],
@@ -22,11 +39,11 @@ Ok(
                 ),
                 span: 1:1; [0, 12],
             },
-            StmtId(1) => Statement {
-                id: StmtId(1),
+            StmtId(2) => Statement {
+                id: StmtId(2),
                 kind: Struct(
                     Identifier {
-                        id: IdentId(0),
+                        id: IdentId(1),
                         span: 1:21; [20, 21],
                     },
                     [],
@@ -38,7 +55,6 @@ Ok(
         type_defs: [],
         roots: [
             StmtId(0),
-            StmtId(1),
         ],
     },
 )

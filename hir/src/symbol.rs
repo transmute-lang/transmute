@@ -1,4 +1,5 @@
 use crate::natives::{NativeFnKind, Type};
+use transmute_core::id_map::IdMap;
 use transmute_core::ids::{IdentId, StmtId, SymbolId, TypeId};
 
 #[derive(Debug, PartialEq)]
@@ -22,12 +23,42 @@ impl Symbol {
             _ => panic!("{:?} is not an annotation", self),
         }
     }
+
+    pub(crate) fn as_namespace_mut(
+        &mut self,
+    ) -> (
+        &mut IdMap<IdentId, SymbolId>,
+        &mut IdMap<IdentId, Vec<SymbolId>>,
+    ) {
+        if !matches!(self.kind, SymbolKind::Namespace(..)) {
+            panic!("{:?} is not a namespace", self);
+        }
+        match &mut self.kind {
+            SymbolKind::Namespace(_, _, children, symbols) => (children, symbols),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn as_namespace(&self) -> (&IdMap<IdentId, SymbolId>, &IdMap<IdentId, Vec<SymbolId>>) {
+        if !matches!(self.kind, SymbolKind::Namespace(..)) {
+            panic!("{:?} is not a namespace", self);
+        }
+        match &self.kind {
+            SymbolKind::Namespace(_, _, children, symbols) => (children, symbols),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
 pub enum SymbolKind {
     NotFound,
     Let(IdentId, StmtId),
+    // todo:refactoring would it help that the function symbol only points to a StmtId, as for
+    //  structs for instance? this may allow to implement insert_function as we do for insert_struct
+    //  but what would be the drawbacks? when searching for a symbol with
+    //  find_symbol_id_by_ident_and_param_types we would need to dereference the SymbolId to match
+    //  on types...
     LetFn(IdentId, StmtId, Vec<TypeId>, TypeId),
     // todo:refactoring could StmtId be replaced with SymbolId (the symbol that defines the function)
     Parameter(IdentId, StmtId, usize),
@@ -37,4 +68,20 @@ pub enum SymbolKind {
     Field(IdentId, StmtId, usize),
     NativeType(IdentId, Type),
     Native(IdentId, Vec<TypeId>, TypeId, NativeFnKind),
+    Namespace(
+        /// namespace's identifier, id not root
+        IdentId,
+        /// namespace's parent, if not root
+        Option<SymbolId>,
+        /// namespace's children
+        // todo we dont need that, we have the namespace's content to store children
+        IdMap<IdentId, SymbolId>,
+        /// namespace's content
+        // todo:
+        //  - should it be a Scope?; or
+        //  - should Scope disappear and become a HashMap<>?; or
+        //  - should we instead have type Scope = HashMap<>?
+        //  at least it should be something that makes insert(IdentId, SymbolId) easy to perform
+        IdMap<IdentId, Vec<SymbolId>>,
+    ),
 }
