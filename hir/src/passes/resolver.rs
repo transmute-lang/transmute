@@ -1,6 +1,7 @@
-use crate::bound::{Bound, Unbound};
+use crate::bound::{Bound, BoundMultiple, Unbound};
 use crate::expression::{ExpressionKind, Target};
 use crate::identifier::Identifier;
+use crate::identifier_ref::IdentifierRef;
 use crate::literal::LiteralKind;
 use crate::natives::{Native, Natives, Type};
 use crate::passes::exit_points_resolver::ExitPoint;
@@ -10,10 +11,7 @@ use crate::statement::{
 };
 use crate::symbol::{Symbol, SymbolKind};
 use crate::typed::{Typed, Untyped};
-use crate::{
-    FindSymbol, ResolvedExpression, ResolvedHir, ResolvedIdentifierRef, ResolvedStatement,
-    UnresolvedHir,
-};
+use crate::{FindSymbol, ResolvedExpression, ResolvedHir, ResolvedStatement, UnresolvedHir};
 use bimap::BiHashMap;
 use std::collections::HashMap;
 use std::mem;
@@ -39,7 +37,7 @@ type Function<T, B> = (
 pub struct Resolver {
     // out
     identifiers: BiHashMap<IdentId, String>,
-    identifier_refs: VecMap<IdentRefId, ResolvedIdentifierRef>,
+    identifier_refs: VecMap<IdentRefId, IdentifierRef<BoundMultiple>>,
     expressions: VecMap<ExprId, ResolvedExpression>,
     statements: VecMap<StmtId, ResolvedStatement>,
     types: BiHashMap<TypeId, Type>,
@@ -53,7 +51,7 @@ pub struct Resolver {
     namespace_stack: Vec<SymbolId>,
     root_namespace: SymbolId,
     // todo:refactoring replace with a Stack<> struct that implements push/pop/last and
-    //  delete/replace scope_push/scope_pop
+    //  delete/replace scope_push/scope_pop. Also: insert to insert in last directly..
     scope_stack: Vec<Scope>,
     /// maps functions (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
     function_symbols: HashMap<StmtId, SymbolId>,
@@ -349,42 +347,32 @@ impl Resolver {
             return Err(self.diagnostics);
         }
 
-        let result = ResolvedHir {
-            identifiers: VecMap::from_iter(self.identifiers),
-            identifier_refs: self.identifier_refs,
-            expressions: self.expressions,
-            statements: self.statements,
-            type_defs: hir.type_defs,
-            roots: hir.roots,
-            symbols: self.symbols,
-            types: VecMap::from_iter(self.types),
-            exit_points: hir.exit_points,
-        };
+        let types = VecMap::from_iter(self.types);
 
         #[cfg(debug_assertions)]
         {
             debug_assert!(
-                !result.identifier_refs.has_holes(),
+                !self.identifier_refs.has_holes(),
                 "identifier_refs has holes. missing: {:?}",
                 hir.identifier_refs
             );
             debug_assert!(
-                !result.expressions.has_holes(),
+                !self.expressions.has_holes(),
                 "expressions has holes. missing: {:?}",
                 hir.expressions
             );
             debug_assert!(
-                !result.statements.has_holes(),
+                !self.statements.has_holes(),
                 "statements has holes. missing: {:?}",
                 hir.statements
             );
             debug_assert!(
-                !result.symbols.has_holes(),
+                !self.symbols.has_holes(),
                 "symbols has holes: {:?}",
-                result.symbols
+                self.symbols
             );
             debug_assert!(
-                !result.types.has_holes(),
+                !types.has_holes(),
                 "types has holes. missing: {:?}",
                 hir.types
             );
@@ -393,22 +381,175 @@ impl Resolver {
                 "identifier_refs is not empty"
             );
             debug_assert!(
-                ident_ref_count <= result.identifier_refs.len(),
+                ident_ref_count <= self.identifier_refs.len(),
                 "ident_ref count does not match"
             );
             debug_assert!(hir.expressions.is_empty(), "expressions is not empty");
             debug_assert!(hir.statements.is_empty(), "statements is not empty");
             debug_assert!(
-                expr_count == result.expressions.len(),
+                expr_count == self.expressions.len(),
                 "expr count does not match"
             );
             debug_assert!(
-                stmt_count == result.statements.len(),
+                stmt_count == self.statements.len(),
                 "stmt count does not match"
             );
         }
 
-        Ok(result)
+        let stmts_ident_ref_ids = self
+            .statements
+            .iter()
+            .filter_map(|(_, stmt)| match &stmt.kind {
+                StatementKind::LetFn(_, annotations, _, _, _) => Some(
+                    annotations
+                        .iter()
+                        .flat_map(|a| &a.ident_ref_ids)
+                        .collect::<Vec<_>>(),
+                ),
+                StatementKind::Struct(_, annotations, _) => Some(
+                    annotations
+                        .iter()
+                        .flat_map(|a| &a.ident_ref_ids)
+                        .collect::<Vec<_>>(),
+                ),
+                _ => None,
+            })
+            .flatten()
+            .cloned()
+            .collect::<Vec<_>>();
+
+        // here we test all statements that require unique binding for IndentRefs have unique
+        // bindings
+        #[cfg(debug_assertions)]
+        for ident_ref_id in stmts_ident_ref_ids.iter() {
+            debug_assert_eq!(
+                self.identifier_refs[*ident_ref_id]
+                    .resolved_symbol_ids()
+                    .len(),
+                1
+            );
+        }
+
+        let expr_ident_ref_ids = self
+            .expressions
+            .iter()
+            .filter_map(|(_, stmt)| match &stmt.kind {
+                ExpressionKind::Assignment(Target::Direct(ident_ref_id), _) => {
+                    Some(vec![ident_ref_id])
+                }
+                ExpressionKind::Literal(lit) => match &lit.kind {
+                    LiteralKind::Identifier(ident_ref_id) => Some(vec![ident_ref_id]),
+                    _ => None,
+                },
+                ExpressionKind::Access(_, ident_ref_id) => Some(vec![ident_ref_id]),
+                ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
+                    let mut ident_ref_ids = fields
+                        .iter()
+                        .map(|(ident_ref_id, _)| ident_ref_id)
+                        .collect::<Vec<_>>();
+                    ident_ref_ids.push(ident_ref_id);
+                    Some(ident_ref_ids)
+                }
+                _ => None,
+            })
+            .flatten()
+            .cloned()
+            .collect::<Vec<_>>();
+
+        // here we test all expressions that require unique binding for IndentRefs have unique
+        // bindings
+        #[cfg(debug_assertions)]
+        for ident_ref_id in expr_ident_ref_ids.iter() {
+            debug_assert_eq!(
+                self.identifier_refs[*ident_ref_id]
+                    .resolved_symbol_ids()
+                    .len(),
+                1
+            );
+        }
+
+        let type_defs_ref_ids = hir
+            .type_defs
+            .iter()
+            .filter_map(|(_, td)| match &td.kind {
+                TypeDefKind::Simple(ident_ref_ids) => Some(ident_ref_ids),
+                TypeDefKind::Array(_, _) => None,
+            })
+            .flatten()
+            .cloned()
+            .collect::<Vec<_>>();
+
+        // here we test all type defs that require unique binding for IndentRefs have unique
+        // bindings
+        #[cfg(debug_assertions)]
+        for ident_ref_id in type_defs_ref_ids.iter() {
+            debug_assert_eq!(
+                self.identifier_refs[*ident_ref_id]
+                    .resolved_symbol_ids()
+                    .len(),
+                1
+            );
+        }
+
+        let ident_ref_ids = stmts_ident_ref_ids
+            .into_iter()
+            .chain(expr_ident_ref_ids)
+            .chain(type_defs_ref_ids)
+            .collect::<Vec<_>>();
+
+        let mut ident_refs = self.identifier_refs;
+
+        let ident_refs = ident_ref_ids
+            .into_iter()
+            .map(|id| (id, ident_refs.remove(id).unwrap().into_bound_unique()))
+            .collect::<VecMap<_, _>>();
+
+        // todo try to find a way to keep all the statements, including the `StatementKind::Use`
+        //  ones, as well as all the related ident_refs (that may have more than one binding) for
+        //  the test / dump during tests
+
+        let use_stmts = self
+            .statements
+            .iter()
+            .filter(|(_, stmt)| matches!(stmt.kind, StatementKind::Use(..)))
+            .map(|(id, _)| id)
+            .collect::<Vec<_>>();
+
+        Ok(ResolvedHir {
+            identifiers: VecMap::from_iter(self.identifiers),
+            identifier_refs: ident_refs,
+            // we remove all references to Use statements
+            expressions: self
+                .expressions
+                .into_iter()
+                .map(|(id, mut expr)| match expr.kind {
+                    ExpressionKind::Block(ref mut stmts) => {
+                        stmts.retain(|stmt_id| !use_stmts.contains(stmt_id));
+                        (id, expr)
+                    }
+                    _ => (id, expr),
+                })
+                .collect(),
+
+            // we remove all Use statements and references to Use statements
+            statements: self
+                .statements
+                .into_iter()
+                .filter_map(|(id, mut stmt)| match stmt.kind {
+                    StatementKind::Use(_) => None,
+                    StatementKind::Namespace(_, _, _, ref mut stmts) => {
+                        stmts.retain(|stmt_id| !use_stmts.contains(stmt_id));
+                        Some((id, stmt))
+                    }
+                    _ => Some((id, stmt)),
+                })
+                .collect(),
+            type_defs: hir.type_defs,
+            roots: hir.roots,
+            symbols: self.symbols,
+            types,
+            exit_points: hir.exit_points,
+        })
     }
 
     fn resolve_expression(
@@ -421,7 +562,9 @@ impl Resolver {
             let symbol_id = match &expr.kind {
                 ExpressionKind::Literal(lit) => match &lit.kind {
                     LiteralKind::Identifier(ident_ref_id) => {
-                        Some(self.identifier_refs[*ident_ref_id].resolved_symbol_id())
+                        let symbol_ids = self.identifier_refs[*ident_ref_id].resolved_symbol_ids();
+                        assert_eq!(symbol_ids.len(), 1);
+                        Some(symbol_ids[0])
                     }
                     _ => None,
                 },
@@ -475,12 +618,14 @@ impl Resolver {
                     None,
                 ),
                 LiteralKind::Identifier(ident_ref) => {
-                    let symbol_id = self.resolve_ident_ref(hir, ident_ref, param_types);
-                    let type_id = symbol_id
-                        .map(|s| self.symbols[s].type_id)
+                    let symbol_ids = self.resolve_ident_ref(hir, ident_ref, param_types);
+                    debug_assert!(symbol_ids.len() <= 1);
+                    let type_id = symbol_ids
+                        .first()
+                        .map(|s| self.symbols[*s].type_id)
                         .unwrap_or(self.find_type_id_by_type(&Type::Invalid));
 
-                    (type_id, symbol_id)
+                    (type_id, symbol_ids.first().cloned())
                 }
             },
             ExpressionKind::Access(expr_id, ident_ref_id) => {
@@ -617,9 +762,10 @@ impl Resolver {
                                 .find_symbol_id_for_struct_field(*stmt_id, index)
                                 .expect("field exists");
                             let ident_ref = ident_ref.resolved(field_symbol_id);
-                            let symbol_id = ident_ref.resolved_symbol_id();
+                            let symbol_ids = ident_ref.resolved_symbol_ids().to_vec();
+                            assert_eq!(symbol_ids.len(), 1);
                             self.identifier_refs.insert(ident_ref.id, ident_ref);
-                            (field.resolved_type_id(), Some(symbol_id))
+                            (field.resolved_type_id(), Some(symbol_ids[0]))
                         }
                         None => {
                             self.diagnostics.report_err(
@@ -696,13 +842,15 @@ impl Resolver {
 
         let rhs_type_id = self.resolve_expression(hir, expr, None).0;
 
-        let lhs_type_id = self
-            // todo:feature:fn-value to search for method, we need to extract the parameter types from the
-            //  expr_type, if it corresponds to a function type. We don't have this
-            //  information yet and thus we cannot assign to a variable holding a function
-            //  (yet).
-            .resolve_ident_ref(hir, ident_ref, None)
-            .map(|s| self.symbols[s].type_id)
+        // todo:feature:fn-value to search for method, we need to extract the parameter types from the
+        //  expr_type, if it corresponds to a function type. We don't have this
+        //  information yet and thus we cannot assign to a variable holding a function
+        //  (yet).
+        let lhs_symbol_ids = self.resolve_ident_ref(hir, ident_ref, None);
+        debug_assert!(lhs_symbol_ids.len() <= 1);
+        let lhs_type_id = lhs_symbol_ids
+            .first()
+            .map(|s| self.symbols[*s].type_id)
             .unwrap_or(self.find_type_id_by_type(&Type::Invalid));
 
         if lhs_type_id == self.find_type_id_by_type(&Type::Invalid) {
@@ -871,8 +1019,9 @@ impl Resolver {
 
         let struct_def = self
             .resolve_ident_ref(hir, ident_ref_id, None)
-            .map(|sid| &self.symbols[sid])
-            .and_then(|s| match s.kind {
+            .iter()
+            .map(|sid| &self.symbols[*sid])
+            .filter_map(|s| match s.kind {
                 SymbolKind::Struct(_, stmt_id) => Some(&self.statements[stmt_id]),
                 _ => None,
             })
@@ -881,9 +1030,12 @@ impl Resolver {
                     (s.id, struct_identifier, struct_fields)
                 }
                 _ => panic!("must be a struct"),
-            });
+            })
+            .collect::<Vec<_>>();
 
-        if let Some((struct_stmt_id, struct_identifier, implementation)) = struct_def {
+        debug_assert!(struct_def.len() <= 1);
+
+        if let Some((struct_stmt_id, struct_identifier, implementation)) = struct_def.first() {
             let field_types = match implementation {
                 Implementation::Provided(field_types) => field_types,
                 _ => {
@@ -920,7 +1072,7 @@ impl Resolver {
                     .find(|(_, field)| field.identifier.id == field_ident_ref.ident.id)
                 {
                     let field_symbol_id = self
-                        .find_symbol_id_for_struct_field(struct_stmt_id, index)
+                        .find_symbol_id_for_struct_field(*struct_stmt_id, index)
                         .expect("symbol exists");
 
                     self.identifier_refs.insert(
@@ -1058,6 +1210,7 @@ impl Resolver {
                     StatementKind::LetFn(..) => self.find_type_id_by_type(&Type::Void),
                     StatementKind::Struct(..) => self.find_type_id_by_type(&Type::Void),
                     StatementKind::Annotation(..) => self.find_type_id_by_type(&Type::Void),
+                    StatementKind::Use(..) => todo!(),
                     StatementKind::Namespace(..) => todo!(),
                 }
             };
@@ -1191,6 +1344,30 @@ impl Resolver {
                 );
 
                 (self.find_type_id_by_type(&Type::Void), Some(symbol_id))
+            }
+            StatementKind::Use(ident_ref_ids) => {
+                self.resolve_ident_refs(hir, &ident_ref_ids, false);
+                let ident = &self.identifier_refs[*ident_ref_ids.last().unwrap()].ident;
+
+                let scope = self
+                    .scope_stack
+                    .last_mut()
+                    .unwrap()
+                    .symbols
+                    .entry(ident.id)
+                    .or_default();
+
+                ident
+                    .resolved_symbol_ids()
+                    .iter()
+                    .for_each(|id| scope.push(*id));
+
+                self.statements.insert(
+                    stmt_id,
+                    Statement::new(stmt_id, StatementKind::Use(ident_ref_ids), span),
+                );
+
+                (self.find_type_id_by_type(&Type::Void), None)
             }
             StatementKind::Namespace(ident, parent, input_id, stmts) => {
                 self.push_scope();
@@ -1353,7 +1530,7 @@ impl Resolver {
         success = success && parameters.len() == params_len;
 
         for annotation in annotations.iter() {
-            self.resolve_ident_refs(hir, &annotation.ident_ref_ids);
+            self.resolve_ident_refs(hir, &annotation.ident_ref_ids, false);
         }
 
         let is_native = self.native_annotation_present(annotations);
@@ -1505,7 +1682,7 @@ impl Resolver {
         annotations: &[Annotation],
     ) -> (Identifier<Bound>, Implementation<Vec<Field<Typed, Bound>>>) {
         for annotation in annotations {
-            self.resolve_ident_refs(hir, &annotation.ident_ref_ids);
+            self.resolve_ident_refs(hir, &annotation.ident_ref_ids, false);
         }
 
         let is_native = self.native_annotation_present(annotations);
@@ -1637,8 +1814,15 @@ impl Resolver {
     }
 
     /// Resolve `ident_refs` involved in fully qualified names. Intermediate identifier refs are
-    /// pointing to namespaces, final one to any kind of symbol.
-    fn resolve_ident_refs(&mut self, hir: &mut UnresolvedHir, ident_ref_ids: &[IdentRefId]) {
+    /// pointing to namespaces, final one to any kind of symbol. If `ignore_not_found` is `true`,
+    /// no errors will be reported and the failed resolution will be put back in the
+    /// `UnresolvedHir` so that a next phase can resolve them.
+    fn resolve_ident_refs(
+        &mut self,
+        hir: &mut UnresolvedHir,
+        ident_ref_ids: &[IdentRefId],
+        ignore_not_found: bool,
+    ) {
         if ident_ref_ids.len() == 1 {
             self.resolve_ident_ref(hir, ident_ref_ids[0], None);
             return;
@@ -1647,7 +1831,11 @@ impl Resolver {
         let mut parent_found = true;
         let mut namespace_id = self.root_namespace;
 
-        for (id, ident_ref_id) in ident_ref_ids[0..ident_ref_ids.len() - 1].iter().enumerate() {
+        for (index, ident_ref_id) in ident_ref_ids[0..ident_ref_ids.len() - 1].iter().enumerate() {
+            if self.identifier_refs.get(*ident_ref_id).is_some() {
+                continue;
+            }
+
             let ident_ref = hir.identifier_refs.remove(*ident_ref_id).unwrap();
 
             if !parent_found {
@@ -1665,78 +1853,109 @@ impl Resolver {
                 }
             }
 
-            let parent_ident_ref_id = ident_ref_ids[id - 1];
-            let parent_ident_id = self
-                .identifier_refs
-                .get(parent_ident_ref_id)
-                .unwrap()
-                .ident
-                .id;
+            if ignore_not_found {
+                hir.identifier_refs.insert(*ident_ref_id, ident_ref);
+                return;
+            }
 
-            self.diagnostics.report_err(
-                format!(
-                    "Expected '{}' to be a namespace",
-                    self.identifiers.get_by_left(&parent_ident_id).unwrap()
-                ),
-                self.identifier_refs[parent_ident_ref_id].ident.span.clone(),
-                (file!(), line!()),
-            );
+            if index > 0 {
+                let parent_ident_ref_id = ident_ref_ids[index - 1];
+                let parent_ident_id = self
+                    .identifier_refs
+                    .get(parent_ident_ref_id)
+                    .unwrap()
+                    .ident
+                    .id;
+                self.diagnostics.report_err(
+                    format!(
+                        "Expected '{}' to be a namespace",
+                        self.identifiers.get_by_left(&parent_ident_id).unwrap()
+                    ),
+                    self.identifier_refs[parent_ident_ref_id].ident.span.clone(),
+                    (file!(), line!()),
+                );
+            } else if !ignore_not_found {
+                self.diagnostics.report_err(
+                    format!(
+                        "Namespace '{}' not found",
+                        self.identifiers.get_by_left(&ident_ref.ident.id).unwrap()
+                    ),
+                    ident_ref.ident.span.clone(),
+                    (file!(), line!()),
+                );
+            }
+
             self.identifier_refs
                 .insert(*ident_ref_id, ident_ref.resolved(self.not_found_symbol_id));
             parent_found = false;
         }
 
         let ident_ref_id = ident_ref_ids[ident_ref_ids.len() - 1];
+
+        if self.identifier_refs.get(ident_ref_id).is_some() {
+            return;
+        }
+
         let ident_ref = hir.identifier_refs.remove(ident_ref_id).unwrap();
 
         if !parent_found {
-            self.identifier_refs
-                .insert(ident_ref_id, ident_ref.resolved(self.not_found_symbol_id));
+            if ignore_not_found {
+                hir.identifier_refs.insert(ident_ref_id, ident_ref);
+            } else {
+                self.identifier_refs
+                    .insert(ident_ref_id, ident_ref.resolved(self.not_found_symbol_id));
+            }
             return;
         }
 
         if !matches!(self.symbols[namespace_id].kind, SymbolKind::Namespace(..)) {
-            let parent_ident_ref_id = ident_ref_ids[ident_ref_ids.len() - 2];
-            let parent_ident_id = self
-                .identifier_refs
-                .get(parent_ident_ref_id)
-                .unwrap()
-                .ident
-                .id;
+            if !ignore_not_found {
+                let parent_ident_ref_id = ident_ref_ids[ident_ref_ids.len() - 2];
+                let parent_ident_id = self
+                    .identifier_refs
+                    .get(parent_ident_ref_id)
+                    .unwrap()
+                    .ident
+                    .id;
 
-            self.diagnostics.report_err(
-                format!(
-                    "Expected '{}' to be a namespace",
-                    self.identifiers.get_by_left(&parent_ident_id).unwrap()
-                ),
-                self.identifier_refs[parent_ident_ref_id].ident.span.clone(),
-                (file!(), line!()),
-            );
+                self.diagnostics.report_err(
+                    format!(
+                        "Expected '{}' to be a namespace",
+                        self.identifiers.get_by_left(&parent_ident_id).unwrap()
+                    ),
+                    self.identifier_refs[parent_ident_ref_id].ident.span.clone(),
+                    (file!(), line!()),
+                );
+            }
             self.identifier_refs
                 .insert(ident_ref_id, ident_ref.resolved(self.not_found_symbol_id));
             return;
         }
 
-        if let Some(symbol_id) = self.symbols[namespace_id].as_namespace().1.find(
-            &self.symbols,
-            ident_ref.ident.id,
-            None,
-        ) {
-            self.identifier_refs
-                .insert(ident_ref_id, ident_ref.resolved(symbol_id));
-            return;
-        }
+        let symbol_ids = self.symbols[namespace_id]
+            .as_namespace()
+            .1
+            .get(&ident_ref.ident.id)
+            .cloned()
+            .unwrap_or_default();
 
-        self.diagnostics.report_err(
-            format!(
-                "Symbol '{}' not found",
-                self.identifiers.get_by_left(&ident_ref.ident.id).unwrap()
-            ),
-            ident_ref.ident.span.clone(),
-            (file!(), line!()),
-        );
-        self.identifier_refs
-            .insert(ident_ref_id, ident_ref.resolved(self.not_found_symbol_id));
+        if !symbol_ids.is_empty() {
+            self.identifier_refs
+                .insert(ident_ref_id, ident_ref.resolved_multiple(symbol_ids));
+        } else if ignore_not_found {
+            hir.identifier_refs.insert(ident_ref_id, ident_ref);
+        } else {
+            self.diagnostics.report_err(
+                format!(
+                    "Symbol '{}' not found",
+                    self.identifiers.get_by_left(&ident_ref.ident.id).unwrap()
+                ),
+                ident_ref.ident.span.clone(),
+                (file!(), line!()),
+            );
+            self.identifier_refs
+                .insert(ident_ref_id, ident_ref.resolved(self.not_found_symbol_id));
+        }
     }
 
     /// Resolves an identifier ref by its `IdentRefId` and returns the corresponding `SymbolId`.
@@ -1747,9 +1966,9 @@ impl Resolver {
         hir: &mut UnresolvedHir,
         ident_ref_id: IdentRefId,
         param_types: Option<&[TypeId]>,
-    ) -> Option<SymbolId> {
+    ) -> Vec<SymbolId> {
         if let Some(ident_ref) = &self.identifier_refs.get(ident_ref_id) {
-            return Some(ident_ref.resolved_symbol_id());
+            return ident_ref.resolved_symbol_ids().to_vec();
         }
 
         let ident_ref = hir
@@ -1760,9 +1979,11 @@ impl Resolver {
         let ident_id = ident_ref.ident.id;
         match self.find_symbol_id_by_ident_and_param_types(ident_id, param_types) {
             Some(s) => {
-                self.identifier_refs
-                    .insert(ident_ref.id, ident_ref.resolved(s));
-                Some(s)
+                let ident_id = ident_ref.id;
+                self.identifier_refs.insert(ident_id, ident_ref.resolved(s));
+                self.identifier_refs[ident_id]
+                    .resolved_symbol_ids()
+                    .to_vec()
             }
             None => {
                 // todo:feature propose known alternatives
@@ -1798,33 +2019,40 @@ impl Resolver {
                 self.identifier_refs
                     .insert(ident_ref.id, ident_ref.resolved(self.not_found_symbol_id));
 
-                None
+                Vec::new()
             }
         }
     }
 
+    /// Resolves a `TypeDefId`. Starts by resolving all potential `IdentRefId`s found and resolves
+    /// the `TypeDefId` to that last found type. By default, issues a diagnostic when the type
+    /// found is not assignable (as per `Type::is_assignable()` definition. If `return_type` is set
+    /// to true however, the type validity is checked with `Type::is_valid_return_type()`.
     fn resolve_type_def(
         &mut self,
         hir: &mut UnresolvedHir,
         type_def_id: TypeDefId,
         return_type: bool,
-    ) {
+    ) -> TypeId {
         match &hir.type_defs[type_def_id].kind {
             TypeDefKind::Simple(ident_ref_ids) => {
                 let ident_ref_ids = ident_ref_ids.clone();
-                self.resolve_ident_refs(hir, &ident_ref_ids);
+                self.resolve_ident_refs(hir, &ident_ref_ids, false);
 
                 let ident_ref_id = *ident_ref_ids.last().unwrap();
-                let symbol_id = self.identifier_refs[ident_ref_id]
+                let symbol_ids = self.identifier_refs[ident_ref_id]
                     .ident
-                    .resolved_symbol_id();
+                    .resolved_symbol_ids();
 
-                let ty = match &(&self.symbols[symbol_id]).kind {
+                debug_assert_eq!(symbol_ids.len(), 1);
+                let symbol_id = symbol_ids[0];
+
+                let ty = match &self.symbols[symbol_id].kind {
                     SymbolKind::Struct(_, stmt_id) => Type::Struct(*stmt_id),
                     SymbolKind::NativeType(_, ty) => ty.clone(),
                     SymbolKind::NotFound => {
                         // nothing, we reported already
-                        return;
+                        return self.find_type_id_by_type(&Type::Invalid);
                     }
                     _ => {
                         let ident = &self.identifier_refs[ident_ref_id].ident;
@@ -1836,7 +2064,7 @@ impl Resolver {
                             ident.span.clone(),
                             (file!(), line!()),
                         );
-                        return;
+                        return self.find_type_id_by_type(&Type::Invalid);
                     }
                 };
 
@@ -1852,6 +2080,9 @@ impl Resolver {
                 self.resolve_type_def(hir, *type_def_id, false);
             }
         }
+
+        self.find_type_id_by_type_def_id(hir, type_def_id)
+            .unwrap_or_else(|| self.find_type_id_by_type(&Type::Invalid))
     }
 
     fn native_annotation_present(&mut self, annotations: &[Annotation]) -> bool {
@@ -1878,10 +2109,12 @@ impl Resolver {
                 continue;
             }
 
-            let symbol_id = self.identifier_refs[*annotation.ident_ref_ids.last().unwrap()]
-                .resolved_symbol_id();
-            if matches!(self.symbols[symbol_id].kind, SymbolKind::Annotation(..)) {
-                return true;
+            let symbol_ids = self.identifier_refs[*annotation.ident_ref_ids.last().unwrap()]
+                .resolved_symbol_ids();
+            for symbol_id in symbol_ids {
+                if matches!(self.symbols[*symbol_id].kind, SymbolKind::Annotation(..)) {
+                    return true;
+                }
             }
         }
         false
@@ -1916,7 +2149,7 @@ impl Resolver {
         debug_assert!(!path.is_empty());
 
         if path.len() == 1 {
-            todo!("Search for symbol in current scope")
+            todo!("Search for symbol in current scope, crawling up as needed")
         }
 
         let mut ns_symbols = self.symbols[self.namespace_stack[0]].as_namespace().1;
@@ -1956,7 +2189,7 @@ impl Resolver {
         debug_assert!(!ident_ref_ids.is_empty());
 
         if ident_ref_ids.len() == 1 {
-            todo!("Search for symbol in current scope")
+            todo!("Search for symbol in current scope, crawling up as needed")
         }
 
         fn extract_ident_and_span<'a>(
@@ -1994,45 +2227,30 @@ impl Resolver {
         let mut ns_symbols = self.symbols[self.namespace_stack[0]].as_namespace().1;
         for ident_ref_id in &ident_ref_ids[0..ident_ref_ids.len() - 1] {
             let (ident_id, span) = extract_ident_and_span(self, hir, *ident_ref_id);
-            match ns_symbols.get(&ident_id) {
+            let symbols = ns_symbols.get(&ident_id).unwrap(); // {
+            visited_ident_ids.push(ident_id);
+            let symbols = symbols
+                .iter()
+                .map(|sid| &self.symbols[*sid])
+                .filter(|s| matches!(s.kind, SymbolKind::Namespace(..)))
+                .collect::<Vec<_>>();
+
+            debug_assert!(symbols.len() <= 1, "{:?}", symbols);
+
+            match symbols.first() {
                 None => {
                     self.diagnostics.report_err(
                         format!(
-                            "Symbol {sym} not found in {ns}",
-                            sym = self.identifiers.get_by_left(&ident_id).unwrap(),
-                            ns = build_visited_ident_string(self, &visited_ident_ids)
+                            "Symbol {sym} is not a namespace",
+                            sym = build_visited_ident_string(self, &visited_ident_ids)
                         ),
                         span.clone(),
                         (file!(), line!()),
                     );
                     return None;
                 }
-                Some(symbols) => {
-                    visited_ident_ids.push(ident_id);
-                    let symbols = symbols
-                        .iter()
-                        .map(|sid| &self.symbols[*sid])
-                        .filter(|s| matches!(s.kind, SymbolKind::Namespace(..)))
-                        .collect::<Vec<_>>();
-
-                    debug_assert!(symbols.len() <= 1, "{:?}", symbols);
-
-                    match symbols.first() {
-                        None => {
-                            self.diagnostics.report_err(
-                                format!(
-                                    "Symbol {sym} is not a namespace",
-                                    sym = build_visited_ident_string(self, &visited_ident_ids)
-                                ),
-                                span.clone(),
-                                (file!(), line!()),
-                            );
-                            return None;
-                        }
-                        Some(symbol) => {
-                            ns_symbols = symbol.as_namespace().1;
-                        }
-                    }
+                Some(symbol) => {
+                    ns_symbols = symbol.as_namespace().1;
                 }
             }
         }
@@ -2190,6 +2408,7 @@ impl Resolver {
         self.namespace_stack.pop();
     }
 
+    /// Inserts all top level functions contained in namespaces which `StmtId` are provided.
     fn insert_namespaces_functions(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId]) {
         let namespaces = stmts
             .iter()
@@ -2209,120 +2428,93 @@ impl Resolver {
     /// reference to `self.symbols`) as well as the current stack frame's symbol table, and if
     /// `top_level` is `true` into the current namespace.
     fn insert_functions(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId], top_level: bool) {
-        // first, we resolve all the type defs ids for parameter types and return type ...
-        let type_def_ids = stmts
-            .iter()
-            .filter_map(|stmt| hir.statements.get(*stmt))
-            .filter_map(|stmt| match &stmt.kind {
-                StatementKind::LetFn(_, _, params, ret, ..) => {
-                    let mut type_def_ids = params
-                        .iter()
-                        .map(|p| (p.type_def_id, false))
-                        .collect::<Vec<_>>();
+        for stmt_id in stmts.iter() {
+            let stmt = hir.statements.remove(*stmt_id).unwrap();
 
-                    if let Some(type_def) = &ret.type_def_id {
-                        type_def_ids.push((*type_def, true));
-                    }
-
-                    Some(type_def_ids)
-                }
-                _ => None,
-            })
-            .flatten()
-            .collect::<Vec<(TypeDefId, bool)>>();
-
-        for (type_def_id, return_type) in type_def_ids.into_iter() {
-            self.resolve_type_def(hir, type_def_id, return_type);
-        }
-
-        // ... then, we proceed with the function
-        let functions = stmts
-            .iter()
-            .filter_map(|stmt| hir.statements.get(*stmt))
-            .filter_map(|stmt| match &stmt.kind {
-                StatementKind::LetFn(ident, _, params, ret_type, expr_id) => {
-                    #[cfg(test)]
-                    if let Some(namespace_symbol_id) = self.namespace_stack.last() {
-                        println!(
-                            "{}:{}: Inserting function '{}' ({:?}) in '{}'",
-                            file!(),
-                            line!(),
-                            self.identifiers.get_by_left(&ident.id).unwrap(),
-                            ident.id,
-                            self.identifiers
-                                .get_by_left(match &self.symbols[*namespace_symbol_id].kind {
-                                    SymbolKind::Namespace(ident, _, _, _) => ident,
-                                    _ => panic!("Namespace expected"),
-                                })
-                                .unwrap()
-                        );
-                    } else {
-                        // fixme check why nested_function_same_type gets here
-                        println!(
-                            "{}:{}: Inserting function '{}' ({:?}) in no namespaces",
-                            file!(),
-                            line!(),
-                            self.identifiers.get_by_left(&ident.id).unwrap(),
-                            ident.id,
-                        );
-                    }
+            match &stmt.kind {
+                StatementKind::LetFn(ident, _, params, ret, _) => {
                     let parameter_types = params
                         .iter()
-                        .map(|p| {
-                            self.find_type_id_by_type_def_id(hir, p.type_def_id)
-                                .unwrap_or(self.find_type_id_by_type(&Type::Invalid))
-                        })
-                        .collect::<Vec<TypeId>>();
+                        .map(|p| p.type_def_id)
+                        .map(|type_def_id| self.resolve_type_def(hir, type_def_id, false))
+                        .collect::<Vec<_>>();
 
-                    let ret_type_id = ret_type
+                    let ret_type = ret
                         .type_def_id
-                        .as_ref()
-                        .map(|type_def_id| {
-                            self.find_type_id_by_type_def_id(hir, *type_def_id)
-                                .unwrap_or(self.find_type_id_by_type(&Type::Invalid))
-                        })
+                        .map(|type_def_id| self.resolve_type_def(hir, type_def_id, true))
                         .unwrap_or(self.find_type_id_by_type(&Type::Void));
 
-                    Some((
-                        ident.clone(),
-                        stmt.id,
-                        parameter_types,
-                        ret_type_id,
-                        *expr_id,
-                    ))
+                    let fn_type_id =
+                        self.insert_type(Type::Function(parameter_types.clone(), ret_type));
+
+                    let symbol_id = self.insert_symbol(
+                        ident.id,
+                        SymbolKind::LetFn(ident.id, stmt.id, parameter_types, ret_type),
+                        fn_type_id,
+                    );
+
+                    if top_level {
+                        #[cfg(test)]
+                        if let Some(namespace_symbol_id) = self.namespace_stack.last() {
+                            println!(
+                                "{}:{}: Inserting function '{}' ({:?}) in '{}'",
+                                file!(),
+                                line!(),
+                                self.identifiers.get_by_left(&ident.id).unwrap(),
+                                ident.id,
+                                self.identifiers
+                                    .get_by_left(match &self.symbols[*namespace_symbol_id].kind {
+                                        SymbolKind::Namespace(ident, _, _, _) => ident,
+                                        _ => panic!("Namespace expected"),
+                                    })
+                                    .unwrap()
+                            );
+                        } else {
+                            // fixme check why nested_function_same_type gets here
+                            println!(
+                                "{}:{}: Inserting function '{}' ({:?}) in no namespaces",
+                                file!(),
+                                line!(),
+                                self.identifiers.get_by_left(&ident.id).unwrap(),
+                                ident.id,
+                            );
+                        }
+
+                        // todo:refactor same pattern used 4 times
+                        self.symbols
+                            .get_mut(*self.namespace_stack.last().unwrap())
+                            .unwrap()
+                            .as_namespace_mut()
+                            .1
+                            .entry(ident.id)
+                            .or_default()
+                            .push(symbol_id);
+                    }
+
+                    self.function_symbols.insert(*stmt_id, symbol_id);
                 }
-                _ => None,
-            })
-            .collect::<Vec<(
-                Identifier<Unbound>,
-                StmtId,
-                Vec<TypeId>,
-                TypeId,
-                Implementation<ExprId>,
-            )>>();
+                StatementKind::Use(path) => {
+                    self.resolve_ident_refs(hir, path, true);
+                    if let Some(ident_ref) = self.identifier_refs.get(*path.last().unwrap()) {
+                        let ident = &ident_ref.ident;
+                        let scope = self
+                            .scope_stack
+                            .last_mut()
+                            .unwrap()
+                            .symbols
+                            .entry(ident.id)
+                            .or_default();
 
-        for (ident, stmt_id, parameter_types, ret_type, _) in functions.into_iter() {
-            let fn_type_id = self.insert_type(Type::Function(parameter_types.clone(), ret_type));
-
-            let symbol_id = self.insert_symbol(
-                ident.id,
-                SymbolKind::LetFn(ident.id, stmt_id, parameter_types, ret_type),
-                fn_type_id,
-            );
-
-            if top_level {
-                // todo:refactor same pattern used 4 times
-                self.symbols
-                    .get_mut(*self.namespace_stack.last().unwrap())
-                    .unwrap()
-                    .as_namespace_mut()
-                    .1
-                    .entry(ident.id)
-                    .or_default()
-                    .push(symbol_id);
+                        ident
+                            .resolved_symbol_ids()
+                            .iter()
+                            .for_each(|id| scope.push(*id));
+                    }
+                }
+                _ => (),
             }
 
-            self.function_symbols.insert(stmt_id, symbol_id);
+            hir.statements.insert(*stmt_id, stmt);
         }
     }
 
@@ -2531,9 +2723,8 @@ impl Resolver {
         }
     }
 
-    /// Finds the `TypeId` corresponding to a `TypeDefId`. Does not require the `TypeDefId` chain
-    /// to be resolved. Self is taken mutably in case we have an array for which we need to create
-    /// a new `TypeId`.
+    /// Finds the `TypeId` corresponding to a `TypeDefId`. Self is taken mutably in case we have an
+    /// array for which we need to create a new `TypeId`.
     ///
     /// The assumption is that the provided `TypeDefId` is already fully resolved (through
     /// `resolve_type_def`).
@@ -4068,4 +4259,64 @@ mod tests {
     //     }
     //     "#
     // );
+
+    test_resolution!(
+        use_struct_target_exists,
+        r#"
+        namespace ns1 {
+            struct S {}
+        }
+        namespace ns2 {
+            use ns1.S;
+            let f(s: S) {}
+        }
+        "#
+    );
+    test_resolution!(
+        use_function_target_exists,
+        r#"
+        namespace ns1 {
+            let f() {}
+        }
+        namespace ns2 {
+            use ns1.f;
+            let g() {
+                f();
+            }
+        }
+        "#
+    );
+    test_resolution!(
+        use_function_in_function_target_exists,
+        r#"
+        namespace ns1 {
+            let f() {}
+        }
+        namespace ns2 {
+            let g() {
+                use ns1.f;
+                f();
+            }
+        }
+        "#
+    );
+    test_resolution!(
+        use_target_does_not_exist_in_namespace,
+        r#"
+        namespace ns1 {}
+        namespace ns2 {
+            use ns1.S;
+            let f(s: S) {}
+        }
+        "#
+    );
+    test_resolution!(
+        use_target_namespace_does_not_exist,
+        r#"
+        namespace ns2 {
+            use ns1.S;
+            let f(s: S) {}
+        }
+        "#
+    );
 }

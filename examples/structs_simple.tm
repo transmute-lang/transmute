@@ -1,9 +1,14 @@
+use std.env.args;
+use std.list.list_get;
+use std.numbers.number_parse;
+use std.numbers.print;
+
 struct Struct {
     field: number,
 }
 
 let main() = {
-    let n = std.numbers.number_parse(std.list.list_get(std.env.args(), 1));
+    let n = number_parse(list_get(args(), 1));
 
     let s = Struct {
         field: n * 2,
@@ -11,5 +16,5 @@ let main() = {
 
     s.field = s.field + 1;
 
-    std.numbers.print(s.field);
+    print(s.field);
 }

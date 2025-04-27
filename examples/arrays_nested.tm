@@ -1,6 +1,10 @@
+use std.env.args;
+use std.list.list_get;
+use std.numbers.number_parse;
+use std.numbers.print;
 
 let main() {
-    let n = std.numbers.number_parse(std.list.list_get(std.env.args(), 1));
+    let n = number_parse(list_get(args(), 1));
 
     let n = [
         [ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9],
@@ -15,5 +19,5 @@ let main() {
         [90, 91, 92, 93, 94, 95, 96, 97, 98, 99],
     ][n][n];
 
-    std.numbers.print(n);
+    print(n);
 }

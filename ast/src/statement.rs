@@ -33,6 +33,7 @@ pub enum StatementKind {
     LetFn(Identifier, Vec<Annotation>, Vec<Parameter>, Return, ExprId),
     Struct(Identifier, Vec<Annotation>, Vec<Field>),
     Annotation(Identifier),
+    Use(Vec<IdentRefId>),
     Namespace(
         /// Namespace identifier
         Identifier,

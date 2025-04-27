@@ -1,5 +1,6 @@
+use std.numbers.print;
 
 let main() {
     let a = [0];
-    std.numbers.print(a[1]);
+    print(a[1]);
 }

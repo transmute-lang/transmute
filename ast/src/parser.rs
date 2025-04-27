@@ -233,6 +233,7 @@ impl<'s, 'c> Parser<'s, 'c> {
                 StatementKind::LetFn(_, _, _, _, _)
                 | StatementKind::Struct(_, _, _)
                 | StatementKind::Annotation(_)
+                | StatementKind::Use(_)
                 | StatementKind::Namespace(_, _, _, _) => statements.push(statement.id),
                 StatementKind::Expression(_)
                 | StatementKind::Let(_, _)
@@ -246,7 +247,7 @@ impl<'s, 'c> Parser<'s, 'c> {
                     {
                         let span = statement.span.clone();
                         self.compilation_unit.diagnostics.push(Diagnostic::new(
-                            "Only namespaces, functions and structs are allowed at top level",
+                            "Only use, namespaces, functions and structs are allowed at top level",
                             span,
                             Level::Error,
                             (file!(), line!()),
@@ -477,6 +478,60 @@ impl<'s, 'c> Parser<'s, 'c> {
                 let span = annotation_token.span.extend_to(&semicolon_span);
 
                 let id = self.push_statement(StatementKind::Annotation(identifier), span);
+                Some(&self.compilation_unit.statements[id])
+            }
+            TokenKind::Use => {
+                let use_token = self.lexer.next_token();
+                self.potential_tokens.clear();
+
+                if !annotations.is_empty() {
+                    self.compilation_unit.diagnostics.report_err(
+                        "Annotations not supported on use",
+                        annotations
+                            .first()?
+                            .span
+                            .extend_to(&annotations.last()?.span),
+                        (file!(), line!()),
+                    );
+                }
+
+                let mut fq_identifier = Vec::new();
+                loop {
+                    let identifier_token = self.lexer.next_token();
+                    let identifier = match &identifier_token.kind {
+                        TokenKind::Identifier => Identifier::new(
+                            self.push_identifier(&identifier_token.span),
+                            identifier_token.span.clone(),
+                        ),
+                        _ => {
+                            report_unexpected_token!(
+                                self,
+                                identifier_token,
+                                [expected_token!(TokenKind::Identifier),]
+                            );
+                            self.lexer.push_next(identifier_token);
+                            return None;
+                        }
+                    };
+                    fq_identifier.push(identifier);
+
+                    if !matches!(self.lexer.peek().kind, TokenKind::Dot) {
+                        break;
+                    }
+                    // consume the `.`
+                    self.lexer.next_token();
+                }
+
+                let ident_ref_ids = fq_identifier
+                    .into_iter()
+                    .map(|identifier| self.push_identifier_ref(identifier))
+                    .collect::<Vec<_>>();
+
+                let semicolon_span = self.parse_semicolon();
+
+                let span = use_token.span.extend_to(&semicolon_span);
+
+                let id = self.push_statement(StatementKind::Use(ident_ref_ids), span);
                 Some(&self.compilation_unit.statements[id])
             }
             TokenKind::Namespace => {
@@ -2358,6 +2413,7 @@ mod tests {
     test_syntax!(err_define_annotation_with_at => "annotation @a;");
     test_syntax!(err_define_annotation_missing_name => "annotation ;");
     test_syntax!(err_define_annotation_missing_semi => "annotation a");
+    test_syntax!(use_simple => "use a.b.c;");
     test_syntax!(define_namespace => "namespace ns;");
     test_syntax!(define_namespace_inline => "namespace ns {}");
     test_syntax!(define_namespace_inline_with_content => "namespace ns { let f() {} }");

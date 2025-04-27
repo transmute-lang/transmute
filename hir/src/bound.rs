@@ -18,3 +18,14 @@ impl Debug for Bound {
         write!(f, "Bound({})", self.0)
     }
 }
+
+#[derive(PartialEq)]
+pub struct BoundMultiple(pub Vec<SymbolId>);
+
+impl BoundState for BoundMultiple {}
+
+impl Debug for BoundMultiple {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Bound({:?})", self.0)
+    }
+}

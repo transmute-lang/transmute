@@ -1,12 +1,17 @@
+use std.env.args;
+use std.list.list_get;
+use std.numbers.number_parse;
+use std.numbers.print;
+
 let main() {
-    let n = std.numbers.number_parse(
-        std.list.list_get(
-            std.env.args(),
+    let n = number_parse(
+        list_get(
+            args(),
             1
         )
     );
     let f = fibo(n);
-    std.numbers.print(f);
+    print(f);
 }
 
 let fibo(n: number): number {

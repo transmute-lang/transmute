@@ -464,6 +464,13 @@ impl<'s> Lexer<'s> {
                 TokenKind::True,
                 span.extend('t'.len_utf8()),
             ),
+            'u' => make_keyword(
+                self,
+                chars,
+                "se",
+                TokenKind::Use,
+                span.extend('u'.len_utf8()),
+            ),
             'w' => make_keyword(
                 self,
                 chars,
@@ -637,6 +644,7 @@ pub enum TokenKind {
     SmallerEqual,
     Star,
     True,
+    Use,
     While,
     Struct,
     Bad(String),
@@ -679,6 +687,7 @@ impl TokenKind {
             TokenKind::SmallerEqual => Cow::from("`<=`"),
             TokenKind::Star => Cow::from("`*`"),
             TokenKind::True => Cow::from("`true`"),
+            TokenKind::Use => Cow::from("`use`"),
             TokenKind::While => Cow::from("`while`"),
             TokenKind::Bad(s) => Cow::from(format!("`{s}`")),
             TokenKind::Eof => Cow::from("`eof`"),
@@ -695,43 +704,44 @@ impl TokenKind {
             TokenKind::False => 4,
 
             TokenKind::Namespace => 5,
-            TokenKind::Let => 6,
-            TokenKind::Ret => 7,
-            TokenKind::If => 8,
-            TokenKind::Else => 9,
-            TokenKind::While => 10,
-            TokenKind::Struct => 11,
-            TokenKind::Annotation => 12,
+            TokenKind::Use => 6,
+            TokenKind::Let => 7,
+            TokenKind::Ret => 8,
+            TokenKind::If => 9,
+            TokenKind::Else => 10,
+            TokenKind::While => 11,
+            TokenKind::Struct => 12,
+            TokenKind::Annotation => 13,
 
-            TokenKind::Comma => 13,
-            TokenKind::Semicolon => 14,
-            TokenKind::Colon => 15,
-            TokenKind::Dot => 16,
+            TokenKind::Comma => 14,
+            TokenKind::Semicolon => 15,
+            TokenKind::Colon => 16,
+            TokenKind::Dot => 17,
 
-            TokenKind::CloseCurlyBracket => 17,
-            TokenKind::CloseParenthesis => 18,
-            TokenKind::OpenCurlyBracket => 19,
-            TokenKind::OpenParenthesis => 20,
+            TokenKind::CloseCurlyBracket => 18,
+            TokenKind::CloseParenthesis => 19,
+            TokenKind::OpenCurlyBracket => 20,
+            TokenKind::OpenParenthesis => 21,
 
-            TokenKind::Equal => 21,
+            TokenKind::Equal => 22,
 
-            TokenKind::Star => 22,
-            TokenKind::Slash => 23,
+            TokenKind::Star => 23,
+            TokenKind::Slash => 24,
 
-            TokenKind::Minus => 24,
-            TokenKind::Plus => 25,
+            TokenKind::Minus => 25,
+            TokenKind::Plus => 26,
 
-            TokenKind::EqualEqual => 26,
-            TokenKind::ExclaimEqual => 27,
-            TokenKind::Greater => 28,
-            TokenKind::GreaterEqual => 29,
-            TokenKind::Smaller => 30,
-            TokenKind::SmallerEqual => 31,
+            TokenKind::EqualEqual => 27,
+            TokenKind::ExclaimEqual => 28,
+            TokenKind::Greater => 29,
+            TokenKind::GreaterEqual => 30,
+            TokenKind::Smaller => 31,
+            TokenKind::SmallerEqual => 32,
 
-            TokenKind::CloseBracket => 32,
-            TokenKind::OpenBracket => 33,
+            TokenKind::CloseBracket => 33,
+            TokenKind::OpenBracket => 34,
 
-            TokenKind::At => 34,
+            TokenKind::At => 35,
 
             TokenKind::Eof => 254,
             TokenKind::Bad(_) => 255,
@@ -852,6 +862,9 @@ impl Display for TokenKind {
             }
             TokenKind::True => {
                 write!(f, "`true`")
+            }
+            TokenKind::Use => {
+                write!(f, "`use`")
             }
             TokenKind::While => {
                 write!(f, "`while`")
@@ -977,6 +990,7 @@ mod tests {
     lexer_test_next!(identifier_space, " ident ");
     lexer_test_next!(identifier_with_keyword_prefix, "let123");
     lexer_test_next!(keyword_namespace, "namespace");
+    lexer_test_next!(keyword_use, "use");
     lexer_test_next!(keyword_let, "let");
     lexer_test_next!(keyword_ret, "ret");
     lexer_test_next!(keyword_if, "if");

@@ -1,3 +1,8 @@
+use std.env.args;
+use std.list.list_get;
+use std.numbers.number_parse;
+use std.numbers.print;
+
 struct Inner {
     field: number,
 }
@@ -7,8 +12,8 @@ struct Outer {
 }
 
 let main() {
-    let i = std.numbers.number_parse(std.list.list_get(std.env.args(), 1));
-    std.numbers.print(f2(i) + f3(i) + f4(i) + f5(i));
+    let i = number_parse(list_get(args(), 1));
+    print(f2(i) + f3(i) + f4(i) + f5(i));
 }
 
 let f2(i: number): number {

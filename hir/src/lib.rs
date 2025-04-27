@@ -176,6 +176,12 @@ impl ResolvedHir {
 }
 
 trait FindSymbol {
+    // todo:refactor instead of param_types, pass a RequiredSymbolKind
+    /// deprecated: this is quite useless, the caller knows better what it wants to get, and this
+    /// function does not crawl any scope up... `find_symbol_id_by_ident_and_param_types` does.
+    /// Note that `find_type_id_by_identifier` does crawl the scope stack too, through
+    /// `find_symbol_id_by_ident_and_param_types`
+    #[deprecated]
     fn find(
         &self,
         all_symbols: &VecMap<SymbolId, Symbol>,

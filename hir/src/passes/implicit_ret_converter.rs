@@ -461,11 +461,9 @@ impl ImplicitRetResolver {
 
                 false
             }
-            StatementKind::Struct(_, _, _) => {
-                self.statements.insert(statement.id, statement);
-                false
-            }
-            StatementKind::Annotation(_) => {
+            StatementKind::Struct(_, _, _)
+            | StatementKind::Annotation(_)
+            | StatementKind::Use(_) => {
                 self.statements.insert(statement.id, statement);
                 false
             }

@@ -192,7 +192,10 @@ impl Transformer {
                 HirStatementKind::Annotation(_) => {
                     self.statements.remove(stmt_id);
                 }
-                kind => panic!("annotation, function or struct expected, got {:?}", kind),
+                kind => panic!(
+                    "namespace, annotation, function or struct expected, got {:?}",
+                    kind
+                ),
             }
         }
     }
@@ -749,7 +752,7 @@ impl Transformer {
                 HirStatementKind::Struct(identifier, _, fields) => {
                     self.transform_struct(parent, stmt_id, identifier, fields)
                 }
-                HirStatementKind::Annotation(_) => {
+                HirStatementKind::Annotation(_) | HirStatementKind::Use(_) => {
                     // nothing
                 }
                 HirStatementKind::Namespace(..) => todo!(),
@@ -1375,6 +1378,26 @@ mod tests {
         }
         let main() {
             ns.f();
+        }
+    "#);
+    t!(test_use_outside_function => r#"
+        namespace ns1 {
+            let f() {}
+        }
+        namespace ns2 {
+            use ns1.f;
+            let g() {
+                f();
+            }
+        }
+    "#);
+    t!(test_use_inside_function => r#"
+        namespace ns {
+            let f() {}
+        }
+        let main() {
+            use ns.f;
+            f();
         }
     "#);
 }

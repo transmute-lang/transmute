@@ -327,6 +327,18 @@ impl PrettyPrint for Statement {
                 }
                 writeln!(f, "{indent}}}")
             }
+            StatementKind::Use(ident) => {
+                let indent = ctx.indent();
+                writeln!(
+                    f,
+                    "{indent}use {ident};",
+                    ident = ident
+                        .iter()
+                        .map(|ident_ref_id| ctx.identifier_ref(*ident_ref_id))
+                        .collect::<Vec<_>>()
+                        .join(".")
+                )
+            }
             StatementKind::Annotation(ident) => {
                 let indent = ctx.indent();
                 writeln!(
@@ -1254,6 +1266,24 @@ mod tests {
             &mut compilation_unit,
             None,
             Lexer::new(InputId::from(0), "let f(p: a.b.c): ns1.ns2.type {}"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_snapshot!(w);
+    }
+
+    #[test]
+    fn use_simple() {
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "use a.b.c;"),
         )
         .parse();
         let ast = compilation_unit.into_ast().unwrap();

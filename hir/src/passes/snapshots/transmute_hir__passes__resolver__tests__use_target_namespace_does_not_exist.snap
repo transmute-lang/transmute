@@ -6,13 +6,13 @@ Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Symbol 'C' not found",
-                span: 7:21; [121, 122],
+                message: "Identifier 'S' not found",
+                span: 4:22; [69, 70],
                 level: Error,
             },
             Diagnostic {
-                message: "Symbol 'D' not found",
-                span: 8:23; [148, 149],
+                message: "Namespace 'ns1' not found",
+                span: 3:17; [41, 44],
                 level: Error,
             },
         ],

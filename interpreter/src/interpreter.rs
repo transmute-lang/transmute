@@ -136,6 +136,7 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
             }
             StatementKind::Struct(_, _, _) => Val::none(),
             StatementKind::Annotation(_) => Val::none(),
+            StatementKind::Use(_) => Val::none(),
             StatementKind::Namespace(_, _, _, _) => Val::none(),
         }
     }

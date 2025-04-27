@@ -1,5 +1,10 @@
 #!transmute
 
+use std.env.args;
+use std.list.list_get;
+use std.numbers.number_parse;
+use std.numbers.print;
+
 struct Point {
     a: number,
 }
@@ -21,5 +26,5 @@ let area(n: number): number = {
 }
 
 let main() {
-    std.numbers.print(area(std.numbers.number_parse(std.list.list_get(std.env.args(), 1))));
+    print(area(number_parse(list_get(args(), 1))));
 }
