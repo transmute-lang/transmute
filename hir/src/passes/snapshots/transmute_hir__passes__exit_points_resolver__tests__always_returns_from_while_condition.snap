@@ -125,7 +125,6 @@ expression: "(ast, block_exit_points)"
                         id: IdentId(0),
                         span: 0:0; [0, 0],
                     },
-                    None,
                     InputId(0),
                     [
                         StmtId(6),
@@ -198,9 +197,7 @@ expression: "(ast, block_exit_points)"
             },
         ],
         type_defs: [],
-        roots: [
-            StmtId(0),
-        ],
+        root: StmtId(0),
     },
     [
         (

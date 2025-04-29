@@ -21,7 +21,7 @@ impl ImplicitRetResolver {
 
     pub fn resolve(
         mut self,
-        root_statements: &[StmtId],
+        root_statement: StmtId,
         mut statements: VecMap<StmtId, Statement>,
         mut expressions: VecMap<ExprId, Expression>,
     ) -> Output {
@@ -32,17 +32,15 @@ impl ImplicitRetResolver {
         let (initial_statements_len, initial_expressions_len) =
             (statements.len(), expressions.len());
 
-        for stmt_id in root_statements.iter() {
-            let statement = statements.remove(*stmt_id).unwrap();
-            self.visit_statement(
-                &mut statements,
-                &mut expressions,
-                statement,
-                0,
-                false,
-                false,
-            );
-        }
+        let statement = statements.remove(root_statement).unwrap();
+        self.visit_statement(
+            &mut statements,
+            &mut expressions,
+            statement,
+            0,
+            false,
+            false,
+        );
 
         // we may have skipped the visit of statements or expressions due to the fact that their
         // parent was unreachable, and thus its children were not visited... we transfer them now.
@@ -467,7 +465,7 @@ impl ImplicitRetResolver {
                 self.statements.insert(statement.id, statement);
                 false
             }
-            StatementKind::Namespace(_, _, _, stmts) => {
+            StatementKind::Namespace(_, _, stmts) => {
                 for stmt in stmts {
                     let statement = statements.remove(*stmt).unwrap();
                     self.visit_statement(statements, expressions, statement, 0, false, false);
@@ -516,7 +514,7 @@ mod tests {
                 }
 
                 let explicit_rets =
-                    ImplicitRetResolver::new().resolve(&ast.roots, statements, expressions);
+                    ImplicitRetResolver::new().resolve(ast.root, statements, expressions);
 
                 let expressions = explicit_rets.expressions;
                 let statements = explicit_rets.statements;

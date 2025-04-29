@@ -75,7 +75,6 @@ Ok(
                         span: 0:0; [0, 0],
                         bound: Bound(1),
                     },
-                    None,
                     InputId(0),
                     [
                         StmtId(3),
@@ -122,9 +121,6 @@ Ok(
                         span: 2:19; [19, 20],
                         bound: Bound(2),
                     },
-                    Some(
-                        StmtId(0),
-                    ),
                     InputId(0),
                     [
                         StmtId(2),
@@ -140,9 +136,6 @@ Ok(
                         span: 8:11; [109, 113],
                         bound: Bound(3),
                     },
-                    Some(
-                        StmtId(0),
-                    ),
                     InputId(0),
                     [],
                 ),
@@ -150,9 +143,7 @@ Ok(
             },
         ],
         type_defs: [],
-        roots: [
-            StmtId(0),
-        ],
+        root: StmtId(0),
         symbols: [
             SymbolId(0) => Symbol {
                 id: SymbolId(0),

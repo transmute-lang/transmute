@@ -312,14 +312,14 @@ impl Type {
     }
 
     pub fn is_assignable(&self) -> bool {
-        match self {
+        matches!(
+            self,
             Type::Boolean
-            | Type::Number
-            | Type::Function(_, _)
-            | Type::Struct(_)
-            | Type::Array(_, _) => true,
-            _ => false,
-        }
+                | Type::Number
+                | Type::Function(_, _)
+                | Type::Struct(_)
+                | Type::Array(_, _)
+        )
     }
 }
 

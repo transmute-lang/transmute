@@ -51,17 +51,12 @@ impl Transformer {
         self.expressions.resize(hir.expressions.len());
         self.statements.resize(hir.statements.len());
 
-        debug_assert_eq!(hir.roots.len(), 1);
-
-        for stmt_id in hir.roots.clone().into_iter() {
-            let stmt = hir.statements.remove(stmt_id).unwrap();
-
-            match stmt.kind {
-                HirStatementKind::Namespace(_ident_id, _parent, _input, statements) => {
-                    self.transform_namespace(&mut hir, statements)
-                }
-                kind => panic!("namespace expected, got {:?}", kind),
+        let stmt = hir.statements.remove(hir.root).unwrap();
+        match stmt.kind {
+            HirStatementKind::Namespace(_ident_id, _, statements) => {
+                self.transform_namespace(&mut hir, statements)
             }
+            kind => panic!("namespace expected, got {:?}", kind),
         }
 
         debug_assert!(hir.expressions.is_empty(), "{:?}", hir.expressions);
@@ -173,7 +168,7 @@ impl Transformer {
         for stmt_id in stmt_ids.into_iter() {
             let stmt = hir.statements.remove(stmt_id).unwrap();
             match stmt.kind {
-                HirStatementKind::Namespace(_ident_id, _parent, _input, statements) => {
+                HirStatementKind::Namespace(_ident_id, _, statements) => {
                     self.transform_namespace(hir, statements)
                 }
                 HirStatementKind::LetFn(identifier, _, parameters, ret_type, implementation) => {

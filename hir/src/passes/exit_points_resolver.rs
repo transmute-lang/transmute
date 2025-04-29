@@ -249,7 +249,7 @@ impl<'a> ExitPointsResolver<'a> {
             StatementKind::LetFn(_, _, _, _, _) => (Collected::default(), false),
             StatementKind::Struct(_, _, _) => (Collected::default(), false),
             StatementKind::Annotation(_) => (Collected::default(), false),
-            StatementKind::Namespace(_, _, _, _) => todo!(),
+            StatementKind::Namespace(_, _, _) => todo!(),
             StatementKind::Use(_) => (Collected::default(), false),
         }
     }

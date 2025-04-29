@@ -32,8 +32,8 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
 
     pub fn start(&mut self) {
         // todo:refactor DISGUSTING
-        let expr_id = match &self.hir.statements[self.hir.roots[0]].kind {
-            StatementKind::Namespace(ident, _, _, _) => {
+        let expr_id = match &self.hir.statements[self.hir.root].kind {
+            StatementKind::Namespace(ident, _, _) => {
                 let symbols = self.hir.symbols[ident.resolved_symbol_id()]
                     .as_namespace()
                     .1;
@@ -137,7 +137,7 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
             StatementKind::Struct(_, _, _) => Val::none(),
             StatementKind::Annotation(_) => Val::none(),
             StatementKind::Use(_) => Val::none(),
-            StatementKind::Namespace(_, _, _, _) => Val::none(),
+            StatementKind::Namespace(_, _, _) => Val::none(),
         }
     }
 

@@ -79,13 +79,8 @@ impl From<AstStatement> for Statement<Untyped, Unbound> {
                     StatementKind::Annotation(Identifier::from(identifier))
                 }
                 AstStatementKind::Use(ident_ref_ids) => StatementKind::Use(ident_ref_ids),
-                AstStatementKind::Namespace(identifier, parent, input_id, statements) => {
-                    StatementKind::Namespace(
-                        Identifier::from(identifier),
-                        parent,
-                        input_id,
-                        statements,
-                    )
+                AstStatementKind::Namespace(identifier, input_id, statements) => {
+                    StatementKind::Namespace(Identifier::from(identifier), input_id, statements)
                 }
             },
         }
@@ -118,9 +113,6 @@ where
     Namespace(
         /// Namespace identifier
         Identifier<B>,
-        /// Statement ID of the parent namespace definition. `None` the namespace is the root one
-        // todo:refactoring remove, useless
-        Option<StmtId>,
         /// `InputId` this namespace is coming from
         InputId,
         /// Statements included in this namespace

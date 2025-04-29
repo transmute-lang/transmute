@@ -151,7 +151,7 @@ mod tests {
                     expressions: output.expressions,
                     statements: ast.statements,
                     type_defs: ast.type_defs,
-                    roots: ast.roots,
+                    root: ast.root,
                 };
 
                 let mut w = String::new();

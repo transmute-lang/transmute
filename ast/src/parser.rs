@@ -221,8 +221,8 @@ impl<'s, 'c> Parser<'s, 'c> {
             .statements
             .remove(self.parent_namespace)
             .map(|stmt| match stmt.kind {
-                StatementKind::Namespace(identifier, parent, input, statements) => {
-                    ((stmt.id, stmt.span, identifier, parent, input), statements)
+                StatementKind::Namespace(identifier, input, statements) => {
+                    ((stmt.id, stmt.span, identifier, input), statements)
                 }
                 _ => panic!("Namespace expected, got {stmt:?}"),
             })
@@ -234,7 +234,7 @@ impl<'s, 'c> Parser<'s, 'c> {
                 | StatementKind::Struct(_, _, _)
                 | StatementKind::Annotation(_)
                 | StatementKind::Use(_)
-                | StatementKind::Namespace(_, _, _, _) => statements.push(statement.id),
+                | StatementKind::Namespace(_, _, _) => statements.push(statement.id),
                 StatementKind::Expression(_)
                 | StatementKind::Let(_, _)
                 | StatementKind::Ret(_, _) => {
@@ -257,12 +257,12 @@ impl<'s, 'c> Parser<'s, 'c> {
             }
         }
 
-        let (stmt_id, span, identifier, parent, input) = namespace;
+        let (stmt_id, span, identifier, input) = namespace;
         self.compilation_unit.statements.insert(
             stmt_id,
             Statement {
                 id: stmt_id,
-                kind: StatementKind::Namespace(identifier, parent, input, statements),
+                kind: StatementKind::Namespace(identifier, input, statements),
                 span,
             },
         );
@@ -584,12 +584,7 @@ impl<'s, 'c> Parser<'s, 'c> {
                 };
 
                 let id = self.push_statement(
-                    StatementKind::Namespace(
-                        identifier,
-                        Some(self.parent_namespace),
-                        self.lexer.input_id(),
-                        statements,
-                    ),
+                    StatementKind::Namespace(identifier, self.lexer.input_id(), statements),
                     span,
                 );
 

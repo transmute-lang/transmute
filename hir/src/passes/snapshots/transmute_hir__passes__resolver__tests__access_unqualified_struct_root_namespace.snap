@@ -56,7 +56,6 @@ Ok(
                         span: 0:0; [0, 0],
                         bound: Bound(1),
                     },
-                    None,
                     InputId(0),
                     [
                         StmtId(1),
@@ -120,9 +119,6 @@ Ok(
                         span: 6:11; [72, 76],
                         bound: Bound(2),
                     },
-                    Some(
-                        StmtId(0),
-                    ),
                     InputId(0),
                     [],
                 ),
@@ -147,9 +143,7 @@ Ok(
                 span: 3:18; [38, 39],
             },
         ],
-        roots: [
-            StmtId(0),
-        ],
+        root: StmtId(0),
         symbols: [
             SymbolId(0) => Symbol {
                 id: SymbolId(0),

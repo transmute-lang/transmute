@@ -111,7 +111,6 @@ Hir {
                     span: 0:0; [0, 0],
                     bound: Bound(1),
                 },
-                None,
                 InputId(0),
                 [
                     StmtId(3),
@@ -178,9 +177,6 @@ Hir {
                     span: 2:11; [63, 67],
                     bound: Bound(2),
                 },
-                Some(
-                    StmtId(0),
-                ),
                 InputId(0),
                 [],
             ),
@@ -205,9 +201,7 @@ Hir {
             span: 1:19; [18, 24],
         },
     ],
-    roots: [
-        StmtId(0),
-    ],
+    root: StmtId(0),
     symbols: [
         SymbolId(0) => Symbol {
             id: SymbolId(0),

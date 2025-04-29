@@ -201,8 +201,8 @@ impl PrettyPrint for Statement {
                     writeln!(f)
                 }
             }
-            StatementKind::Namespace(ident, parent, _, stmts) => {
-                if parent.is_some() {
+            StatementKind::Namespace(ident, _, stmts) => {
+                if ctx.identifier(ident.id) != "<root>" {
                     writeln!(
                         f,
                         "{indent}namespace {ident} {{",
@@ -216,7 +216,7 @@ impl PrettyPrint for Statement {
                     ctx.pretty_print_statement(*stmt, opts, f)?;
                 }
 
-                if parent.is_some() {
+                if ctx.identifier(ident.id) != "<root>" {
                     ctx.level -= 1;
                     writeln!(f, "{indent}}}", indent = ctx.indent(),)?;
                 }
@@ -388,9 +388,7 @@ impl Ast {
             level: 0,
             require_semicolon: false,
         };
-        for stmt_id in self.roots.iter() {
-            ctx.pretty_print_statement(*stmt_id, opts, f)?;
-        }
+        ctx.pretty_print_statement(self.root, opts, f)?;
         Ok(())
     }
 }
@@ -473,7 +471,7 @@ mod tests {
             Default::default(),
             vec![],
             Default::default(),
-            vec![],
+            StmtId::from(0),
             Default::default(),
         );
 
@@ -496,7 +494,7 @@ mod tests {
             Default::default(),
             vec![],
             Default::default(),
-            vec![],
+            StmtId::from(0),
             Default::default(),
         );
 
@@ -514,24 +512,12 @@ mod tests {
 
     #[test]
     fn literal_ident() {
-        // let mut ident_refs = VecMap::<IdentRefId, IdentifierRef>::new();
-        // let id = ident_refs.create();
-        // ident_refs.insert(
-        //     id,
-        //     IdentifierRef::new(
-        //         id,
-        //         Identifier {
-        //             id: IdentId::from(0),
-        //             span: Default::default(),
-        //         },
-        //     ),
-        // );
         let ast = Ast::new(
             identifiers!["ident"],
             identifier_refs!(0),
             vec![],
             Default::default(),
-            vec![],
+            StmtId::from(0),
             Default::default(),
         );
 

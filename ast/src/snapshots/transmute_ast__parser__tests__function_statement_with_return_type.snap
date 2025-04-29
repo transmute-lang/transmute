@@ -84,7 +84,6 @@ Ok(
                         id: IdentId(0),
                         span: 0:0; [0, 0],
                     },
-                    None,
                     InputId(0),
                     [
                         StmtId(2),
@@ -145,8 +144,6 @@ Ok(
                 span: 1:27; [26, 32],
             },
         ],
-        roots: [
-            StmtId(0),
-        ],
+        root: StmtId(0),
     },
 )

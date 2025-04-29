@@ -41,7 +41,7 @@ pub fn parse(inputs: Vec<Input>) -> (Inputs, Result<Ast, Diagnostics<()>>) {
     }
 
     while let Some(namespace_id) = compilation_unit.next_namespace() {
-        let (name, _, input_id, _) = compilation_unit.statements[namespace_id].as_namespace();
+        let (name, input_id, _) = compilation_unit.statements[namespace_id].as_namespace();
         let file_name = format!(
             "{}.tm",
             compilation_unit.identifiers.get_by_right(&name.id).unwrap()
@@ -82,8 +82,8 @@ pub struct Ast {
     pub statements: VecMap<StmtId, Statement>,
     /// Types
     pub type_defs: VecMap<TypeDefId, TypeDef>,
-    /// Root statements
-    pub roots: Vec<StmtId>,
+    /// Root statement
+    pub root: StmtId,
 }
 
 impl Ast {
@@ -92,7 +92,7 @@ impl Ast {
         identifier_refs: VecMap<IdentRefId, IdentifierRef>,
         expressions: Vec<Expression>,
         statements: VecMap<StmtId, Statement>,
-        roots: Vec<StmtId>,
+        root: StmtId,
         type_defs: VecMap<TypeDefId, TypeDef>,
     ) -> Self {
         Self {
@@ -101,7 +101,7 @@ impl Ast {
             expressions: expressions.into(),
             statements,
             type_defs,
-            roots,
+            root,
         }
     }
 }
@@ -112,8 +112,7 @@ pub struct CompilationUnit {
     expressions: Vec<Expression>,
     statements: VecMap<StmtId, Statement>,
     type_defs: VecMap<TypeDefId, TypeDef>,
-    //todo:refactoring must be singular root and it is a namespace (can we shortcut to namespaces[0]?)
-    roots: Vec<StmtId>,
+    root: StmtId,
     diagnostics: Diagnostics<()>,
 
     namespaces: Vec<StmtId>,
@@ -121,31 +120,17 @@ pub struct CompilationUnit {
 
 impl Default for CompilationUnit {
     fn default() -> Self {
-        Self::create_root_namespace(Self {
-            identifiers: Default::default(),
-            identifier_refs: Default::default(),
-            expressions: vec![],
-            statements: Default::default(),
-            type_defs: Default::default(),
-            roots: vec![],
-            diagnostics: Default::default(),
-            namespaces: vec![],
-        })
-    }
-}
+        let mut identifiers = BiMap::new();
 
-impl CompilationUnit {
-    fn create_root_namespace(mut compilation_unit: CompilationUnit) -> CompilationUnit {
-        let root_ident_id = IdentId::from(compilation_unit.identifiers.len());
-        compilation_unit
-            .identifiers
-            .insert("<root>".to_string(), root_ident_id);
+        let root_ident_id = IdentId::from(identifiers.len());
+        identifiers.insert("<root>".to_string(), root_ident_id);
         debug_assert_eq!(root_ident_id, IdentId::from(0));
 
-        let root_namespace = StmtId::from(compilation_unit.statements.len());
+        let mut statements = VecMap::new();
+        let root_namespace = StmtId::from(statements.len());
         debug_assert_eq!(root_namespace, StmtId::from(0));
 
-        compilation_unit.statements.insert(
+        statements.insert(
             root_namespace,
             Statement {
                 id: root_namespace,
@@ -154,7 +139,6 @@ impl CompilationUnit {
                         id: root_ident_id,
                         span: Default::default(),
                     },
-                    None,
                     InputId::from(0),
                     Vec::new(),
                 ),
@@ -162,10 +146,20 @@ impl CompilationUnit {
             },
         );
 
-        compilation_unit.roots.push(root_namespace);
-        compilation_unit
+        Self {
+            identifiers,
+            identifier_refs: Default::default(),
+            expressions: vec![],
+            statements,
+            type_defs: Default::default(),
+            root: root_namespace,
+            diagnostics: Default::default(),
+            namespaces: vec![],
+        }
     }
+}
 
+impl CompilationUnit {
     /// Returns the root namespace. The root namespace is a synthetic one.
     fn root_namespace(&self) -> StmtId {
         // the root namespace is StmtId, as per debug_assert in default() implementation
@@ -196,7 +190,7 @@ impl CompilationUnit {
                 self.identifier_refs,
                 self.expressions,
                 self.statements,
-                self.roots,
+                self.root,
                 self.type_defs,
             ))
         } else {

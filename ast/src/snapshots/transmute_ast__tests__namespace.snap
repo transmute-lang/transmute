@@ -42,7 +42,6 @@ Ast {
                     id: IdentId(0),
                     span: 0:0; [0, 0],
                 },
-                None,
                 InputId(0),
                 [
                     StmtId(1),
@@ -58,9 +57,6 @@ Ast {
                     id: IdentId(1),
                     span: 2:11; [11, 16],
                 },
-                Some(
-                    StmtId(0),
-                ),
                 InputId(0),
                 [
                     StmtId(3),
@@ -119,7 +115,5 @@ Ast {
         },
     ],
     type_defs: [],
-    roots: [
-        StmtId(0),
-    ],
+    root: StmtId(0),
 }

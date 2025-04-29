@@ -15,11 +15,9 @@ impl Statement {
         Self { id, kind, span }
     }
 
-    pub fn as_namespace(&self) -> (&Identifier, Option<StmtId>, InputId, &[StmtId]) {
+    pub fn as_namespace(&self) -> (&Identifier, InputId, &[StmtId]) {
         match &self.kind {
-            StatementKind::Namespace(identifier, parent, input_id, stmts) => {
-                (identifier, *parent, *input_id, stmts)
-            }
+            StatementKind::Namespace(identifier, input_id, stmts) => (identifier, *input_id, stmts),
             _ => panic!("{:?} is not a namespace", self),
         }
     }
@@ -37,9 +35,6 @@ pub enum StatementKind {
     Namespace(
         /// Namespace identifier
         Identifier,
-        /// Statement ID of the parent namespace definition. `None` the namespace is the root one
-        // todo remove, probably not useful
-        Option<StmtId>,
         /// `InputId` this namespace is coming from
         InputId,
         /// Statements included in this namespace

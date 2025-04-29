@@ -64,8 +64,7 @@ where
     /// Types
     pub type_defs: VecMap<TypeDefId, TypeDef>,
     /// Root statements
-    // todo:refactor must be a single StmtId
-    pub roots: Vec<StmtId>,
+    pub root: StmtId,
     /// All symbols
     pub symbols: VecMap<SymbolId, Symbol>,
     /// All types
@@ -82,8 +81,6 @@ impl UnresolvedHir {
 
 impl From<Ast> for UnresolvedHir {
     fn from(ast: Ast) -> Self {
-        debug_assert_eq!(ast.roots.len(), 1);
-
         // convert operators to function calls
         let operator_free =
             OperatorsConverter::new(ast.identifiers, ast.identifier_refs).convert(ast.expressions);
@@ -97,7 +94,7 @@ impl From<Ast> for UnresolvedHir {
         let ImplicitRetResolverOutput {
             statements,
             expressions,
-        } = ImplicitRetResolver::new().resolve(&ast.roots, ast.statements, expressions);
+        } = ImplicitRetResolver::new().resolve(ast.root, ast.statements, expressions);
 
         // here, we have two kind of `Ret` statements:
         //  - explicit, which are present in the source code (`ret x;`)
@@ -146,7 +143,7 @@ impl From<Ast> for UnresolvedHir {
                 .into_iter()
                 .map(|e| (e.0, TypeDef::from(e.1)))
                 .collect::<VecMap<TypeDefId, TypeDef>>(),
-            roots: ast.roots,
+            root: ast.root,
             symbols: Default::default(),
             types: Default::default(),
             exit_points: ExitPoints {
