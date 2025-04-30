@@ -580,30 +580,10 @@ impl Resolver {
 
         let (type_id, symbol_id) = match &expr.kind {
             ExpressionKind::Assignment(Target::Direct(ident_ref), expr) => {
-                (self.resolve_assignment(hir, *ident_ref, *expr), None)
+                (self.resolve_direct_assignment(hir, *ident_ref, *expr), None)
             }
             ExpressionKind::Assignment(Target::Indirect(lhs_expr_id), rhs_expr_id) => {
-                let lhs_type_id = self.resolve_expression(hir, *lhs_expr_id, None).0;
-                let rhs_type_id = self.resolve_expression(hir, *rhs_expr_id, None).0;
-
-                if lhs_type_id == self.find_type_id_by_type(&Type::Invalid)
-                    || rhs_type_id == self.find_type_id_by_type(&Type::Invalid)
-                {
-                    (self.find_type_id_by_type(&Type::Invalid), None)
-                } else if lhs_type_id != rhs_type_id {
-                    self.diagnostics.report_err(
-                        format!(
-                            "RHS expected to be of type {}, got {}",
-                            self.find_type_by_type_id(lhs_type_id),
-                            self.find_type_by_type_id(rhs_type_id)
-                        ),
-                        self.expressions[*rhs_expr_id].span.clone(),
-                        (file!(), line!()),
-                    );
-                    (self.find_type_id_by_type(&Type::Invalid), None)
-                } else {
-                    (lhs_type_id, None)
-                }
+                self.resolve_indirect_assignment(hir, lhs_expr_id, rhs_expr_id)
             }
             ExpressionKind::If(cond, true_branch, false_branch) => (
                 self.resolve_if(hir, *cond, *true_branch, *false_branch),
@@ -652,6 +632,219 @@ impl Resolver {
         self.expressions.insert(expr_id, expr.typed(type_id));
 
         (type_id, symbol_id)
+    }
+
+    fn resolve_direct_assignment(
+        &mut self,
+        hir: &mut UnresolvedHir,
+        ident_ref: IdentRefId,
+        expr: ExprId,
+    ) -> TypeId {
+        // If we have the following:
+        //   let add(a: number, b: number): number = {}
+        //   let add(a: boolean, b: boolean): boolean = {}
+        //
+        // then:
+        //   add = |a: boolean, b: boolean|: boolean {}
+        //
+        // must update the value of the 2nd add. Hence, we need to first compute the type
+        // of the expression, then find all the symbols matching the name and update the
+        // one with the correct function type, i.e. parameter types + return type. This,
+        // even though the return type does *not* count in method signature when computing
+        // their uniqueness, i.e. x(a: number): number is considered the same as
+        // x(a: number): boolean.
+        //
+        // Similarly:
+        //   let add_bool: |boolean, boolean|: boolean = add;
+        //
+        // chooses the 2nd function as this is the one for which the type matches.
+        //
+        // todo:feature:fn-value implement the above...
+
+        let rhs_type_id = self.resolve_expression(hir, expr, None).0;
+
+        // todo:feature:fn-value to search for method, we need to extract the parameter types from the
+        //  expr_type, if it corresponds to a function type. We don't have this
+        //  information yet and thus we cannot assign to a variable holding a function
+        //  (yet).
+        let lhs_symbol_ids = self.resolve_ident_ref(hir, ident_ref, None);
+        debug_assert!(lhs_symbol_ids.len() <= 1);
+        let lhs_type_id = lhs_symbol_ids
+            .first()
+            .map(|s| self.symbols[*s].type_id)
+            .unwrap_or(self.find_type_id_by_type(&Type::Invalid));
+
+        if lhs_type_id == self.find_type_id_by_type(&Type::Invalid) {
+            return lhs_type_id;
+        }
+
+        if rhs_type_id == self.find_type_id_by_type(&Type::Invalid) {
+            return rhs_type_id;
+        }
+
+        if rhs_type_id != lhs_type_id {
+            self.diagnostics.report_err(
+                format!(
+                    "RHS expected to be of type {}, got {}",
+                    self.find_type_by_type_id(lhs_type_id),
+                    self.find_type_by_type_id(rhs_type_id)
+                ),
+                self.expressions[expr].span.clone(),
+                (file!(), line!()),
+            );
+            return self.find_type_id_by_type(&Type::Invalid);
+        }
+
+        rhs_type_id
+    }
+
+    fn resolve_indirect_assignment(
+        &mut self,
+        hir: &mut UnresolvedHir,
+        lhs_expr_id: &ExprId,
+        rhs_expr_id: &ExprId,
+    ) -> (TypeId, Option<SymbolId>) {
+        let lhs_type_id = self.resolve_expression(hir, *lhs_expr_id, None).0;
+        let rhs_type_id = self.resolve_expression(hir, *rhs_expr_id, None).0;
+
+        if lhs_type_id == self.find_type_id_by_type(&Type::Invalid)
+            || rhs_type_id == self.find_type_id_by_type(&Type::Invalid)
+        {
+            (self.find_type_id_by_type(&Type::Invalid), None)
+        } else if lhs_type_id != rhs_type_id {
+            self.diagnostics.report_err(
+                format!(
+                    "RHS expected to be of type {}, got {}",
+                    self.find_type_by_type_id(lhs_type_id),
+                    self.find_type_by_type_id(rhs_type_id)
+                ),
+                self.expressions[*rhs_expr_id].span.clone(),
+                (file!(), line!()),
+            );
+            (self.find_type_id_by_type(&Type::Invalid), None)
+        } else {
+            (lhs_type_id, None)
+        }
+    }
+
+    fn resolve_if(
+        &mut self,
+        hir: &mut UnresolvedHir,
+        cond: ExprId,
+        true_branch: ExprId,
+        false_branch: Option<ExprId>,
+    ) -> TypeId {
+        let cond_type = self.resolve_expression(hir, cond, None).0;
+
+        if cond_type != self.find_type_id_by_type(&Type::Boolean)
+            && cond_type != self.find_type_id_by_type(&Type::Invalid)
+        {
+            self.diagnostics.report_err(
+                format!(
+                    "Condition expected to be of type {}, got {}",
+                    Type::Boolean,
+                    self.find_type_by_type_id(cond_type)
+                ),
+                self.expressions[cond].span.clone(),
+                (file!(), line!()),
+            );
+        }
+
+        let true_branch_type_id = self.resolve_expression(hir, true_branch, None).0;
+        let false_branch_type_id = match false_branch {
+            None => self.find_type_id_by_type(&Type::Void),
+            Some(e) => self.resolve_expression(hir, e, None).0,
+        };
+
+        let true_branch_type = self.find_type_by_type_id(true_branch_type_id);
+        let false_branch_type = self.find_type_by_type_id(false_branch_type_id);
+
+        match (true_branch_type, false_branch_type) {
+            (Type::Invalid, _) | (_, Type::Invalid) => self.find_type_id_by_type(&Type::Invalid),
+            (Type::None, Type::None) => true_branch_type_id,
+            // todo:test the following case is not well tested + implement proper error handing
+            (Type::None, t) | (t, Type::None) => self.find_type_id_by_type(t),
+            (_, Type::Void) | (Type::Void, _) => {
+                // todo:feature ifs with only one branch should return option<t>
+                self.find_type_id_by_type(&Type::Void)
+            }
+            (tt, ft) if tt == ft => true_branch_type_id,
+            (tt, ft) => {
+                let false_branch = &self.expressions[false_branch.expect("false branch exists")];
+                self.diagnostics.report_err(
+                    format!("Expected type {tt}, got {ft}"),
+                    false_branch.span.clone(),
+                    (file!(), line!()),
+                );
+                self.find_type_id_by_type(&Type::Invalid)
+            }
+        }
+    }
+
+    /// Resolves an identifier ref by its `IdentRefId` and returns the corresponding `SymbolId`.
+    /// The resolution starts in the current scope and crawls the scopes stack up until the
+    /// identifier is found.
+    fn resolve_ident_ref(
+        &mut self,
+        hir: &mut UnresolvedHir,
+        ident_ref_id: IdentRefId,
+        param_types: Option<&[TypeId]>,
+    ) -> Vec<SymbolId> {
+        if let Some(ident_ref) = &self.identifier_refs.get(ident_ref_id) {
+            return ident_ref.resolved_symbol_ids().to_vec();
+        }
+
+        let ident_ref = hir
+            .identifier_refs
+            .remove(ident_ref_id)
+            .expect("ident_ref is not resolved");
+
+        let ident_id = ident_ref.ident.id;
+        match self.find_symbol_id_by_ident_and_param_types(ident_id, param_types) {
+            Some(s) => {
+                let ident_id = ident_ref.id;
+                self.identifier_refs.insert(ident_id, ident_ref.resolved(s));
+                self.identifier_refs[ident_id]
+                    .resolved_symbol_ids()
+                    .to_vec()
+            }
+            None => {
+                // todo:feature propose known alternatives
+                if let Some(param_types) = param_types {
+                    // todo:refactoring move that to caller side
+                    self.diagnostics.report_err(
+                        format!(
+                            "No function '{}' found for parameters of types ({})",
+                            self.identifiers.get_by_left(&ident_id).unwrap(),
+                            param_types
+                                .iter()
+                                .map(|t| self.find_type_by_type_id(*t))
+                                .map(Type::to_string)
+                                .collect::<Vec<String>>()
+                                .join(", ")
+                        ),
+                        ident_ref.ident.span.clone(),
+                        (file!(), line!()),
+                    );
+                } else {
+                    // todo:refactoring move that to caller side
+                    self.diagnostics.report_err(
+                        format!(
+                            "Identifier '{}' not found",
+                            self.identifiers.get_by_left(&ident_id).unwrap()
+                        ),
+                        ident_ref.ident.span.clone(),
+                        (file!(), line!()),
+                    );
+                }
+
+                // still, resolve it to an unknown symbol
+                self.identifier_refs
+                    .insert(ident_ref.id, ident_ref.resolved(self.not_found_symbol_id));
+
+                Vec::new()
+            }
+        }
     }
 
     fn resolve_access(
@@ -809,124 +1002,6 @@ impl Resolver {
                 let ident_ref = ident_ref.resolved(self.not_found_symbol_id);
                 self.identifier_refs.insert(ident_ref.id, ident_ref);
                 (self.find_type_id_by_type(&Type::Invalid), None)
-            }
-        }
-    }
-
-    fn resolve_assignment(
-        &mut self,
-        hir: &mut UnresolvedHir,
-        ident_ref: IdentRefId,
-        expr: ExprId,
-    ) -> TypeId {
-        // If we have the following:
-        //   let add(a: number, b: number): number = {}
-        //   let add(a: boolean, b: boolean): boolean = {}
-        //
-        // then:
-        //   add = |a: boolean, b: boolean|: boolean {}
-        //
-        // must update the value of the 2nd add. Hence, we need to first compute the type
-        // of the expression, then find all the symbols matching the name and update the
-        // one with the correct function type, i.e. parameter types + return type. This,
-        // even though the return type does *not* count in method signature when computing
-        // their uniqueness, i.e. x(a: number): number is considered the same as
-        // x(a: number): boolean.
-        //
-        // Similarly:
-        //   let add_bool: |boolean, boolean|: boolean = add;
-        //
-        // chooses the 2nd function as this is the one for which the type matches.
-        //
-        // todo:feature:fn-value implement the above...
-
-        let rhs_type_id = self.resolve_expression(hir, expr, None).0;
-
-        // todo:feature:fn-value to search for method, we need to extract the parameter types from the
-        //  expr_type, if it corresponds to a function type. We don't have this
-        //  information yet and thus we cannot assign to a variable holding a function
-        //  (yet).
-        let lhs_symbol_ids = self.resolve_ident_ref(hir, ident_ref, None);
-        debug_assert!(lhs_symbol_ids.len() <= 1);
-        let lhs_type_id = lhs_symbol_ids
-            .first()
-            .map(|s| self.symbols[*s].type_id)
-            .unwrap_or(self.find_type_id_by_type(&Type::Invalid));
-
-        if lhs_type_id == self.find_type_id_by_type(&Type::Invalid) {
-            return lhs_type_id;
-        }
-
-        if rhs_type_id == self.find_type_id_by_type(&Type::Invalid) {
-            return rhs_type_id;
-        }
-
-        if rhs_type_id != lhs_type_id {
-            self.diagnostics.report_err(
-                format!(
-                    "RHS expected to be of type {}, got {}",
-                    self.find_type_by_type_id(lhs_type_id),
-                    self.find_type_by_type_id(rhs_type_id)
-                ),
-                self.expressions[expr].span.clone(),
-                (file!(), line!()),
-            );
-            return self.find_type_id_by_type(&Type::Invalid);
-        }
-
-        rhs_type_id
-    }
-
-    fn resolve_if(
-        &mut self,
-        hir: &mut UnresolvedHir,
-        cond: ExprId,
-        true_branch: ExprId,
-        false_branch: Option<ExprId>,
-    ) -> TypeId {
-        let cond_type = self.resolve_expression(hir, cond, None).0;
-
-        if cond_type != self.find_type_id_by_type(&Type::Boolean)
-            && cond_type != self.find_type_id_by_type(&Type::Invalid)
-        {
-            self.diagnostics.report_err(
-                format!(
-                    "Condition expected to be of type {}, got {}",
-                    Type::Boolean,
-                    self.find_type_by_type_id(cond_type)
-                ),
-                self.expressions[cond].span.clone(),
-                (file!(), line!()),
-            );
-        }
-
-        let true_branch_type_id = self.resolve_expression(hir, true_branch, None).0;
-        let false_branch_type_id = match false_branch {
-            None => self.find_type_id_by_type(&Type::Void),
-            Some(e) => self.resolve_expression(hir, e, None).0,
-        };
-
-        let true_branch_type = self.find_type_by_type_id(true_branch_type_id);
-        let false_branch_type = self.find_type_by_type_id(false_branch_type_id);
-
-        match (true_branch_type, false_branch_type) {
-            (Type::Invalid, _) | (_, Type::Invalid) => self.find_type_id_by_type(&Type::Invalid),
-            (Type::None, Type::None) => true_branch_type_id,
-            // todo:test the following case is not well tested + implement proper error handing
-            (Type::None, t) | (t, Type::None) => self.find_type_id_by_type(t),
-            (_, Type::Void) | (Type::Void, _) => {
-                // todo:feature ifs with only one branch should return option<t>
-                self.find_type_id_by_type(&Type::Void)
-            }
-            (tt, ft) if tt == ft => true_branch_type_id,
-            (tt, ft) => {
-                let false_branch = &self.expressions[false_branch.expect("false branch exists")];
-                self.diagnostics.report_err(
-                    format!("Expected type {tt}, got {ft}"),
-                    false_branch.span.clone(),
-                    (file!(), line!()),
-                );
-                self.find_type_id_by_type(&Type::Invalid)
             }
         }
     }
@@ -1335,21 +1410,7 @@ impl Resolver {
                 self.find_type_id_by_type(&Type::Void)
             }
             StatementKind::Use(ident_ref_ids) => {
-                self.resolve_ident_refs(hir, &ident_ref_ids, false);
-                let ident = &self.identifier_refs[*ident_ref_ids.last().unwrap()].ident;
-
-                let scope = self
-                    .scope_stack
-                    .last_mut()
-                    .unwrap()
-                    .symbols
-                    .entry(ident.id)
-                    .or_default();
-
-                ident
-                    .resolved_symbol_ids()
-                    .iter()
-                    .for_each(|id| scope.push(*id));
+                self.resolve_use(hir, &ident_ref_ids);
 
                 self.statements.insert(
                     stmt_id,
@@ -1359,38 +1420,7 @@ impl Resolver {
                 self.find_type_id_by_type(&Type::Void)
             }
             StatementKind::Namespace(ident, input_id, stmts) => {
-                self.push_scope();
-
-                // todo:refactoring this pattern is used 5 times
-                #[cfg(test)]
-                let scope_index = self.scope_stack.len();
-                let symbols = &mut self.scope_stack.last_mut().unwrap().symbols;
-                let namespace_symbols = self.symbols
-                    [*self.namespace_symbols.get(&stmt_id).unwrap()]
-                .as_namespace()
-                .1;
-                for ident_id in namespace_symbols.keys() {
-                    for symbol_id in namespace_symbols.get(ident_id).unwrap() {
-                        #[cfg(test)]
-                        println!(
-                            "{}:{}: Inserting symbol {:?} from '{}' into current scope ({})",
-                            file!(),
-                            line!(),
-                            self.symbols[*symbol_id],
-                            self.identifiers.get_by_left(&ident.id).unwrap(),
-                            scope_index
-                        );
-                        symbols.entry(*ident_id).or_default().push(*symbol_id);
-                    }
-                }
-
-                for stmt_id in stmts.iter() {
-                    if let Some(statement) = hir.statements.remove(*stmt_id) {
-                        self.resolve_statement(hir, statement);
-                    }
-                }
-
-                let ident = self.resolve_namespace(hir, stmt_id, ident);
+                let ident = self.resolve_namespace(hir, stmt_id, ident, &stmts);
 
                 self.statements.insert(
                     stmt_id,
@@ -1493,7 +1523,7 @@ impl Resolver {
                 let ident_id = parameter.identifier.id;
                 let symbol_kind = SymbolKind::Parameter(ident_id, stmt_id, index);
 
-                if self.symbol_exists_in_current_scope(ident_id, &symbol_kind) {
+                if self.is_symbol_in_current_scope(ident_id, &symbol_kind) {
                     self.diagnostics.report_err(
                         format!(
                             "Parameter '{ident}' is already defined",
@@ -1515,7 +1545,7 @@ impl Resolver {
             self.resolve_ident_refs(hir, &annotation.ident_ref_ids, false);
         }
 
-        let is_native = self.native_annotation_present(annotations);
+        let is_native = self.is_native_annotation_present(annotations);
         if is_native {
             let expression = &hir.expressions[body_expr_id];
             let has_body = match &expression.kind {
@@ -1640,7 +1670,7 @@ impl Resolver {
             self.resolve_ident_refs(hir, &annotation.ident_ref_ids, false);
         }
 
-        let is_native = self.native_annotation_present(annotations);
+        let is_native = self.is_native_annotation_present(annotations);
         if is_native && !fields.is_empty() {
             self.diagnostics.report_err(
                 format!(
@@ -1684,7 +1714,7 @@ impl Resolver {
                 let ident_id = field.identifier.id;
                 let symbol_kind = SymbolKind::Field(ident_id, stmt_id, index);
 
-                if self.symbol_exists_in_current_scope(ident_id, &symbol_kind) {
+                if self.is_symbol_in_current_scope(ident_id, &symbol_kind) {
                     self.diagnostics.report_err(
                         format!(
                             "Field '{ident}' is already defined",
@@ -1750,15 +1780,65 @@ impl Resolver {
         identifier.bind(symbol_id)
     }
 
+    fn resolve_use(&mut self, hir: &mut UnresolvedHir, ident_ref_ids: &[IdentRefId]) {
+        self.resolve_ident_refs(hir, ident_ref_ids, false);
+        let ident = &self.identifier_refs[*ident_ref_ids.last().unwrap()].ident;
+
+        let scope = self
+            .scope_stack
+            .last_mut()
+            .unwrap()
+            .symbols
+            .entry(ident.id)
+            .or_default();
+
+        ident
+            .resolved_symbol_ids()
+            .iter()
+            .for_each(|id| scope.push(*id));
+    }
+
     fn resolve_namespace(
         &mut self,
-        _hir: &mut UnresolvedHir,
-        stmt_id: StmtId,
+        hir: &mut UnresolvedHir,
+        namespace_stmt_id: StmtId,
         identifier: Identifier<Unbound>,
+        stmts: &[StmtId],
     ) -> Identifier<Bound> {
+        self.push_scope();
+
+        // todo:refactoring this pattern is used 5 times
+        #[cfg(test)]
+        let scope_index = self.scope_stack.len();
+        let symbols = &mut self.scope_stack.last_mut().unwrap().symbols;
+        let namespace_symbols = self.symbols
+            [*self.namespace_symbols.get(&namespace_stmt_id).unwrap()]
+        .as_namespace()
+        .1;
+        for ident_id in namespace_symbols.keys() {
+            for symbol_id in namespace_symbols.get(ident_id).unwrap() {
+                #[cfg(test)]
+                println!(
+                    "{}:{}: Inserting symbol {:?} from '{}' into current scope ({})",
+                    file!(),
+                    line!(),
+                    self.symbols[*symbol_id],
+                    self.identifiers.get_by_left(&identifier.id).unwrap(),
+                    scope_index
+                );
+                symbols.entry(*ident_id).or_default().push(*symbol_id);
+            }
+        }
+
+        for stmt_id in stmts.iter() {
+            if let Some(statement) = hir.statements.remove(*stmt_id) {
+                self.resolve_statement(hir, statement);
+            }
+        }
+
         let symbol_id = self
             .namespace_symbols
-            .get(&stmt_id)
+            .get(&namespace_stmt_id)
             .cloned()
             // todo:refactoring same handling as for visit_function: if not found, return Err()
             //   or, return not_found_symbol_id in visit_function. This requires that the find_*()
@@ -1913,72 +1993,6 @@ impl Resolver {
         }
     }
 
-    /// Resolves an identifier ref by its `IdentRefId` and returns the corresponding `SymbolId`.
-    /// The resolution starts in the current scope and crawls the scopes stack up until the
-    /// identifier is found.
-    fn resolve_ident_ref(
-        &mut self,
-        hir: &mut UnresolvedHir,
-        ident_ref_id: IdentRefId,
-        param_types: Option<&[TypeId]>,
-    ) -> Vec<SymbolId> {
-        if let Some(ident_ref) = &self.identifier_refs.get(ident_ref_id) {
-            return ident_ref.resolved_symbol_ids().to_vec();
-        }
-
-        let ident_ref = hir
-            .identifier_refs
-            .remove(ident_ref_id)
-            .expect("ident_ref is not resolved");
-
-        let ident_id = ident_ref.ident.id;
-        match self.find_symbol_id_by_ident_and_param_types(ident_id, param_types) {
-            Some(s) => {
-                let ident_id = ident_ref.id;
-                self.identifier_refs.insert(ident_id, ident_ref.resolved(s));
-                self.identifier_refs[ident_id]
-                    .resolved_symbol_ids()
-                    .to_vec()
-            }
-            None => {
-                // todo:feature propose known alternatives
-                if let Some(param_types) = param_types {
-                    // todo:refactoring move that to caller side
-                    self.diagnostics.report_err(
-                        format!(
-                            "No function '{}' found for parameters of types ({})",
-                            self.identifiers.get_by_left(&ident_id).unwrap(),
-                            param_types
-                                .iter()
-                                .map(|t| self.find_type_by_type_id(*t))
-                                .map(Type::to_string)
-                                .collect::<Vec<String>>()
-                                .join(", ")
-                        ),
-                        ident_ref.ident.span.clone(),
-                        (file!(), line!()),
-                    );
-                } else {
-                    // todo:refactoring move that to caller side
-                    self.diagnostics.report_err(
-                        format!(
-                            "Identifier '{}' not found",
-                            self.identifiers.get_by_left(&ident_id).unwrap()
-                        ),
-                        ident_ref.ident.span.clone(),
-                        (file!(), line!()),
-                    );
-                }
-
-                // still, resolve it to an unknown symbol
-                self.identifier_refs
-                    .insert(ident_ref.id, ident_ref.resolved(self.not_found_symbol_id));
-
-                Vec::new()
-            }
-        }
-    }
-
     /// Resolves a `TypeDefId`. Starts by resolving all potential `IdentRefId`s found and resolves
     /// the `TypeDefId` to that last found type. By default, issues a diagnostic when the type
     /// found is not assignable (as per `Type::is_assignable()` definition. If `return_type` is set
@@ -2040,7 +2054,7 @@ impl Resolver {
             .unwrap_or_else(|| self.find_type_id_by_type(&Type::Invalid))
     }
 
-    fn native_annotation_present(&mut self, annotations: &[Annotation]) -> bool {
+    fn is_native_annotation_present(&mut self, annotations: &[Annotation]) -> bool {
         for annotation in annotations.iter() {
             if annotation.ident_ref_ids.len() != NATIVE_ANNOTATION.len() {
                 continue;
@@ -2075,160 +2089,59 @@ impl Resolver {
         false
     }
 
-    /// Resolves an identifier by its `IdentId` and returns the corresponding `SymbolId`. The
-    /// resolution starts in the current scope and crawls the scopes stack up until the identifier
-    /// is found.
-    fn find_symbol_id_by_ident_and_param_types(
-        &self,
-        ident: IdentId,
-        param_types: Option<&[TypeId]>,
-    ) -> Option<SymbolId> {
+    /// Returns `true` if a symbol of the same kind already exists in the current scope.
+    fn is_symbol_in_current_scope(&self, ident_id: IdentId, kind: &SymbolKind) -> bool {
+        // todo: review the "exists" meaning. make it coherent with find_symbol_*, and also with
+        //  the FindSymbol trait
+        match self
+            .scope_stack
+            .last()
+            .expect("current scope exists")
+            .symbols
+            .get(&ident_id)
+        {
+            None => false,
+            Some(symbols) => symbols.iter().map(|s| &self.symbols[*s]).any(|s| {
+                matches!(
+                    (&s.kind, kind),
+                    (SymbolKind::Parameter(..), SymbolKind::Parameter(..))
+                        | (SymbolKind::Field(..), SymbolKind::Field(..))
+                        | (SymbolKind::Struct(..), SymbolKind::Struct(..))
+                        | (SymbolKind::Annotation(..), SymbolKind::Annotation(..))
+                )
+            }),
+        }
+    }
+
+    fn insert_symbol(&mut self, ident_id: IdentId, kind: SymbolKind, ty: TypeId) -> SymbolId {
+        let symbol_id = self.symbols.create();
+
+        match &kind {
+            SymbolKind::Parameter(_, stmt_id, index) | SymbolKind::Field(_, stmt_id, index) => {
+                debug_assert!(self.scope_stack.len() > 1);
+                self.stmt_symbols.insert((*stmt_id, *index), symbol_id);
+            }
+            _ => (),
+        };
+
+        self.symbols.insert(
+            symbol_id,
+            Symbol {
+                id: symbol_id,
+                kind,
+                type_id: ty,
+            },
+        );
+
         self.scope_stack
-            .iter()
-            .rev()
-            .find_map(|scope| scope.find(&self.symbols, ident, param_types))
-    }
+            .last_mut()
+            .expect("current scope exists")
+            .symbols
+            .entry(ident_id)
+            .or_default()
+            .push(symbol_id);
 
-    fn find_symbol_id_for_struct_field(&self, stmt_id: StmtId, index: usize) -> Option<SymbolId> {
-        self.stmt_symbols
-            .get(&(stmt_id, index))
-            .and_then(|sid| self.symbols.get(*sid))
-            .and_then(|s| match s.kind {
-                SymbolKind::Field(_, _, _) => Some(s.id),
-                _ => None,
-            })
-    }
-
-    // todo:refactoring this function is only used from fund_type_by_id, which itself is only used
-    //  to find the string TypeId... the whole is a bit overkill
-    fn find_symbol_by_name(&mut self, name: &str) -> Option<SymbolId> {
-        let path = name.split('.').collect::<Vec<&str>>();
-        debug_assert!(!path.is_empty());
-
-        if path.len() == 1 {
-            todo!("Search for symbol in current scope, crawling up as needed")
-        }
-
-        let mut ns_symbols = self.symbols[self.namespace_stack[0]].as_namespace().1;
-        for &name in &path[0..path.len() - 1] {
-            let ident_id = *self.identifiers.get_by_right(name)?;
-            let symbols = ns_symbols
-                .get(&ident_id)?
-                .iter()
-                .map(|sid| &self.symbols[*sid])
-                .filter(|s| matches!(s.kind, SymbolKind::Namespace(..)))
-                .collect::<Vec<_>>();
-
-            debug_assert!(symbols.len() <= 1);
-
-            ns_symbols = symbols.first()?.as_namespace().1;
-        }
-
-        let ident_id = self
-            .identifiers
-            .get_by_right(*path.last().unwrap())
-            .unwrap();
-        let symbols = ns_symbols.get(ident_id)?;
-
-        debug_assert_eq!(symbols.len(), 1);
-        symbols.first().cloned()
-    }
-
-    /// Finds the `SymbolId` that the `ident_ids` refer to. Does not try to resolve `IdentifierRef`
-    /// on the way.
-    fn find_symbol_by_ident_ref_ids(
-        &mut self,
-        hir: &UnresolvedHir,
-        ident_ref_ids: &[IdentRefId],
-    ) -> Option<SymbolId> {
-        debug_assert!(!ident_ref_ids.is_empty());
-
-        if ident_ref_ids.len() == 1 {
-            todo!("Search for symbol in current scope, crawling up as needed")
-        }
-
-        fn extract_ident_and_span<'a>(
-            resolver: &'a Resolver,
-            hir: &'a UnresolvedHir,
-            ident_ref_id: IdentRefId,
-        ) -> (IdentId, &'a Span) {
-            resolver
-                .identifier_refs
-                .get(ident_ref_id)
-                .map(|ident_ref| (ident_ref.ident.id, &ident_ref.ident.span))
-                .or_else(|| {
-                    hir.identifier_refs
-                        .get(ident_ref_id)
-                        .map(|ident_ref| (ident_ref.ident.id, &ident_ref.ident.span))
-                })
-                .unwrap_or_else(|| {
-                    panic!(
-                        "{:?} neither found in self.identifier_refs={:?} nor in hir.identifier_refs={:?}",
-                        ident_ref_id, resolver.identifier_refs, hir.identifier_refs
-                    )
-                })
-        }
-
-        fn build_visited_ident_string(resolver: &Resolver, ident_ids: &[IdentId]) -> String {
-            ident_ids
-                .iter()
-                .map(|ident_id| resolver.identifiers.get_by_left(ident_id).unwrap().as_str())
-                .collect::<Vec<_>>()
-                .join(".")
-        }
-
-        let mut visited_ident_ids = Vec::<IdentId>::with_capacity(ident_ref_ids.len());
-
-        let mut ns_symbols = self.symbols[self.namespace_stack[0]].as_namespace().1;
-        for ident_ref_id in &ident_ref_ids[0..ident_ref_ids.len() - 1] {
-            let (ident_id, span) = extract_ident_and_span(self, hir, *ident_ref_id);
-            let symbols = ns_symbols.get(&ident_id).unwrap(); // {
-            visited_ident_ids.push(ident_id);
-            let symbols = symbols
-                .iter()
-                .map(|sid| &self.symbols[*sid])
-                .filter(|s| matches!(s.kind, SymbolKind::Namespace(..)))
-                .collect::<Vec<_>>();
-
-            debug_assert!(symbols.len() <= 1, "{:?}", symbols);
-
-            match symbols.first() {
-                None => {
-                    self.diagnostics.report_err(
-                        format!(
-                            "Symbol {sym} is not a namespace",
-                            sym = build_visited_ident_string(self, &visited_ident_ids)
-                        ),
-                        span.clone(),
-                        (file!(), line!()),
-                    );
-                    return None;
-                }
-                Some(symbol) => {
-                    ns_symbols = symbol.as_namespace().1;
-                }
-            }
-        }
-
-        let (ident_id, span) = extract_ident_and_span(self, hir, *ident_ref_ids.last().unwrap());
-        match ns_symbols.get(&ident_id) {
-            None => {
-                self.diagnostics.report_err(
-                    format!(
-                        "Symbol {sym} not found in {ns}",
-                        sym = self.identifiers.get_by_left(&ident_id).unwrap(),
-                        ns = build_visited_ident_string(self, &visited_ident_ids)
-                    ),
-                    span.clone(),
-                    (file!(), line!()),
-                );
-                None
-            }
-            Some(symbols) => {
-                debug_assert_eq!(symbols.len(), 1);
-                symbols.first().cloned()
-            }
-        }
+        symbol_id
     }
 
     /// Inserts a namespace, walking down the children. Returns the `SymbolId` of the inserted
@@ -2514,7 +2427,7 @@ impl Resolver {
                 );
             }
 
-            if self.symbol_exists_in_current_scope(ident_id, &symbol_kind) {
+            if self.is_symbol_in_current_scope(ident_id, &symbol_kind) {
                 self.diagnostics.report_err(
                     format!(
                         "Struct '{ident}' is already defined in scope",
@@ -2578,7 +2491,7 @@ impl Resolver {
                     .unwrap()
             );
 
-            if self.symbol_exists_in_current_scope(ident_id, &symbol_kind) {
+            if self.is_symbol_in_current_scope(ident_id, &symbol_kind) {
                 self.diagnostics.report_err(
                     format!(
                         "Annotation '{ident}' is already defined in scope",
@@ -2606,65 +2519,6 @@ impl Resolver {
         }
     }
 
-    /// Returns `true` if a symbol of the same kind already exists in the current scope.
-    fn symbol_exists_in_current_scope(&self, ident_id: IdentId, kind: &SymbolKind) -> bool {
-        // todo: review the "exists" meaning. make it coherent with find_symbol_*, and also with
-        //  the FindSymbol trait
-        match self
-            .scope_stack
-            .last()
-            .expect("current scope exists")
-            .symbols
-            .get(&ident_id)
-        {
-            None => false,
-            Some(symbols) => symbols.iter().map(|s| &self.symbols[*s]).any(|s| {
-                matches!(
-                    (&s.kind, kind),
-                    (SymbolKind::Parameter(..), SymbolKind::Parameter(..))
-                        | (SymbolKind::Field(..), SymbolKind::Field(..))
-                        | (SymbolKind::Struct(..), SymbolKind::Struct(..))
-                        | (SymbolKind::Annotation(..), SymbolKind::Annotation(..))
-                )
-            }),
-        }
-    }
-
-    fn insert_symbol(&mut self, ident_id: IdentId, kind: SymbolKind, ty: TypeId) -> SymbolId {
-        let symbol_id = self.symbols.create();
-
-        match &kind {
-            SymbolKind::Parameter(_, stmt_id, index) | SymbolKind::Field(_, stmt_id, index) => {
-                debug_assert!(self.scope_stack.len() > 1);
-                self.stmt_symbols.insert((*stmt_id, *index), symbol_id);
-            }
-            _ => (),
-        };
-
-        self.symbols.insert(
-            symbol_id,
-            Symbol {
-                id: symbol_id,
-                kind,
-                type_id: ty,
-            },
-        );
-
-        self.scope_stack
-            .last_mut()
-            .expect("current scope exists")
-            .symbols
-            .entry(ident_id)
-            .or_default()
-            .push(symbol_id);
-
-        symbol_id
-    }
-
-    pub fn find_ident_id_by_str(&self, name: &str) -> IdentId {
-        *self.identifiers.get_by_right(name).unwrap()
-    }
-
     /// Inserts a `Type` if it does not already exist and returns its `TypeId`. If the type already
     /// exists, returns its `TypeId`
     fn insert_type(&mut self, ty: Type) -> TypeId {
@@ -2676,6 +2530,10 @@ impl Resolver {
             debug_assert!(!did_overwrite);
             id
         }
+    }
+
+    pub fn find_ident_id_by_str(&self, name: &str) -> IdentId {
+        *self.identifiers.get_by_right(name).unwrap()
     }
 
     /// Finds the `TypeId` corresponding to a `TypeDefId`. Self is taken mutably in case we have an
@@ -2746,6 +2604,162 @@ impl Resolver {
         self.types
             .get_by_left(&ty)
             .unwrap_or_else(|| panic!("type {ty} exists"))
+    }
+
+    /// Resolves an identifier by its `IdentId` and returns the corresponding `SymbolId`. The
+    /// resolution starts in the current scope and crawls the scopes stack up until the identifier
+    /// is found.
+    fn find_symbol_id_by_ident_and_param_types(
+        &self,
+        ident: IdentId,
+        param_types: Option<&[TypeId]>,
+    ) -> Option<SymbolId> {
+        self.scope_stack
+            .iter()
+            .rev()
+            .find_map(|scope| scope.find(&self.symbols, ident, param_types))
+    }
+
+    fn find_symbol_id_for_struct_field(&self, stmt_id: StmtId, index: usize) -> Option<SymbolId> {
+        self.stmt_symbols
+            .get(&(stmt_id, index))
+            .and_then(|sid| self.symbols.get(*sid))
+            .and_then(|s| match s.kind {
+                SymbolKind::Field(_, _, _) => Some(s.id),
+                _ => None,
+            })
+    }
+
+    // todo:refactoring this function is only used from fund_type_by_id, which itself is only used
+    //  to find the string TypeId... the whole is a bit overkill
+    fn find_symbol_by_name(&mut self, name: &str) -> Option<SymbolId> {
+        let path = name.split('.').collect::<Vec<&str>>();
+        debug_assert!(!path.is_empty());
+
+        if path.len() == 1 {
+            todo!("Search for symbol in current scope, crawling up as needed")
+        }
+
+        let mut ns_symbols = self.symbols[self.namespace_stack[0]].as_namespace().1;
+        for &name in &path[0..path.len() - 1] {
+            let ident_id = *self.identifiers.get_by_right(name)?;
+            let symbols = ns_symbols
+                .get(&ident_id)?
+                .iter()
+                .map(|sid| &self.symbols[*sid])
+                .filter(|s| matches!(s.kind, SymbolKind::Namespace(..)))
+                .collect::<Vec<_>>();
+
+            debug_assert!(symbols.len() <= 1);
+
+            ns_symbols = symbols.first()?.as_namespace().1;
+        }
+
+        let ident_id = self
+            .identifiers
+            .get_by_right(*path.last().unwrap())
+            .unwrap();
+        let symbols = ns_symbols.get(ident_id)?;
+
+        debug_assert_eq!(symbols.len(), 1);
+        symbols.first().cloned()
+    }
+
+    /// Finds the `SymbolId` that the `ident_ids` refer to. Does not try to resolve `IdentifierRef`
+    /// on the way.
+    fn find_symbol_by_ident_ref_ids(
+        &mut self,
+        hir: &UnresolvedHir,
+        ident_ref_ids: &[IdentRefId],
+    ) -> Option<SymbolId> {
+        debug_assert!(!ident_ref_ids.is_empty());
+
+        if ident_ref_ids.len() == 1 {
+            todo!("Search for symbol in current scope, crawling up as needed")
+        }
+
+        fn extract_ident_and_span<'a>(
+            resolver: &'a Resolver,
+            hir: &'a UnresolvedHir,
+            ident_ref_id: IdentRefId,
+        ) -> (IdentId, &'a Span) {
+            resolver
+                .identifier_refs
+                .get(ident_ref_id)
+                .map(|ident_ref| (ident_ref.ident.id, &ident_ref.ident.span))
+                .or_else(|| {
+                    hir.identifier_refs
+                        .get(ident_ref_id)
+                        .map(|ident_ref| (ident_ref.ident.id, &ident_ref.ident.span))
+                })
+                .unwrap_or_else(|| {
+                    panic!(
+                        "{:?} neither found in self.identifier_refs={:?} nor in hir.identifier_refs={:?}",
+                        ident_ref_id, resolver.identifier_refs, hir.identifier_refs
+                    )
+                })
+        }
+
+        fn build_visited_ident_string(resolver: &Resolver, ident_ids: &[IdentId]) -> String {
+            ident_ids
+                .iter()
+                .map(|ident_id| resolver.identifiers.get_by_left(ident_id).unwrap().as_str())
+                .collect::<Vec<_>>()
+                .join(".")
+        }
+
+        let mut visited_ident_ids = Vec::<IdentId>::with_capacity(ident_ref_ids.len());
+
+        let mut ns_symbols = self.symbols[self.namespace_stack[0]].as_namespace().1;
+        for ident_ref_id in &ident_ref_ids[0..ident_ref_ids.len() - 1] {
+            let (ident_id, span) = extract_ident_and_span(self, hir, *ident_ref_id);
+            let symbols = ns_symbols.get(&ident_id).unwrap(); // {
+            visited_ident_ids.push(ident_id);
+            let symbols = symbols
+                .iter()
+                .map(|sid| &self.symbols[*sid])
+                .filter(|s| matches!(s.kind, SymbolKind::Namespace(..)))
+                .collect::<Vec<_>>();
+
+            debug_assert!(symbols.len() <= 1, "{:?}", symbols);
+
+            match symbols.first() {
+                None => {
+                    self.diagnostics.report_err(
+                        format!(
+                            "Symbol {sym} is not a namespace",
+                            sym = build_visited_ident_string(self, &visited_ident_ids)
+                        ),
+                        span.clone(),
+                        (file!(), line!()),
+                    );
+                    return None;
+                }
+                Some(symbol) => {
+                    ns_symbols = symbol.as_namespace().1;
+                }
+            }
+        }
+
+        let (ident_id, span) = extract_ident_and_span(self, hir, *ident_ref_ids.last().unwrap());
+        match ns_symbols.get(&ident_id) {
+            None => {
+                self.diagnostics.report_err(
+                    format!(
+                        "Symbol {sym} not found in {ns}",
+                        sym = self.identifiers.get_by_left(&ident_id).unwrap(),
+                        ns = build_visited_ident_string(self, &visited_ident_ids)
+                    ),
+                    span.clone(),
+                    (file!(), line!()),
+                );
+                None
+            }
+            Some(symbols) => {
+                debug_assert_eq!(symbols.len(), 1);
+                symbols.first().cloned()
+            }
+        }
     }
 
     fn push_scope(&mut self) {
