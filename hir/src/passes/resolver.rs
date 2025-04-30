@@ -19,6 +19,7 @@ use transmute_core::error::Diagnostics;
 use transmute_core::id_map::IdMap;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeDefId, TypeId};
 use transmute_core::span::Span;
+use transmute_core::stack::Iter;
 use transmute_core::stack::Stack;
 use transmute_core::vec_map::VecMap;
 
@@ -31,9 +32,9 @@ type Function<T, B> = (
     Implementation<ExprId>,
 );
 
-// todo:refactoring this would deserve a reordering of functions, and that each `resolve_` method
-//  does the actual resolution instead of giving to its caller the information required to resolve
-//  also: review all the find variants
+// todo:refactoring each `resolve_` method does the actual resolution instead of giving to its
+//  caller the information required to resolve
+// todo:refactoring review all the find variants
 
 pub struct Resolver {
     // out
@@ -48,9 +49,8 @@ pub struct Resolver {
 
     // work
     namespaces: Stack<SymbolId>,
-    // todo:refactoring replace with a Stack<> struct that implements push/pop/last and
-    //  delete/replace scope_push/scope_pop. Also: insert to insert in last directly..
-    scope_stack: Vec<Scope>,
+    scopes: Scopes,
+
     /// maps functions (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
     function_symbols: HashMap<StmtId, SymbolId>,
     /// maps structs (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
@@ -79,7 +79,8 @@ impl Resolver {
             not_found_symbol_id: Default::default(),
 
             namespaces: Default::default(),
-            scope_stack: Default::default(),
+            scopes: Default::default(),
+
             function_symbols: Default::default(),
             struct_symbols: Default::default(),
             annotation_symbols: Default::default(),
@@ -190,7 +191,7 @@ impl Resolver {
         // todo:refactoring this stack will be cleared after: find a way to skip pushing/popping
         //  (and inserting).
 
-        self.push_scope();
+        self.scopes.push();
         let root_root_namespace_symbol_id = self.insert_namespace(&hir, root);
         self.namespaces.push(root_root_namespace_symbol_id);
         debug_assert_eq!(self.namespaces.len(), 1, "{:?}", &self.namespaces);
@@ -259,8 +260,8 @@ impl Resolver {
 
         // we discard all inserted symbols, they are not part of any scope, but only of the 'core'
         // root package
-        debug_assert_eq!(self.scope_stack.len(), 1);
-        self.scope_stack.last_mut().unwrap().symbols.clear();
+        debug_assert_eq!(self.scopes.len(), 1);
+        self.scopes.clear_last();
 
         // STEP 3.a --------------------------------------------------------------------------------
         // todo:feature replace this with prelude 'use'
@@ -279,18 +280,14 @@ impl Resolver {
         self.bring_namespace_symbols_into_scope(root_root_namespace_symbol_id);
 
         // STEP 4 ----------------------------------------------------------------------------------
-        debug_assert_eq!(self.scope_stack.len(), 1, "{:?}", self.namespaces);
+        debug_assert_eq!(self.scopes.len(), 1, "{:?}", self.namespaces);
         self.insert_namespace_functions(&mut hir, root);
-        debug_assert_eq!(self.scope_stack.len(), 1, "{:?}", self.namespaces);
+        debug_assert_eq!(self.scopes.len(), 1, "{:?}", self.namespaces);
 
         // STEP 5 ----------------------------------------------------------------------------------
         // insert root namespace's fn symbols into the first scope
         // todo:refactoring try to use bring_namespace_symbols_into_scope
-        let root_scope = &mut self
-            .scope_stack
-            .last_mut()
-            .expect("current scope exists")
-            .symbols;
+        let root_scope = self.scopes.last_symbols_mut().unwrap();
         let root_symbols = self.symbols[*self.namespaces.root().unwrap()].as_namespace();
         for ident_id in root_symbols.keys() {
             for symbol_id in root_symbols.get(ident_id).unwrap() {
@@ -1030,12 +1027,12 @@ impl Resolver {
     }
 
     fn resolve_block(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId]) -> TypeId {
-        self.push_scope();
+        self.scopes.push();
 
         self.insert_functions(hir, stmts, false);
         let stmts_type_id = self.resolve_statements(hir, stmts);
 
-        self.pop_scope();
+        self.scopes.pop();
 
         stmts_type_id
     }
@@ -1394,7 +1391,7 @@ impl Resolver {
                     ),
                 );
 
-                self.pop_scope();
+                self.scopes.pop();
 
                 self.find_type_id_by_type(&Type::Void)
             }
@@ -1444,7 +1441,7 @@ impl Resolver {
             Implementation::Provided(expr_id) => expr_id,
             _ => panic!("implementation required"),
         };
-        self.push_scope();
+        self.scopes.push();
 
         if let ExpressionKind::Block(stmt_ids) = &hir.expressions[body_expr_id].kind {
             let stmt_ids = stmt_ids
@@ -1475,7 +1472,7 @@ impl Resolver {
             line!(),
             name = self.identifiers.get_by_left(&ident.id).unwrap(),
             ret_type = self.types.get_by_left(&ret_type_id).unwrap(),
-            scope = self.scope_stack.len()
+            scope = self.scopes.len()
         );
 
         let parameters = params
@@ -1600,7 +1597,7 @@ impl Resolver {
             }
         }
 
-        self.pop_scope();
+        self.scopes.pop();
 
         (
             ident.bind(*self.function_symbols.get(&stmt_id).unwrap()),
@@ -1668,7 +1665,7 @@ impl Resolver {
         // struct fields are in the scope of the struct itself, we want to make sure that no other
         // field with the same name exists in the current struct, but the same identifier might
         // exist outside and this is not an issue
-        self.push_scope();
+        self.scopes.push();
 
         let fields = fields
             .into_iter()
@@ -1695,7 +1692,7 @@ impl Resolver {
             })
             .collect::<Vec<Field<Typed, Bound>>>();
 
-        self.pop_scope();
+        self.scopes.pop();
 
         let symbol_id = self
             .struct_symbols
@@ -1745,20 +1742,16 @@ impl Resolver {
 
     fn resolve_use(&mut self, hir: &mut UnresolvedHir, ident_ref_ids: &[IdentRefId]) {
         self.resolve_ident_refs(hir, ident_ref_ids, false);
-        let ident = &self.identifier_refs[*ident_ref_ids.last().unwrap()].ident;
 
-        let scope = self
-            .scope_stack
-            .last_mut()
-            .unwrap()
-            .symbols
-            .entry(ident.id)
-            .or_default();
+        let ident_id = self.identifier_refs[*ident_ref_ids.last().unwrap()]
+            .ident
+            .id;
 
-        ident
+        self.identifier_refs[*ident_ref_ids.last().unwrap()]
+            .ident
             .resolved_symbol_ids()
             .iter()
-            .for_each(|id| scope.push(*id));
+            .for_each(|id| self.scopes.push_symbol(ident_id, *id));
     }
 
     fn resolve_namespace(
@@ -1768,7 +1761,7 @@ impl Resolver {
         identifier: Identifier<Unbound>,
         stmts: &[StmtId],
     ) -> Identifier<Bound> {
-        self.push_scope();
+        self.scopes.push();
 
         let namespace_symbol_id = *self.namespace_symbols.get(&namespace_stmt_id).unwrap();
         self.bring_namespace_symbols_into_scope(namespace_symbol_id);
@@ -2035,15 +2028,11 @@ impl Resolver {
     fn is_symbol_in_current_scope(&self, ident_id: IdentId, kind: &SymbolKind) -> bool {
         // todo: review the "exists" meaning. make it coherent with find_symbol_*, and also with
         //  the FindSymbol trait
-        match self
-            .scope_stack
-            .last()
-            .expect("current scope exists")
-            .symbols
-            .get(&ident_id)
-        {
-            None => false,
-            Some(symbols) => symbols.iter().map(|s| &self.symbols[*s]).any(|s| {
+        self.scopes
+            .last_symbols_by_ident_id(ident_id)
+            .iter()
+            .map(|s| &self.symbols[*s])
+            .any(|s| {
                 matches!(
                     (&s.kind, kind),
                     (SymbolKind::Parameter(..), SymbolKind::Parameter(..))
@@ -2051,8 +2040,7 @@ impl Resolver {
                         | (SymbolKind::Struct(..), SymbolKind::Struct(..))
                         | (SymbolKind::Annotation(..), SymbolKind::Annotation(..))
                 )
-            }),
-        }
+            })
     }
 
     fn insert_symbol(&mut self, ident_id: IdentId, kind: SymbolKind, ty: TypeId) -> SymbolId {
@@ -2060,7 +2048,7 @@ impl Resolver {
 
         match &kind {
             SymbolKind::Parameter(_, stmt_id, index) | SymbolKind::Field(_, stmt_id, index) => {
-                debug_assert!(self.scope_stack.len() > 1);
+                debug_assert!(self.scopes.len() > 1);
                 self.stmt_symbols.insert((*stmt_id, *index), symbol_id);
             }
             _ => (),
@@ -2075,13 +2063,7 @@ impl Resolver {
             },
         );
 
-        self.scope_stack
-            .last_mut()
-            .expect("current scope exists")
-            .symbols
-            .entry(ident_id)
-            .or_default()
-            .push(symbol_id);
+        self.scopes.push_symbol(ident_id, symbol_id);
 
         symbol_id
     }
@@ -2159,7 +2141,7 @@ impl Resolver {
     fn insert_namespace_functions(&mut self, hir: &mut UnresolvedHir, stmt_id: StmtId) {
         self.namespaces
             .push(*self.namespace_symbols.get(&stmt_id).unwrap());
-        self.push_scope();
+        self.scopes.push();
 
         let namespace_symbol_id = *self.namespace_symbols.get(&stmt_id).unwrap();
         self.bring_namespace_symbols_into_scope(namespace_symbol_id);
@@ -2173,7 +2155,7 @@ impl Resolver {
             _ => panic!("Namespace expected"),
         }
 
-        self.pop_scope();
+        self.scopes.pop();
         self.namespaces.pop();
     }
 
@@ -2232,18 +2214,10 @@ impl Resolver {
                     self.resolve_ident_refs(hir, path, true);
                     if let Some(ident_ref) = self.identifier_refs.get(*path.last().unwrap()) {
                         let ident = &ident_ref.ident;
-                        let scope = self
-                            .scope_stack
-                            .last_mut()
-                            .unwrap()
-                            .symbols
-                            .entry(ident.id)
-                            .or_default();
-
                         ident
                             .resolved_symbol_ids()
                             .iter()
-                            .for_each(|id| scope.push(*id));
+                            .for_each(|id| self.scopes.push_symbol(ident.id, *id));
                     }
                 }
                 _ => (),
@@ -2431,7 +2405,7 @@ impl Resolver {
         ident: IdentId,
         param_types: Option<&[TypeId]>,
     ) -> Option<SymbolId> {
-        self.scope_stack
+        self.scopes
             .iter()
             .rev()
             .find_map(|scope| scope.find(&self.symbols, ident, param_types))
@@ -2584,13 +2558,7 @@ impl Resolver {
 
         for ident_id in namespace_symbols.keys() {
             for symbol_id in namespace_symbols.get(ident_id).unwrap() {
-                self.scope_stack
-                    .last_mut()
-                    .unwrap()
-                    .symbols
-                    .entry(*ident_id)
-                    .or_default()
-                    .push(*symbol_id);
+                self.scopes.push_symbol(*ident_id, *symbol_id)
             }
         }
     }
@@ -2606,25 +2574,11 @@ impl Resolver {
                 .push(symbol_id);
         }
     }
-
-    fn push_scope(&mut self) {
-        self.scope_stack.push(Scope::new());
-    }
-
-    fn pop_scope(&mut self) {
-        self.scope_stack.pop();
-    }
 }
 
 #[derive(Debug, Default)]
 struct Scope {
     symbols: IdMap<IdentId, Vec<SymbolId>>,
-}
-
-impl Scope {
-    fn new() -> Self {
-        Self::default()
-    }
 }
 
 impl FindSymbol for Scope {
@@ -2636,6 +2590,71 @@ impl FindSymbol for Scope {
         param_types: Option<&[TypeId]>,
     ) -> Option<SymbolId> {
         self.symbols.find(all_symbols, ident, param_types)
+    }
+}
+
+#[derive(Debug, Default)]
+struct Scopes {
+    scopes: Stack<Scope>,
+}
+
+impl Scopes {
+    fn len(&self) -> usize {
+        self.scopes.len()
+    }
+
+    fn push(&mut self) {
+        self.scopes.push_default();
+    }
+
+    fn pop(&mut self) {
+        self.scopes.pop();
+    }
+
+    /// Returns the modifiable last scope. Returns `None` when the last scope does not exist.
+    fn last_mut(&mut self) -> Option<&mut Scope> {
+        self.scopes.last_mut()
+    }
+
+    /// Returns the modifiable symbols in the last scope. Returns `None` when the last scope does
+    /// not exist.
+    fn last_symbols_mut(&mut self) -> Option<&mut IdMap<IdentId, Vec<SymbolId>>> {
+        self.scopes.last_mut().map(|scope| &mut scope.symbols)
+    }
+
+    /// Returns the symbols matching `ident_id` in the last scope. Returns and empty since when
+    /// either no scope exists or when no symbol match `ident_id`.
+    fn last_symbols_by_ident_id(&self, ident_id: IdentId) -> &[SymbolId] {
+        self.scopes
+            .last()
+            .and_then(|scope| scope.symbols.get(&ident_id).map(|s| s.as_slice()))
+            .unwrap_or_default()
+    }
+
+    /// Returns the modifiable symbols matching `ident_id` in the last scope. Returns `None` only
+    /// when the last scope does not exist. I.e. when no symbol for `ident_id` already exist,
+    /// returns and empty `Vec` ready to receive new symbols.
+    fn last_symbols_mut_by_ident_id(&mut self, ident_id: IdentId) -> Option<&mut Vec<SymbolId>> {
+        self.scopes
+            .last_mut()
+            .map(|scope| scope.symbols.entry(ident_id).or_default())
+    }
+
+    /// Adds a symbol to the last scope. Panics if no scopes exist.
+    fn push_symbol(&mut self, ident_id: IdentId, symbol: SymbolId) {
+        self.last_symbols_mut_by_ident_id(ident_id)
+            .expect("current scope exists")
+            .push(symbol);
+    }
+
+    fn clear_last(&mut self) {
+        if let Some(last) = self.last_mut() {
+            last.symbols.clear();
+        }
+    }
+
+    fn iter(&self) -> Iter<'_, Scope> {
+        self.scopes.iter()
     }
 }
 
