@@ -487,8 +487,6 @@ Hir {
             id: SymbolId(1),
             kind: Namespace(
                 IdentId(0),
-                None,
-                {},
                 {
                     IdentId(1): [
                         SymbolId(19),
@@ -504,10 +502,6 @@ Hir {
             id: SymbolId(2),
             kind: Namespace(
                 IdentId(4),
-                Some(
-                    SymbolId(1),
-                ),
-                {},
                 {
                     IdentId(3): [
                         SymbolId(4),

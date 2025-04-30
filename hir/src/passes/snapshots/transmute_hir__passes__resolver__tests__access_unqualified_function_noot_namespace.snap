@@ -208,8 +208,6 @@ Ok(
                 id: SymbolId(1),
                 kind: Namespace(
                     IdentId(0),
-                    None,
-                    {},
                     {
                         IdentId(1): [
                             SymbolId(19),
@@ -228,10 +226,6 @@ Ok(
                 id: SymbolId(2),
                 kind: Namespace(
                     IdentId(3),
-                    Some(
-                        SymbolId(1),
-                    ),
-                    {},
                     {
                         IdentId(4): [
                             SymbolId(18),

@@ -19,6 +19,7 @@ use transmute_core::error::Diagnostics;
 use transmute_core::id_map::IdMap;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeDefId, TypeId};
 use transmute_core::span::Span;
+use transmute_core::stack::Stack;
 use transmute_core::vec_map::VecMap;
 
 static NATIVE_ANNOTATION: [&str; 2] = ["std", "native"];
@@ -46,10 +47,7 @@ pub struct Resolver {
     not_found_symbol_id: SymbolId,
 
     // work
-    // todo:refactoring replace with a Stack<> struct that implements push/pop/last/root and remove
-    //  and delete root_namespace
-    namespace_stack: Vec<SymbolId>,
-    root_namespace: SymbolId,
+    namespaces: Stack<SymbolId>,
     // todo:refactoring replace with a Stack<> struct that implements push/pop/last and
     //  delete/replace scope_push/scope_pop. Also: insert to insert in last directly..
     scope_stack: Vec<Scope>,
@@ -80,8 +78,7 @@ impl Resolver {
             symbols: Default::default(),
             not_found_symbol_id: Default::default(),
 
-            namespace_stack: Default::default(),
-            root_namespace: Default::default(),
+            namespaces: Default::default(),
             scope_stack: Default::default(),
             function_symbols: Default::default(),
             struct_symbols: Default::default(),
@@ -192,14 +189,16 @@ impl Resolver {
         // STEP 1 ----------------------------------------------------------------------------------
         // todo:refactoring this stack will be cleared after: find a way to skip pushing/popping
         //  (and inserting).
+
         self.push_scope();
-        self.root_namespace = self.insert_namespace(&hir, root);
+        let root_root_namespace_symbol_id = self.insert_namespace(&hir, root);
+        self.namespaces.push(root_root_namespace_symbol_id);
+        debug_assert_eq!(self.namespaces.len(), 1, "{:?}", &self.namespaces);
 
         // STEP 2 ----------------------------------------------------------------------------------
         let core_namespace_ident_id = *self.identifiers.get_by_right("core").unwrap();
-        let core_namespace_symbol_id = self.symbols[self.root_namespace]
+        let core_namespace_symbol_id = self.symbols[*self.namespaces.root().unwrap()]
             .as_namespace()
-            .1
             .get(&core_namespace_ident_id)
             .unwrap()
             .iter()
@@ -213,6 +212,7 @@ impl Resolver {
             .next()
             .expect("core namespace exists");
 
+        debug_assert_eq!(self.namespaces.len(), 1, "{:?}", &self.namespaces);
         for native in natives.into_iter() {
             let (ident, symbol_id) = match native {
                 Native::Fn(native) => {
@@ -251,13 +251,11 @@ impl Resolver {
 
             self.symbols[core_namespace_symbol_id]
                 .as_namespace_mut()
-                .1
                 .entry(ident)
                 .or_default()
                 .push(symbol_id);
         }
-
-        debug_assert!(self.namespace_stack.is_empty());
+        debug_assert_eq!(self.namespaces.len(), 1, "{:?}", &self.namespaces);
 
         // we discard all inserted symbols, they are not part of any scope, but only of the 'core'
         // root package
@@ -267,81 +265,46 @@ impl Resolver {
         // STEP 3.a --------------------------------------------------------------------------------
         // todo:feature replace this with prelude 'use'
         // insert 'core' namespace symbols into the first scope
-        let root_scope = &mut self
-            .scope_stack
-            .last_mut()
-            .expect("current scope exists")
-            .symbols;
+        // let root_scope = &mut self
+        //     .scope_stack
+        //     .last_mut()
+        //     .expect("current scope exists")
+        //     .symbols;
 
-        // todo:refactoring this pattern is used 5 times
         // todo:refactoring we redo the insertions in resolve_statements
-        let core_namespace = self.symbols[core_namespace_symbol_id].as_namespace().1;
-        for ident_id in core_namespace.keys() {
-            for symbol_id in core_namespace.get(ident_id).unwrap() {
-                #[cfg(test)]
-                println!(
-                    "{}:{}: Inserting symbol {:?} from 'core' into root scope",
-                    file!(),
-                    line!(),
-                    self.symbols[*symbol_id]
-                );
-                root_scope.entry(*ident_id).or_default().push(*symbol_id);
-            }
-        }
+        self.bring_namespace_symbols_into_scope(core_namespace_symbol_id);
 
         // STEP 3.b --------------------------------------------------------------------------------
         // insert root namespace's symbols into the first scope
-        // todo:refactoring this pattern is used 5 times
-        let root_symbols = self.symbols[self.root_namespace].as_namespace().1;
-        for ident_id in root_symbols.keys() {
-            for symbol_id in root_symbols.get(ident_id).unwrap() {
-                #[cfg(test)]
-                println!(
-                    "{}:{}: Inserting symbol {:?} from <root> into root scope",
-                    file!(),
-                    line!(),
-                    self.symbols[*symbol_id]
-                );
-                root_scope.entry(*ident_id).or_default().push(*symbol_id);
-            }
-        }
+        self.bring_namespace_symbols_into_scope(root_root_namespace_symbol_id);
 
         // STEP 4 ----------------------------------------------------------------------------------
-        debug_assert_eq!(self.scope_stack.len(), 1);
+        debug_assert_eq!(self.scope_stack.len(), 1, "{:?}", self.namespaces);
         self.insert_namespace_functions(&mut hir, root);
-        debug_assert_eq!(self.scope_stack.len(), 1);
+        debug_assert_eq!(self.scope_stack.len(), 1, "{:?}", self.namespaces);
 
         // STEP 5 ----------------------------------------------------------------------------------
+        // insert root namespace's fn symbols into the first scope
+        // todo:refactoring try to use bring_namespace_symbols_into_scope
         let root_scope = &mut self
             .scope_stack
             .last_mut()
             .expect("current scope exists")
             .symbols;
-
-        // insert root namespace's fn symbols into the first scope
-        // todo:refactoring this pattern is used 5 times
-        let root_symbols = self.symbols[self.root_namespace].as_namespace().1;
+        let root_symbols = self.symbols[*self.namespaces.root().unwrap()].as_namespace();
         for ident_id in root_symbols.keys() {
             for symbol_id in root_symbols.get(ident_id).unwrap() {
                 if matches!(self.symbols[*symbol_id].kind, SymbolKind::LetFn(..)) {
-                    #[cfg(test)]
-                    println!(
-                        "{}:{}: Inserting symbol {:?} from <root> into root scope",
-                        file!(),
-                        line!(),
-                        self.symbols[*symbol_id]
-                    );
                     root_scope.entry(*ident_id).or_default().push(*symbol_id);
                 }
             }
         }
 
         // STEP 6 ----------------------------------------------------------------------------------
-        self.namespace_stack.push(self.root_namespace);
-        debug_assert_eq!(self.namespace_stack.len(), 1);
+        debug_assert_eq!(self.namespaces.len(), 1, "{:?}", self.namespaces);
         let root_namespace = hir.statements.remove(root).unwrap();
         self.resolve_statement(&mut hir, root_namespace);
-        debug_assert_eq!(self.namespace_stack.len(), 1);
+        debug_assert_eq!(self.namespaces.len(), 1, "{:?}", self.namespaces);
 
         if !self.diagnostics.is_empty() {
             return Err(self.diagnostics);
@@ -880,7 +843,7 @@ impl Resolver {
         // so, if we have a symbol_id, we use it
         if let Some(symbol_id) = symbol_id {
             match &self.symbols[symbol_id].kind {
-                SymbolKind::Namespace(ns_ident_id, _, _, symbols) => {
+                SymbolKind::Namespace(ns_ident_id, symbols) => {
                     #[cfg(test)]
                     println!(
                         "{}:{}: Searching for {:?} ({:?}) in {:?}",
@@ -1807,28 +1770,8 @@ impl Resolver {
     ) -> Identifier<Bound> {
         self.push_scope();
 
-        // todo:refactoring this pattern is used 5 times
-        #[cfg(test)]
-        let scope_index = self.scope_stack.len();
-        let symbols = &mut self.scope_stack.last_mut().unwrap().symbols;
-        let namespace_symbols = self.symbols
-            [*self.namespace_symbols.get(&namespace_stmt_id).unwrap()]
-        .as_namespace()
-        .1;
-        for ident_id in namespace_symbols.keys() {
-            for symbol_id in namespace_symbols.get(ident_id).unwrap() {
-                #[cfg(test)]
-                println!(
-                    "{}:{}: Inserting symbol {:?} from '{}' into current scope ({})",
-                    file!(),
-                    line!(),
-                    self.symbols[*symbol_id],
-                    self.identifiers.get_by_left(&identifier.id).unwrap(),
-                    scope_index
-                );
-                symbols.entry(*ident_id).or_default().push(*symbol_id);
-            }
-        }
+        let namespace_symbol_id = *self.namespace_symbols.get(&namespace_stmt_id).unwrap();
+        self.bring_namespace_symbols_into_scope(namespace_symbol_id);
 
         for stmt_id in stmts.iter() {
             if let Some(statement) = hir.statements.remove(*stmt_id) {
@@ -1864,7 +1807,7 @@ impl Resolver {
         }
 
         let mut parent_found = true;
-        let mut namespace_id = self.root_namespace;
+        let mut namespace_id = *self.namespaces.root().unwrap();
 
         for (index, ident_ref_id) in ident_ref_ids[0..ident_ref_ids.len() - 1].iter().enumerate() {
             if self.identifier_refs.get(*ident_ref_id).is_some() {
@@ -1879,7 +1822,7 @@ impl Resolver {
                 continue;
             }
 
-            if let SymbolKind::Namespace(_, _, _, symbols) = &self.symbols[namespace_id].kind {
+            if let SymbolKind::Namespace(_, symbols) = &self.symbols[namespace_id].kind {
                 if let Some(symbol_id) = symbols.find(&self.symbols, ident_ref.ident.id, None) {
                     self.identifier_refs
                         .insert(*ident_ref_id, ident_ref.resolved(symbol_id));
@@ -1969,7 +1912,6 @@ impl Resolver {
 
         let symbol_ids = self.symbols[namespace_id]
             .as_namespace()
-            .1
             .get(&ident_ref.ident.id)
             .cloned()
             .unwrap_or_default();
@@ -2054,7 +1996,7 @@ impl Resolver {
             .unwrap_or_else(|| self.find_type_id_by_type(&Type::Invalid))
     }
 
-    fn is_native_annotation_present(&mut self, annotations: &[Annotation]) -> bool {
+    fn is_native_annotation_present(&self, annotations: &[Annotation]) -> bool {
         for annotation in annotations.iter() {
             if annotation.ident_ref_ids.len() != NATIVE_ANNOTATION.len() {
                 continue;
@@ -2153,19 +2095,9 @@ impl Resolver {
                 let stmts = stmts.clone();
                 // check that the identifier is not already used in the current (i.e. last in
                 // namespaces stack) namespace
-                if let Some(namespace_symbol_id) = self.namespace_stack.last() {
+                if let Some(namespace_symbol_id) = self.namespaces.last() {
                     match &self.symbols[*namespace_symbol_id].kind {
-                        #[allow(unused)] // because ident_outer which is used only in cfg(test)
-                        SymbolKind::Namespace(ident_outer, _, _, symbols) => {
-                            #[cfg(test)]
-                            println!(
-                                "{}:{}: Inserting namespace '{}' ({:?}) in '{}'",
-                                file!(),
-                                line!(),
-                                self.identifiers.get_by_left(&ident.id).unwrap(),
-                                ident.id,
-                                self.identifiers.get_by_left(ident_outer).unwrap()
-                            );
+                        SymbolKind::Namespace(_, symbols) => {
                             if symbols.contains_key(&ident.id) {
                                 self.diagnostics.report_err(
                                     format!(
@@ -2185,33 +2117,23 @@ impl Resolver {
                     ident.id,
                     SymbolKind::Namespace(
                         ident.id,
-                        self.namespace_stack.last().cloned(),
-                        Default::default(),
+                        // self.namespaces.last().cloned(),
+                        // Default::default(),
                         Default::default(),
                     ),
                     self.find_type_id_by_type(&Type::Void),
                 );
                 self.namespace_symbols.insert(stmt_id, symbol_id);
 
-                if let Some(namespace_symbol_id) = self.namespace_stack.last() {
-                    // todo:refactor same pattern used 4 times
-                    self.symbols
-                        .get_mut(*namespace_symbol_id)
-                        .unwrap()
-                        .as_namespace_mut()
-                        .1
-                        .entry(ident.id)
-                        .or_default()
-                        .push(symbol_id);
-                }
+                self.bring_symbol_into_namespace(ident.id, symbol_id);
 
-                self.namespace_stack.push(symbol_id);
+                self.namespaces.push(symbol_id);
 
                 self.insert_namespaces(hir, &stmts);
                 self.insert_annotations(hir, &stmts);
                 self.insert_structs(hir, &stmts, true);
 
-                self.namespace_stack.pop();
+                self.namespaces.pop();
 
                 symbol_id
             }
@@ -2235,33 +2157,12 @@ impl Resolver {
     }
 
     fn insert_namespace_functions(&mut self, hir: &mut UnresolvedHir, stmt_id: StmtId) {
-        self.namespace_stack
+        self.namespaces
             .push(*self.namespace_symbols.get(&stmt_id).unwrap());
         self.push_scope();
 
-        // todo:refactoring this pattern is used 5 times
-        let namespace_symbols = self.symbols[*self.namespace_stack.last().unwrap()]
-            .as_namespace()
-            .1;
-        for ident_id in namespace_symbols.keys() {
-            for symbol_id in namespace_symbols.get(ident_id).unwrap() {
-                #[cfg(test)]
-                println!(
-                    "{}:{}: Inserting symbol {:?} into current scope ({})",
-                    file!(),
-                    line!(),
-                    self.symbols[*symbol_id],
-                    self.scope_stack.len()
-                );
-                self.scope_stack
-                    .last_mut()
-                    .unwrap()
-                    .symbols
-                    .entry(*ident_id)
-                    .or_default()
-                    .push(*symbol_id);
-            }
-        }
+        let namespace_symbol_id = *self.namespace_symbols.get(&stmt_id).unwrap();
+        self.bring_namespace_symbols_into_scope(namespace_symbol_id);
 
         match &hir.statements[stmt_id].kind {
             StatementKind::Namespace(_, _, stmts) => {
@@ -2273,7 +2174,7 @@ impl Resolver {
         }
 
         self.pop_scope();
-        self.namespace_stack.pop();
+        self.namespaces.pop();
     }
 
     /// Inserts all top level functions contained in namespaces which `StmtId` are provided.
@@ -2322,41 +2223,7 @@ impl Resolver {
                     );
 
                     if top_level {
-                        #[cfg(test)]
-                        if let Some(namespace_symbol_id) = self.namespace_stack.last() {
-                            println!(
-                                "{}:{}: Inserting function '{}' ({:?}) in '{}'",
-                                file!(),
-                                line!(),
-                                self.identifiers.get_by_left(&ident.id).unwrap(),
-                                ident.id,
-                                self.identifiers
-                                    .get_by_left(match &self.symbols[*namespace_symbol_id].kind {
-                                        SymbolKind::Namespace(ident, _, _, _) => ident,
-                                        _ => panic!("Namespace expected"),
-                                    })
-                                    .unwrap()
-                            );
-                        } else {
-                            // fixme check why nested_function_same_type gets here
-                            println!(
-                                "{}:{}: Inserting function '{}' ({:?}) in no namespaces",
-                                file!(),
-                                line!(),
-                                self.identifiers.get_by_left(&ident.id).unwrap(),
-                                ident.id,
-                            );
-                        }
-
-                        // todo:refactor same pattern used 4 times
-                        self.symbols
-                            .get_mut(*self.namespace_stack.last().unwrap())
-                            .unwrap()
-                            .as_namespace_mut()
-                            .1
-                            .entry(ident.id)
-                            .or_default()
-                            .push(symbol_id);
+                        self.bring_symbol_into_namespace(ident.id, symbol_id);
                     }
 
                     self.function_symbols.insert(*stmt_id, symbol_id);
@@ -2410,23 +2277,6 @@ impl Resolver {
             let ident_id = identifier.id;
             let symbol_kind = SymbolKind::Struct(ident_id, stmt_id);
 
-            #[cfg(test)]
-            if let Some(namespace_symbol_id) = self.namespace_stack.last() {
-                println!(
-                    "{}:{}: Inserting struct '{}' ({:?}) in '{}'",
-                    file!(),
-                    line!(),
-                    self.identifiers.get_by_left(&ident_id).unwrap(),
-                    ident_id,
-                    self.identifiers
-                        .get_by_left(match &self.symbols[*namespace_symbol_id].kind {
-                            SymbolKind::Namespace(ident, _, _, _) => ident,
-                            _ => panic!("Namespace expected"),
-                        })
-                        .unwrap()
-                );
-            }
-
             if self.is_symbol_in_current_scope(ident_id, &symbol_kind) {
                 self.diagnostics.report_err(
                     format!(
@@ -2441,15 +2291,7 @@ impl Resolver {
                 let symbol_id = self.insert_symbol(ident_id, symbol_kind, struct_type_id);
 
                 if top_level {
-                    // todo:refactor same pattern used 4 times
-                    self.symbols
-                        .get_mut(*self.namespace_stack.last().unwrap())
-                        .unwrap()
-                        .as_namespace_mut()
-                        .1
-                        .entry(ident_id)
-                        .or_default()
-                        .push(symbol_id);
+                    self.bring_symbol_into_namespace(ident_id, symbol_id);
                 }
 
                 self.struct_symbols.insert(stmt_id, symbol_id);
@@ -2474,23 +2316,6 @@ impl Resolver {
             let ident_id = identifier.id;
             let symbol_kind = SymbolKind::Annotation(ident_id, stmt_id);
 
-            #[cfg(test)]
-            println!(
-                "{}:{}: Inserting annotation '{}' ({:?}) in '{}'",
-                file!(),
-                line!(),
-                self.identifiers.get_by_left(&ident_id).unwrap(),
-                ident_id,
-                self.identifiers
-                    .get_by_left(
-                        match &self.symbols[*self.namespace_stack.last().unwrap()].kind {
-                            SymbolKind::Namespace(ident, _, _, _) => ident,
-                            _ => panic!("Namespace expected"),
-                        }
-                    )
-                    .unwrap()
-            );
-
             if self.is_symbol_in_current_scope(ident_id, &symbol_kind) {
                 self.diagnostics.report_err(
                     format!(
@@ -2504,15 +2329,7 @@ impl Resolver {
                 let annotation_type_id = self.insert_type(Type::Void);
                 let symbol_id = self.insert_symbol(ident_id, symbol_kind, annotation_type_id);
 
-                // todo:refactor same pattern used 4 times
-                self.symbols
-                    .get_mut(*self.namespace_stack.last().unwrap())
-                    .unwrap()
-                    .as_namespace_mut()
-                    .1
-                    .entry(ident_id)
-                    .or_default()
-                    .push(symbol_id);
+                self.bring_symbol_into_namespace(ident_id, symbol_id);
 
                 self.annotation_symbols.insert(stmt_id, symbol_id);
             }
@@ -2640,7 +2457,7 @@ impl Resolver {
             todo!("Search for symbol in current scope, crawling up as needed")
         }
 
-        let mut ns_symbols = self.symbols[self.namespace_stack[0]].as_namespace().1;
+        let mut ns_symbols = self.symbols[*self.namespaces.root().unwrap()].as_namespace();
         for &name in &path[0..path.len() - 1] {
             let ident_id = *self.identifiers.get_by_right(name)?;
             let symbols = ns_symbols
@@ -2652,7 +2469,7 @@ impl Resolver {
 
             debug_assert!(symbols.len() <= 1);
 
-            ns_symbols = symbols.first()?.as_namespace().1;
+            ns_symbols = symbols.first()?.as_namespace();
         }
 
         let ident_id = self
@@ -2710,7 +2527,7 @@ impl Resolver {
 
         let mut visited_ident_ids = Vec::<IdentId>::with_capacity(ident_ref_ids.len());
 
-        let mut ns_symbols = self.symbols[self.namespace_stack[0]].as_namespace().1;
+        let mut ns_symbols = self.symbols[*self.namespaces.root().unwrap()].as_namespace();
         for ident_ref_id in &ident_ref_ids[0..ident_ref_ids.len() - 1] {
             let (ident_id, span) = extract_ident_and_span(self, hir, *ident_ref_id);
             let symbols = ns_symbols.get(&ident_id).unwrap(); // {
@@ -2736,7 +2553,7 @@ impl Resolver {
                     return None;
                 }
                 Some(symbol) => {
-                    ns_symbols = symbol.as_namespace().1;
+                    ns_symbols = symbol.as_namespace();
                 }
             }
         }
@@ -2762,6 +2579,34 @@ impl Resolver {
         }
     }
 
+    fn bring_namespace_symbols_into_scope(&mut self, namespace_symbol_id: SymbolId) {
+        let namespace_symbols = self.symbols[namespace_symbol_id].as_namespace();
+
+        for ident_id in namespace_symbols.keys() {
+            for symbol_id in namespace_symbols.get(ident_id).unwrap() {
+                self.scope_stack
+                    .last_mut()
+                    .unwrap()
+                    .symbols
+                    .entry(*ident_id)
+                    .or_default()
+                    .push(*symbol_id);
+            }
+        }
+    }
+
+    fn bring_symbol_into_namespace(&mut self, ident_id: IdentId, symbol_id: SymbolId) {
+        if let Some(namespace_symbol_id) = self.namespaces.last() {
+            self.symbols
+                .get_mut(*namespace_symbol_id)
+                .unwrap()
+                .as_namespace_mut()
+                .entry(ident_id)
+                .or_default()
+                .push(symbol_id);
+        }
+    }
+
     fn push_scope(&mut self) {
         self.scope_stack.push(Scope::new());
     }
@@ -2771,7 +2616,7 @@ impl Resolver {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct Scope {
     symbols: IdMap<IdentId, Vec<SymbolId>>,
 }

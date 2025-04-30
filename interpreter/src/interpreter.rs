@@ -34,9 +34,7 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
         // todo:refactor DISGUSTING
         let expr_id = match &self.hir.statements[self.hir.root].kind {
             StatementKind::Namespace(ident, _, _) => {
-                let symbols = self.hir.symbols[ident.resolved_symbol_id()]
-                    .as_namespace()
-                    .1;
+                let symbols = self.hir.symbols[ident.resolved_symbol_id()].as_namespace();
                 symbols
                     .keys()
                     .filter(|&ident_id| &self.hir.identifiers[*ident_id] == "main")

@@ -24,28 +24,20 @@ impl Symbol {
         }
     }
 
-    pub(crate) fn as_namespace_mut(
-        &mut self,
-    ) -> (
-        &mut IdMap<IdentId, SymbolId>,
-        &mut IdMap<IdentId, Vec<SymbolId>>,
-    ) {
+    pub(crate) fn as_namespace_mut(&mut self) -> &mut IdMap<IdentId, Vec<SymbolId>> {
         if !matches!(self.kind, SymbolKind::Namespace(..)) {
             panic!("{:?} is not a namespace", self);
         }
         match &mut self.kind {
-            SymbolKind::Namespace(_, _, children, symbols) => (children, symbols),
+            SymbolKind::Namespace(_, symbols) => symbols,
             _ => unreachable!(),
         }
     }
 
-    pub fn as_namespace(&self) -> (&IdMap<IdentId, SymbolId>, &IdMap<IdentId, Vec<SymbolId>>) {
-        if !matches!(self.kind, SymbolKind::Namespace(..)) {
-            panic!("{:?} is not a namespace", self);
-        }
+    pub fn as_namespace(&self) -> &IdMap<IdentId, Vec<SymbolId>> {
         match &self.kind {
-            SymbolKind::Namespace(_, _, children, symbols) => (children, symbols),
-            _ => unreachable!(),
+            SymbolKind::Namespace(_, symbols) => symbols,
+            _ => panic!("{:?} is not a namespace", self),
         }
     }
 }
@@ -69,13 +61,8 @@ pub enum SymbolKind {
     NativeType(IdentId, Type),
     Native(IdentId, Vec<TypeId>, TypeId, NativeFnKind),
     Namespace(
-        /// namespace's identifier, id not root
+        /// namespace's identifier, if not root
         IdentId,
-        /// namespace's parent, if not root
-        Option<SymbolId>,
-        /// namespace's children
-        // todo we dont need that, we have the namespace's content to store children
-        IdMap<IdentId, SymbolId>,
         /// namespace's content
         // todo:
         //  - should it be a Scope?; or
