@@ -1,0 +1,72 @@
+---
+source: ast/src/ast_print.rs
+expression: s
+---
++- stmt 0
+   +- Namespace name=<root>
+      +- stmt 1
+      |  +- Use std.env.args
+      +- stmt 2
+      |  +- Use std.list.list_get
+      +- stmt 3
+      |  +- Use std.numbers.number_parse
+      +- stmt 4
+      |  +- Use std.numbers.print
+      +- stmt 5
+      |  +- Struct name=Struct
+      |     +- field: number
+      +- stmt 9
+         +- Fn name=main
+            +- annotations=[]
+            +- params=[]
+            +- ret=[]
+            +- body:expr 17
+               +- Block
+                  +- stmt 6
+                  |  +- Let name=n
+                  |     +- expr 6
+                  |        +- Call
+                  |           +- expr 0
+                  |           |  +- Ident: number_parse
+                  |           +- params
+                  |              +- expr 5
+                  |                 +- Call
+                  |                    +- expr 1
+                  |                    |  +- Ident: list_get
+                  |                    +- params
+                  |                       +- expr 3
+                  |                       |  +- Call
+                  |                       |     +- expr 2
+                  |                       |     |  +- Ident: args
+                  |                       |     +- params=[]
+                  |                       +- expr 4
+                  |                          +- Number: 1
+                  +- stmt 7
+                  |  +- Let name=a
+                  |     +- expr 9
+                  |        +- Access
+                  |           +- expr 8
+                  |           |  +- StructInstantiate name=Struct
+                  |           |     +- field name=field
+                  |           |        +- expr 7
+                  |           |           +- Ident: n
+                  |           +- ident=field
+                  +- stmt 8
+                     +- Expression
+                        +- expr 16
+                           +- Call
+                              +- expr 10
+                              |  +- Ident: print
+                              +- params
+                                 +- expr 15
+                                    +- Binary +
+                                       +- lhs:expr 11
+                                       |  +- Ident: a
+                                       +- rhs:expr 14
+                                          +- Access
+                                             +- expr 13
+                                             |  +- StructInstantiate name=Struct
+                                             |     +- field name=field
+                                             |        +- expr 12
+                                             |           +- Ident: n
+                                             +- ident=field

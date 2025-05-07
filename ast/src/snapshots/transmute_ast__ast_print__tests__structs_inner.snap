@@ -1,0 +1,133 @@
+---
+source: ast/src/ast_print.rs
+expression: s
+---
++- stmt 0
+   +- Namespace name=<root>
+      +- stmt 1
+      |  +- Use std.env.args
+      +- stmt 2
+      |  +- Use std.list.list_get
+      +- stmt 3
+      |  +- Use std.numbers.number_parse
+      +- stmt 4
+      |  +- Use std.numbers.print
+      +- stmt 5
+      |  +- Struct name=Point
+      |     +- a: number
+      +- stmt 10
+      |  +- Fn name=area
+      |     +- annotations=[]
+      |     +- params
+      |     |  +- n: number
+      |     +- ret=number
+      |     +- body:expr 24
+      |        +- Block
+      |           +- stmt 6
+      |           |  +- Struct name=Point
+      |           |     +- x: number
+      |           |     +- y: number
+      |           +- stmt 8
+      |           |  +- Fn name=f
+      |           |     +- annotations=[]
+      |           |     +- params
+      |           |     |  +- a: Point
+      |           |     |  +- b: Point
+      |           |     +- ret=number
+      |           |     +- body:expr 11
+      |           |        +- Block
+      |           |           +- stmt 7
+      |           |              +- Expression
+      |           |                 +- expr 10
+      |           |                    +- Binary *
+      |           |                       +- lhs:expr 4
+      |           |                       |  +- Binary -
+      |           |                       |     +- lhs:expr 1
+      |           |                       |     |  +- Access
+      |           |                       |     |     +- expr 0
+      |           |                       |     |     |  +- Ident: b
+      |           |                       |     |     +- ident=x
+      |           |                       |     +- rhs:expr 3
+      |           |                       |        +- Access
+      |           |                       |           +- expr 2
+      |           |                       |           |  +- Ident: a
+      |           |                       |           +- ident=x
+      |           |                       +- rhs:expr 9
+      |           |                          +- Binary -
+      |           |                             +- lhs:expr 6
+      |           |                             |  +- Access
+      |           |                             |     +- expr 5
+      |           |                             |     |  +- Ident: b
+      |           |                             |     +- ident=y
+      |           |                             +- rhs:expr 8
+      |           |                                +- Access
+      |           |                                   +- expr 7
+      |           |                                   |  +- Ident: a
+      |           |                                   +- ident=y
+      |           +- stmt 9
+      |              +- Expression
+      |                 +- expr 23
+      |                    +- Call
+      |                       +- expr 12
+      |                       |  +- Ident: f
+      |                       +- params
+      |                          +- expr 15
+      |                          |  +- StructInstantiate name=Point
+      |                          |     +- field name=x
+      |                          |     |  +- expr 13
+      |                          |     |     +- Number: 1
+      |                          |     +- field name=y
+      |                          |        +- expr 14
+      |                          |           +- Number: 1
+      |                          +- expr 22
+      |                             +- StructInstantiate name=Point
+      |                                +- field name=x
+      |                                |  +- expr 18
+      |                                |     +- Binary +
+      |                                |        +- lhs:expr 16
+      |                                |        |  +- Ident: n
+      |                                |        +- rhs:expr 17
+      |                                |           +- Number: 7
+      |                                +- field name=y
+      |                                   +- expr 21
+      |                                      +- Binary +
+      |                                         +- lhs:expr 19
+      |                                         |  +- Ident: n
+      |                                         +- rhs:expr 20
+      |                                            +- Number: 8
+      +- stmt 12
+         +- Fn name=main
+            +- annotations=[]
+            +- params=[]
+            +- ret=[]
+            +- body:expr 36
+               +- Block
+                  +- stmt 11
+                     +- Expression
+                        +- expr 35
+                           +- Call
+                              +- expr 25
+                              |  +- Ident: print
+                              +- params
+                                 +- expr 34
+                                    +- Call
+                                       +- expr 26
+                                       |  +- Ident: area
+                                       +- params
+                                          +- expr 33
+                                             +- Call
+                                                +- expr 27
+                                                |  +- Ident: number_parse
+                                                +- params
+                                                   +- expr 32
+                                                      +- Call
+                                                         +- expr 28
+                                                         |  +- Ident: list_get
+                                                         +- params
+                                                            +- expr 30
+                                                            |  +- Call
+                                                            |     +- expr 29
+                                                            |     |  +- Ident: args
+                                                            |     +- params=[]
+                                                            +- expr 31
+                                                               +- Number: 1

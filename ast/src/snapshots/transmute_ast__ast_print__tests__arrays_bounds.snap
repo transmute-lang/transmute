@@ -1,0 +1,34 @@
+---
+source: ast/src/ast_print.rs
+expression: s
+---
++- stmt 0
+   +- Namespace name=<root>
+      +- stmt 1
+      |  +- Use std.numbers.print
+      +- stmt 4
+         +- Fn name=main
+            +- annotations=[]
+            +- params=[]
+            +- ret=[]
+            +- body:expr 7
+               +- Block
+                  +- stmt 2
+                  |  +- Let name=a
+                  |     +- expr 1
+                  |        +- ArrayInstantiate
+                  |           +- expr 0
+                  |              +- Number: 0
+                  +- stmt 3
+                     +- Expression
+                        +- expr 6
+                           +- Call
+                              +- expr 2
+                              |  +- Ident: print
+                              +- params
+                                 +- expr 5
+                                    +- ArrayAccess
+                                       +- expr 3
+                                       |  +- Ident: a
+                                       +- expr 4
+                                          +- Number: 1

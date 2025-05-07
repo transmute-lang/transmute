@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use transmute_ast::ast_print::Options as AstPrintOptions;
 use transmute_ast::parse;
 use transmute_core::error::Diagnostics;
 use transmute_core::input::Input;
@@ -20,6 +21,7 @@ pub enum OutputFormat {
     LlvmIr,
     Assembly,
     Source,
+    Ast,
 }
 
 impl Options {
@@ -58,11 +60,31 @@ pub fn compile_file<S: AsRef<Path>, D: AsRef<Path>>(
         inputs.push(Input::try_from(stdlib_path)?);
     }
 
-    if matches!(options.output_format, OutputFormat::Source) {
-        println!("{inputs:?}");
-        Ok(())
-    } else {
-        compile_inputs(inputs, dst, options)
+    match options.output_format {
+        OutputFormat::Source => {
+            for input in inputs.iter() {
+                println!("{}", input.source());
+            }
+
+            Ok(())
+        }
+        OutputFormat::Ast => {
+            let (inputs, ast) = parse(inputs);
+            match ast
+                .map_err(|d| d.with_inputs(inputs).to_string())
+                .map(|ast| {
+                    let mut out = String::new();
+                    ast.ast_print(&AstPrintOptions::default(), &mut out)
+                        .unwrap();
+                    out
+                }) {
+                Ok(s) | Err(s) => {
+                    println!("{s}");
+                    Ok(())
+                }
+            }
+        }
+        _ => compile_inputs(inputs, dst, options),
     }
 }
 
@@ -98,7 +120,7 @@ fn produce_output(llvm_ir: LlvmIr, dst: &Path, options: &Options) -> Result<(), 
             let dst = dst.with_extension("s");
             llvm_ir.write_assembly(&dst)
         }
-        OutputFormat::Source => {
+        OutputFormat::Source | OutputFormat::Ast => {
             // already done
             Ok(())
         }

@@ -20,6 +20,8 @@ fn main() {
         options.set_output_format(OutputFormat::Assembly);
     } else if args.output_source() {
         options.set_output_format(OutputFormat::Source);
+    } else if args.output_ast() {
+        options.set_output_format(OutputFormat::Ast);
     }
     options.set_optimize(args.optimize());
     if let Some(stdlib_path) = args.stdlib_path() {

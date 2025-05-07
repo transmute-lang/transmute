@@ -11,6 +11,7 @@ use transmute_core::input::{Input, Inputs};
 use transmute_core::vec_map::VecMap;
 
 pub mod annotation;
+pub mod ast_print;
 pub mod expression;
 pub mod identifier;
 pub mod identifier_ref;

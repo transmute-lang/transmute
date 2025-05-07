@@ -1,0 +1,251 @@
+---
+source: ast/src/ast_print.rs
+expression: s
+---
++- stmt 0
+   +- Namespace name=<root>
+      +- stmt 1
+      |  +- Use std.env.args
+      +- stmt 2
+      |  +- Use std.list.list_get
+      +- stmt 3
+      |  +- Use std.numbers.number_parse
+      +- stmt 4
+      |  +- Use std.numbers.print
+      +- stmt 5
+      |  +- Struct name=Point
+      |     +- x: number
+      |     +- y: number
+      +- stmt 6
+      |  +- Struct name=Rect
+      |     +- a: Point
+      |     +- b: Point
+      +- stmt 19
+      |  +- Fn name=main
+      |     +- annotations=[]
+      |     +- params=[]
+      |     +- ret=[]
+      |     +- body:expr 51
+      |        +- Block
+      |           +- stmt 7
+      |           |  +- Let name=n
+      |           |     +- expr 6
+      |           |        +- Call
+      |           |           +- expr 0
+      |           |           |  +- Ident: number_parse
+      |           |           +- params
+      |           |              +- expr 5
+      |           |                 +- Call
+      |           |                    +- expr 1
+      |           |                    |  +- Ident: list_get
+      |           |                    +- params
+      |           |                       +- expr 3
+      |           |                       |  +- Call
+      |           |                       |     +- expr 2
+      |           |                       |     |  +- Ident: args
+      |           |                       |     +- params=[]
+      |           |                       +- expr 4
+      |           |                          +- Number: 1
+      |           +- stmt 8
+      |           |  +- Let name=origin
+      |           |     +- expr 8
+      |           |        +- Call
+      |           |           +- expr 7
+      |           |           |  +- Ident: origin
+      |           |           +- params=[]
+      |           +- stmt 9
+      |           |  +- Let name=p1
+      |           |     +- expr 11
+      |           |        +- StructInstantiate name=Point
+      |           |           +- field name=x
+      |           |           |  +- expr 9
+      |           |           |     +- Ident: n
+      |           |           +- field name=y
+      |           |              +- expr 10
+      |           |                 +- Ident: n
+      |           +- stmt 10
+      |           |  +- Let name=r1
+      |           |     +- expr 14
+      |           |        +- StructInstantiate name=Rect
+      |           |           +- field name=a
+      |           |           |  +- expr 12
+      |           |           |     +- Ident: origin
+      |           |           +- field name=b
+      |           |              +- expr 13
+      |           |                 +- Ident: p1
+      |           +- stmt 11
+      |           |  +- Expression
+      |           |     +- expr 18
+      |           |        +- Assignment target=r1
+      |           |           +- expr 17
+      |           |              +- StructInstantiate name=Rect
+      |           |                 +- field name=a
+      |           |                 |  +- expr 15
+      |           |                 |     +- Ident: p1
+      |           |                 +- field name=b
+      |           |                    +- expr 16
+      |           |                       +- Ident: p1
+      |           +- stmt 12
+      |           |  +- Let name=a1
+      |           |     +- expr 21
+      |           |        +- Call
+      |           |           +- expr 19
+      |           |           |  +- Ident: area
+      |           |           +- params
+      |           |              +- expr 20
+      |           |                 +- Ident: r1
+      |           +- stmt 13
+      |           |  +- Let name=p2
+      |           |     +- expr 28
+      |           |        +- StructInstantiate name=Point
+      |           |           +- field name=x
+      |           |           |  +- expr 24
+      |           |           |     +- Binary *
+      |           |           |        +- lhs:expr 22
+      |           |           |        |  +- Ident: n
+      |           |           |        +- rhs:expr 23
+      |           |           |           +- Number: 2
+      |           |           +- field name=y
+      |           |              +- expr 27
+      |           |                 +- Binary *
+      |           |                    +- lhs:expr 25
+      |           |                    |  +- Ident: n
+      |           |                    +- rhs:expr 26
+      |           |                       +- Number: 2
+      |           +- stmt 14
+      |           |  +- Let name=r2
+      |           |     +- expr 31
+      |           |        +- StructInstantiate name=Rect
+      |           |           +- field name=a
+      |           |           |  +- expr 29
+      |           |           |     +- Ident: origin
+      |           |           +- field name=b
+      |           |              +- expr 30
+      |           |                 +- Ident: p2
+      |           +- stmt 15
+      |           |  +- Let name=a2
+      |           |     +- expr 34
+      |           |        +- Call
+      |           |           +- expr 32
+      |           |           |  +- Ident: area
+      |           |           +- params
+      |           |              +- expr 33
+      |           |                 +- Ident: r2
+      |           +- stmt 16
+      |           |  +- Expression
+      |           |     +- expr 44
+      |           |        +- ArrayInstantiate
+      |           |           +- expr 37
+      |           |           |  +- StructInstantiate name=Point
+      |           |           |     +- field name=x
+      |           |           |     |  +- expr 35
+      |           |           |     |     +- Number: 1
+      |           |           |     +- field name=y
+      |           |           |        +- expr 36
+      |           |           |           +- Number: 1
+      |           |           +- expr 40
+      |           |           |  +- StructInstantiate name=Point
+      |           |           |     +- field name=x
+      |           |           |     |  +- expr 38
+      |           |           |     |     +- Number: 2
+      |           |           |     +- field name=y
+      |           |           |        +- expr 39
+      |           |           |           +- Number: 2
+      |           |           +- expr 43
+      |           |              +- StructInstantiate name=Point
+      |           |                 +- field name=x
+      |           |                 |  +- expr 41
+      |           |                 |     +- Number: 3
+      |           |                 +- field name=y
+      |           |                    +- expr 42
+      |           |                       +- Number: 3
+      |           +- stmt 17
+      |           |  +- Let name=a
+      |           |     +- expr 45
+      |           |        +- Number: 0
+      |           +- stmt 18
+      |              +- Expression
+      |                 +- expr 50
+      |                    +- Call
+      |                       +- expr 46
+      |                       |  +- Ident: print
+      |                       +- params
+      |                          +- expr 49
+      |                             +- Binary +
+      |                                +- lhs:expr 47
+      |                                |  +- Ident: a1
+      |                                +- rhs:expr 48
+      |                                   +- Ident: a2
+      +- stmt 21
+      |  +- Fn name=origin
+      |     +- annotations=[]
+      |     +- params=[]
+      |     +- ret=Point
+      |     +- body:expr 55
+      |        +- Block
+      |           +- stmt 20
+      |              +- Expression
+      |                 +- expr 54
+      |                    +- StructInstantiate name=Point
+      |                       +- field name=x
+      |                       |  +- expr 52
+      |                       |     +- Number: 0
+      |                       +- field name=y
+      |                          +- expr 53
+      |                             +- Number: 0
+      +- stmt 25
+         +- Fn name=area
+            +- annotations=[]
+            +- params
+            |  +- r: Rect
+            +- ret=number
+            +- body:expr 73
+               +- Block
+                  +- stmt 22
+                  |  +- Let name=dx
+                  |     +- expr 62
+                  |        +- Binary -
+                  |           +- lhs:expr 58
+                  |           |  +- Access
+                  |           |     +- expr 57
+                  |           |     |  +- Access
+                  |           |     |     +- expr 56
+                  |           |     |     |  +- Ident: r
+                  |           |     |     +- ident=a
+                  |           |     +- ident=x
+                  |           +- rhs:expr 61
+                  |              +- Access
+                  |                 +- expr 60
+                  |                 |  +- Access
+                  |                 |     +- expr 59
+                  |                 |     |  +- Ident: r
+                  |                 |     +- ident=b
+                  |                 +- ident=x
+                  +- stmt 23
+                  |  +- Let name=dy
+                  |     +- expr 69
+                  |        +- Binary -
+                  |           +- lhs:expr 65
+                  |           |  +- Access
+                  |           |     +- expr 64
+                  |           |     |  +- Access
+                  |           |     |     +- expr 63
+                  |           |     |     |  +- Ident: r
+                  |           |     |     +- ident=a
+                  |           |     +- ident=y
+                  |           +- rhs:expr 68
+                  |              +- Access
+                  |                 +- expr 67
+                  |                 |  +- Access
+                  |                 |     +- expr 66
+                  |                 |     |  +- Ident: r
+                  |                 |     +- ident=b
+                  |                 +- ident=y
+                  +- stmt 24
+                     +- Expression
+                        +- expr 72
+                           +- Binary *
+                              +- lhs:expr 70
+                              |  +- Ident: dx
+                              +- rhs:expr 71
+                                 +- Ident: dy

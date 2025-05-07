@@ -1,0 +1,91 @@
+---
+source: ast/src/ast_print.rs
+expression: s
+---
++- stmt 0
+   +- Namespace name=<root>
+      +- stmt 1
+      |  +- Use std.booleans.print
+      +- stmt 2
+      |  +- Use std.numbers.print
+      +- stmt 7
+         +- Fn name=main
+            +- annotations=[]
+            +- params=[]
+            +- ret=[]
+            +- body:expr 26
+               +- Block
+                  +- stmt 3
+                  |  +- Let name=n
+                  |     +- expr 12
+                  |        +- Call
+                  |           +- expr 2
+                  |           |  +- Access
+                  |           |     +- expr 1
+                  |           |     |  +- Access
+                  |           |     |     +- expr 0
+                  |           |     |     |  +- Ident: std
+                  |           |     |     +- ident=numbers
+                  |           |     +- ident=number_parse
+                  |           +- params
+                  |              +- expr 11
+                  |                 +- Call
+                  |                    +- expr 5
+                  |                    |  +- Access
+                  |                    |     +- expr 4
+                  |                    |     |  +- Access
+                  |                    |     |     +- expr 3
+                  |                    |     |     |  +- Ident: std
+                  |                    |     |     +- ident=list
+                  |                    |     +- ident=list_get
+                  |                    +- params
+                  |                       +- expr 9
+                  |                       |  +- Call
+                  |                       |     +- expr 8
+                  |                       |     |  +- Access
+                  |                       |     |     +- expr 7
+                  |                       |     |     |  +- Access
+                  |                       |     |     |     +- expr 6
+                  |                       |     |     |     |  +- Ident: std
+                  |                       |     |     |     +- ident=env
+                  |                       |     |     +- ident=args
+                  |                       |     +- params=[]
+                  |                       +- expr 10
+                  |                          +- Number: 1
+                  +- stmt 4
+                  |  +- Expression
+                  |     +- expr 15
+                  |        +- Call
+                  |           +- expr 13
+                  |           |  +- Ident: print
+                  |           +- params
+                  |              +- expr 14
+                  |                 +- Ident: n
+                  +- stmt 5
+                  |  +- Expression
+                  |     +- expr 20
+                  |        +- Call
+                  |           +- expr 16
+                  |           |  +- Ident: print
+                  |           +- params
+                  |              +- expr 19
+                  |                 +- Binary ==
+                  |                    +- lhs:expr 17
+                  |                    |  +- Ident: n
+                  |                    +- rhs:expr 18
+                  |                       +- Number: 0
+                  +- stmt 6
+                     +- Expression
+                        +- expr 25
+                           +- Call
+                              +- expr 23
+                              |  +- Access
+                              |     +- expr 22
+                              |     |  +- Access
+                              |     |     +- expr 21
+                              |     |     |  +- Ident: std
+                              |     |     +- ident=str
+                              |     +- ident=print
+                              +- params
+                                 +- expr 24
+                                    +- String: hello, world

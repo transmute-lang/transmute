@@ -1,0 +1,146 @@
+---
+source: ast/src/ast_print.rs
+expression: s
+---
++- stmt 0
+   +- Namespace name=<root>
+      +- stmt 1
+      |  +- Use std.env.args
+      +- stmt 2
+      |  +- Use std.list.list_get
+      +- stmt 3
+      |  +- Use std.numbers.number_parse
+      +- stmt 4
+      |  +- Use std.numbers.print
+      +- stmt 5
+      |  +- Struct name=Point
+      |     +- xy: [number; 2]
+      +- stmt 14
+         +- Fn name=main
+            +- annotations=[]
+            +- params=[]
+            +- ret=[]
+            +- body:expr 48
+               +- Block
+                  +- stmt 6
+                  |  +- Let name=n
+                  |     +- expr 6
+                  |        +- Call
+                  |           +- expr 0
+                  |           |  +- Ident: number_parse
+                  |           +- params
+                  |              +- expr 5
+                  |                 +- Call
+                  |                    +- expr 1
+                  |                    |  +- Ident: list_get
+                  |                    +- params
+                  |                       +- expr 3
+                  |                       |  +- Call
+                  |                       |     +- expr 2
+                  |                       |     |  +- Ident: args
+                  |                       |     +- params=[]
+                  |                       +- expr 4
+                  |                          +- Number: 1
+                  +- stmt 7
+                  |  +- Let name=p1
+                  |     +- expr 10
+                  |        +- StructInstantiate name=Point
+                  |           +- field name=xy
+                  |              +- expr 9
+                  |                 +- ArrayInstantiate
+                  |                    +- expr 7
+                  |                    |  +- Number: 0
+                  |                    +- expr 8
+                  |                       +- Number: 0
+                  +- stmt 8
+                  |  +- Let name=p2
+                  |     +- expr 14
+                  |        +- StructInstantiate name=Point
+                  |           +- field name=xy
+                  |              +- expr 13
+                  |                 +- ArrayInstantiate
+                  |                    +- expr 11
+                  |                    |  +- Ident: n
+                  |                    +- expr 12
+                  |                       +- Ident: n
+                  +- stmt 9
+                  |  +- Expression
+                  |     +- expr 20
+                  |        +- Assignment
+                  |           +- target:expr 18
+                  |           |  +- ArrayAccess
+                  |           |     +- expr 16
+                  |           |     |  +- Access
+                  |           |     |     +- expr 15
+                  |           |     |     |  +- Ident: p1
+                  |           |     |     +- ident=xy
+                  |           |     +- expr 17
+                  |           |        +- Number: 0
+                  |           +- value:expr 19
+                  |              +- Number: 1
+                  +- stmt 10
+                  |  +- Let name=p1xy
+                  |     +- expr 22
+                  |        +- Access
+                  |           +- expr 21
+                  |           |  +- Ident: p1
+                  |           +- ident=xy
+                  +- stmt 11
+                  |  +- Expression
+                  |     +- expr 27
+                  |        +- Assignment
+                  |           +- target:expr 25
+                  |           |  +- ArrayAccess
+                  |           |     +- expr 23
+                  |           |     |  +- Ident: p1xy
+                  |           |     +- expr 24
+                  |           |        +- Number: 1
+                  |           +- value:expr 26
+                  |              +- Number: 1
+                  +- stmt 12
+                  |  +- Let name=area
+                  |     +- expr 44
+                  |        +- Binary *
+                  |           +- lhs:expr 35
+                  |           |  +- Binary -
+                  |           |     +- lhs:expr 31
+                  |           |     |  +- ArrayAccess
+                  |           |     |     +- expr 29
+                  |           |     |     |  +- Access
+                  |           |     |     |     +- expr 28
+                  |           |     |     |     |  +- Ident: p2
+                  |           |     |     |     +- ident=xy
+                  |           |     |     +- expr 30
+                  |           |     |        +- Number: 0
+                  |           |     +- rhs:expr 34
+                  |           |        +- ArrayAccess
+                  |           |           +- expr 32
+                  |           |           |  +- Ident: p1xy
+                  |           |           +- expr 33
+                  |           |              +- Number: 0
+                  |           +- rhs:expr 43
+                  |              +- Binary -
+                  |                 +- lhs:expr 39
+                  |                 |  +- ArrayAccess
+                  |                 |     +- expr 37
+                  |                 |     |  +- Access
+                  |                 |     |     +- expr 36
+                  |                 |     |     |  +- Ident: p2
+                  |                 |     |     +- ident=xy
+                  |                 |     +- expr 38
+                  |                 |        +- Number: 1
+                  |                 +- rhs:expr 42
+                  |                    +- ArrayAccess
+                  |                       +- expr 40
+                  |                       |  +- Ident: p1xy
+                  |                       +- expr 41
+                  |                          +- Number: 1
+                  +- stmt 13
+                     +- Expression
+                        +- expr 47
+                           +- Call
+                              +- expr 45
+                              |  +- Ident: print
+                              +- params
+                                 +- expr 46
+                                    +- Ident: area

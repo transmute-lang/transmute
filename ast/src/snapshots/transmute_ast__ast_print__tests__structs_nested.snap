@@ -1,0 +1,215 @@
+---
+source: ast/src/ast_print.rs
+expression: s
+---
++- stmt 0
+   +- Namespace name=<root>
+      +- stmt 1
+      |  +- Use std.env.args
+      +- stmt 2
+      |  +- Use std.list.list_get
+      +- stmt 3
+      |  +- Use std.numbers.number_parse
+      +- stmt 4
+      |  +- Use std.numbers.print
+      +- stmt 5
+      |  +- Struct name=Inner
+      |     +- field: number
+      +- stmt 6
+      |  +- Struct name=Outer
+      |     +- field: Inner
+      +- stmt 9
+      |  +- Fn name=main
+      |     +- annotations=[]
+      |     +- params=[]
+      |     +- ret=[]
+      |     +- body:expr 24
+      |        +- Block
+      |           +- stmt 7
+      |           |  +- Let name=i
+      |           |     +- expr 6
+      |           |        +- Call
+      |           |           +- expr 0
+      |           |           |  +- Ident: number_parse
+      |           |           +- params
+      |           |              +- expr 5
+      |           |                 +- Call
+      |           |                    +- expr 1
+      |           |                    |  +- Ident: list_get
+      |           |                    +- params
+      |           |                       +- expr 3
+      |           |                       |  +- Call
+      |           |                       |     +- expr 2
+      |           |                       |     |  +- Ident: args
+      |           |                       |     +- params=[]
+      |           |                       +- expr 4
+      |           |                          +- Number: 1
+      |           +- stmt 8
+      |              +- Expression
+      |                 +- expr 23
+      |                    +- Call
+      |                       +- expr 7
+      |                       |  +- Ident: print
+      |                       +- params
+      |                          +- expr 22
+      |                             +- Binary +
+      |                                +- lhs:expr 18
+      |                                |  +- Binary +
+      |                                |     +- lhs:expr 14
+      |                                |     |  +- Binary +
+      |                                |     |     +- lhs:expr 10
+      |                                |     |     |  +- Call
+      |                                |     |     |     +- expr 8
+      |                                |     |     |     |  +- Ident: f2
+      |                                |     |     |     +- params
+      |                                |     |     |        +- expr 9
+      |                                |     |     |           +- Ident: i
+      |                                |     |     +- rhs:expr 13
+      |                                |     |        +- Call
+      |                                |     |           +- expr 11
+      |                                |     |           |  +- Ident: f3
+      |                                |     |           +- params
+      |                                |     |              +- expr 12
+      |                                |     |                 +- Ident: i
+      |                                |     +- rhs:expr 17
+      |                                |        +- Call
+      |                                |           +- expr 15
+      |                                |           |  +- Ident: f4
+      |                                |           +- params
+      |                                |              +- expr 16
+      |                                |                 +- Ident: i
+      |                                +- rhs:expr 21
+      |                                   +- Call
+      |                                      +- expr 19
+      |                                      |  +- Ident: f5
+      |                                      +- params
+      |                                         +- expr 20
+      |                                            +- Ident: i
+      +- stmt 14
+      |  +- Fn name=f2
+      |     +- annotations=[]
+      |     +- params
+      |     |  +- i: number
+      |     +- ret=number
+      |     +- body:expr 33
+      |        +- Block
+      |           +- stmt 10
+      |           |  +- Let name=inner
+      |           |     +- expr 26
+      |           |        +- StructInstantiate name=Inner
+      |           |           +- field name=field
+      |           |              +- expr 25
+      |           |                 +- Ident: i
+      |           +- stmt 11
+      |           |  +- Let name=outer
+      |           |     +- expr 28
+      |           |        +- StructInstantiate name=Outer
+      |           |           +- field name=field
+      |           |              +- expr 27
+      |           |                 +- Ident: inner
+      |           +- stmt 12
+      |           |  +- Let name=inner
+      |           |     +- expr 30
+      |           |        +- Access
+      |           |           +- expr 29
+      |           |           |  +- Ident: outer
+      |           |           +- ident=field
+      |           +- stmt 13
+      |              +- Expression
+      |                 +- expr 32
+      |                    +- Access
+      |                       +- expr 31
+      |                       |  +- Ident: inner
+      |                       +- ident=field
+      +- stmt 18
+      |  +- Fn name=f3
+      |     +- annotations=[]
+      |     +- params
+      |     |  +- i: number
+      |     +- ret=number
+      |     +- body:expr 41
+      |        +- Block
+      |           +- stmt 15
+      |           |  +- Let name=inner
+      |           |     +- expr 35
+      |           |        +- StructInstantiate name=Inner
+      |           |           +- field name=field
+      |           |              +- expr 34
+      |           |                 +- Ident: i
+      |           +- stmt 16
+      |           |  +- Let name=outer
+      |           |     +- expr 37
+      |           |        +- StructInstantiate name=Outer
+      |           |           +- field name=field
+      |           |              +- expr 36
+      |           |                 +- Ident: inner
+      |           +- stmt 17
+      |              +- Expression
+      |                 +- expr 40
+      |                    +- Access
+      |                       +- expr 39
+      |                       |  +- Access
+      |                       |     +- expr 38
+      |                       |     |  +- Ident: outer
+      |                       |     +- ident=field
+      |                       +- ident=field
+      +- stmt 22
+      |  +- Fn name=f4
+      |     +- annotations=[]
+      |     +- params
+      |     |  +- i: number
+      |     +- ret=number
+      |     +- body:expr 49
+      |        +- Block
+      |           +- stmt 19
+      |           |  +- Let name=outer
+      |           |     +- expr 44
+      |           |        +- StructInstantiate name=Outer
+      |           |           +- field name=field
+      |           |              +- expr 43
+      |           |                 +- StructInstantiate name=Inner
+      |           |                    +- field name=field
+      |           |                       +- expr 42
+      |           |                          +- Ident: i
+      |           +- stmt 20
+      |           |  +- Let name=inner
+      |           |     +- expr 46
+      |           |        +- Access
+      |           |           +- expr 45
+      |           |           |  +- Ident: outer
+      |           |           +- ident=field
+      |           +- stmt 21
+      |              +- Expression
+      |                 +- expr 48
+      |                    +- Access
+      |                       +- expr 47
+      |                       |  +- Ident: inner
+      |                       +- ident=field
+      +- stmt 25
+         +- Fn name=f5
+            +- annotations=[]
+            +- params
+            |  +- i: number
+            +- ret=number
+            +- body:expr 56
+               +- Block
+                  +- stmt 23
+                  |  +- Let name=outer
+                  |     +- expr 52
+                  |        +- StructInstantiate name=Outer
+                  |           +- field name=field
+                  |              +- expr 51
+                  |                 +- StructInstantiate name=Inner
+                  |                    +- field name=field
+                  |                       +- expr 50
+                  |                          +- Ident: i
+                  +- stmt 24
+                     +- Expression
+                        +- expr 55
+                           +- Access
+                              +- expr 54
+                              |  +- Access
+                              |     +- expr 53
+                              |     |  +- Ident: outer
+                              |     +- ident=field
+                              +- ident=field

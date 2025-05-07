@@ -1,0 +1,144 @@
+---
+source: ast/src/ast_print.rs
+expression: s
+---
++- stmt 0
+   +- Namespace name=<root>
+      +- stmt 1
+      |  +- Use std.env.args
+      +- stmt 2
+      |  +- Use std.list.list_get
+      +- stmt 3
+      |  +- Use std.numbers.number_parse
+      +- stmt 4
+      |  +- Use std.numbers.print
+      +- stmt 5
+      |  +- Struct name=Point
+      |     +- x: number
+      |     +- y: number
+      +- stmt 6
+      |  +- Struct name=Square
+      |     +- a: Point
+      |     +- b: Point
+      +- stmt 10
+      |  +- Fn name=perimeter
+      |     +- annotations=[]
+      |     +- params
+      |     |  +- square: Square
+      |     +- ret=number
+      |     +- body:expr 21
+      |        +- Block
+      |           +- stmt 7
+      |           |  +- Let name=width
+      |           |     +- expr 6
+      |           |        +- Binary -
+      |           |           +- lhs:expr 2
+      |           |           |  +- Access
+      |           |           |     +- expr 1
+      |           |           |     |  +- Access
+      |           |           |     |     +- expr 0
+      |           |           |     |     |  +- Ident: square
+      |           |           |     |     +- ident=b
+      |           |           |     +- ident=x
+      |           |           +- rhs:expr 5
+      |           |              +- Access
+      |           |                 +- expr 4
+      |           |                 |  +- Access
+      |           |                 |     +- expr 3
+      |           |                 |     |  +- Ident: square
+      |           |                 |     +- ident=a
+      |           |                 +- ident=x
+      |           +- stmt 8
+      |           |  +- Let name=height
+      |           |     +- expr 13
+      |           |        +- Binary -
+      |           |           +- lhs:expr 9
+      |           |           |  +- Access
+      |           |           |     +- expr 8
+      |           |           |     |  +- Access
+      |           |           |     |     +- expr 7
+      |           |           |     |     |  +- Ident: square
+      |           |           |     |     +- ident=b
+      |           |           |     +- ident=y
+      |           |           +- rhs:expr 12
+      |           |              +- Access
+      |           |                 +- expr 11
+      |           |                 |  +- Access
+      |           |                 |     +- expr 10
+      |           |                 |     |  +- Ident: square
+      |           |                 |     +- ident=a
+      |           |                 +- ident=y
+      |           +- stmt 9
+      |              +- Ret
+      |                 +- expr 20
+      |                    +- Binary +
+      |                       +- lhs:expr 16
+      |                       |  +- Binary *
+      |                       |     +- lhs:expr 14
+      |                       |     |  +- Ident: width
+      |                       |     +- rhs:expr 15
+      |                       |        +- Number: 2
+      |                       +- rhs:expr 19
+      |                          +- Binary *
+      |                             +- lhs:expr 17
+      |                             |  +- Ident: height
+      |                             +- rhs:expr 18
+      |                                +- Number: 2
+      +- stmt 13
+         +- Fn name=main
+            +- annotations=[]
+            +- params=[]
+            +- ret=[]
+            +- body:expr 40
+               +- Block
+                  +- stmt 11
+                  |  +- Let name=n
+                  |     +- expr 28
+                  |        +- Call
+                  |           +- expr 22
+                  |           |  +- Ident: number_parse
+                  |           +- params
+                  |              +- expr 27
+                  |                 +- Call
+                  |                    +- expr 23
+                  |                    |  +- Ident: list_get
+                  |                    +- params
+                  |                       +- expr 25
+                  |                       |  +- Call
+                  |                       |     +- expr 24
+                  |                       |     |  +- Ident: args
+                  |                       |     +- params=[]
+                  |                       +- expr 26
+                  |                          +- Number: 1
+                  +- stmt 12
+                     +- Expression
+                        +- expr 39
+                           +- Call
+                              +- expr 29
+                              |  +- Ident: print
+                              +- params
+                                 +- expr 38
+                                    +- Call
+                                       +- expr 30
+                                       |  +- Ident: perimeter
+                                       +- params
+                                          +- expr 37
+                                             +- StructInstantiate name=Square
+                                                +- field name=a
+                                                |  +- expr 33
+                                                |     +- StructInstantiate name=Point
+                                                |        +- field name=x
+                                                |        |  +- expr 31
+                                                |        |     +- Number: 0
+                                                |        +- field name=y
+                                                |           +- expr 32
+                                                |              +- Number: 0
+                                                +- field name=b
+                                                   +- expr 36
+                                                      +- StructInstantiate name=Point
+                                                         +- field name=x
+                                                         |  +- expr 34
+                                                         |     +- Ident: n
+                                                         +- field name=y
+                                                            +- expr 35
+                                                               +- Ident: n

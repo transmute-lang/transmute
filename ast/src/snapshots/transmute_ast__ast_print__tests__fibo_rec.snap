@@ -1,0 +1,108 @@
+---
+source: ast/src/ast_print.rs
+expression: s
+---
++- stmt 0
+   +- Namespace name=<root>
+      +- stmt 1
+      |  +- Use std.env.args
+      +- stmt 2
+      |  +- Use std.list.list_get
+      +- stmt 3
+      |  +- Use std.numbers.number_parse
+      +- stmt 4
+      |  +- Use std.numbers.print
+      +- stmt 8
+      |  +- Fn name=main
+      |     +- annotations=[]
+      |     +- params=[]
+      |     +- ret=[]
+      |     +- body:expr 13
+      |        +- Block
+      |           +- stmt 5
+      |           |  +- Let name=n
+      |           |     +- expr 6
+      |           |        +- Call
+      |           |           +- expr 0
+      |           |           |  +- Ident: number_parse
+      |           |           +- params
+      |           |              +- expr 5
+      |           |                 +- Call
+      |           |                    +- expr 1
+      |           |                    |  +- Ident: list_get
+      |           |                    +- params
+      |           |                       +- expr 3
+      |           |                       |  +- Call
+      |           |                       |     +- expr 2
+      |           |                       |     |  +- Ident: args
+      |           |                       |     +- params=[]
+      |           |                       +- expr 4
+      |           |                          +- Number: 1
+      |           +- stmt 6
+      |           |  +- Let name=f
+      |           |     +- expr 9
+      |           |        +- Call
+      |           |           +- expr 7
+      |           |           |  +- Ident: fibo
+      |           |           +- params
+      |           |              +- expr 8
+      |           |                 +- Ident: n
+      |           +- stmt 7
+      |              +- Expression
+      |                 +- expr 12
+      |                    +- Call
+      |                       +- expr 10
+      |                       |  +- Ident: print
+      |                       +- params
+      |                          +- expr 11
+      |                             +- Ident: f
+      +- stmt 12
+         +- Fn name=fibo
+            +- annotations=[]
+            +- params
+            |  +- n: number
+            +- ret=number
+            +- body:expr 31
+               +- Block
+                  +- stmt 10
+                  |  +- Expression
+                  |     +- expr 19
+                  |        +- If
+                  |           +- cond:expr 16
+                  |           |  +- Binary <
+                  |           |     +- lhs:expr 14
+                  |           |     |  +- Ident: n
+                  |           |     +- rhs:expr 15
+                  |           |        +- Number: 2
+                  |           +- true:expr 18
+                  |              +- Block
+                  |                 +- stmt 9
+                  |                    +- Ret
+                  |                       +- expr 17
+                  |                          +- Ident: n
+                  +- stmt 11
+                     +- Expression
+                        +- expr 30
+                           +- Binary +
+                              +- lhs:expr 24
+                              |  +- Call
+                              |     +- expr 20
+                              |     |  +- Ident: fibo
+                              |     +- params
+                              |        +- expr 23
+                              |           +- Binary -
+                              |              +- lhs:expr 21
+                              |              |  +- Ident: n
+                              |              +- rhs:expr 22
+                              |                 +- Number: 1
+                              +- rhs:expr 29
+                                 +- Call
+                                    +- expr 25
+                                    |  +- Ident: fibo
+                                    +- params
+                                       +- expr 28
+                                          +- Binary -
+                                             +- lhs:expr 26
+                                             |  +- Ident: n
+                                             +- rhs:expr 27
+                                                +- Number: 2

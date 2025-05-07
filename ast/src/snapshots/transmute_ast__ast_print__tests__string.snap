@@ -1,0 +1,37 @@
+---
+source: ast/src/ast_print.rs
+expression: s
+---
++- stmt 0
+   +- Namespace name=<root>
+      +- stmt 1
+      |  +- Use std.str.print
+      +- stmt 5
+         +- Fn name=main
+            +- annotations=[]
+            +- params=[]
+            +- ret=[]
+            +- body:expr 7
+               +- Block
+                  +- stmt 2
+                  |  +- Let name=who
+                  |     +- expr 0
+                  |        +- String: world
+                  +- stmt 3
+                  |  +- Expression
+                  |     +- expr 3
+                  |        +- Call
+                  |           +- expr 1
+                  |           |  +- Ident: print
+                  |           +- params
+                  |              +- expr 2
+                  |                 +- String: hello, 
+                  +- stmt 4
+                     +- Expression
+                        +- expr 6
+                           +- Call
+                              +- expr 4
+                              |  +- Ident: print
+                              +- params
+                                 +- expr 5
+                                    +- Ident: who

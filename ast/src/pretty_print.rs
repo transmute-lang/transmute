@@ -443,13 +443,13 @@ mod tests {
     use transmute_core::vec_map::VecMap;
 
     macro_rules! identifiers {
-    ($expr:expr) => {vec![$expr.to_string()]};
-    ($expr:expr, $($tail:tt)*) => {{
-        let mut v = identifiers!($expr);
-        v.append(&mut identifiers!($($tail)*));
-        v
-    }};
-}
+        ($expr:expr) => {vec![$expr.to_string()]};
+        ($expr:expr, $($tail:tt)*) => {{
+            let mut v = identifiers!($expr);
+            v.append(&mut identifiers!($($tail)*));
+            v
+        }};
+    }
 
     macro_rules! identifier_refs {
         ($ident:expr) => {{

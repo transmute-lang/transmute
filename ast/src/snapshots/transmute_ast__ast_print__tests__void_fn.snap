@@ -1,0 +1,17 @@
+---
+source: ast/src/ast_print.rs
+expression: s
+---
++- stmt 0
+   +- Namespace name=<root>
+      +- stmt 2
+         +- Fn name=main
+            +- annotations=[]
+            +- params=[]
+            +- ret=[]
+            +- body:expr 1
+               +- Block
+                  +- stmt 1
+                     +- Expression
+                        +- expr 0
+                           +- Number: 42
