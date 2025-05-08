@@ -1,0 +1,301 @@
+---
+source: hir/src/hir_print.rs
+expression: s
+---
+               +- stmt 0
+=    1:     1     +- Namespace name=<root>
+                     +- stmt 1
+=    2:     1        |  +- Namespace name=core
+                     |     +- stmts=[]
+                     +- stmt 6
+=   12:     7        |  +- Struct name=Inner
+=   41:     4        |     +- field: number
+                     +- stmt 7
+=   13:     8        |  +- Struct name=Outer
+=   42:     7        |     +- field: Inner
+                     +- stmt 10
+=   36:    19        |  +- Fn name=main
+                     |     +- annotations=[]
+                     |     +- params=[]
+@     :     1        |     +- ret=[]
+@     :     2        |     +- body:expr 24
+@     :     2        |        +- Block
+                     |           +- stmt 8
+=   43:     4        |           |  +- Let name=i
+@     :     4        |           |     +- expr 6
+@     :     4        |           |        +- Call
+@     :    17        |           |           +- expr 0
+@   34:    17        |           |           |  +- Ident: number_parse
+                     |           |           +- params
+@     :     6        |           |              +- expr 5
+@     :     6        |           |                 +- Call
+@     :    15        |           |                    +- expr 1
+@   32:    15        |           |                    |  +- Ident: list_get
+                     |           |                    +- params
+@     :     5        |           |                       +- expr 3
+@     :     5        |           |                       |  +- Call
+@     :    14        |           |                       |     +- expr 2
+@   31:    14        |           |                       |     |  +- Ident: args
+                     |           |                       |     +- params=[]
+@     :     4        |           |                       +- expr 4
+@     :     4        |           |                          +- Number: 1
+                     |           +- stmt 9
+@     :     1        |              +- Ret
+@     :     1        |                 +- expr 23
+@     :     1        |                    +- Call
+@     :    16        |                       +- expr 7
+@   33:    16        |                       |  +- Ident: print
+                     |                       +- params
+@     :     4        |                          +- expr 22
+@     :     4        |                             +- Call
+@     :     9        |                                +- expr 65
+@   29:     9        |                                |  +- Ident: add
+                     |                                +- params
+@     :     4        |                                   +- expr 18
+@     :     4        |                                   |  +- Call
+@     :     9        |                                   |     +- expr 64
+@   29:     9        |                                   |     |  +- Ident: add
+                     |                                   |     +- params
+@     :     4        |                                   |        +- expr 14
+@     :     4        |                                   |        |  +- Call
+@     :     9        |                                   |        |     +- expr 63
+@   29:     9        |                                   |        |     |  +- Ident: add
+                     |                                   |        |     +- params
+@     :     4        |                                   |        |        +- expr 10
+@     :     4        |                                   |        |        |  +- Call
+@     :    12        |                                   |        |        |     +- expr 8
+@   37:    12        |                                   |        |        |     |  +- Ident: f2
+                     |                                   |        |        |     +- params
+@     :     4        |                                   |        |        |        +- expr 9
+@   43:     4        |                                   |        |        |           +- Ident: i
+@     :     4        |                                   |        |        +- expr 13
+@     :     4        |                                   |        |           +- Call
+@     :    12        |                                   |        |              +- expr 11
+@   38:    12        |                                   |        |              |  +- Ident: f3
+                     |                                   |        |              +- params
+@     :     4        |                                   |        |                 +- expr 12
+@   43:     4        |                                   |        |                    +- Ident: i
+@     :     4        |                                   |        +- expr 17
+@     :     4        |                                   |           +- Call
+@     :    12        |                                   |              +- expr 15
+@   39:    12        |                                   |              |  +- Ident: f4
+                     |                                   |              +- params
+@     :     4        |                                   |                 +- expr 16
+@   43:     4        |                                   |                    +- Ident: i
+@     :     4        |                                   +- expr 21
+@     :     4        |                                      +- Call
+@     :    12        |                                         +- expr 19
+@   40:    12        |                                         |  +- Ident: f5
+                     |                                         +- params
+@     :     4        |                                            +- expr 20
+@   43:     4        |                                               +- Ident: i
+                     +- stmt 15
+=   37:    12        |  +- Fn name=f2
+                     |     +- annotations=[]
+                     |     +- params
+=   44:     4        |     |  +- i: number
+@     :     2        |     +- ret=number
+@     :     2        |     +- body:expr 33
+@     :     2        |        +- Block
+                     |           +- stmt 11
+=   45:     7        |           |  +- Let name=inner
+@     :     7        |           |     +- expr 26
+@   12:     7        |           |        +- StructInstantiate name=Inner
+@   41:     4        |           |           +- field name=field
+@     :     4        |           |              +- expr 25
+@   44:     4        |           |                 +- Ident: i
+                     |           +- stmt 12
+=   46:     8        |           |  +- Let name=outer
+@     :     8        |           |     +- expr 28
+@   13:     8        |           |        +- StructInstantiate name=Outer
+@   42:     7        |           |           +- field name=field
+@     :     7        |           |              +- expr 27
+@   45:     7        |           |                 +- Ident: inner
+                     |           +- stmt 13
+=   47:     7        |           |  +- Let name=inner
+@     :     7        |           |     +- expr 30
+@   42:     7        |           |        +- Access
+@     :     8        |           |           +- expr 29
+@   46:     8        |           |           |  +- Ident: outer
+@   42:     7        |           |           +- ident=field
+                     |           +- stmt 14
+@     :     4        |              +- Ret
+@     :     4        |                 +- expr 32
+@   41:     4        |                    +- Access
+@     :     7        |                       +- expr 31
+@   47:     7        |                       |  +- Ident: inner
+@   41:     4        |                       +- ident=field
+                     +- stmt 19
+=   38:    12        |  +- Fn name=f3
+                     |     +- annotations=[]
+                     |     +- params
+=   48:     4        |     |  +- i: number
+@     :     2        |     +- ret=number
+@     :     2        |     +- body:expr 41
+@     :     2        |        +- Block
+                     |           +- stmt 16
+=   49:     7        |           |  +- Let name=inner
+@     :     7        |           |     +- expr 35
+@   12:     7        |           |        +- StructInstantiate name=Inner
+@   41:     4        |           |           +- field name=field
+@     :     4        |           |              +- expr 34
+@   48:     4        |           |                 +- Ident: i
+                     |           +- stmt 17
+=   50:     8        |           |  +- Let name=outer
+@     :     8        |           |     +- expr 37
+@   13:     8        |           |        +- StructInstantiate name=Outer
+@   42:     7        |           |           +- field name=field
+@     :     7        |           |              +- expr 36
+@   49:     7        |           |                 +- Ident: inner
+                     |           +- stmt 18
+@     :     4        |              +- Ret
+@     :     4        |                 +- expr 40
+@   41:     4        |                    +- Access
+@     :     7        |                       +- expr 39
+@   42:     7        |                       |  +- Access
+@     :     8        |                       |     +- expr 38
+@   50:     8        |                       |     |  +- Ident: outer
+@   42:     7        |                       |     +- ident=field
+@   41:     4        |                       +- ident=field
+                     +- stmt 23
+=   39:    12        |  +- Fn name=f4
+                     |     +- annotations=[]
+                     |     +- params
+=   51:     4        |     |  +- i: number
+@     :     2        |     +- ret=number
+@     :     2        |     +- body:expr 49
+@     :     2        |        +- Block
+                     |           +- stmt 20
+=   52:     8        |           |  +- Let name=outer
+@     :     8        |           |     +- expr 44
+@   13:     8        |           |        +- StructInstantiate name=Outer
+@   42:     7        |           |           +- field name=field
+@     :     7        |           |              +- expr 43
+@   12:     7        |           |                 +- StructInstantiate name=Inner
+@   41:     4        |           |                    +- field name=field
+@     :     4        |           |                       +- expr 42
+@   51:     4        |           |                          +- Ident: i
+                     |           +- stmt 21
+=   53:     7        |           |  +- Let name=inner
+@     :     7        |           |     +- expr 46
+@   42:     7        |           |        +- Access
+@     :     8        |           |           +- expr 45
+@   52:     8        |           |           |  +- Ident: outer
+@   42:     7        |           |           +- ident=field
+                     |           +- stmt 22
+@     :     4        |              +- Ret
+@     :     4        |                 +- expr 48
+@   41:     4        |                    +- Access
+@     :     7        |                       +- expr 47
+@   53:     7        |                       |  +- Ident: inner
+@   41:     4        |                       +- ident=field
+                     +- stmt 26
+=   40:    12        |  +- Fn name=f5
+                     |     +- annotations=[]
+                     |     +- params
+=   54:     4        |     |  +- i: number
+@     :     2        |     +- ret=number
+@     :     2        |     +- body:expr 56
+@     :     2        |        +- Block
+                     |           +- stmt 24
+=   55:     8        |           |  +- Let name=outer
+@     :     8        |           |     +- expr 52
+@   13:     8        |           |        +- StructInstantiate name=Outer
+@   42:     7        |           |           +- field name=field
+@     :     7        |           |              +- expr 51
+@   12:     7        |           |                 +- StructInstantiate name=Inner
+@   41:     4        |           |                    +- field name=field
+@     :     4        |           |                       +- expr 50
+@   54:     4        |           |                          +- Ident: i
+                     |           +- stmt 25
+@     :     4        |              +- Ret
+@     :     4        |                 +- expr 55
+@   41:     4        |                    +- Access
+@     :     7        |                       +- expr 54
+@   42:     7        |                       |  +- Access
+@     :     8        |                       |     +- expr 53
+@   55:     8        |                       |     |  +- Ident: outer
+@   42:     7        |                       |     +- ident=field
+@   41:     4        |                       +- ident=field
+                     +- stmt 33
+=    3:     1           +- Namespace name=std
+                           +- stmt 27
+=   11:     1              |  +- Annotation name=native
+                           +- stmt 28
+=    4:     1              |  +- Namespace name=booleans
+                           |     +- stmt 41
+=   30:    13              |        +- Fn name=print (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   56:     3              |           |  +- b: core.boolean
+@     :     1              |           +- ret=[]
+                           +- stmt 29
+=    5:     1              |  +- Namespace name=env
+                           |     +- stmt 40
+=   31:    14              |        +- Fn name=args (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params=[]
+@     :     5              |           +- ret=std.list.List
+                           +- stmt 30
+=    6:     1              |  +- Namespace name=list
+                           |     +- stmt 38
+=    7:     5              |     |  +- Struct name=List (native)
+                           |     +- stmt 39
+=   32:    15              |        +- Fn name=list_get (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   57:     5              |           |  +- list: List
+=   58:     4              |           |  +- index: number
+@     :     6              |           +- ret=std.str.string
+                           +- stmt 31
+=    8:     1              |  +- Namespace name=numbers
+                           |     +- stmt 36
+=   33:    16              |     |  +- Fn name=print (native)
+                           |     |     +- annotations
+@   11:     1              |     |     |  +- std.native
+                           |     |     +- params
+=   59:     4              |     |     |  +- n: core.number
+@     :     1              |     |     +- ret=[]
+                           |     +- stmt 37
+=   34:    17              |        +- Fn name=number_parse (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   60:     6              |           |  +- s: std.str.string
+@     :     2              |           +- ret=core.number
+                           +- stmt 32
+=    9:     1                 +- Namespace name=str
+                                 +- stmt 34
+=   10:     6                    |  +- Struct name=string (native)
+                                 +- stmt 35
+=   35:    18                       +- Fn name=print (native)
+                                       +- annotations
+@   11:     1                          |  +- std.native
+                                       +- params
+=   61:     6                          |  +- s: string
+@     :     1                          +- ret=[]
+
+--- types ---
+0: invalid
+1: void
+2: none
+3: boolean
+4: number
+5: struct 7
+6: struct 10
+7: struct 12
+8: struct 13
+9: f(4, 4) : 4
+10: f(4, 4) : 3
+11: f(3, 3) : 3
+12: f(4) : 4
+13: f(3) : 1
+14: f() : 5
+15: f(5, 4) : 6
+16: f(4) : 1
+17: f(6) : 4
+18: f(6) : 1
+19: f() : 1

@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use transmute_ast::ast_print::Options as AstPrintOptions;
+use transmute_hir::hir_print::Options as HirPrintOptions;
 use transmute_ast::parse;
 use transmute_core::error::Diagnostics;
 use transmute_core::input::Input;
@@ -22,6 +23,7 @@ pub enum OutputFormat {
     Assembly,
     Source,
     Ast,
+    Hir,
 }
 
 impl Options {
@@ -84,6 +86,23 @@ pub fn compile_file<S: AsRef<Path>, D: AsRef<Path>>(
                 }
             }
         }
+        OutputFormat::Hir => {
+            let (inputs, ast) = parse(inputs);
+            match ast
+                .and_then(resolve)
+                .map_err(|d| d.with_inputs(inputs).to_string())
+                .map(|hir| {
+                    let mut out = String::new();
+                    hir.hir_print(&HirPrintOptions::default(), &mut out)
+                        .unwrap();
+                    out
+                }) {
+                Ok(s) | Err(s) => {
+                    println!("{s}");
+                    Ok(())
+                }
+            }
+        }
         _ => compile_inputs(inputs, dst, options),
     }
 }
@@ -120,7 +139,7 @@ fn produce_output(llvm_ir: LlvmIr, dst: &Path, options: &Options) -> Result<(), 
             let dst = dst.with_extension("s");
             llvm_ir.write_assembly(&dst)
         }
-        OutputFormat::Source | OutputFormat::Ast => {
+        OutputFormat::Source | OutputFormat::Ast | OutputFormat::Hir => {
             // already done
             Ok(())
         }

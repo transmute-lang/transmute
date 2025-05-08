@@ -1,0 +1,173 @@
+---
+source: hir/src/hir_print.rs
+expression: s
+---
+               +- stmt 0
+=    1:     1     +- Namespace name=<root>
+                     +- stmt 1
+=    2:     1        |  +- Namespace name=core
+                     |     +- stmts=[]
+                     +- stmt 8
+=   34:    17        |  +- Fn name=main
+                     |     +- annotations=[]
+                     |     +- params=[]
+@     :     1        |     +- ret=[]
+@     :     2        |     +- body:expr 26
+@     :     2        |        +- Block
+                     |           +- stmt 4
+=   35:     4        |           |  +- Let name=n
+@     :     4        |           |     +- expr 12
+@     :     4        |           |        +- Call
+@     :     1        |           |           +- expr 2
+@   32:    15        |           |           |  +- Access
+@     :     1        |           |           |     +- expr 1
+@    8:     1        |           |           |     |  +- Access
+@     :     1        |           |           |     |     +- expr 0
+@    3:     1        |           |           |     |     |  +- Ident: std
+@    8:     1        |           |           |     |     +- ident=numbers
+@   32:    15        |           |           |     +- ident=number_parse
+                     |           |           +- params
+@     :     6        |           |              +- expr 11
+@     :     6        |           |                 +- Call
+@     :     1        |           |                    +- expr 5
+@   30:    13        |           |                    |  +- Access
+@     :     1        |           |                    |     +- expr 4
+@    6:     1        |           |                    |     |  +- Access
+@     :     1        |           |                    |     |     +- expr 3
+@    3:     1        |           |                    |     |     |  +- Ident: std
+@    6:     1        |           |                    |     |     +- ident=list
+@   30:    13        |           |                    |     +- ident=list_get
+                     |           |                    +- params
+@     :     5        |           |                       +- expr 9
+@     :     5        |           |                       |  +- Call
+@     :     1        |           |                       |     +- expr 8
+@   29:    12        |           |                       |     |  +- Access
+@     :     1        |           |                       |     |     +- expr 7
+@    5:     1        |           |                       |     |     |  +- Access
+@     :     1        |           |                       |     |     |     +- expr 6
+@    3:     1        |           |                       |     |     |     |  +- Ident: std
+@    5:     1        |           |                       |     |     |     +- ident=env
+@   29:    12        |           |                       |     |     +- ident=args
+                     |           |                       |     +- params=[]
+@     :     4        |           |                       +- expr 10
+@     :     4        |           |                          +- Number: 1
+                     |           +- stmt 5
+@     :     1        |           |  +- Expression
+@     :     1        |           |     +- expr 15
+@     :     1        |           |        +- Call
+@     :    14        |           |           +- expr 13
+@   31:    14        |           |           |  +- Ident: print
+                     |           |           +- params
+@     :     4        |           |              +- expr 14
+@   35:     4        |           |                 +- Ident: n
+                     |           +- stmt 6
+@     :     1        |           |  +- Expression
+@     :     1        |           |     +- expr 20
+@     :     1        |           |        +- Call
+@     :    11        |           |           +- expr 16
+@   28:    11        |           |           |  +- Ident: print
+                     |           |           +- params
+@     :     3        |           |              +- expr 19
+@     :     3        |           |                 +- Call
+@     :     8        |           |                    +- expr 33
+@   24:     8        |           |                    |  +- Ident: eq
+                     |           |                    +- params
+@     :     4        |           |                       +- expr 17
+@   35:     4        |           |                       |  +- Ident: n
+@     :     4        |           |                       +- expr 18
+@     :     4        |           |                          +- Number: 0
+                     |           +- stmt 7
+@     :     1        |              +- Ret
+@     :     1        |                 +- expr 25
+@     :     1        |                    +- Call
+@     :     1        |                       +- expr 23
+@   33:    16        |                       |  +- Access
+@     :     1        |                       |     +- expr 22
+@    9:     1        |                       |     |  +- Access
+@     :     1        |                       |     |     +- expr 21
+@    3:     1        |                       |     |     |  +- Ident: std
+@    9:     1        |                       |     |     +- ident=str
+@   33:    16        |                       |     +- ident=print
+                     |                       +- params
+@     :     6        |                          +- expr 24
+                     |                             +- String: hello, world
+                     +- stmt 15
+=    3:     1           +- Namespace name=std
+                           +- stmt 9
+=   11:     1              |  +- Annotation name=native
+                           +- stmt 10
+=    4:     1              |  +- Namespace name=booleans
+                           |     +- stmt 23
+=   28:    11              |        +- Fn name=print (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   36:     3              |           |  +- b: core.boolean
+@     :     1              |           +- ret=[]
+                           +- stmt 11
+=    5:     1              |  +- Namespace name=env
+                           |     +- stmt 22
+=   29:    12              |        +- Fn name=args (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params=[]
+@     :     5              |           +- ret=std.list.List
+                           +- stmt 12
+=    6:     1              |  +- Namespace name=list
+                           |     +- stmt 20
+=    7:     5              |     |  +- Struct name=List (native)
+                           |     +- stmt 21
+=   30:    13              |        +- Fn name=list_get (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   37:     5              |           |  +- list: List
+=   38:     4              |           |  +- index: number
+@     :     6              |           +- ret=std.str.string
+                           +- stmt 13
+=    8:     1              |  +- Namespace name=numbers
+                           |     +- stmt 18
+=   31:    14              |     |  +- Fn name=print (native)
+                           |     |     +- annotations
+@   11:     1              |     |     |  +- std.native
+                           |     |     +- params
+=   39:     4              |     |     |  +- n: core.number
+@     :     1              |     |     +- ret=[]
+                           |     +- stmt 19
+=   32:    15              |        +- Fn name=number_parse (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   40:     6              |           |  +- s: std.str.string
+@     :     2              |           +- ret=core.number
+                           +- stmt 14
+=    9:     1                 +- Namespace name=str
+                                 +- stmt 16
+=   10:     6                    |  +- Struct name=string (native)
+                                 +- stmt 17
+=   33:    16                       +- Fn name=print (native)
+                                       +- annotations
+@   11:     1                          |  +- std.native
+                                       +- params
+=   41:     6                          |  +- s: string
+@     :     1                          +- ret=[]
+
+--- types ---
+0: invalid
+1: void
+2: none
+3: boolean
+4: number
+5: struct 7
+6: struct 10
+7: f(4, 4) : 4
+8: f(4, 4) : 3
+9: f(3, 3) : 3
+10: f(4) : 4
+11: f(3) : 1
+12: f() : 5
+13: f(5, 4) : 6
+14: f(4) : 1
+15: f(6) : 4
+16: f(6) : 1
+17: f() : 1

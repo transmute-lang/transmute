@@ -1,0 +1,187 @@
+---
+source: hir/src/hir_print.rs
+expression: s
+---
+               +- stmt 0
+=    1:     1     +- Namespace name=<root>
+                     +- stmt 1
+=    2:     1        |  +- Namespace name=core
+                     |     +- stmts=[]
+                     +- stmt 7
+=   34:    17        |  +- Fn name=main
+                     |     +- annotations=[]
+                     |     +- params=[]
+@     :     1        |     +- ret=[]
+@     :     2        |     +- body:expr 11
+@     :     2        |        +- Block
+                     |           +- stmt 6
+@     :     1        |              +- Ret
+@     :     1        |                 +- expr 10
+@     :     1        |                    +- Call
+@     :    14        |                       +- expr 0
+@   31:    14        |                       |  +- Ident: print
+                     |                       +- params
+@     :     4        |                          +- expr 9
+@     :     4        |                             +- Call
+@     :    10        |                                +- expr 1
+@   35:    10        |                                |  +- Ident: fibo
+                     |                                +- params
+@     :     4        |                                   +- expr 8
+@     :     4        |                                      +- Call
+@     :    15        |                                         +- expr 2
+@   32:    15        |                                         |  +- Ident: number_parse
+                     |                                         +- params
+@     :     6        |                                            +- expr 7
+@     :     6        |                                               +- Call
+@     :    13        |                                                  +- expr 3
+@   30:    13        |                                                  |  +- Ident: list_get
+                     |                                                  +- params
+@     :     5        |                                                     +- expr 5
+@     :     5        |                                                     |  +- Call
+@     :    12        |                                                     |     +- expr 4
+@   29:    12        |                                                     |     |  +- Ident: args
+                     |                                                     |     +- params=[]
+@     :     4        |                                                     +- expr 6
+@     :     4        |                                                        +- Number: 1
+                     +- stmt 11
+=   35:    10        |  +- Fn name=fibo
+                     |     +- annotations=[]
+                     |     +- params
+=   36:     4        |     |  +- n: number
+@     :     2        |     +- ret=number
+@     :     2        |     +- body:expr 29
+@     :     2        |        +- Block
+                     |           +- stmt 9
+@     :     1        |           |  +- Expression
+@     :     1        |           |     +- expr 17
+@     :     1        |           |        +- If
+@     :     3        |           |           +- cond:expr 14
+@     :     3        |           |           |  +- Call
+@     :     8        |           |           |     +- expr 36
+@   20:     8        |           |           |     |  +- Ident: lt
+                     |           |           |     +- params
+@     :     4        |           |           |        +- expr 12
+@   36:     4        |           |           |        |  +- Ident: n
+@     :     4        |           |           |        +- expr 13
+@     :     4        |           |           |           +- Number: 2
+@     :     2        |           |           +- true:expr 16
+@     :     2        |           |              +- Block
+                     |           |                 +- stmt 8
+@     :     4        |           |                    +- Ret
+@     :     4        |           |                       +- expr 15
+@   36:     4        |           |                          +- Ident: n
+                     |           +- stmt 10
+@     :     4        |              +- Ret
+@     :     4        |                 +- expr 28
+@     :     4        |                    +- Call
+@     :     7        |                       +- expr 39
+@   27:     7        |                       |  +- Ident: add
+                     |                       +- params
+@     :     4        |                          +- expr 22
+@     :     4        |                          |  +- Call
+@     :    10        |                          |     +- expr 18
+@   35:    10        |                          |     |  +- Ident: fibo
+                     |                          |     +- params
+@     :     4        |                          |        +- expr 21
+@     :     4        |                          |           +- Call
+@     :     7        |                          |              +- expr 37
+@   15:     7        |                          |              |  +- Ident: sub
+                     |                          |              +- params
+@     :     4        |                          |                 +- expr 19
+@   36:     4        |                          |                 |  +- Ident: n
+@     :     4        |                          |                 +- expr 20
+@     :     4        |                          |                    +- Number: 1
+@     :     4        |                          +- expr 27
+@     :     4        |                             +- Call
+@     :    10        |                                +- expr 23
+@   35:    10        |                                |  +- Ident: fibo
+                     |                                +- params
+@     :     4        |                                   +- expr 26
+@     :     4        |                                      +- Call
+@     :     7        |                                         +- expr 38
+@   15:     7        |                                         |  +- Ident: sub
+                     |                                         +- params
+@     :     4        |                                            +- expr 24
+@   36:     4        |                                            |  +- Ident: n
+@     :     4        |                                            +- expr 25
+@     :     4        |                                               +- Number: 2
+                     +- stmt 18
+=    3:     1           +- Namespace name=std
+                           +- stmt 12
+=   11:     1              |  +- Annotation name=native
+                           +- stmt 13
+=    4:     1              |  +- Namespace name=booleans
+                           |     +- stmt 26
+=   28:    11              |        +- Fn name=print (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   37:     3              |           |  +- b: core.boolean
+@     :     1              |           +- ret=[]
+                           +- stmt 14
+=    5:     1              |  +- Namespace name=env
+                           |     +- stmt 25
+=   29:    12              |        +- Fn name=args (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params=[]
+@     :     5              |           +- ret=std.list.List
+                           +- stmt 15
+=    6:     1              |  +- Namespace name=list
+                           |     +- stmt 23
+=    7:     5              |     |  +- Struct name=List (native)
+                           |     +- stmt 24
+=   30:    13              |        +- Fn name=list_get (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   38:     5              |           |  +- list: List
+=   39:     4              |           |  +- index: number
+@     :     6              |           +- ret=std.str.string
+                           +- stmt 16
+=    8:     1              |  +- Namespace name=numbers
+                           |     +- stmt 21
+=   31:    14              |     |  +- Fn name=print (native)
+                           |     |     +- annotations
+@   11:     1              |     |     |  +- std.native
+                           |     |     +- params
+=   40:     4              |     |     |  +- n: core.number
+@     :     1              |     |     +- ret=[]
+                           |     +- stmt 22
+=   32:    15              |        +- Fn name=number_parse (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   41:     6              |           |  +- s: std.str.string
+@     :     2              |           +- ret=core.number
+                           +- stmt 17
+=    9:     1                 +- Namespace name=str
+                                 +- stmt 19
+=   10:     6                    |  +- Struct name=string (native)
+                                 +- stmt 20
+=   33:    16                       +- Fn name=print (native)
+                                       +- annotations
+@   11:     1                          |  +- std.native
+                                       +- params
+=   42:     6                          |  +- s: string
+@     :     1                          +- ret=[]
+
+--- types ---
+0: invalid
+1: void
+2: none
+3: boolean
+4: number
+5: struct 7
+6: struct 10
+7: f(4, 4) : 4
+8: f(4, 4) : 3
+9: f(3, 3) : 3
+10: f(4) : 4
+11: f(3) : 1
+12: f() : 5
+13: f(5, 4) : 6
+14: f(4) : 1
+15: f(6) : 4
+16: f(6) : 1
+17: f() : 1

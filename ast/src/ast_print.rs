@@ -416,6 +416,7 @@ impl AstPrint for Statement {
                 ctx.prev_level();
             }
             StatementKind::Struct(ident, _annotations, fields) => {
+                // todo use annotations
                 writeln!(
                     f,
                     "{indent}Struct name={ident}",
@@ -595,11 +596,11 @@ mod tests {
                 let ast = parse(vec![Input::Internal(
                     "internal",
                     include_str!(concat!("../../examples/", stringify!($name), ".tm")),
-                )]);
+                )])
+                .1
+                .unwrap();
                 let mut s = String::new();
-                ast.1
-                    .unwrap()
-                    .ast_print(&Options::default(), &mut s)
+                ast.ast_print(&Options::default(), &mut s)
                     .expect("can print");
                 assert_snapshot!(s);
             }

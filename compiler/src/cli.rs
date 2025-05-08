@@ -21,20 +21,24 @@ pub struct Args {
     optimize: bool,
 
     /// Outputs LLVM IR
-    #[arg(long, conflicts_with_all = ["assembly", "source", "ast"])]
+    #[arg(long, conflicts_with_all = ["assembly", "source", "ast", "hir"])]
     llvm_ir: bool,
 
     /// Outputs Assembly
-    #[arg(long, conflicts_with_all = ["llvm_ir", "source", "ast"])]
+    #[arg(long, conflicts_with_all = ["llvm_ir", "source", "ast", "hir"])]
     assembly: bool,
 
     /// Outputs Source
-    #[arg(long, conflicts_with_all = ["llvm_ir", "assembly", "ast"])]
+    #[arg(long, conflicts_with_all = ["llvm_ir", "assembly", "ast", "hir"])]
     source: bool,
 
     /// Outputs Ast
-    #[arg(long, conflicts_with_all = ["assembly", "llvm_ir", "source"])]
+    #[arg(long, conflicts_with_all = ["assembly", "llvm_ir", "source", "hir"])]
     ast: bool,
+
+    /// Outputs Hir
+    #[arg(long, conflicts_with_all = ["assembly", "llvm_ir", "source", "ast"])]
+    hir: bool,
 
     /// Path to the stdlib library. If not provided, use `TRANSMUTE_STDLIB_PATH` env. variable if set.
     #[arg(long)]
@@ -73,6 +77,10 @@ impl Args {
 
     pub fn output_ast(&self) -> bool {
         self.ast
+    }
+
+    pub fn output_hir(&self) -> bool {
+        self.hir
     }
 
     pub fn stdlib_path(&self) -> Option<PathBuf> {

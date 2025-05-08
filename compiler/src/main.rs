@@ -22,6 +22,8 @@ fn main() {
         options.set_output_format(OutputFormat::Source);
     } else if args.output_ast() {
         options.set_output_format(OutputFormat::Ast);
+    } else if args.output_hir() {
+        options.set_output_format(OutputFormat::Hir);
     }
     options.set_optimize(args.optimize());
     if let Some(stdlib_path) = args.stdlib_path() {

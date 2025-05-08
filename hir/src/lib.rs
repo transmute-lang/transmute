@@ -23,6 +23,7 @@ use transmute_core::vec_map::VecMap;
 pub mod bound;
 pub mod exit_points;
 pub mod expression;
+pub mod hir_print;
 pub mod identifier;
 pub mod identifier_ref;
 pub mod literal;

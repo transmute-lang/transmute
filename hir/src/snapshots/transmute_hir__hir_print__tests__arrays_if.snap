@@ -1,0 +1,187 @@
+---
+source: hir/src/hir_print.rs
+expression: s
+---
+               +- stmt 0
+=    1:     1     +- Namespace name=<root>
+                     +- stmt 1
+=    2:     1        |  +- Namespace name=core
+                     |     +- stmts=[]
+                     +- stmt 11
+=   34:    17        |  +- Fn name=main
+                     |     +- annotations=[]
+                     |     +- params=[]
+@     :     1        |     +- ret=[]
+@     :     2        |     +- body:expr 38
+@     :     2        |        +- Block
+                     |           +- stmt 6
+=   35:     4        |           |  +- Let name=n
+@     :     4        |           |     +- expr 6
+@     :     4        |           |        +- Call
+@     :    15        |           |           +- expr 0
+@   32:    15        |           |           |  +- Ident: number_parse
+                     |           |           +- params
+@     :     6        |           |              +- expr 5
+@     :     6        |           |                 +- Call
+@     :    13        |           |                    +- expr 1
+@   30:    13        |           |                    |  +- Ident: list_get
+                     |           |                    +- params
+@     :     5        |           |                       +- expr 3
+@     :     5        |           |                       |  +- Call
+@     :    12        |           |                       |     +- expr 2
+@   29:    12        |           |                       |     |  +- Ident: args
+                     |           |                       |     +- params=[]
+@     :     4        |           |                       +- expr 4
+@     :     4        |           |                          +- Number: 1
+                     |           +- stmt 9
+=   36:     4        |           |  +- Let name=n
+@     :     4        |           |     +- expr 34
+@     :     4        |           |        +- ArrayAccess
+@     :    18        |           |           +- expr 32
+@     :    18        |           |           |  +- If
+@     :     3        |           |           |     +- cond:expr 7
+@     :     3        |           |           |     |  +- Bool: true
+@     :    18        |           |           |     +- true:expr 19
+@     :    18        |           |           |     |  +- Block
+                     |           |           |     |     +- stmt 7
+@     :    18        |           |           |     |        +- Expression
+@     :    18        |           |           |     |           +- expr 18
+@     :    18        |           |           |     |              +- ArrayInstantiate
+@     :     4        |           |           |     |                 +- expr 8
+@     :     4        |           |           |     |                 |  +- Number: 0
+@     :     4        |           |           |     |                 +- expr 9
+@     :     4        |           |           |     |                 |  +- Number: 2
+@     :     4        |           |           |     |                 +- expr 10
+@     :     4        |           |           |     |                 |  +- Number: 4
+@     :     4        |           |           |     |                 +- expr 11
+@     :     4        |           |           |     |                 |  +- Number: 6
+@     :     4        |           |           |     |                 +- expr 12
+@     :     4        |           |           |     |                 |  +- Number: 8
+@     :     4        |           |           |     |                 +- expr 13
+@     :     4        |           |           |     |                 |  +- Number: 10
+@     :     4        |           |           |     |                 +- expr 14
+@     :     4        |           |           |     |                 |  +- Number: 12
+@     :     4        |           |           |     |                 +- expr 15
+@     :     4        |           |           |     |                 |  +- Number: 14
+@     :     4        |           |           |     |                 +- expr 16
+@     :     4        |           |           |     |                 |  +- Number: 16
+@     :     4        |           |           |     |                 +- expr 17
+@     :     4        |           |           |     |                    +- Number: 18
+@     :    18        |           |           |     +- false:expr 31
+@     :    18        |           |           |        +- Block
+                     |           |           |           +- stmt 8
+@     :    18        |           |           |              +- Expression
+@     :    18        |           |           |                 +- expr 30
+@     :    18        |           |           |                    +- ArrayInstantiate
+@     :     4        |           |           |                       +- expr 20
+@     :     4        |           |           |                       |  +- Number: 1
+@     :     4        |           |           |                       +- expr 21
+@     :     4        |           |           |                       |  +- Number: 3
+@     :     4        |           |           |                       +- expr 22
+@     :     4        |           |           |                       |  +- Number: 5
+@     :     4        |           |           |                       +- expr 23
+@     :     4        |           |           |                       |  +- Number: 7
+@     :     4        |           |           |                       +- expr 24
+@     :     4        |           |           |                       |  +- Number: 9
+@     :     4        |           |           |                       +- expr 25
+@     :     4        |           |           |                       |  +- Number: 11
+@     :     4        |           |           |                       +- expr 26
+@     :     4        |           |           |                       |  +- Number: 13
+@     :     4        |           |           |                       +- expr 27
+@     :     4        |           |           |                       |  +- Number: 15
+@     :     4        |           |           |                       +- expr 28
+@     :     4        |           |           |                       |  +- Number: 17
+@     :     4        |           |           |                       +- expr 29
+@     :     4        |           |           |                          +- Number: 19
+@     :     4        |           |           +- expr 33
+@   35:     4        |           |              +- Ident: n
+                     |           +- stmt 10
+@     :     1        |              +- Ret
+@     :     1        |                 +- expr 37
+@     :     1        |                    +- Call
+@     :    14        |                       +- expr 35
+@   31:    14        |                       |  +- Ident: print
+                     |                       +- params
+@     :     4        |                          +- expr 36
+@   36:     4        |                             +- Ident: n
+                     +- stmt 18
+=    3:     1           +- Namespace name=std
+                           +- stmt 12
+=   11:     1              |  +- Annotation name=native
+                           +- stmt 13
+=    4:     1              |  +- Namespace name=booleans
+                           |     +- stmt 26
+=   28:    11              |        +- Fn name=print (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   37:     3              |           |  +- b: core.boolean
+@     :     1              |           +- ret=[]
+                           +- stmt 14
+=    5:     1              |  +- Namespace name=env
+                           |     +- stmt 25
+=   29:    12              |        +- Fn name=args (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params=[]
+@     :     5              |           +- ret=std.list.List
+                           +- stmt 15
+=    6:     1              |  +- Namespace name=list
+                           |     +- stmt 23
+=    7:     5              |     |  +- Struct name=List (native)
+                           |     +- stmt 24
+=   30:    13              |        +- Fn name=list_get (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   38:     5              |           |  +- list: List
+=   39:     4              |           |  +- index: number
+@     :     6              |           +- ret=std.str.string
+                           +- stmt 16
+=    8:     1              |  +- Namespace name=numbers
+                           |     +- stmt 21
+=   31:    14              |     |  +- Fn name=print (native)
+                           |     |     +- annotations
+@   11:     1              |     |     |  +- std.native
+                           |     |     +- params
+=   40:     4              |     |     |  +- n: core.number
+@     :     1              |     |     +- ret=[]
+                           |     +- stmt 22
+=   32:    15              |        +- Fn name=number_parse (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   41:     6              |           |  +- s: std.str.string
+@     :     2              |           +- ret=core.number
+                           +- stmt 17
+=    9:     1                 +- Namespace name=str
+                                 +- stmt 19
+=   10:     6                    |  +- Struct name=string (native)
+                                 +- stmt 20
+=   33:    16                       +- Fn name=print (native)
+                                       +- annotations
+@   11:     1                          |  +- std.native
+                                       +- params
+=   42:     6                          |  +- s: string
+@     :     1                          +- ret=[]
+
+--- types ---
+0: invalid
+1: void
+2: none
+3: boolean
+4: number
+5: struct 7
+6: struct 10
+7: f(4, 4) : 4
+8: f(4, 4) : 3
+9: f(3, 3) : 3
+10: f(4) : 4
+11: f(3) : 1
+12: f() : 5
+13: f(5, 4) : 6
+14: f(4) : 1
+15: f(6) : 4
+16: f(6) : 1
+17: f() : 1
+18: [4; 10]

@@ -1,0 +1,100 @@
+---
+source: hir/src/hir_print.rs
+expression: s
+---
+               +- stmt 0
+=    1:     1     +- Namespace name=<root>
+                     +- stmt 1
+=    2:     1        |  +- Namespace name=core
+                     |     +- stmts=[]
+                     +- stmt 3
+=   34:    17        |  +- Fn name=main
+                     |     +- annotations=[]
+                     |     +- params=[]
+@     :     1        |     +- ret=[]
+@     :     2        |     +- body:expr 1
+@     :     2        |        +- Block
+                     |           +- stmt 2
+@     :     4        |              +- Ret
+@     :     4        |                 +- expr 0
+@     :     4        |                    +- Number: 42
+                     +- stmt 10
+=    3:     1           +- Namespace name=std
+                           +- stmt 4
+=   11:     1              |  +- Annotation name=native
+                           +- stmt 5
+=    4:     1              |  +- Namespace name=booleans
+                           |     +- stmt 18
+=   28:    11              |        +- Fn name=print (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   35:     3              |           |  +- b: core.boolean
+@     :     1              |           +- ret=[]
+                           +- stmt 6
+=    5:     1              |  +- Namespace name=env
+                           |     +- stmt 17
+=   29:    12              |        +- Fn name=args (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params=[]
+@     :     5              |           +- ret=std.list.List
+                           +- stmt 7
+=    6:     1              |  +- Namespace name=list
+                           |     +- stmt 15
+=    7:     5              |     |  +- Struct name=List (native)
+                           |     +- stmt 16
+=   30:    13              |        +- Fn name=list_get (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   36:     5              |           |  +- list: List
+=   37:     4              |           |  +- index: number
+@     :     6              |           +- ret=std.str.string
+                           +- stmt 8
+=    8:     1              |  +- Namespace name=numbers
+                           |     +- stmt 13
+=   31:    14              |     |  +- Fn name=print (native)
+                           |     |     +- annotations
+@   11:     1              |     |     |  +- std.native
+                           |     |     +- params
+=   38:     4              |     |     |  +- n: core.number
+@     :     1              |     |     +- ret=[]
+                           |     +- stmt 14
+=   32:    15              |        +- Fn name=number_parse (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   39:     6              |           |  +- s: std.str.string
+@     :     2              |           +- ret=core.number
+                           +- stmt 9
+=    9:     1                 +- Namespace name=str
+                                 +- stmt 11
+=   10:     6                    |  +- Struct name=string (native)
+                                 +- stmt 12
+=   33:    16                       +- Fn name=print (native)
+                                       +- annotations
+@   11:     1                          |  +- std.native
+                                       +- params
+=   40:     6                          |  +- s: string
+@     :     1                          +- ret=[]
+
+--- types ---
+0: invalid
+1: void
+2: none
+3: boolean
+4: number
+5: struct 7
+6: struct 10
+7: f(4, 4) : 4
+8: f(4, 4) : 3
+9: f(3, 3) : 3
+10: f(4) : 4
+11: f(3) : 1
+12: f() : 5
+13: f(5, 4) : 6
+14: f(4) : 1
+15: f(6) : 4
+16: f(6) : 1
+17: f() : 1
