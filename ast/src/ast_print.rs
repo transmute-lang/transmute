@@ -149,8 +149,9 @@ impl AstPrint for Expression {
                     indent = ctx.indent(),
                     op = op.kind.as_str()
                 )?;
-
+                ctx.last = true;
                 ctx.next_level();
+                ctx.last = true;
                 ctx.ast_print_expression(*expr_id, opts, f)?;
                 ctx.prev_level();
             }

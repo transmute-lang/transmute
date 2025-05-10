@@ -78,9 +78,11 @@ impl<'a> ExitPointsResolver<'a> {
     }
 
     pub fn resolve(&self, expr: ExprId) -> Output {
-        if !matches!(&self.expressions[expr].kind, ExpressionKind::Block(_)) {
-            panic!("expected block got {:?}", &self.expressions[expr].kind)
-        }
+        assert!(
+            matches!(&self.expressions[expr].kind, ExpressionKind::Block(_)),
+            "expected block got {:?}",
+            &self.expressions[expr].kind
+        );
 
         self.visit_expression(expr, 0, false).0.finalize()
     }
@@ -249,8 +251,8 @@ impl<'a> ExitPointsResolver<'a> {
             StatementKind::LetFn(_, _, _, _, _) => (Collected::default(), false),
             StatementKind::Struct(_, _, _) => (Collected::default(), false),
             StatementKind::Annotation(_) => (Collected::default(), false),
-            StatementKind::Namespace(_, _, _) => todo!(),
             StatementKind::Use(_) => (Collected::default(), false),
+            StatementKind::Namespace(_, _, _) => (Collected::default(), false)
         }
     }
 }

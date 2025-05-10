@@ -1737,7 +1737,15 @@ impl LlvmImpl for NativeFnKind {
         params: &[ExprId],
     ) -> Value<'ctx> {
         match self {
-            NativeFnKind::NegNumber => todo!(),
+            NativeFnKind::NegNumber => {
+                let number =
+                    IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]], true));
+                codegen
+                    .builder
+                    .build_int_neg(number, "neg#")
+                    .unwrap()
+                    .into()
+            }
             NativeFnKind::AddNumberNumber => {
                 let lhs =
                     IntValue::from(codegen.gen_expression(mir, &mir.expressions[params[0]], true));

@@ -34,7 +34,6 @@ type Function<T, B> = (
 
 // todo:refactoring each `resolve_` method does the actual resolution instead of giving to its
 //  caller the information required to resolve
-// todo:refactoring review all the find variants
 
 pub struct Resolver {
     // out
@@ -266,11 +265,6 @@ impl Resolver {
         // STEP 3.a --------------------------------------------------------------------------------
         // todo:feature replace this with prelude 'use'
         // insert 'core' namespace symbols into the first scope
-        // let root_scope = &mut self
-        //     .scope_stack
-        //     .last_mut()
-        //     .expect("current scope exists")
-        //     .symbols;
 
         // todo:refactoring we redo the insertions in resolve_statements
         self.bring_namespace_symbols_into_scope(core_namespace_symbol_id);
@@ -1227,6 +1221,14 @@ impl Resolver {
 
         for &stmt_id in stmts {
             let stmt_type = if let Some(stmt) = hir.statements.remove(stmt_id) {
+                if matches!(stmt.kind, StatementKind::Namespace(..)) {
+                    self.diagnostics.report_err(
+                        "Namespace invalid at this location",
+                        stmt.span.clone(),
+                        (file!(), line!()),
+                    );
+                    return self.find_type_id_by_type(&Type::Invalid);
+                }
                 self.resolve_statement(hir, stmt)
             } else {
                 let stmt = self
@@ -1244,8 +1246,8 @@ impl Resolver {
                     StatementKind::LetFn(..) => self.find_type_id_by_type(&Type::Void),
                     StatementKind::Struct(..) => self.find_type_id_by_type(&Type::Void),
                     StatementKind::Annotation(..) => self.find_type_id_by_type(&Type::Void),
-                    StatementKind::Use(..) => todo!(),
-                    StatementKind::Namespace(..) => todo!(),
+                    StatementKind::Use(..) => self.find_type_id_by_type(&Type::Void),
+                    StatementKind::Namespace(..) => unreachable!("namespace invalid at this location"),
                 }
             };
 
@@ -2825,7 +2827,7 @@ mod tests {
     t_without_natives!(basic_fn => "let f(){}");
     t_without_natives!(basic_fn_in_namespace => "namespace ns { let f() {} }");
 
-    // todo remove
+    // todo: replace with test_resolution
     macro_rules! test_type_error {
         ($name:ident, $src:expr, $error:expr, $span:expr) => {
             #[test]
@@ -2858,7 +2860,7 @@ mod tests {
         };
     }
 
-    // todo remove
+    // todo: replace with test_resolution
     macro_rules! test_type_ok {
         ($name:ident, $src:expr) => {
             #[test]
@@ -4151,6 +4153,15 @@ mod tests {
         namespace ns2 {
             use ns1.S;
             let f(s: S) {}
+        }
+        "#
+    );
+    test_resolution!(
+        namespace_is_invalid_in_block,
+        r#"
+        let f() {
+            namespace a {
+            }
         }
         "#
     );

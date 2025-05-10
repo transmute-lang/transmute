@@ -65,16 +65,6 @@ pub struct TypeDef {
     pub span: Span,
 }
 
-impl TypeDef {
-    pub fn identifier_ref_id(&self) -> &[IdentRefId] {
-        match &self.kind {
-            TypeDefKind::Simple(ident_ref_id) => ident_ref_id,
-            TypeDefKind::Array(_, _) => todo!(),
-            _ => panic!("no identifier_ref_id for TypeDefKind::Dummy"),
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeDefKind {
     Simple(Vec<IdentRefId>),

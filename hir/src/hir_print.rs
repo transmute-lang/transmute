@@ -495,18 +495,8 @@ impl HirPrint for Statement<Typed, Bound> {
                 }
                 ctx.prev_level();
             }
-            StatementKind::Use(ident) => {
-                writeln!(
-                    f,
-                    "{indent}Use {idents}",
-                    indent =
-                        ctx.indent_symbol_def(ctx.identifier_ref_symbol(*ident.last().unwrap())),
-                    idents = ident
-                        .iter()
-                        .map(|id| ctx.identifier_ref_name(*id))
-                        .collect::<Vec<_>>()
-                        .join(".")
-                )?;
+            StatementKind::Use(_) => {
+                unreachable!("for as long as the resolver removes the use statements")
             }
             StatementKind::Annotation(ident) => {
                 writeln!(

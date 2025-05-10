@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Namespace invalid at this location",
+                span: 4:13; [57, 58],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

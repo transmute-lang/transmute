@@ -87,14 +87,11 @@ impl<'s> Lexer<'s> {
                 self.advance_consumed(span.len);
                 (TokenKind::Plus, span)
             }
-            '-' => match chars.next().unwrap_or_default() {
-                '0'..='9' => self.number(), // todo:question is that really useful?
-                _ => {
-                    self.advance_column();
-                    self.advance_consumed(span.len);
-                    (TokenKind::Minus, span)
-                }
-            },
+            '-' => {
+                self.advance_column();
+                self.advance_consumed(span.len);
+                (TokenKind::Minus, span)
+            }
             '*' => {
                 self.advance_column();
                 self.advance_consumed(span.len);
@@ -316,27 +313,6 @@ impl<'s> Lexer<'s> {
     }
 
     fn number(&mut self) -> (TokenKind, Span) {
-        let (negative, span) = match self
-            .remaining
-            .chars()
-            .next()
-            .expect("we have at least one char")
-        {
-            '-' => {
-                let span = Span::new(
-                    self.input_id(),
-                    self.location.line,
-                    self.location.column,
-                    self.pos,
-                    '-'.len_utf8(),
-                );
-                self.advance_consumed(span.len);
-
-                (true, Some(span))
-            }
-            _ => (false, None),
-        };
-
         let digits_span = self
             .take_while(|c| c.is_ascii_digit() || c == '_')
             .expect("we have at least one digit");
@@ -350,17 +326,10 @@ impl<'s> Lexer<'s> {
 
             parsed += (ch as u32 - '0' as u32) as i64;
         }
-        if negative {
-            parsed = -parsed;
-        }
 
         self.advance_consumed(digits_span.len);
 
-        (
-            TokenKind::Number(parsed),
-            span.map(|s| s.extend_to(&digits_span))
-                .unwrap_or(digits_span),
-        )
+        (TokenKind::Number(parsed), digits_span)
     }
 
     fn identifier(&mut self) -> (TokenKind, Span) {
@@ -947,7 +916,6 @@ mod tests {
     }
 
     lexer_test_next!(next_number, "42");
-    lexer_test_next!(next_neg_number, "-42");
     lexer_test_next!(next_number_suffix, "42a");
     lexer_test_next!(next_string, "\"hello\"");
     lexer_test_next!(next_string_empty, "\"\"");
@@ -1035,7 +1003,6 @@ mod tests {
     }
 
     lexer_test_fn!(number, number, "42" => 42);
-    lexer_test_fn!(neg_number, number, "-42" => -42);
 
     #[test]
     fn peek_next_peek_next() {

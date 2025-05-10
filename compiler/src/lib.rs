@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 use transmute_ast::ast_print::Options as AstPrintOptions;
-use transmute_hir::hir_print::Options as HirPrintOptions;
 use transmute_ast::parse;
 use transmute_core::error::Diagnostics;
 use transmute_core::input::Input;
+use transmute_hir::hir_print::Options as HirPrintOptions;
 use transmute_hir::resolve;
 use transmute_llvm::{LlvmIr, LlvmIrGen};
 use transmute_mir::make_mir;
