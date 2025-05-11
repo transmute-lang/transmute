@@ -1,16 +1,14 @@
 ---
 source: hir/src/passes/resolver.rs
-assertion_line: 4088
 expression: resolved_hir
 ---
 Err(
     Diagnostics {
         diagnostics: [
             Diagnostic {
-                message: "Struct 'S' is already defined in scope",
-                span: 3:20; [44, 45],
+                message: "Function 'f' is already defined in scope",
+                span: 3:13; [33, 34],
                 level: Error,
-                generated_at: hir/src/passes/resolver.rs:2263,
             },
         ],
         inputs: (),

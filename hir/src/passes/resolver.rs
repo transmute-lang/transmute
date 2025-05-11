@@ -187,9 +187,6 @@ impl Resolver {
         // will be visible from everywhere
 
         // STEP 1 ----------------------------------------------------------------------------------
-        // todo:refactoring this stack will be cleared after: find a way to skip pushing/popping
-        //  (and inserting).
-
         self.scopes.push();
         let root_root_namespace_symbol_id = self.insert_namespace(&hir, root);
         self.namespaces.push(root_root_namespace_symbol_id);
@@ -266,7 +263,6 @@ impl Resolver {
         // todo:feature replace this with prelude 'use'
         // insert 'core' namespace symbols into the first scope
 
-        // todo:refactoring we redo the insertions in resolve_statements
         self.bring_namespace_symbols_into_scope(core_namespace_symbol_id);
 
         // STEP 3.b --------------------------------------------------------------------------------
@@ -1247,7 +1243,9 @@ impl Resolver {
                     StatementKind::Struct(..) => self.find_type_id_by_type(&Type::Void),
                     StatementKind::Annotation(..) => self.find_type_id_by_type(&Type::Void),
                     StatementKind::Use(..) => self.find_type_id_by_type(&Type::Void),
-                    StatementKind::Namespace(..) => unreachable!("namespace invalid at this location"),
+                    StatementKind::Namespace(..) => {
+                        unreachable!("namespace invalid at this location")
+                    }
                 }
             };
 
@@ -1456,20 +1454,29 @@ impl Resolver {
             self.insert_structs(hir, &stmt_ids, false);
         }
 
-        // todo:feature manage duplicate functions (for whatever it means ... - at least same name
-        //   same first parameter type)
-
-        let symbol_id = *self
+        let (fn_symbol_id, param_types, ret_type_id) = self
             .function_symbols
             .get(&stmt_id)
-            .expect("function was inserted");
-
-        let (param_types, ret_type_id) = self.symbols[symbol_id].as_function();
-        let param_types = param_types.clone();
+            .cloned()
+            .map(|symbol_id| {
+                let (param_types, ret_type_id) = self.symbols[symbol_id].as_function();
+                let param_types = param_types.clone();
+                (symbol_id, param_types, ret_type_id)
+            })
+            // it may happen that the function is not found in case of duplicate def.
+            .unwrap_or({
+                let mut params = Vec::with_capacity(params.len());
+                params.resize(params.len(), self.find_type_id_by_type(&Type::Invalid));
+                (
+                    self.not_found_symbol_id,
+                    params,
+                    self.find_type_id_by_type(&Type::Invalid),
+                )
+            });
 
         #[cfg(test)]
         println!(
-            "{}:{}: Visiting function {name} ({symbol_id:?}) with return type {ret_type} in scope {scope}",
+            "{}:{}: Visiting function {name} ({fn_symbol_id:?}) with return type {ret_type} in scope {scope}",
             file!(),
             line!(),
             name = self.identifiers.get_by_left(&ident.id).unwrap(),
@@ -1602,7 +1609,7 @@ impl Resolver {
         self.scopes.pop();
 
         (
-            ident.bind(*self.function_symbols.get(&stmt_id).unwrap()),
+            ident.bind(fn_symbol_id),
             parameters,
             ret_type.typed(ret_type_id),
             if is_native {
@@ -1700,9 +1707,6 @@ impl Resolver {
             .struct_symbols
             .get(&stmt_id)
             .cloned()
-            // todo:refactoring same handling as for visit_function: if not found, return Err()
-            //   or, return not_found_symbol_id in visit_function. This requires that the find_*()
-            //   and resolve_*() function are reworked...
             // it may happen that the struct is not found in case of duplicate def.
             .unwrap_or(self.not_found_symbol_id);
 
@@ -1733,9 +1737,6 @@ impl Resolver {
             .annotation_symbols
             .get(&stmt_id)
             .cloned()
-            // todo:refactoring same handling as for visit_function: if not found, return Err()
-            //   or, return not_found_symbol_id in visit_function. This requires that the find_*()
-            //   and resolve_*() function are reworked...
             // it may happen that the annotation is not found in case of duplicate def.
             .unwrap_or(self.not_found_symbol_id);
 
@@ -1778,9 +1779,6 @@ impl Resolver {
             .namespace_symbols
             .get(&namespace_stmt_id)
             .cloned()
-            // todo:refactoring same handling as for visit_function: if not found, return Err()
-            //   or, return not_found_symbol_id in visit_function. This requires that the find_*()
-            //   and resolve_*() function are reworked...
             .unwrap_or(self.not_found_symbol_id);
 
         identifier.bind(symbol_id)
@@ -2030,6 +2028,8 @@ impl Resolver {
     fn is_symbol_in_current_scope(&self, ident_id: IdentId, kind: &SymbolKind) -> bool {
         // todo: review the "exists" meaning. make it coherent with find_symbol_*, and also with
         //  the FindSymbol trait
+        // todo:feature manage duplicate functions (for whatever it means ... - at least same name
+        //   same first parameter type)
         self.scopes
             .last_symbols_by_ident_id(ident_id)
             .iter()
@@ -2037,9 +2037,10 @@ impl Resolver {
             .any(|s| {
                 matches!(
                     (&s.kind, kind),
-                    (SymbolKind::Parameter(..), SymbolKind::Parameter(..))
-                        | (SymbolKind::Field(..), SymbolKind::Field(..))
+                    (SymbolKind::LetFn(..), SymbolKind::LetFn(..))
+                        | (SymbolKind::Parameter(..), SymbolKind::Parameter(..))
                         | (SymbolKind::Struct(..), SymbolKind::Struct(..))
+                        | (SymbolKind::Field(..), SymbolKind::Field(..))
                         | (SymbolKind::Annotation(..), SymbolKind::Annotation(..))
                 )
             })
@@ -2099,12 +2100,7 @@ impl Resolver {
 
                 let symbol_id = self.insert_symbol(
                     ident.id,
-                    SymbolKind::Namespace(
-                        ident.id,
-                        // self.namespaces.last().cloned(),
-                        // Default::default(),
-                        Default::default(),
-                    ),
+                    SymbolKind::Namespace(ident.id, Default::default()),
                     self.find_type_id_by_type(&Type::Void),
                 );
                 self.namespace_symbols.insert(stmt_id, symbol_id);
@@ -2112,11 +2108,13 @@ impl Resolver {
                 self.bring_symbol_into_namespace(ident.id, symbol_id);
 
                 self.namespaces.push(symbol_id);
+                self.scopes.push();
 
                 self.insert_namespaces(hir, &stmts);
                 self.insert_annotations(hir, &stmts);
                 self.insert_structs(hir, &stmts, true);
 
+                self.scopes.pop();
                 self.namespaces.pop();
 
                 symbol_id
@@ -2178,7 +2176,7 @@ impl Resolver {
     }
 
     /// Inserts all functions found in `stmts` into `self.function_symbols` (which itself contains
-    /// reference to `self.symbols`) as well as the current stack frame's symbol table, and if
+    /// reference to `self.symbols`) as well as the current scope's symbol table, and if
     /// `top_level` is `true` into the current namespace.
     fn insert_functions(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId], top_level: bool) {
         for stmt_id in stmts.iter() {
@@ -2197,20 +2195,30 @@ impl Resolver {
                         .map(|type_def_id| self.resolve_type_def(hir, type_def_id, true))
                         .unwrap_or(self.find_type_id_by_type(&Type::Void));
 
-                    let fn_type_id =
-                        self.insert_type(Type::Function(parameter_types.clone(), ret_type));
+                    let symbol_kind =
+                        SymbolKind::LetFn(ident.id, stmt.id, parameter_types.clone(), ret_type);
 
-                    let symbol_id = self.insert_symbol(
-                        ident.id,
-                        SymbolKind::LetFn(ident.id, stmt.id, parameter_types, ret_type),
-                        fn_type_id,
-                    );
+                    if self.is_symbol_in_current_scope(ident.id, &symbol_kind) {
+                        self.diagnostics.report_err(
+                            format!(
+                                "Function '{ident}' is already defined in scope",
+                                ident = self.identifiers.get_by_left(&ident.id).unwrap(),
+                            ),
+                            ident.span.clone(),
+                            (file!(), line!()),
+                        )
+                    } else {
+                        let fn_type_id =
+                            self.insert_type(Type::Function(parameter_types, ret_type));
 
-                    if top_level {
-                        self.bring_symbol_into_namespace(ident.id, symbol_id);
+                        let symbol_id = self.insert_symbol(ident.id, symbol_kind, fn_type_id);
+
+                        if top_level {
+                            self.bring_symbol_into_namespace(ident.id, symbol_id);
+                        }
+
+                        self.function_symbols.insert(*stmt_id, symbol_id);
                     }
-
-                    self.function_symbols.insert(*stmt_id, symbol_id);
                 }
                 StatementKind::Use(path) => {
                     self.resolve_ident_refs(hir, path, true);
@@ -2236,10 +2244,6 @@ impl Resolver {
     ///  - verify that no struct with the same name already exist in the current scope;
     ///  - resolve the fields' types.
     fn insert_structs(&mut self, hir: &UnresolvedHir, stmts: &[StmtId], top_level: bool) {
-        // we start by inserting all the structs we find, so that the types are available from
-        // everywhere in the current scope.
-
-        // first, we collect and insert all structs
         let structs = stmts
             .iter()
             .filter_map(|stmt| hir.statements.get(*stmt))
@@ -2377,13 +2381,46 @@ impl Resolver {
     }
 
     // todo:refactoring this is only used to find the TypeId of std.string.string (same as for
-    //  self.types_by_name...
+    //  self.types_by_name)...
     fn find_type_id_by_name(&mut self, name: &'static str) -> Option<TypeId> {
+        fn find_symbol_by_name(resolver: &mut Resolver, name: &str) -> Option<SymbolId> {
+            let path = name.split('.').collect::<Vec<&str>>();
+            debug_assert!(!path.is_empty());
+
+            if path.len() == 1 {
+                todo!("Search for symbol in current scope, crawling up as needed")
+            }
+
+            let mut ns_symbols = resolver.symbols[*resolver.namespaces.root().unwrap()].as_namespace();
+            for &name in &path[0..path.len() - 1] {
+                let ident_id = *resolver.identifiers.get_by_right(name)?;
+                let symbols = ns_symbols
+                    .get(&ident_id)?
+                    .iter()
+                    .map(|sid| &resolver.symbols[*sid])
+                    .filter(|s| matches!(s.kind, SymbolKind::Namespace(..)))
+                    .collect::<Vec<_>>();
+
+                debug_assert!(symbols.len() <= 1);
+
+                ns_symbols = symbols.first()?.as_namespace();
+            }
+
+            let ident_id = resolver
+                .identifiers
+                .get_by_right(*path.last().unwrap())
+                .unwrap();
+            let symbols = ns_symbols.get(ident_id)?;
+
+            debug_assert_eq!(symbols.len(), 1);
+            symbols.first().cloned()
+        }
+
         if let Some(type_id) = self.types_by_name.get(name) {
             return Some(*type_id);
         }
 
-        let symbol_id = self.find_symbol_by_name(name)?;
+        let symbol_id = find_symbol_by_name(self, name)?;
         let type_id = self.symbols[symbol_id].type_id;
         self.types_by_name.insert(name, type_id);
         Some(type_id)
@@ -2421,41 +2458,6 @@ impl Resolver {
                 SymbolKind::Field(_, _, _) => Some(s.id),
                 _ => None,
             })
-    }
-
-    // todo:refactoring this function is only used from fund_type_by_id, which itself is only used
-    //  to find the string TypeId... the whole is a bit overkill
-    fn find_symbol_by_name(&mut self, name: &str) -> Option<SymbolId> {
-        let path = name.split('.').collect::<Vec<&str>>();
-        debug_assert!(!path.is_empty());
-
-        if path.len() == 1 {
-            todo!("Search for symbol in current scope, crawling up as needed")
-        }
-
-        let mut ns_symbols = self.symbols[*self.namespaces.root().unwrap()].as_namespace();
-        for &name in &path[0..path.len() - 1] {
-            let ident_id = *self.identifiers.get_by_right(name)?;
-            let symbols = ns_symbols
-                .get(&ident_id)?
-                .iter()
-                .map(|sid| &self.symbols[*sid])
-                .filter(|s| matches!(s.kind, SymbolKind::Namespace(..)))
-                .collect::<Vec<_>>();
-
-            debug_assert!(symbols.len() <= 1);
-
-            ns_symbols = symbols.first()?.as_namespace();
-        }
-
-        let ident_id = self
-            .identifiers
-            .get_by_right(*path.last().unwrap())
-            .unwrap();
-        let symbols = ns_symbols.get(ident_id)?;
-
-        debug_assert_eq!(symbols.len(), 1);
-        symbols.first().cloned()
     }
 
     /// Finds the `SymbolId` that the `ident_ids` refer to. Does not try to resolve `IdentifierRef`
@@ -3355,12 +3357,6 @@ mod tests {
         Span::new(InputId::from(0), 1, 29, 28, 1)
     );
     test_type_error!(
-        duplicate_struct,
-        "struct S {} struct S {}",
-        "Struct 'S' is already defined in scope",
-        Span::new(InputId::from(0), 1, 20, 19, 1)
-    );
-    test_type_error!(
         function_void_cannot_return_number,
         "let f() = { ret 1; }",
         "Function f expected to return type void, got number",
@@ -4084,18 +4080,44 @@ mod tests {
         "#
     );
 
-    // fixme make it pass
-    // test_resolution!(
-    //     struct_same_name,
-    //     r#"
-    //     namespace ns1 {
-    //         struct S {}
-    //         namespace ns2 {
-    //             struct S {}
-    //         }
-    //     }
-    //     "#
-    // );
+    // todo:test align with is_symbol_in_current_scope (and see todo there as well)
+    test_resolution!(
+        duplicate_function_definition,
+        r#"
+        let f () {}
+        let f () {}
+        "#
+    );
+    test_resolution!(
+        duplicate_struct_definition,
+        r#"
+        struct S {}
+        struct S {}
+        "#
+    );
+
+    test_resolution!(
+        struct_same_name,
+        r#"
+        namespace ns1 {
+            struct S {}
+            namespace ns2 {
+                struct S {}
+            }
+        }
+        "#
+    );
+    test_resolution!(
+        fn_same_name,
+        r#"
+        namespace ns1 {
+            let f() {}
+            namespace ns2 {
+                let f() {}
+            }
+        }
+        "#
+    );
 
     test_resolution!(
         use_struct_target_exists,

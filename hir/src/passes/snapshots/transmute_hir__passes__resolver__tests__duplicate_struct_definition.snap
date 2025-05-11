@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Struct 'S' is already defined in scope",
+                span: 3:16; [36, 37],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)
