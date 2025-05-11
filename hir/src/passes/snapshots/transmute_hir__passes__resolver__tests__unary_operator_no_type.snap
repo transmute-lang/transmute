@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "No function 'neg' found for parameters of types (no type)",
+                span: 1:9; [8, 9],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

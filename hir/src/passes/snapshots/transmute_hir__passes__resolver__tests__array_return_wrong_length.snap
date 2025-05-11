@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Function f expected to return type array[1], got array[2]",
+                span: 1:24; [23, 29],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

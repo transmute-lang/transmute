@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Identifier 'unknown' not found",
+                span: 2:10; [10, 17],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

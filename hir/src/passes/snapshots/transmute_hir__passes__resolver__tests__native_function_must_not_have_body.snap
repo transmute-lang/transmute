@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Native function f must not have a body",
+                span: 3:37; [82, 91],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

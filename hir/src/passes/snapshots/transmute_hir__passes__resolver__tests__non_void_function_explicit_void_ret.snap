@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Function f expected to return type number, got void",
+                span: 1:17; [16, 24],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

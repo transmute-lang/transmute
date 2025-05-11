@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Identifier 'n' not found",
+                span: 1:13; [12, 13],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

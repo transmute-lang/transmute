@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Void values cannot be used as array elements at index 0",
+                span: 2:32; [32, 35],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

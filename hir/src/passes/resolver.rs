@@ -2391,7 +2391,8 @@ impl Resolver {
                 todo!("Search for symbol in current scope, crawling up as needed")
             }
 
-            let mut ns_symbols = resolver.symbols[*resolver.namespaces.root().unwrap()].as_namespace();
+            let mut ns_symbols =
+                resolver.symbols[*resolver.namespaces.root().unwrap()].as_namespace();
             for &name in &path[0..path.len() - 1] {
                 let ident_id = *resolver.identifiers.get_by_right(name)?;
                 let symbols = ns_symbols
@@ -2729,157 +2730,7 @@ mod tests {
     use transmute_ast::lexer::Lexer;
     use transmute_ast::parser::Parser;
     use transmute_ast::CompilationUnit;
-    use transmute_core::error::Level;
     use transmute_core::ids::InputId;
-    use transmute_core::span::Span;
-
-    // todo: replace with test_resolution
-    macro_rules! t_with_natives {
-        ($name:ident => $src:expr) => {
-            #[test]
-            fn $name() {
-                let mut compilation_unit: CompilationUnit = Default::default();
-
-                Parser::new(
-                    &mut compilation_unit,
-                    None,
-                    Lexer::new(InputId::from(0), &format!("{}\nnamespace core {{}}", $src)),
-                )
-                .parse();
-
-                let hir = UnresolvedHir::from(compilation_unit.into_ast().unwrap())
-                    .resolve(Natives::default())
-                    .unwrap();
-
-                assert_debug_snapshot!(hir);
-            }
-        };
-    }
-
-    // todo: replace with test_resolution_without_native (to create)
-    macro_rules! t_without_natives {
-        ($name:ident => $src:expr) => {
-            #[test]
-            fn $name() {
-                let mut compilation_unit: CompilationUnit = Default::default();
-
-                Parser::new(
-                    &mut compilation_unit,
-                    None,
-                    Lexer::new(InputId::from(0), &format!("{}\nnamespace core {{}}", $src)),
-                )
-                .parse();
-
-                let hir = UnresolvedHir::from(compilation_unit.into_ast().unwrap())
-                    .resolve(Natives::empty())
-                    .unwrap();
-
-                assert_debug_snapshot!(hir);
-            }
-        };
-    }
-
-    t_with_natives!(resolve_ref_to_parameter => "let x(n: number): number = { n; }");
-    t_with_natives!(resolve_ref_to_let => "let x(): number = { let n = 0; n; }");
-    t_with_natives!(resolve_ref_to_let_fn => "let x() = { } x();");
-    t_with_natives!(resolve_ref_to_parameter_nested=>"let x(n: number): number = { while true { ret n; } }");
-
-    #[test]
-    fn resolve_missing_def() {
-        let mut compilation_unit: CompilationUnit = Default::default();
-        Parser::new(
-            &mut compilation_unit,
-            None,
-            Lexer::new(InputId::from(0), "let x() = { n; } namespace core {}"),
-        )
-        .parse();
-        let actual_diagnostics = UnresolvedHir::from(compilation_unit.into_ast().unwrap())
-            .resolve(Natives::default())
-            .unwrap_err();
-
-        let actual_diagnostics = actual_diagnostics
-            .iter()
-            .map(|d| (d.message.as_str(), d.span.clone(), d.level))
-            .collect::<Vec<(&str, Span, Level)>>();
-
-        let expected_diagnostics = vec![(
-            "Identifier 'n' not found",
-            Span::new(InputId::from(0), 1, 13, 12, 1),
-            Level::Error,
-        )];
-
-        assert_eq!(actual_diagnostics, expected_diagnostics);
-    }
-
-    t_with_natives!(rebinding => "let x = true; let x = 1; x + 1;");
-    t_with_natives!(fibonacci_rec => r#"
-        let main(n: number): number {
-            if n < 2 {
-                ret n;
-            }
-            main(n - 1) + main(n - 2);
-        }
-        "#);
-    t_without_natives!(bindings_and_types => "struct S { f: S } let f(a: S, b: S): S { a; }");
-    t_without_natives!(annotation_function_bindings => "annotation a; @a let f() {}");
-    t_without_natives!(annotation_native_function_bindings => "namespace std { annotation native; } @std.native let f() {}");
-    t_without_natives!(annotation_struct_bindings => "annotation a; @a struct S {}");
-    t_without_natives!(annotation_native_struct_bindings => "namespace std { annotation native; } @std.native struct S {}");
-
-    t_without_natives!(basic_fn => "let f(){}");
-    t_without_natives!(basic_fn_in_namespace => "namespace ns { let f() {} }");
-
-    // todo: replace with test_resolution
-    macro_rules! test_type_error {
-        ($name:ident, $src:expr, $error:expr, $span:expr) => {
-            #[test]
-            fn $name() {
-                let mut compilation_unit = CompilationUnit::default();
-                Parser::new(
-                    &mut compilation_unit,
-                    None,
-                    Lexer::new(InputId::from(0), &format!("{}\nnamespace core {{}}", $src)),
-                )
-                .parse();
-
-                let actual_diagnostics = UnresolvedHir::from(compilation_unit.into_ast().unwrap())
-                    .resolve(Natives::default())
-                    .unwrap_err();
-
-                let actual_diagnostics_str = actual_diagnostics
-                    .iter()
-                    .map(|d| (d.message.as_str(), d.span.clone(), d.level))
-                    .collect::<Vec<(&str, Span, Level)>>();
-
-                let expected_diagnostics = vec![($error, $span, Level::Error)];
-
-                assert_eq!(
-                    actual_diagnostics_str, expected_diagnostics,
-                    "{}",
-                    actual_diagnostics
-                );
-            }
-        };
-    }
-
-    // todo: replace with test_resolution
-    macro_rules! test_type_ok {
-        ($name:ident, $src:expr) => {
-            #[test]
-            fn $name() {
-                let mut compilation_unit = CompilationUnit::default();
-                Parser::new(
-                    &mut compilation_unit,
-                    None,
-                    Lexer::new(InputId::from(0), &format!("{}\nnamespace core {{}}", $src)),
-                )
-                .parse();
-                UnresolvedHir::from(compilation_unit.into_ast().unwrap())
-                    .resolve(Natives::new())
-                    .expect("ok expected");
-            }
-        };
-    }
 
     impl ResolvedHir {
         fn symbols_with_invalid_type(&self) -> Vec<&Symbol> {
@@ -2995,7 +2846,7 @@ mod tests {
     }
 
     macro_rules! test_resolution {
-        ($name:ident, $src:expr) => {
+        ($name:ident, $src:expr, $natives:expr) => {
             #[test]
             fn $name() {
                 let mut compilation_unit = CompilationUnit::default();
@@ -3006,8 +2857,8 @@ mod tests {
                 )
                 .parse();
 
-                let resolved_hir = UnresolvedHir::from(compilation_unit.into_ast().unwrap())
-                    .resolve(Natives::new());
+                let resolved_hir =
+                    UnresolvedHir::from(compilation_unit.into_ast().unwrap()).resolve($natives);
 
                 if let Ok(hir) = &resolved_hir {
                     let symbols_with_invalid_type = hir.symbols_with_invalid_type();
@@ -3046,67 +2897,103 @@ mod tests {
                 assert_debug_snapshot!(resolved_hir);
             }
         };
+        ($name:ident, $src:expr) => {
+            test_resolution!($name, $src, Natives::new());
+        };
     }
 
-    test_type_error!(
-        let_expr_type_is_void,
-        "let x = if true { ret 42; } else { ret 43; };",
-        "Expected some type, got no type",
-        Span::new(InputId::from(0), 1, 9, 8, 36)
+    test_resolution!(
+        resolve_ref_to_parameter,
+        "let x(n: number): number = { n; }"
+    );
+    test_resolution!(resolve_ref_to_let, "let x(): number = { let n = 0; n; }");
+    test_resolution!(resolve_ref_to_let_fn, "let x() = { } x();");
+    test_resolution!(
+        resolve_ref_to_parameter_nested,
+        "let x(n: number): number = { while true { ret n; } }"
     );
 
-    test_type_error!(
-        if_expected_boolean_condition_got_number,
-        "if 42 {}",
-        "Condition expected to be of type boolean, got number",
-        Span::new(InputId::from(0), 1, 4, 3, 2)
+    test_resolution!(resolve_missing_def, "let x() = { n; }");
+
+    test_resolution!(rebinding, "let x = true; let x = 1; x + 1;");
+    test_resolution!(
+        fibonacci_rec,
+        r#"
+        let main(n: number): number {
+            if n < 2 {
+                ret n;
+            }
+            main(n - 1) + main(n - 2);
+        }
+        "#
     );
-    test_type_ok!(if_expected_boolean_condition_got_boolean, "if true {}");
-    test_type_error!(
+
+    test_resolution!(
+        bindings_and_types,
+        "struct S { f: S } let f(a: S, b: S): S { a; }",
+        Natives::empty()
+    );
+    test_resolution!(
+        annotation_function_bindings,
+        "annotation a; @a let f() {}",
+        Natives::empty()
+    );
+    test_resolution!(
+        annotation_native_function_bindings,
+        "namespace std { annotation native; } @std.native let f() {}",
+        Natives::empty()
+    );
+    test_resolution!(
+        annotation_struct_bindings,
+        "annotation a; @a struct S {}",
+        Natives::empty()
+    );
+    test_resolution!(
+        annotation_native_struct_bindings,
+        "namespace std { annotation native; } @std.native struct S {}",
+        Natives::empty()
+    );
+    test_resolution!(basic_fn, "let f(){}", Natives::empty());
+    test_resolution!(
+        basic_fn_in_namespace,
+        "namespace ns { let f() {} }",
+        Natives::empty()
+    );
+
+    test_resolution!(
+        let_expr_type_is_void,
+        "let x = if true { ret 42; } else { ret 43; };"
+    );
+
+    test_resolution!(if_expected_boolean_condition_got_number, "if 42 {}");
+    test_resolution!(if_expected_boolean_condition_got_boolean, "if true {}");
+    test_resolution!(
         if_expected_boolean_condition_got_number_expr_binary,
-        "if 40 + 2 {}",
-        "Condition expected to be of type boolean, got number",
-        Span::new(InputId::from(0), 1, 4, 3, 6)
+        "if 40 + 2 {}"
     );
-    test_type_error!(
+    test_resolution!(
         if_expected_boolean_condition_got_number_expr_unary,
-        "if - 42 {}",
-        "Condition expected to be of type boolean, got number",
-        Span::new(InputId::from(0), 1, 4, 3, 4)
+        "if - 42 {}"
     );
-    test_type_error!(
+    test_resolution!(
         if_expected_boolean_condition_got_no_type,
-        "if if true { ret 42; } else { ret 43; } {}",
-        "Condition expected to be of type boolean, got no type",
-        Span::new(InputId::from(0), 1, 4, 3, 36)
+        "if if true { ret 42; } else { ret 43; } {}"
     );
-    test_type_ok!(
+    test_resolution!(
         if_expected_boolean_condition_got_boolean_expr,
         "if 42 > 40 {}"
     );
-    test_type_error!(
+    test_resolution!(
         if_expected_boolean_condition_got_number_identifier,
-        "let forty_two = 42; if forty_two {}",
-        "Condition expected to be of type boolean, got number",
-        Span::new(InputId::from(0), 1, 24, 23, 9)
+        "let forty_two = 42; if forty_two {}"
     );
-    test_type_ok!(
+    test_resolution!(
         if_expected_boolean_condition_got_boolean_identifier,
         "let t = true; if t {}"
     );
-    test_type_error!(
-        if_mismatch_branch_types,
-        "if true { true; } else { 42; }",
-        "Expected type boolean, got number",
-        Span::new(InputId::from(0), 1, 24, 23, 7)
-    );
-    test_type_error!(
-        if_no_false_branch_to_val,
-        "let n = 0; n = if true { 42; };",
-        "RHS expected to be of type number, got void",
-        Span::new(InputId::from(0), 1, 16, 15, 15)
-    );
-    test_type_ok!(
+    test_resolution!(if_mismatch_branch_types, "if true { true; } else { 42; }");
+    test_resolution!(if_no_false_branch_to_val, "let n = 0; n = if true { 42; };");
+    test_resolution!(
         if_false_branch_returns_to_val,
         r#"
             let f(): boolean = {
@@ -3120,7 +3007,7 @@ mod tests {
             };
         "#
     );
-    test_type_ok!(
+    test_resolution!(
         if_true_branch_returns_to_val,
         r#"
             let f(): boolean = {
@@ -3134,118 +3021,93 @@ mod tests {
             };
         "#
     );
-    test_type_ok!(if_no_false_branch, "if true { 42; }");
-    test_type_ok!(if_type, "let n = 0 + if true { 42; } else { 0; };");
-    test_type_error!(
+    test_resolution!(if_no_false_branch, "if true { 42; }");
+    test_resolution!(if_type, "let n = 0 + if true { 42; } else { 0; };");
+    test_resolution!(
         if_expected_boolean_condition_got_number_in_else_if,
-        "if true {} else if 42 {}",
-        "Condition expected to be of type boolean, got number",
-        Span::new(InputId::from(0), 1, 20, 19, 2)
+        "if true {} else if 42 {}"
     );
-    test_type_ok!(if_type_of_else_if, "if true { 42; } else if false { 0; }");
-    test_type_error!(
-        while_expected_boolean_condition_got_number,
-        "while 42 {}",
-        "Condition expected to be of type boolean, got number",
-        Span::new(InputId::from(0), 1, 7, 6, 2)
-    );
-    test_type_error!(
+    test_resolution!(if_type_of_else_if, "if true { 42; } else if false { 0; }");
+    test_resolution!(while_expected_boolean_condition_got_number, "while 42 {}");
+    test_resolution!(
         while_expected_boolean_condition_got_no_type,
-        "while if true { ret 42; } else { ret 43; } {}",
-        "Condition expected to be of type boolean, got no type",
-        Span::new(InputId::from(0), 1, 7, 6, 36)
+        "while if true { ret 42; } else { ret 43; } {}"
     );
-    test_type_ok!(
+    test_resolution!(
         while_expected_boolean_condition_got_boolean,
         "while true {}"
     );
-    test_type_error!(
+    test_resolution!(
         while_expected_boolean_condition_got_number_expr_binary,
-        "while 40 + 2 {}",
-        "Condition expected to be of type boolean, got number",
-        Span::new(InputId::from(0), 1, 7, 6, 6)
+        "while 40 + 2 {}"
     );
-    test_type_error!(
+    test_resolution!(
         while_expected_boolean_condition_got_number_expr_unary,
-        "while - 42 {}",
-        "Condition expected to be of type boolean, got number",
-        Span::new(InputId::from(0), 1, 7, 6, 4)
+        "while - 42 {}"
     );
-    test_type_ok!(
+    test_resolution!(
         while_expected_boolean_condition_got_boolean_expr,
         "while 42 > 40 {}"
     );
-    test_type_error!(
+    test_resolution!(
         while_expected_boolean_condition_got_number_identifier,
-        "let forty_two = 42; while forty_two {}",
-        "Condition expected to be of type boolean, got number",
-        Span::new(InputId::from(0), 1, 27, 26, 9)
+        "let forty_two = 42; while forty_two {}"
     );
-    test_type_ok!(
+    test_resolution!(
         while_expected_boolean_condition_got_boolean_identifier,
         "let t = true; while t {}"
     );
-    test_type_error!(
+    test_resolution!(
         assignment_wrong_type,
-        "let forty_two = 42; forty_two = true;",
-        "RHS expected to be of type number, got boolean",
-        Span::new(InputId::from(0), 1, 33, 32, 4)
+        "let forty_two = 42; forty_two = true;"
     );
-    test_type_ok!(
+    test_resolution!(
         assignment_correct_type,
         "let forty_two = 0; forty_two = 42;"
     );
-    test_type_ok!(
+    test_resolution!(
         assignment_to_function_parameter_correct_type,
         "let f(n: number): number = { n = 1; }"
     );
-    test_type_error!(
+    test_resolution!(
         assignment_to_function_parameter_incorrect_type,
-        "let f(n: number): number = { n = true; }",
-        "RHS expected to be of type number, got boolean",
-        Span::new(InputId::from(0), 1, 34, 33, 4)
+        "let f(n: number): number = { n = true; }"
     );
-    test_type_error!(
+    test_resolution!(
         assignment_wrong_type_from_function,
-        "let forty_two = 42; let f(): boolean = true; forty_two = f();",
-        "RHS expected to be of type number, got boolean",
-        Span::new(InputId::from(0), 1, 58, 57, 3)
+        "let forty_two = 42; let f(): boolean = true; forty_two = f();"
     );
-    test_type_error!(
+    test_resolution!(
         assignment_wrong_type_from_void_function,
-        "let forty_two = 42; let f() = {} forty_two = f();",
-        "RHS expected to be of type number, got void",
-        Span::new(InputId::from(0), 1, 46, 45, 3)
+        "let forty_two = 42; let f() = {} forty_two = f();"
     );
-    test_type_error!(
+    test_resolution!(
         assignment_always_returning_expr,
-        "let forty_two = 42; forty_two = if true { ret 42; } else { ret 43; };",
-        "RHS expected to be of type number, got no type",
-        Span::new(InputId::from(0), 1, 33, 32, 36)
+        "let forty_two = 42; forty_two = if true { ret 42; } else { ret 43; };"
     );
-    test_type_ok!(
+    test_resolution!(
         assignment_correct_type_from_function,
         "let forty_two = 0; let f(): number = 42; forty_two = f();"
     );
-    test_type_ok!(function_is_allowed_to_return_void, "let f() = { 1; }");
-    test_type_ok!(function_has_struct_params, "struct S {} let f(s: S) = { }");
-    test_type_ok!(
+    test_resolution!(function_is_allowed_to_return_void, "let f() = { 1; }");
+    test_resolution!(function_has_struct_params, "struct S {} let f(s: S) = { }");
+    test_resolution!(
         struct_instantiation,
         "struct S { x: number } let s = S { x: 1 };"
     );
-    test_type_ok!(
+    test_resolution!(
         function_returns_struct,
         "struct S {} let f(): S = { S { }; }"
     );
-    test_type_ok!(
+    test_resolution!(
         function_returns_struct_field,
         "struct S { field: number } let f(s: S): number = { s.field; }"
     );
-    test_type_ok!(
+    test_resolution!(
         access_struct_field_read,
         "struct S { field: boolean } let s = S { field: true }; if s.field { }"
     );
-    test_type_ok!(
+    test_resolution!(
         access_struct_field_nested_read,
         r#"
         struct S1 { s: S2 }
@@ -3259,7 +3121,7 @@ mod tests {
         "#
     );
 
-    test_type_ok!(
+    test_resolution!(
         if_evaluates_to_struct,
         r#"
         struct S { f: number }
@@ -3274,181 +3136,94 @@ mod tests {
         }.f = 42;
         "#
     );
-    test_type_error!(
+    test_resolution!(
         access_struct_field_read_invalid_type,
-        "struct S { field: number } let s = S { field: 1 }; if s.field { }",
-        "Condition expected to be of type boolean, got number",
-        Span::new(InputId::from(0), 1, 55, 54, 7)
+        "struct S { field: number } let s = S { field: 1 }; if s.field { }"
     );
-    test_type_ok!(
+    test_resolution!(
         access_struct_field_write,
         "struct S { field: number } let s = S { field: 1 }; s.field = 1;"
     );
-    test_type_error!(
+    test_resolution!(
         access_struct_field_write_wrong_type,
-        "struct S { field: number } let s = S { field: 1 }; s.field = false;",
-        "RHS expected to be of type number, got boolean",
-        Span::new(InputId::from(0), 1, 62, 61, 5)
+        "struct S { field: number } let s = S { field: 1 }; s.field = false;"
     );
-    test_type_error!(
+    test_resolution!(
         function_returns_void_but_expect_struct,
-        "struct S {} let f(): S = { }",
-        "Function f expected to return type struct, got void",
-        Span::new(InputId::from(0), 1, 26, 25, 3)
+        "struct S {} let f(): S = { }"
     );
-    test_type_error!(
-        struct_unknown,
-        "let s = S {};",
-        "Identifier 'S' not found",
-        Span::new(InputId::from(0), 1, 9, 8, 1)
-    );
-    test_type_error!(
-        struct_length,
-        "struct S { x: number } let s = S { };",
-        "Struct fields differ in length",
-        Span::new(InputId::from(0), 1, 32, 31, 5)
-    );
-    test_type_error!(
-        duplicate_struct_field,
-        "struct S { x: number, x: number }",
-        "Field 'x' is already defined",
-        Span::new(InputId::from(0), 1, 23, 22, 1)
-    );
-    test_type_error!(
+    test_resolution!(struct_unknown, "let s = S {};");
+    test_resolution!(struct_length, "struct S { x: number } let s = S { };");
+    test_resolution!(duplicate_struct_field, "struct S { x: number, x: number }");
+    test_resolution!(
         struct_invalid_field_type,
-        "struct S { x: number } let s = S { x: 1 == 1 };",
-        "Invalid type for field 'x': expected number, got boolean",
-        Span::new(InputId::from(0), 1, 39, 38, 6)
+        "struct S { x: number } let s = S { x: 1 == 1 };"
     );
-    test_type_error!(
-        access_non_struct,
-        "1.x;",
-        "Expected namespace or struct type, got number",
-        Span::new(InputId::from(0), 1, 1, 0, 1)
-    );
-    test_type_error!(
-        access_namespace,
-        "namespace a {} a.x;",
-        "No symbol 'x' found in 'a'",
-        Span::new(InputId::from(0), 1, 18, 17, 1)
-    );
-    test_type_error!(
+    test_resolution!(access_non_struct, "1.x;");
+    test_resolution!(access_namespace, "namespace a {} a.x;");
+    test_resolution!(
         access_non_namespace_then_non_namespace,
-        "struct S {} @S.x let f() {}",
-        "Expected 'S' to be a namespace",
-        Span::new(InputId::from(0), 1, 14, 13, 1)
+        "struct S {} @S.x let f() {}"
     );
-    test_type_error!(
+    test_resolution!(
         access_namespace_then_non_namespace,
-        "namespace a { struct S {} } @a.S.x let f() {}",
-        "Expected 'S' to be a namespace",
-        Span::new(InputId::from(0), 1, 32, 31, 1)
+        "namespace a { struct S {} } @a.S.x let f() {}"
     );
-    test_type_error!(
+    test_resolution!(
         access_namespace_then_non_namespace_then_non_namespace,
-        "namespace a { struct S {} } @a.S.x.y let f() {}",
-        "Expected 'S' to be a namespace",
-        Span::new(InputId::from(0), 1, 32, 31, 1)
+        "namespace a { struct S {} } @a.S.x.y let f() {}"
     );
-    test_type_error!(
+    test_resolution!(
         access_struct_unknown_field,
-        "struct S {} let a = S {}; a.x;",
-        "No field 'x' found in struct S",
-        Span::new(InputId::from(0), 1, 29, 28, 1)
+        "struct S {} let a = S {}; a.x;"
     );
-    test_type_error!(
-        function_void_cannot_return_number,
-        "let f() = { ret 1; }",
-        "Function f expected to return type void, got number",
-        Span::new(InputId::from(0), 1, 17, 16, 1)
-    );
-    test_type_error!(
-        function_invalid_return_type,
-        "let f(): unknown = { }",
-        "Identifier 'unknown' not found",
-        Span::new(InputId::from(0), 1, 10, 9, 7)
-    );
-    test_type_error!(
+    test_resolution!(function_void_cannot_return_number, "let f() = { ret 1; }");
+    test_resolution!(function_invalid_return_type, "let f(): unknown = { }");
+    test_resolution!(
         function_wrong_return_type,
-        "let f(): boolean = { true; 42; }",
-        "Function f expected to return type boolean, got number",
-        Span::new(InputId::from(0), 1, 28, 27, 2)
+        "let f(): boolean = { true; 42; }"
     );
-    test_type_error!(
-        function_wrong_return_type_2,
-        "let f(): boolean = { }",
-        "Function f expected to return type boolean, got void",
-        Span::new(InputId::from(0), 1, 20, 19, 3)
-    );
-    test_type_error!(
+    test_resolution!(function_wrong_return_type_2, "let f(): boolean = { }");
+    test_resolution!(
         function_wrong_early_return_type,
-        "let f(): number = { if false { ret false; } 42; }",
-        "Function f expected to return type number, got boolean",
-        Span::new(InputId::from(0), 1, 36, 35, 5)
+        "let f(): number = { if false { ret false; } 42; }"
     );
-    test_type_ok!(
+    test_resolution!(
         function_parameter_returned_correct_type,
         "let f(n: number): number = { n; }"
     );
-    test_type_error!(
+    test_resolution!(
         function_parameter_returned_wrong_type,
-        "let f(n: number): boolean = { n; }",
-        "Function f expected to return type boolean, got number",
-        Span::new(InputId::from(0), 1, 31, 30, 1)
+        "let f(n: number): boolean = { n; }"
     );
-    test_type_error!(
+    test_resolution!(
         function_parameter_invalid_type,
-        "let f(n: unknown) = { let a = n + true; }",
-        "Identifier 'unknown' not found",
-        Span::new(InputId::from(0), 1, 10, 9, 7)
+        "let f(n: unknown) = { let a = n + true; }"
     );
-    test_type_error!(
+    test_resolution!(
         function_parameter_incorrect_type,
-        "let f(n: number) = { let a = n + true; }",
-        "No function 'add' found for parameters of types (number, boolean)",
-        Span::new(InputId::from(0), 1, 32, 31, 1)
+        "let f(n: number) = { let a = n + true; }"
     );
-    test_type_error!(
+    test_resolution!(
         function_parameter_incorrect_arity,
-        "let f(n: number, b: boolean) = { f(0); }",
-        "No function 'f' found for parameters of types (number)",
-        Span::new(InputId::from(0), 1, 34, 33, 1)
+        "let f(n: number, b: boolean) = { f(0); }"
     );
-    test_type_error!(
+    test_resolution!(
         duplicate_function_parameter_name,
-        "let f(n: number, n: number) = { }",
-        "Parameter 'n' is already defined",
-        Span::new(InputId::from(0), 1, 18, 17, 1)
+        "let f(n: number, n: number) = { }"
     );
-    test_type_error!(
-        function_not_found,
-        "let f() = { g(); }",
-        "No function 'g' found for parameters of types ()",
-        Span::new(InputId::from(0), 1, 13, 12, 1)
-    );
-    test_type_ok!(
+    test_resolution!(function_not_found, "let f() = { g(); }");
+    test_resolution!(
         function_invalid_return_type_after_valid_return_type,
         "let f(n: number): number = { ret 41; ret true; }"
     );
-    test_type_error!(
-        unary_operator_invalid_type,
-        "let n = - true;",
-        "No function 'neg' found for parameters of types (boolean)",
-        Span::new(InputId::from(0), 1, 9, 8, 1)
-    );
-    test_type_error!(
+    test_resolution!(unary_operator_invalid_type, "let n = - true;");
+    test_resolution!(
         unary_operator_no_type,
-        "let n = - if true { ret 42; } else { ret 43; };",
-        "No function 'neg' found for parameters of types (no type)",
-        Span::new(InputId::from(0), 1, 9, 8, 1)
+        "let n = - if true { ret 42; } else { ret 43; };"
     );
-    test_type_error!(
-        call_variable,
-        "let n = 10; n();",
-        "No function 'n' found for parameters of types ()",
-        Span::new(InputId::from(0), 1, 13, 12, 1)
-    );
-    test_type_ok!(
+    test_resolution!(call_variable, "let n = 10; n();");
+    test_resolution!(
         unreachable_statement1,
         r#"
         let f(n: number): number = {
@@ -3463,7 +3238,7 @@ mod tests {
         }
         "#
     );
-    test_type_ok!(
+    test_resolution!(
         unreachable_statement3,
         r#"
         let f(n: number): number = {
@@ -3474,7 +3249,7 @@ mod tests {
         }
         "#
     );
-    test_type_ok!(
+    test_resolution!(
         unreachable_statement2,
         r#"
         let f(n: number): number = {
@@ -3489,20 +3264,20 @@ mod tests {
         }
         "#
     );
-    test_type_ok!(nested_function_same_type, "let f() { let g() {} }");
-    test_type_ok!(
+    test_resolution!(nested_function_same_type, "let f() { let g() {} }");
+    test_resolution!(
         nested_function_different_types,
         "let f(): number { let g(): boolean { true; }; 1; }"
     );
 
-    test_type_ok!(
+    test_resolution!(
         struct_same_field_name,
         r#"
         struct Inner { field: number };
         struct Outer { field: number };
         "#
     );
-    test_type_ok!(
+    test_resolution!(
         struct_instantiation_same_field_name,
         r#"
         struct Inner { field: number };
@@ -3511,37 +3286,20 @@ mod tests {
         "#
     );
 
-    test_type_ok!(void_function_explicit_void_ret, "let f() { ret; }");
-    test_type_ok!(void_function_implicit_void_ret, "let f() { }");
-    test_type_ok!(void_function_implicit_number_ret, "let f() { 1; }");
-    test_type_error!(
+    test_resolution!(void_function_explicit_void_ret, "let f() { ret; }");
+    test_resolution!(void_function_implicit_void_ret, "let f() { }");
+    test_resolution!(void_function_implicit_number_ret, "let f() { 1; }");
+    test_resolution!(
         non_void_function_explicit_void_ret,
-        r#"let f(): number { ret; }"#,
-        "Function f expected to return type number, got void",
-        Span::new(InputId::from(0), 1, 17, 16, 8)
+        r#"let f(): number { ret; }"#
     );
-    test_type_error!(
-        non_void_function_implicit_void_ret,
-        "let f(): number { }",
-        "Function f expected to return type number, got void",
-        Span::new(InputId::from(0), 1, 17, 16, 3)
-    );
+    test_resolution!(non_void_function_implicit_void_ret, "let f(): number { }");
 
-    test_type_error!(
-        let_from_void,
-        "let g() {} let f() { let a = g(); }",
-        "Expected some type, got void",
-        Span::new(InputId::from(0), 1, 30, 29, 3)
-    );
+    test_resolution!(let_from_void, "let g() {} let f() { let a = g(); }");
 
-    test_type_error!(
-        return_from_void,
-        "let g() {} let f(): number { g(); }",
-        "Function f expected to return type number, got void",
-        Span::new(InputId::from(0), 1, 30, 29, 3)
-    );
+    test_resolution!(return_from_void, "let g() {} let f(): number { g(); }");
 
-    test_type_ok!(
+    test_resolution!(
         struct_in_function,
         r#"
         let f() {
@@ -3554,7 +3312,7 @@ mod tests {
         }
         "#
     );
-    test_type_ok!(
+    test_resolution!(
         struct_assignment,
         r#"
         struct S {
@@ -3566,7 +3324,7 @@ mod tests {
         }
         "#
     );
-    test_type_error!(
+    test_resolution!(
         struct_assignment_wrong_type,
         r#"
         struct S {
@@ -3576,12 +3334,10 @@ mod tests {
             let s = S { field: 1 };
             s.field = false;
         }
-        "#,
-        "RHS expected to be of type number, got boolean",
-        Span::new(InputId::from(0), 7, 23, 132, 5)
+        "#
     );
 
-    test_type_ok!(
+    test_resolution!(
         array_homogenous_types,
         r#"
         let f() {
@@ -3589,7 +3345,7 @@ mod tests {
         }
         "#
     );
-    test_type_ok!(
+    test_resolution!(
         array_return_type,
         r#"
         let f(): [number; 2] {
@@ -3597,27 +3353,23 @@ mod tests {
         }
         "#
     );
-    test_type_error!(
+    test_resolution!(
         array_return_type_wrong_len,
         r#"
         let f(): [number; 2] {
             [0, 1, 2];
         }
-        "#,
-        "Function f expected to return type array[2], got array[3]",
-        Span::new(InputId::from(0), 3, 13, 44, 9)
+        "#
     );
-    test_type_error!(
+    test_resolution!(
         array_return_type_wrong_base_typee,
         r#"
         let f(): [number; 2] {
             [true, false];
         }
-        "#,
-        "Function f expected to return type array[2], got array[2]",
-        Span::new(InputId::from(0), 3, 13, 44, 13)
+        "#
     );
-    test_type_ok!(
+    test_resolution!(
         array_parameter_type,
         r#"
         let f(a: [number; 2]) {
@@ -3627,7 +3379,7 @@ mod tests {
         }
         "#
     );
-    test_type_ok!(
+    test_resolution!(
         array_of_structs,
         r#"
         struct S { field: number }
@@ -3639,7 +3391,7 @@ mod tests {
         }
         "#
     );
-    test_type_ok!(
+    test_resolution!(
         struct_of_array,
         r#"
         struct S {
@@ -3653,54 +3405,34 @@ mod tests {
         }
         "#
     );
-    test_type_error!(
-        array_heterogeneous_types,
-        "let f() { let a = [0, false]; }",
-        "Expected value of type number, got boolean at index 1",
-        Span::new(InputId::from(0), 1, 23, 22, 5)
-    );
-    test_type_error!(
+    test_resolution!(array_heterogeneous_types, "let f() { let a = [0, false]; }");
+    test_resolution!(
         array_type_1,
-        "let f() { if true { [0, 1]; } else { [2, 3, 4]; } }",
-        "Expected type array[2], got array[3]",
-        Span::new(InputId::from(0), 1, 36, 35, 14)
+        "let f() { if true { [0, 1]; } else { [2, 3, 4]; } }"
     );
     // todo:ux we must have the inner type name in the error (this has to do with the Display impl.
     //   of Type
-    test_type_error!(
+    test_resolution!(
         array_type_2,
-        "let f() { if true { [0, 1]; } else { [true, false]; } }",
-        "Expected type array[2], got array[2]",
-        Span::new(InputId::from(0), 1, 36, 35, 18)
+        "let f() { if true { [0, 1]; } else { [true, false]; } }"
     );
-    test_type_ok!(array_access, "let f() { let a = [0]; a[0]; }");
-    test_type_ok!(array_write_access, "let f() { let a = [0]; a[0] = 1; }");
-    test_type_error!(
+    test_resolution!(array_access, "let f() { let a = [0]; a[0]; }");
+    test_resolution!(array_write_access, "let f() { let a = [0]; a[0] = 1; }");
+    test_resolution!(
         array_write_access_wrong_type,
-        "let f() { let a = [0]; a[0] = false; }",
-        "RHS expected to be of type number, got boolean",
-        Span::new(InputId::from(0), 1, 31, 30, 5)
+        "let f() { let a = [0]; a[0] = false; }"
     );
-    test_type_ok!(array_instantiation_and_access, "let f() { [0, 1][0]; }");
-    test_type_error!(
-        array_access_not_array,
-        "let f() { let a = 1; a[0]; }",
-        "Expected type array, got number",
-        Span::new(InputId::from(0), 1, 22, 21, 1)
-    );
-    test_type_error!(
+    test_resolution!(array_instantiation_and_access, "let f() { [0, 1][0]; }");
+    test_resolution!(array_access_not_array, "let f() { let a = 1; a[0]; }");
+    test_resolution!(
         array_access_not_numeric_index,
-        "let f() { let a = [0]; a[true]; }",
-        "Expected index to be of type number, got boolean",
-        Span::new(InputId::from(0), 1, 24, 23, 1)
+        "let f() { let a = [0]; a[true]; }"
     );
-    test_type_error!(
+    test_resolution!(
         array_return_wrong_length,
-        "let f(): [number; 1] { [0, 1]; }",
-        "Function f expected to return type array[1], got array[2]",
-        Span::new(InputId::from(0), 1, 24, 23, 6)
+        "let f(): [number; 1] { [0, 1]; }"
     );
-    test_type_error!(
+    test_resolution!(
         array_parameter_wrong_length,
         r#"
         let f(a: [number; 2]) {
@@ -3708,51 +3440,45 @@ mod tests {
         let g() {
             f([1, 2, 3]);
         }
-        "#,
-        "No function 'f' found for parameters of types (array[3])",
-        Span::new(InputId::from(0), 5, 13, 73, 1)
+        "#
     );
-    test_type_ok!(define_annotation, "annotation a;");
-    test_type_ok!(
+    test_resolution!(define_annotation, "annotation a;");
+    test_resolution!(
         native_function_have_no_body,
         r#"
         namespace std { annotation native; }
         @std.native let f(): number { }
         "#
     );
-    test_type_error!(
+    test_resolution!(
         native_function_must_not_have_body,
         r#"
         namespace std { annotation native; }
         @std.native let f(): number { true; }
-        "#,
-        "Native function f must not have a body",
-        Span::new(InputId::from(0), 3, 37, 82, 9)
+        "#
     );
-    test_type_ok!(
+    test_resolution!(
         non_native_function_have_body,
         r#"
         annotation non_native;
         @non_native let f(): core.number { 10; }
         "#
     );
-    test_type_ok!(
+    test_resolution!(
         native_struct_have_no_body,
         r#"
         annotation native;
         @native struct S {}
         "#
     );
-    test_type_error!(
+    test_resolution!(
         native_struct_must_not_have_body,
         r#"
         namespace std {annotation native; }
         @std.native struct S { field1: number, field2: number }
-        "#,
-        "Native struct S must not have a body",
-        Span::new(InputId::from(0), 3, 35, 76, 30)
+        "#
     );
-    test_type_error!(
+    test_resolution!(
         native_struct_cannot_be_instantiated,
         r#"
         namespace std { annotation native; }
@@ -3760,11 +3486,9 @@ mod tests {
         let f() {
             let s = S {};
         }
-        "#,
-        "Native struct S cannot be instantiated",
-        Span::new(InputId::from(0), 5, 25, 118, 4)
+        "#
     );
-    test_type_error!(
+    test_resolution!(
         native_struct_fields_cannot_be_accessed,
         r#"
         namespace std { annotation native; }
@@ -3772,43 +3496,35 @@ mod tests {
         let f(s: S) {
             s.whatever;
         }
-        "#,
-        "Native struct S fields cannot be accessed",
-        Span::new(InputId::from(0), 5, 17, 114, 10)
+        "#
     );
-    test_type_ok!(
+    test_resolution!(
         non_native_struct_have_body,
         r#"
         annotation non_native;
         @non_native struct S { field: number }
         "#
     );
-    test_type_error!(
+    test_resolution!(
         unknown_function_annotation,
         r#"
         @unknown let f(): number { 10; }
-        "#,
-        "Identifier 'unknown' not found",
-        Span::new(InputId::from(0), 2, 10, 10, 7)
+        "#
     );
-    test_type_error!(
+    test_resolution!(
         unknown_struct_annotation,
         r#"
         @unknown struct S {}
-        "#,
-        "Identifier 'unknown' not found",
-        Span::new(InputId::from(0), 2, 10, 10, 7)
+        "#
     );
-    test_type_error!(
+    test_resolution!(
         void_in_arrays,
         r#"
         let main() { let a = [ f() ]; }
         let f() {}
-        "#,
-        "Void values cannot be used as array elements at index 0",
-        Span::new(InputId::from(0), 1, 32, 32, 3)
+        "#
     );
-    test_type_ok!(
+    test_resolution!(
         native_struct_can_be_used,
         r#"
         annotation native;

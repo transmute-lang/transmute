@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Native struct S fields cannot be accessed",
+                span: 5:13; [114, 124],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

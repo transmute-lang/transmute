@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Condition expected to be of type boolean, got number",
+                span: 1:4; [3, 7],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

@@ -1,193 +1,195 @@
 ---
 source: hir/src/passes/resolver.rs
-expression: hir
+expression: resolved_hir
 ---
-Hir {
-    identifiers: [
-        IdentId(0) => "<root>",
-        IdentId(1) => "std",
-        IdentId(2) => "native",
-        IdentId(3) => "S",
-        IdentId(4) => "core",
-        IdentId(5) => "boolean",
-        IdentId(6) => "number",
-        IdentId(7) => "void",
-    ],
-    identifier_refs: [
-        IdentRefId(0) => IdentifierRef {
-            id: IdentRefId(0),
-            ident: Identifier {
-                id: IdentId(1),
-                span: 1:39; [38, 41],
-                bound: Bound(2),
-            },
-        },
-        IdentRefId(1) => IdentifierRef {
-            id: IdentRefId(1),
-            ident: Identifier {
-                id: IdentId(2),
-                span: 1:43; [42, 48],
-                bound: Bound(3),
-            },
-        },
-    ],
-    expressions: [],
-    statements: [
-        StmtId(0) => Statement {
-            id: StmtId(0),
-            kind: Namespace(
-                Identifier {
-                    id: IdentId(0),
-                    span: 0:0; [0, 0],
-                    bound: Bound(1),
-                },
-                InputId(0),
-                [
-                    StmtId(2),
-                    StmtId(3),
-                    StmtId(4),
-                ],
-            ),
-            span: 0:0; [0, 0],
-        },
-        StmtId(1) => Statement {
-            id: StmtId(1),
-            kind: Annotation(
-                Identifier {
-                    id: IdentId(2),
-                    span: 1:28; [27, 33],
-                    bound: Bound(3),
-                },
-            ),
-            span: 1:17; [16, 34],
-        },
-        StmtId(2) => Statement {
-            id: StmtId(2),
-            kind: Namespace(
-                Identifier {
+Ok(
+    Hir {
+        identifiers: [
+            IdentId(0) => "<root>",
+            IdentId(1) => "std",
+            IdentId(2) => "native",
+            IdentId(3) => "S",
+            IdentId(4) => "core",
+            IdentId(5) => "boolean",
+            IdentId(6) => "number",
+            IdentId(7) => "void",
+        ],
+        identifier_refs: [
+            IdentRefId(0) => IdentifierRef {
+                id: IdentRefId(0),
+                ident: Identifier {
                     id: IdentId(1),
-                    span: 1:11; [10, 13],
+                    span: 1:39; [38, 41],
                     bound: Bound(2),
                 },
-                InputId(0),
-                [
-                    StmtId(1),
-                ],
-            ),
-            span: 1:36; [35, 36],
-        },
-        StmtId(3) => Statement {
-            id: StmtId(3),
-            kind: Struct(
-                Identifier {
-                    id: IdentId(3),
-                    span: 1:57; [56, 57],
-                    bound: Bound(5),
+            },
+            IdentRefId(1) => IdentifierRef {
+                id: IdentRefId(1),
+                ident: Identifier {
+                    id: IdentId(2),
+                    span: 1:43; [42, 48],
+                    bound: Bound(3),
                 },
-                [
-                    Annotation {
-                        ident_ref_ids: [
-                            IdentRefId(0),
-                            IdentRefId(1),
-                        ],
-                        span: 1:38; [37, 48],
+            },
+        ],
+        expressions: [],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                        bound: Bound(1),
                     },
-                ],
-                Native(
+                    InputId(0),
+                    [
+                        StmtId(2),
+                        StmtId(3),
+                        StmtId(4),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: Annotation(
+                    Identifier {
+                        id: IdentId(2),
+                        span: 1:28; [27, 33],
+                        bound: Bound(3),
+                    },
+                ),
+                span: 1:17; [16, 34],
+            },
+            StmtId(2) => Statement {
+                id: StmtId(2),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(1),
+                        span: 1:11; [10, 13],
+                        bound: Bound(2),
+                    },
+                    InputId(0),
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 1:36; [35, 36],
+            },
+            StmtId(3) => Statement {
+                id: StmtId(3),
+                kind: Struct(
+                    Identifier {
+                        id: IdentId(3),
+                        span: 1:57; [56, 57],
+                        bound: Bound(5),
+                    },
+                    [
+                        Annotation {
+                            ident_ref_ids: [
+                                IdentRefId(0),
+                                IdentRefId(1),
+                            ],
+                            span: 1:38; [37, 48],
+                        },
+                    ],
+                    Native(
+                        [],
+                    ),
+                ),
+                span: 1:50; [49, 60],
+            },
+            StmtId(4) => Statement {
+                id: StmtId(4),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(4),
+                        span: 2:11; [71, 75],
+                        bound: Bound(4),
+                    },
+                    InputId(0),
                     [],
                 ),
-            ),
-            span: 1:50; [49, 60],
-        },
-        StmtId(4) => Statement {
-            id: StmtId(4),
-            kind: Namespace(
-                Identifier {
-                    id: IdentId(4),
-                    span: 2:11; [71, 75],
-                    bound: Bound(4),
-                },
-                InputId(0),
-                [],
-            ),
-            span: 2:17; [77, 78],
-        },
-    ],
-    type_defs: [],
-    root: StmtId(0),
-    symbols: [
-        SymbolId(0) => Symbol {
-            id: SymbolId(0),
-            kind: NotFound,
-            type_id: TypeId(0),
-        },
-        SymbolId(1) => Symbol {
-            id: SymbolId(1),
-            kind: Namespace(
-                IdentId(0),
-                {
-                    IdentId(1): [
-                        SymbolId(2),
-                    ],
-                    IdentId(3): [
-                        SymbolId(5),
-                    ],
-                    IdentId(4): [
-                        SymbolId(4),
-                    ],
-                },
-            ),
-            type_id: TypeId(1),
-        },
-        SymbolId(2) => Symbol {
-            id: SymbolId(2),
-            kind: Namespace(
-                IdentId(1),
-                {
-                    IdentId(2): [
-                        SymbolId(3),
-                    ],
-                },
-            ),
-            type_id: TypeId(1),
-        },
-        SymbolId(3) => Symbol {
-            id: SymbolId(3),
-            kind: Annotation(
-                IdentId(2),
-                StmtId(1),
-            ),
-            type_id: TypeId(1),
-        },
-        SymbolId(4) => Symbol {
-            id: SymbolId(4),
-            kind: Namespace(
-                IdentId(4),
-                {},
-            ),
-            type_id: TypeId(1),
-        },
-        SymbolId(5) => Symbol {
-            id: SymbolId(5),
-            kind: Struct(
-                IdentId(3),
+                span: 2:17; [77, 78],
+            },
+        ],
+        type_defs: [],
+        root: StmtId(0),
+        symbols: [
+            SymbolId(0) => Symbol {
+                id: SymbolId(0),
+                kind: NotFound,
+                type_id: TypeId(0),
+            },
+            SymbolId(1) => Symbol {
+                id: SymbolId(1),
+                kind: Namespace(
+                    IdentId(0),
+                    {
+                        IdentId(1): [
+                            SymbolId(2),
+                        ],
+                        IdentId(3): [
+                            SymbolId(5),
+                        ],
+                        IdentId(4): [
+                            SymbolId(4),
+                        ],
+                    },
+                ),
+                type_id: TypeId(1),
+            },
+            SymbolId(2) => Symbol {
+                id: SymbolId(2),
+                kind: Namespace(
+                    IdentId(1),
+                    {
+                        IdentId(2): [
+                            SymbolId(3),
+                        ],
+                    },
+                ),
+                type_id: TypeId(1),
+            },
+            SymbolId(3) => Symbol {
+                id: SymbolId(3),
+                kind: Annotation(
+                    IdentId(2),
+                    StmtId(1),
+                ),
+                type_id: TypeId(1),
+            },
+            SymbolId(4) => Symbol {
+                id: SymbolId(4),
+                kind: Namespace(
+                    IdentId(4),
+                    {},
+                ),
+                type_id: TypeId(1),
+            },
+            SymbolId(5) => Symbol {
+                id: SymbolId(5),
+                kind: Struct(
+                    IdentId(3),
+                    StmtId(3),
+                ),
+                type_id: TypeId(5),
+            },
+        ],
+        types: [
+            TypeId(0) => Invalid,
+            TypeId(1) => Void,
+            TypeId(2) => None,
+            TypeId(3) => Boolean,
+            TypeId(4) => Number,
+            TypeId(5) => Struct(
                 StmtId(3),
             ),
-            type_id: TypeId(5),
+        ],
+        exit_points: ExitPoints {
+            exit_points: {},
+            unreachable: [],
         },
-    ],
-    types: [
-        TypeId(0) => Invalid,
-        TypeId(1) => Void,
-        TypeId(2) => None,
-        TypeId(3) => Boolean,
-        TypeId(4) => Number,
-        TypeId(5) => Struct(
-            StmtId(3),
-        ),
-    ],
-    exit_points: ExitPoints {
-        exit_points: {},
-        unreachable: [],
     },
-}
+)

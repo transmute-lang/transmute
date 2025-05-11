@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "No function 'f' found for parameters of types (number)",
+                span: 1:34; [33, 34],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

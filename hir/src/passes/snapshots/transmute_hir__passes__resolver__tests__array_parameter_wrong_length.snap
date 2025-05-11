@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "No function 'f' found for parameters of types (array[3])",
+                span: 5:13; [73, 74],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

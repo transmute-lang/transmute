@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Native struct S must not have a body",
+                span: 3:32; [76, 106],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

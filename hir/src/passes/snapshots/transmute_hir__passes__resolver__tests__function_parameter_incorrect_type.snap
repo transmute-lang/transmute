@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "No function 'add' found for parameters of types (number, boolean)",
+                span: 1:32; [31, 32],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

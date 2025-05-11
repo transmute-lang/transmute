@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Expected namespace or struct type, got number",
+                span: 1:1; [0, 1],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

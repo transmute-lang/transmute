@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Expected some type, got no type",
+                span: 1:9; [8, 44],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

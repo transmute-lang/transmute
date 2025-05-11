@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Expected type array, got number",
+                span: 1:22; [21, 22],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

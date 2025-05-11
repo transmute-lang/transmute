@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Invalid type for field 'x': expected number, got boolean",
+                span: 1:39; [38, 44],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

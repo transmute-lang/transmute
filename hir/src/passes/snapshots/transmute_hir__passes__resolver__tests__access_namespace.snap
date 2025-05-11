@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "No symbol 'x' found in 'a'",
+                span: 1:18; [17, 18],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

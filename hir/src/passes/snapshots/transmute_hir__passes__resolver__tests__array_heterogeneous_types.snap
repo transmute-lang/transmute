@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Expected value of type number, got boolean at index 1",
+                span: 1:23; [22, 27],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

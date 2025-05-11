@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "No field 'x' found in struct S",
+                span: 1:29; [28, 29],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

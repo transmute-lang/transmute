@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Parameter 'n' is already defined",
+                span: 1:18; [17, 18],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

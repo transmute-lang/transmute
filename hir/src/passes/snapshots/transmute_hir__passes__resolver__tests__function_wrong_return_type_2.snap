@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Function f expected to return type boolean, got void",
+                span: 1:20; [19, 22],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)
