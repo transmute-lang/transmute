@@ -1802,7 +1802,7 @@ impl Resolver {
         let mut parent_found = true;
         let mut namespace_id = *self.namespaces.root().unwrap();
 
-        for (index, ident_ref_id) in ident_ref_ids[0..ident_ref_ids.len() - 1].iter().enumerate() {
+        for  ident_ref_id in ident_ref_ids[0..ident_ref_ids.len() - 1].iter() {
             if self.identifier_refs.get(*ident_ref_id).is_some() {
                 continue;
             }
@@ -1829,23 +1829,7 @@ impl Resolver {
                 return;
             }
 
-            if index > 0 {
-                let parent_ident_ref_id = ident_ref_ids[index - 1];
-                let parent_ident_id = self
-                    .identifier_refs
-                    .get(parent_ident_ref_id)
-                    .unwrap()
-                    .ident
-                    .id;
-                self.diagnostics.report_err(
-                    format!(
-                        "Expected '{}' to be a namespace",
-                        self.identifiers.get_by_left(&parent_ident_id).unwrap()
-                    ),
-                    self.identifier_refs[parent_ident_ref_id].ident.span.clone(),
-                    (file!(), line!()),
-                );
-            } else if !ignore_not_found {
+            if !ignore_not_found {
                 self.diagnostics.report_err(
                     format!(
                         "Namespace '{}' not found",
