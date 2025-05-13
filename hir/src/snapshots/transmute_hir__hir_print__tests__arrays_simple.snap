@@ -18,17 +18,17 @@ expression: s
 =   35:     4        |           |  +- Let name=n
 @     :     4        |           |     +- expr 6
 @     :     4        |           |        +- Call
-@     :    15        |           |           +- expr 0
+@     :    15        |           |           +- callee:expr 0
 @   32:    15        |           |           |  +- Ident: number_parse
                      |           |           +- params
 @     :     6        |           |              +- expr 5
 @     :     6        |           |                 +- Call
-@     :    13        |           |                    +- expr 1
+@     :    13        |           |                    +- callee:expr 1
 @   30:    13        |           |                    |  +- Ident: list_get
                      |           |                    +- params
 @     :     5        |           |                       +- expr 3
 @     :     5        |           |                       |  +- Call
-@     :    12        |           |                       |     +- expr 2
+@     :    12        |           |                       |     +- callee:expr 2
 @   29:    12        |           |                       |     |  +- Ident: args
                      |           |                       |     +- params=[]
 @     :     4        |           |                       +- expr 4
@@ -43,7 +43,7 @@ expression: s
 @     :     4        |           |           |  +- Number: 0
 @     :     4        |           |           +- expr 11
 @     :     4        |           |              +- Call
-@     :     7        |           |                 +- expr 44
+@     :     7        |           |                 +- callee:expr 44
 @   27:     7        |           |                 |  +- Ident: add
                      |           |                 +- params
 @     :     4        |           |                    +- expr 9
@@ -62,7 +62,7 @@ expression: s
 @     :     4        |           |           |        +- Number: 1
 @     :     4        |           |           +- value:expr 18
 @     :     4        |           |              +- Call
-@     :     7        |           |                 +- expr 45
+@     :     7        |           |                 +- callee:expr 45
 @   27:     7        |           |                 |  +- Ident: add
                      |           |                 +- params
 @     :     4        |           |                    +- expr 16
@@ -73,17 +73,17 @@ expression: s
 @     :     1        |              +- Ret
 @     :     1        |                 +- expr 36
 @     :     1        |                    +- Call
-@     :    14        |                       +- expr 20
+@     :    14        |                       +- callee:expr 20
 @   31:    14        |                       |  +- Ident: print
                      |                       +- params
 @     :     4        |                          +- expr 35
 @     :     4        |                             +- Call
-@     :     7        |                                +- expr 49
+@     :     7        |                                +- callee:expr 49
 @   27:     7        |                                |  +- Ident: add
                      |                                +- params
 @     :     4        |                                   +- expr 29
 @     :     4        |                                   |  +- Call
-@     :     7        |                                   |     +- expr 47
+@     :     7        |                                   |     +- callee:expr 47
 @   27:     7        |                                   |     |  +- Ident: add
                      |                                   |     +- params
 @     :     4        |                                   |        +- expr 23
@@ -98,7 +98,7 @@ expression: s
 @   36:    18        |                                   |              |  +- Ident: a
 @     :     4        |                                   |              +- expr 27
 @     :     4        |                                   |                 +- Call
-@     :     7        |                                   |                    +- expr 46
+@     :     7        |                                   |                    +- callee:expr 46
 @   27:     7        |                                   |                    |  +- Ident: add
                      |                                   |                    +- params
 @     :     4        |                                   |                       +- expr 25
@@ -111,7 +111,7 @@ expression: s
 @   36:    18        |                                         |  +- Ident: a
 @     :     4        |                                         +- expr 33
 @     :     4        |                                            +- Call
-@     :     7        |                                               +- expr 48
+@     :     7        |                                               +- callee:expr 48
 @   27:     7        |                                               |  +- Ident: add
                      |                                               +- params
 @     :     4        |                                                  +- expr 31

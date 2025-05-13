@@ -26,17 +26,17 @@ expression: s
 =   41:     4        |           |  +- Let name=n
 @     :     4        |           |     +- expr 6
 @     :     4        |           |        +- Call
-@     :    17        |           |           +- expr 0
+@     :    17        |           |           +- callee:expr 0
 @   34:    17        |           |           |  +- Ident: number_parse
                      |           |           +- params
 @     :     6        |           |              +- expr 5
 @     :     6        |           |                 +- Call
-@     :    15        |           |                    +- expr 1
+@     :    15        |           |                    +- callee:expr 1
 @   32:    15        |           |                    |  +- Ident: list_get
                      |           |                    +- params
 @     :     5        |           |                       +- expr 3
 @     :     5        |           |                       |  +- Call
-@     :    14        |           |                       |     +- expr 2
+@     :    14        |           |                       |     +- callee:expr 2
 @   31:    14        |           |                       |     |  +- Ident: args
                      |           |                       |     +- params=[]
 @     :     4        |           |                       +- expr 4
@@ -67,22 +67,22 @@ expression: s
 =   43:     4        |           |  +- Let name=width
 @     :     4        |           |     +- expr 20
 @     :     4        |           |        +- Call
-@     :     9        |           |           +- expr 44
+@     :     9        |           |           +- callee:expr 44
 @   17:     9        |           |           |  +- Ident: sub
                      |           |           +- params
 @     :     4        |           |              +- expr 16
 @   37:     4        |           |              |  +- Access
-@     :     7        |           |              |     +- expr 15
+@     :     7        |           |              |     +- lhs:expr 15
 @   40:     7        |           |              |     |  +- Access
-@     :     8        |           |              |     |     +- expr 14
+@     :     8        |           |              |     |     +- lhs:expr 14
 @   42:     8        |           |              |     |     |  +- Ident: square
 @   40:     7        |           |              |     |     +- ident=b
 @   37:     4        |           |              |     +- ident=x
 @     :     4        |           |              +- expr 19
 @   37:     4        |           |                 +- Access
-@     :     7        |           |                    +- expr 18
+@     :     7        |           |                    +- lhs:expr 18
 @   39:     7        |           |                    |  +- Access
-@     :     8        |           |                    |     +- expr 17
+@     :     8        |           |                    |     +- lhs:expr 17
 @   42:     8        |           |                    |     |  +- Ident: square
 @   39:     7        |           |                    |     +- ident=a
 @   37:     4        |           |                    +- ident=x
@@ -90,22 +90,22 @@ expression: s
 =   44:     4        |           |  +- Let name=height
 @     :     4        |           |     +- expr 27
 @     :     4        |           |        +- Call
-@     :     9        |           |           +- expr 45
+@     :     9        |           |           +- callee:expr 45
 @   17:     9        |           |           |  +- Ident: sub
                      |           |           +- params
 @     :     4        |           |              +- expr 23
 @   38:     4        |           |              |  +- Access
-@     :     7        |           |              |     +- expr 22
+@     :     7        |           |              |     +- lhs:expr 22
 @   40:     7        |           |              |     |  +- Access
-@     :     8        |           |              |     |     +- expr 21
+@     :     8        |           |              |     |     +- lhs:expr 21
 @   42:     8        |           |              |     |     |  +- Ident: square
 @   40:     7        |           |              |     |     +- ident=b
 @   38:     4        |           |              |     +- ident=y
 @     :     4        |           |              +- expr 26
 @   38:     4        |           |                 +- Access
-@     :     7        |           |                    +- expr 25
+@     :     7        |           |                    +- lhs:expr 25
 @   39:     7        |           |                    |  +- Access
-@     :     8        |           |                    |     +- expr 24
+@     :     8        |           |                    |     +- lhs:expr 24
 @   42:     8        |           |                    |     |  +- Ident: square
 @   39:     7        |           |                    |     +- ident=a
 @   38:     4        |           |                    +- ident=y
@@ -113,17 +113,17 @@ expression: s
 @     :     1        |              +- Ret
 @     :     1        |                 +- expr 36
 @     :     1        |                    +- Call
-@     :    16        |                       +- expr 28
+@     :    16        |                       +- callee:expr 28
 @   33:    16        |                       |  +- Ident: print
                      |                       +- params
 @     :     4        |                          +- expr 35
 @     :     4        |                             +- Call
-@     :     9        |                                +- expr 48
+@     :     9        |                                +- callee:expr 48
 @   29:     9        |                                |  +- Ident: add
                      |                                +- params
 @     :     4        |                                   +- expr 31
 @     :     4        |                                   |  +- Call
-@     :     9        |                                   |     +- expr 46
+@     :     9        |                                   |     +- callee:expr 46
 @   21:     9        |                                   |     |  +- Ident: mul
                      |                                   |     +- params
 @     :     4        |                                   |        +- expr 29
@@ -132,7 +132,7 @@ expression: s
 @     :     4        |                                   |           +- Number: 2
 @     :     4        |                                   +- expr 34
 @     :     4        |                                      +- Call
-@     :     9        |                                         +- expr 47
+@     :     9        |                                         +- callee:expr 47
 @   21:     9        |                                         |  +- Ident: mul
                      |                                         +- params
 @     :     4        |                                            +- expr 32

@@ -284,7 +284,7 @@ pub enum Type {
     Array(TypeId, usize),
 
     /// This value is used when the statement/expression does not have any value. This is the
-    /// case for `let` and `let fn`.
+    /// case for `namespace`, `let` and `let fn`.
     #[default]
     Void,
 

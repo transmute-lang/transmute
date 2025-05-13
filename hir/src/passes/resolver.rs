@@ -35,6 +35,15 @@ type Function<T, B> = (
 // todo:refactoring each `resolve_` method does the actual resolution instead of giving to its
 //  caller the information required to resolve
 
+// fixme:feature: compiling the following results in a seg faut when executing:
+//   use std.numbers.print;
+//   let add(a: number, b: number): number { a + b; }
+//   let main(){ print(1+1); }
+//  probably due to the redefinition of add, resulting in a recursive mess
+
+// fixme the following requires an import of std.numbers.print, which prevents to name the function
+//  'p' as 'print': struct S { s: number } let p(s: S) { s.field.print(); }
+
 pub struct Resolver {
     // out
     identifiers: BiHashMap<IdentId, String>,
@@ -61,6 +70,8 @@ pub struct Resolver {
     stmt_symbols: HashMap<(StmtId, usize), SymbolId>,
     /// maps namespaces (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
     namespace_symbols: HashMap<StmtId, SymbolId>,
+    /// maps `TypeId`s to functions
+    type_functions: HashMap<TypeId, HashMap<IdentId, SymbolId>>,
 
     diagnostics: Diagnostics<()>,
 }
@@ -85,6 +96,7 @@ impl Resolver {
             annotation_symbols: Default::default(),
             stmt_symbols: Default::default(),
             namespace_symbols: Default::default(),
+            type_functions: Default::default(),
 
             diagnostics: Default::default(),
         }
@@ -824,134 +836,148 @@ impl Resolver {
         //   returned dynamically (by an if expression for instance) and in that case we need to
         //   look things up by the `type_id`.
         //
-        // Note: Usually we don't need to worry about the symbol id as everything should hava a
+        // Note: Usually we don't need to worry about the symbol id as everything should have a
         // valid type, but as namespaces have `void` type, we need to work with the symbol_id too.
 
-        // so, if we have a symbol_id, we use it
-        if let Some(symbol_id) = symbol_id {
-            match &self.symbols[symbol_id].kind {
-                SymbolKind::Namespace(ns_ident_id, symbols) => {
-                    #[cfg(test)]
-                    println!(
-                        "{}:{}: Searching for {:?} ({:?}) in {:?}",
-                        file!(),
-                        line!(),
-                        ident_ref.ident.id,
-                        param_types,
-                        self.symbols[symbol_id]
-                    );
-                    let symbol_id = match symbols.find(
-                        &self.symbols,
-                        ident_ref.ident.id,
-                        param_types,
-                    ) {
-                        Some(symbol_id) => symbol_id,
-                        None => {
-                            if let Some(param_types) = param_types {
-                                println!("{:?}", self.symbols);
-                                self.diagnostics.report_err(
-                                    format!(
-                                        "No function '{}' found for parameters of types ({}) in '{}'",
-                                        self.identifiers.get_by_left(&ident_ref.ident.id).unwrap(),
-                                        param_types
-                                            .iter()
-                                            .map(|t| self.find_type_by_type_id(*t))
-                                            .map(Type::to_string)
-                                            .collect::<Vec<String>>()
-                                            .join(", "),
-                                        self.identifiers.get_by_left(ns_ident_id).unwrap(),
-                                    ),
-                                    ident_ref.ident.span.clone(),
-                                    (file!(), line!()),
-                                );
-                            } else {
-                                self.diagnostics.report_err(
-                                    format!(
-                                        "No symbol '{}' found in '{}'",
-                                        self.identifiers.get_by_left(&ident_ref.ident.id).unwrap(),
-                                        self.identifiers.get_by_left(ns_ident_id).unwrap(),
-                                    ),
-                                    ident_ref.ident.span.clone(),
-                                    (file!(), line!()),
-                                );
-                            }
-
-                            self.not_found_symbol_id
+        // so, if we have a symbol_id, and it corresponds to a namespace, we use it
+        #[allow(unused_variables)] // used in #[cfg(test)]
+        if let Some((symbol_id, SymbolKind::Namespace(ns_ident_id, symbols))) =
+            symbol_id.map(|id| (id, &self.symbols[id].kind))
+        {
+            #[cfg(test)]
+            println!(
+                "{}:{}: Searching for {:?} ({:?}) in {:?}",
+                file!(),
+                line!(),
+                ident_ref.ident.id,
+                param_types,
+                self.symbols[symbol_id]
+            );
+            let resolved_symbol_id =
+                match symbols.find(&self.symbols, ident_ref.ident.id, param_types) {
+                    Some(symbol_id) => symbol_id,
+                    None => {
+                        if let Some(param_types) = param_types {
+                            self.diagnostics.report_err(
+                                format!(
+                                    "No function '{}' found for parameters of types ({}) in '{}'",
+                                    self.identifiers.get_by_left(&ident_ref.ident.id).unwrap(),
+                                    param_types
+                                        .iter()
+                                        .map(|t| self.find_type_by_type_id(*t))
+                                        .map(Type::to_string)
+                                        .collect::<Vec<String>>()
+                                        .join(", "),
+                                    self.identifiers.get_by_left(ns_ident_id).unwrap(),
+                                ),
+                                ident_ref.ident.span.clone(),
+                                (file!(), line!()),
+                            );
+                        } else {
+                            self.diagnostics.report_err(
+                                format!(
+                                    "No symbol '{}' found in '{}'",
+                                    self.identifiers.get_by_left(&ident_ref.ident.id).unwrap(),
+                                    self.identifiers.get_by_left(ns_ident_id).unwrap(),
+                                ),
+                                ident_ref.ident.span.clone(),
+                                (file!(), line!()),
+                            );
                         }
-                    };
 
-                    let ident_ref = ident_ref.resolved(symbol_id);
-                    self.identifier_refs.insert(ident_ref.id, ident_ref);
-                    return (expr_type_id, Some(symbol_id));
-                }
-                _ => {
-                    // we want to use the type_id, as implemented below
-                }
-            }
+                        self.not_found_symbol_id
+                    }
+                };
+
+            let ident_ref = ident_ref.resolved(resolved_symbol_id);
+            self.identifier_refs.insert(ident_ref.id, ident_ref);
+            return (expr_type_id, Some(resolved_symbol_id));
         }
 
         // otherwise, we use the type_id
         let ty = self.find_type_by_type_id(expr_type_id);
         match ty {
-            Type::Struct(stmt_id) => match &self.statements[*stmt_id].kind {
-                StatementKind::Struct(ident, _, Implementation::Provided(fields)) => {
-                    match fields
-                        .iter()
-                        .enumerate()
-                        .find(|(_, field)| field.identifier.id == ident_ref.ident.id)
-                    {
-                        Some((index, field)) => {
-                            let field_symbol_id = self
-                                .find_symbol_id_for_struct_field(*stmt_id, index)
-                                .expect("field exists");
-                            let ident_ref = ident_ref.resolved(field_symbol_id);
-                            let symbol_ids = ident_ref.resolved_symbol_ids().to_vec();
-                            assert_eq!(symbol_ids.len(), 1);
-                            self.identifier_refs.insert(ident_ref.id, ident_ref);
-                            (field.resolved_type_id(), Some(symbol_ids[0]))
-                        }
-                        None => {
-                            self.diagnostics.report_err(
-                                format!(
-                                    "No field '{}' found in struct {}",
-                                    self.identifiers.get_by_left(&ident_ref.ident.id).unwrap(),
-                                    self.identifiers.get_by_left(&ident.id).unwrap()
-                                ),
-                                ident_ref.ident.span.clone(),
-                                (file!(), line!()),
-                            );
-                            let ident_ref = ident_ref.resolved(self.not_found_symbol_id);
-                            self.identifier_refs.insert(ident_ref.id, ident_ref);
-                            (self.find_type_id_by_type(&Type::Invalid), None)
+            Type::Struct(stmt_id) if param_types.is_none() => {
+                let stmt_id = *stmt_id;
+                if let Some(stmt) = hir.statements.remove(stmt_id) {
+                    self.resolve_statement(hir, stmt);
+                }
+
+                match &self.statements[stmt_id].kind {
+                    StatementKind::Struct(ident, _, Implementation::Provided(fields)) => {
+                        match fields
+                            .iter()
+                            .enumerate()
+                            .find(|(_, field)| field.identifier.id == ident_ref.ident.id)
+                        {
+                            Some((index, field)) => {
+                                let field_symbol_id = self
+                                    .find_symbol_id_for_struct_field(stmt_id, index)
+                                    .expect("field exists");
+                                let ident_ref = ident_ref.resolved(field_symbol_id);
+                                let symbol_ids = ident_ref.resolved_symbol_ids().to_vec();
+                                assert_eq!(symbol_ids.len(), 1);
+                                self.identifier_refs.insert(ident_ref.id, ident_ref);
+                                (field.resolved_type_id(), Some(symbol_ids[0]))
+                            }
+                            None => {
+                                self.diagnostics.report_err(
+                                    format!(
+                                        "No field '{}' found in struct {}",
+                                        self.identifiers.get_by_left(&ident_ref.ident.id).unwrap(),
+                                        self.identifiers.get_by_left(&ident.id).unwrap()
+                                    ),
+                                    ident_ref.ident.span.clone(),
+                                    (file!(), line!()),
+                                );
+                                let ident_ref = ident_ref.resolved(self.not_found_symbol_id);
+                                self.identifier_refs.insert(ident_ref.id, ident_ref);
+                                (self.find_type_id_by_type(&Type::Invalid), None)
+                            }
                         }
                     }
+                    StatementKind::Struct(ident, _, _) => {
+                        self.diagnostics.report_err(
+                            format!(
+                                "Native struct {} fields cannot be accessed",
+                                self.identifiers.get_by_left(&ident.id).unwrap()
+                            ),
+                            span.clone(),
+                            (file!(), line!()),
+                        );
+                        (self.find_type_id_by_type(&Type::Invalid), None)
+                    }
+                    _ => panic!("struct expected"),
                 }
-                StatementKind::Struct(ident, _, _) => {
-                    self.diagnostics.report_err(
-                        format!(
-                            "Native struct {} fields cannot be accessed",
-                            self.identifiers.get_by_left(&ident.id).unwrap()
-                        ),
-                        span.clone(),
-                        (file!(), line!()),
-                    );
-                    (self.find_type_id_by_type(&Type::Invalid), None)
-                }
-                _ => panic!("struct expected"),
-            },
+            }
             _ => {
-                self.diagnostics.report_err(
-                    format!("Expected namespace or struct type, got {}", ty),
-                    self.expressions[expr_id].span.clone(),
-                    (file!(), line!()),
-                );
+                let type_id = self.find_type_id_by_type(ty);
+                match self
+                    .type_functions
+                    .get(&type_id)
+                    .and_then(|functions| functions.get(&ident_ref.ident.id))
+                {
+                    // todo make sure the function params type match
+                    Some(symbol_id) => {
+                        let ident_ref = ident_ref.resolved(*symbol_id);
+                        self.identifier_refs.insert(ident_ref.id, ident_ref);
+                        (self.symbols[*symbol_id].type_id, Some(*symbol_id))
+                    }
+                    None => {
+                        self.diagnostics.report_err(
+                            format!("Expected namespace or struct type, got {}", ty),
+                            self.expressions[expr_id].span.clone(),
+                            (file!(), line!()),
+                        );
 
-                // this it not always true (the left hand side can be a symbol), but it not
-                // being a struct field anyway, considering we did not find any symbol is
-                // (probably) fine...
-                let ident_ref = ident_ref.resolved(self.not_found_symbol_id);
-                self.identifier_refs.insert(ident_ref.id, ident_ref);
-                (self.find_type_id_by_type(&Type::Invalid), None)
+                        // this it not always true (the left hand side can be a symbol), but it not
+                        // being a struct field anyway, considering we did not find any symbol is
+                        // (probably) fine...
+                        let ident_ref = ident_ref.resolved(self.not_found_symbol_id);
+                        self.identifier_refs.insert(ident_ref.id, ident_ref);
+                        (self.find_type_id_by_type(&Type::Invalid), None)
+                    }
+                }
             }
         }
     }
@@ -1041,95 +1067,102 @@ impl Resolver {
         }
         debug_assert!(expr_type_ids.len() == field_exprs.len());
 
-        let struct_def = self
+        let struct_stmt_ids = self
             .resolve_ident_ref(hir, ident_ref_id, None)
             .iter()
             .map(|sid| &self.symbols[*sid])
             .filter_map(|s| match s.kind {
-                SymbolKind::Struct(_, stmt_id) => Some(&self.statements[stmt_id]),
+                SymbolKind::Struct(_, stmt_id) => Some(stmt_id),
                 _ => None,
-            })
-            .map(|s| match &s.kind {
-                StatementKind::Struct(struct_identifier, _, struct_fields) => {
-                    (s.id, struct_identifier, struct_fields)
-                }
-                _ => panic!("must be a struct"),
             })
             .collect::<Vec<_>>();
 
-        debug_assert!(struct_def.len() <= 1);
+        debug_assert!(struct_stmt_ids.len() <= 1);
 
-        if let Some((struct_stmt_id, struct_identifier, implementation)) = struct_def.first() {
-            let field_types = match implementation {
-                Implementation::Provided(field_types) => field_types,
-                _ => {
-                    self.diagnostics.report_err(
-                        format!(
-                            "Native struct {} cannot be instantiated",
-                            self.identifiers.get_by_left(&struct_identifier.id).unwrap()
-                        ),
-                        span.clone(),
-                        (file!(), line!()),
-                    );
-                    &Default::default()
+        let struct_stmt_id = match struct_stmt_ids.first() {
+            None => return self.find_type_id_by_type(&Type::Invalid),
+            Some(stmt_id) => {
+                if let Some(stmt) = hir.statements.remove(*stmt_id) {
+                    self.resolve_statement(hir, stmt);
                 }
-            };
-            if field_exprs.len() != field_types.len() {
+                *stmt_id
+            }
+        };
+
+        let (struct_identifier, implementation) = match &self.statements[struct_stmt_id].kind {
+            StatementKind::Struct(struct_identifier, _, struct_fields) => {
+                (struct_identifier, struct_fields)
+            }
+            _ => panic!("must be a struct"),
+        };
+
+        let field_types = match implementation {
+            Implementation::Provided(field_types) => field_types,
+            _ => {
                 self.diagnostics.report_err(
-                    "Struct fields differ in length",
+                    format!(
+                        "Native struct {} cannot be instantiated",
+                        self.identifiers.get_by_left(&struct_identifier.id).unwrap()
+                    ),
                     span.clone(),
                     (file!(), line!()),
                 );
+                &Default::default()
             }
-
-            for ((field_ident_ref_id, field_expr_id), (expr_type_id, _)) in
-                field_exprs.iter().zip(expr_type_ids.into_iter())
-            {
-                let field_ident_ref = hir
-                    .identifier_refs
-                    .remove(*field_ident_ref_id)
-                    .expect("field ident_ref exists");
-
-                if let Some((index, field)) = field_types
-                    .iter()
-                    .enumerate()
-                    .find(|(_, field)| field.identifier.id == field_ident_ref.ident.id)
-                {
-                    let field_symbol_id = self
-                        .find_symbol_id_for_struct_field(*struct_stmt_id, index)
-                        .expect("symbol exists");
-
-                    self.identifier_refs.insert(
-                        *field_ident_ref_id,
-                        field_ident_ref.resolved(field_symbol_id),
-                    );
-
-                    if expr_type_id != field.resolved_type_id() {
-                        self.diagnostics.report_err(
-                            format!(
-                                "Invalid type for field '{}': expected {}, got {}",
-                                self.identifiers.get_by_left(&field.identifier.id).unwrap(),
-                                self.find_type_by_type_id(field.resolved_type_id()),
-                                self.find_type_by_type_id(expr_type_id)
-                            ),
-                            self.expressions[*field_expr_id].span.clone(),
-                            (file!(), line!()),
-                        )
-                    }
-                } else {
-                    // the field was not found by its name...
-                    self.identifier_refs.insert(
-                        *field_ident_ref_id,
-                        field_ident_ref.resolved(self.not_found_symbol_id),
-                    );
-                }
-            }
-
-            self.find_type_id_by_identifier(struct_identifier.id)
-                .expect("type exists")
-        } else {
-            self.find_type_id_by_type(&Type::Invalid)
+        };
+        if field_exprs.len() != field_types.len() {
+            self.diagnostics.report_err(
+                "Struct fields differ in length",
+                span.clone(),
+                (file!(), line!()),
+            );
         }
+
+        for ((field_ident_ref_id, field_expr_id), (expr_type_id, _)) in
+            field_exprs.iter().zip(expr_type_ids.into_iter())
+        {
+            let field_ident_ref = hir
+                .identifier_refs
+                .remove(*field_ident_ref_id)
+                .expect("field ident_ref exists");
+
+            if let Some((index, field)) = field_types
+                .iter()
+                .enumerate()
+                .find(|(_, field)| field.identifier.id == field_ident_ref.ident.id)
+            {
+                let field_symbol_id = self
+                    .find_symbol_id_for_struct_field(struct_stmt_id, index)
+                    .expect("symbol exists");
+
+                self.identifier_refs.insert(
+                    *field_ident_ref_id,
+                    field_ident_ref.resolved(field_symbol_id),
+                );
+
+                if expr_type_id != field.resolved_type_id() {
+                    self.diagnostics.report_err(
+                        format!(
+                            "Invalid type for field '{}': expected {}, got {}",
+                            self.identifiers.get_by_left(&field.identifier.id).unwrap(),
+                            self.find_type_by_type_id(field.resolved_type_id()),
+                            self.find_type_by_type_id(expr_type_id)
+                        ),
+                        self.expressions[*field_expr_id].span.clone(),
+                        (file!(), line!()),
+                    )
+                }
+            } else {
+                // the field was not found by its name...
+                self.identifier_refs.insert(
+                    *field_ident_ref_id,
+                    field_ident_ref.resolved(self.not_found_symbol_id),
+                );
+            }
+        }
+
+        self.find_type_id_by_identifier(struct_identifier.id)
+            .expect("type exists")
     }
 
     fn resolve_array_instantiation(
@@ -1802,7 +1835,7 @@ impl Resolver {
         let mut parent_found = true;
         let mut namespace_id = *self.namespaces.root().unwrap();
 
-        for  ident_ref_id in ident_ref_ids[0..ident_ref_ids.len() - 1].iter() {
+        for ident_ref_id in ident_ref_ids[0..ident_ref_ids.len() - 1].iter() {
             if self.identifier_refs.get(*ident_ref_id).is_some() {
                 continue;
             }
@@ -2192,6 +2225,8 @@ impl Resolver {
                             (file!(), line!()),
                         )
                     } else {
+                        let target_type_id = parameter_types.first().cloned();
+
                         let fn_type_id =
                             self.insert_type(Type::Function(parameter_types, ret_type));
 
@@ -2202,6 +2237,12 @@ impl Resolver {
                         }
 
                         self.function_symbols.insert(*stmt_id, symbol_id);
+                        if let Some(target_type_id) = target_type_id {
+                            self.type_functions
+                                .entry(target_type_id)
+                                .or_default()
+                                .insert(ident.id, symbol_id);
+                        }
                     }
                 }
                 StatementKind::Use(path) => {
@@ -3887,4 +3928,40 @@ mod tests {
         }
         "#
     );
+
+    test_resolution!(
+        function_call_on_value,
+        r#"
+        let print(n: number) {}
+        let f() {
+            1.print();
+        }
+        "#
+    );
+    test_resolution!(
+        function_call_on_string,
+        r#"
+        let f() {
+            "str".print();
+        }
+        namespace std {
+            annotation native;
+            namespace str {
+                @std.native
+                struct string {}
+                let print(n: string) {}
+            }
+        }
+        "#
+    );
+    // test_resolution!(
+    //     function_call_on_struct,
+    //     r#"
+    //     let f() {
+    //         S{}.print();
+    //     }
+    //     struct S {}
+    //     let print(n: S) {}
+    //     "#
+    // );
 }

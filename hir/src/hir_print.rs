@@ -156,6 +156,7 @@ impl HirPrint for Expression<Typed> {
 
                 ctx.last = true;
                 ctx.next_level();
+                ctx.tag = Some("lhs");
                 ctx.hir_print_expression(*expr_id, opts, f)?;
                 writeln!(
                     f,
@@ -174,6 +175,7 @@ impl HirPrint for Expression<Typed> {
 
                 ctx.last = true;
                 ctx.next_level();
+                ctx.tag = Some("callee");
                 ctx.hir_print_expression(*expr_id, opts, f)?;
 
                 if param_ids.is_empty() {

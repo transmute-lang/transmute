@@ -1,0 +1,63 @@
+---
+source: compiler/tests/fn_call_on_val.rs
+expression: "format!\n(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(), String ::\nfrom_utf8(output.stdout).unwrap(), String ::\nfrom_utf8(output.stderr).unwrap())"
+---
+success:true
+stdout:
+[1] gc_init                | Initialize GC with log level: 2
+[2] gc_init                | Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
+2
+1
+[2] gc_malloc              | alloc 12 bytes, align 1
+[2] gc_run                 | Start GC [1]
+[2] gc_run                 | no allocated blocks
+[1] gc_malloc              | allocated block of size 60 at 0x10010, returning object of size 12 at 0x10040(+48)
+[2] gc_take_ownership      | mark block at 0x10010 (object at 0x10040: '') as owned
+[2] gc_malloc              | alloc 24 bytes, align 8
+[2] gc_run                 | Start GC [2]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): owned
+[2] gc_run                 | Phase: mark
+[2] gc_run                 |   frame 0 (1 roots):
+[2] gc_run                 |     root 0: skipped (null)
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 12: ''): owned
+[1] gc_malloc              | allocated block of size 72 at 0x10050, returning object of size 24 at 0x10080(+48)
+[2] gc_take_ownership      | mark block at 0x10050 (object at 0x10080: '') as owned
+[2] gc_set_callbacks       | set callback of block at 0x10050 (object at 0x10080: '')
+[2] gc_release_ownership   | mark block at 0x10050 (object at 0x10080: '') as unreachable
+[2] gc_release_ownership   | mark block at 0x10010 (object at 0x10040: '') as unreachable
+hello, world
+[2] gc_teardown            | GC Teardown
+[2] gc_run                 | Start GC [3]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10050 (object at 0x10080: ''): unreachable
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): unreachable
+[2] gc_run                 | Phase: mark
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   freeing block at 0x10050 (object at 0x10080, size: 24: '')
+[2] gc_free                |     0x10050: recursive free(object at 0x10080)
+[1] gc_run                 |   freeing block at 0x10010 (object at 0x10040, size: 12: '')
+[2] gc_run                 | Phase: sweep (1)
+
+Statistics:
+
+  Executions ......   3
+  Allocated .......   2 blocks
+    Total
+      objects        36 bytes
+      blocks        132 bytes
+    Max
+      objects        36 bytes
+      blocks        132 bytes
+    End
+      objects         0 bytes
+      blocks          0 bytes
+  Freed ...........   2 blocks
+    Total
+      objects        36 bytes
+      blocks        132 bytes
+
+
+
+stderr:

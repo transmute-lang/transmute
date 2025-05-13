@@ -22,7 +22,7 @@ expression: s
 @     :     1        |           |  +- Expression
 @     :     1        |           |     +- expr 3
 @     :     1        |           |        +- Call
-@     :    16        |           |           +- expr 1
+@     :    16        |           |           +- callee:expr 1
 @   33:    16        |           |           |  +- Ident: print
                      |           |           +- params
 @     :     6        |           |              +- expr 2
@@ -31,7 +31,7 @@ expression: s
 @     :     1        |              +- Ret
 @     :     1        |                 +- expr 6
 @     :     1        |                    +- Call
-@     :    16        |                       +- expr 4
+@     :    16        |                       +- callee:expr 4
 @   33:    16        |                       |  +- Ident: print
                      |                       +- params
 @     :     6        |                          +- expr 5

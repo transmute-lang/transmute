@@ -35,7 +35,7 @@ cargo test -p tmi                                                               
 cargo build --bin tmi --release                                                                               || exit 1
 for f in examples/*.tm; do
   if [ "$f" != "examples/arrays_bounds.tm" ]; then
-    echo -e "\033[0;34mExecuting ${f} ...\033[0m"
+    echo -e "\033[0;34mExecuting ${f} 9 ...\033[0m"
     target/release/tmi "$f" 9                                                                                 #|| exit 1
   fi
 done
