@@ -22,17 +22,17 @@ expression: s
 =   38:     4        |           |  +- Let name=n
 @     :     4        |           |     +- expr 6
 @     :     4        |           |        +- Call
-@     :    16        |           |           +- expr 0
+@     :    16        |           |           +- callee:expr 0
 @   33:    16        |           |           |  +- Ident: number_parse
                      |           |           +- params
 @     :     6        |           |              +- expr 5
 @     :     6        |           |                 +- Call
-@     :    14        |           |                    +- expr 1
+@     :    14        |           |                    +- callee:expr 1
 @   31:    14        |           |                    |  +- Ident: list_get
                      |           |                    +- params
 @     :     5        |           |                       +- expr 3
 @     :     5        |           |                       |  +- Call
-@     :    13        |           |                       |     +- expr 2
+@     :    13        |           |                       |     +- callee:expr 2
 @   30:    13        |           |                       |     |  +- Ident: args
                      |           |                       |     +- params=[]
 @     :     4        |           |                       +- expr 4
@@ -63,7 +63,7 @@ expression: s
 @     :     4        |           |        +- Assignment
 @     :     4        |           |           +- target:expr 17
 @   36:     4        |           |           |  +- Access
-@     :     7        |           |           |     +- expr 16
+@     :     7        |           |           |     +- lhs:expr 16
 @     :     7        |           |           |     |  +- ArrayAccess
 @     :    19        |           |           |     |     +- expr 14
 @   39:    19        |           |           |     |     |  +- Ident: square
@@ -86,7 +86,7 @@ expression: s
 @     :     4        |           |        +- Assignment
 @     :     4        |           |           +- target:expr 24
 @   37:     4        |           |           |  +- Access
-@     :     7        |           |           |     +- expr 23
+@     :     7        |           |           |     +- lhs:expr 23
 @   40:     7        |           |           |     |  +- Ident: s0
 @   37:     4        |           |           |     +- ident=y
 @     :     4        |           |           +- value:expr 25
@@ -95,17 +95,17 @@ expression: s
 =   41:     4        |           |  +- Let name=area
 @     :     4        |           |     +- expr 41
 @     :     4        |           |        +- Call
-@     :     8        |           |           +- expr 54
+@     :     8        |           |           +- callee:expr 54
 @   20:     8        |           |           |  +- Ident: mul
                      |           |           +- params
 @     :     4        |           |              +- expr 33
 @     :     4        |           |              |  +- Call
-@     :     8        |           |              |     +- expr 52
+@     :     8        |           |              |     +- callee:expr 52
 @   16:     8        |           |              |     |  +- Ident: sub
                      |           |              |     +- params
 @     :     4        |           |              |        +- expr 30
 @   36:     4        |           |              |        |  +- Access
-@     :     7        |           |              |        |     +- expr 29
+@     :     7        |           |              |        |     +- lhs:expr 29
 @     :     7        |           |              |        |     |  +- ArrayAccess
 @     :    19        |           |              |        |     |     +- expr 27
 @   39:    19        |           |              |        |     |     |  +- Ident: square
@@ -114,17 +114,17 @@ expression: s
 @   36:     4        |           |              |        |     +- ident=x
 @     :     4        |           |              |        +- expr 32
 @   36:     4        |           |              |           +- Access
-@     :     7        |           |              |              +- expr 31
+@     :     7        |           |              |              +- lhs:expr 31
 @   40:     7        |           |              |              |  +- Ident: s0
 @   36:     4        |           |              |              +- ident=x
 @     :     4        |           |              +- expr 40
 @     :     4        |           |                 +- Call
-@     :     8        |           |                    +- expr 53
+@     :     8        |           |                    +- callee:expr 53
 @   16:     8        |           |                    |  +- Ident: sub
                      |           |                    +- params
 @     :     4        |           |                       +- expr 37
 @   37:     4        |           |                       |  +- Access
-@     :     7        |           |                       |     +- expr 36
+@     :     7        |           |                       |     +- lhs:expr 36
 @     :     7        |           |                       |     |  +- ArrayAccess
 @     :    19        |           |                       |     |     +- expr 34
 @   39:    19        |           |                       |     |     |  +- Ident: square
@@ -133,14 +133,14 @@ expression: s
 @   37:     4        |           |                       |     +- ident=y
 @     :     4        |           |                       +- expr 39
 @   37:     4        |           |                          +- Access
-@     :     7        |           |                             +- expr 38
+@     :     7        |           |                             +- lhs:expr 38
 @   40:     7        |           |                             |  +- Ident: s0
 @   37:     4        |           |                             +- ident=y
                      |           +- stmt 13
 @     :     1        |              +- Ret
 @     :     1        |                 +- expr 44
 @     :     1        |                    +- Call
-@     :    15        |                       +- expr 42
+@     :    15        |                       +- callee:expr 42
 @   32:    15        |                       |  +- Ident: print
                      |                       +- params
 @     :     4        |                          +- expr 43

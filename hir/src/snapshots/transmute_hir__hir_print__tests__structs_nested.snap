@@ -24,17 +24,17 @@ expression: s
 =   43:     4        |           |  +- Let name=i
 @     :     4        |           |     +- expr 6
 @     :     4        |           |        +- Call
-@     :    17        |           |           +- expr 0
+@     :    17        |           |           +- callee:expr 0
 @   34:    17        |           |           |  +- Ident: number_parse
                      |           |           +- params
 @     :     6        |           |              +- expr 5
 @     :     6        |           |                 +- Call
-@     :    15        |           |                    +- expr 1
+@     :    15        |           |                    +- callee:expr 1
 @   32:    15        |           |                    |  +- Ident: list_get
                      |           |                    +- params
 @     :     5        |           |                       +- expr 3
 @     :     5        |           |                       |  +- Call
-@     :    14        |           |                       |     +- expr 2
+@     :    14        |           |                       |     +- callee:expr 2
 @   31:    14        |           |                       |     |  +- Ident: args
                      |           |                       |     +- params=[]
 @     :     4        |           |                       +- expr 4
@@ -43,48 +43,48 @@ expression: s
 @     :     1        |              +- Ret
 @     :     1        |                 +- expr 23
 @     :     1        |                    +- Call
-@     :    16        |                       +- expr 7
+@     :    16        |                       +- callee:expr 7
 @   33:    16        |                       |  +- Ident: print
                      |                       +- params
 @     :     4        |                          +- expr 22
 @     :     4        |                             +- Call
-@     :     9        |                                +- expr 65
+@     :     9        |                                +- callee:expr 65
 @   29:     9        |                                |  +- Ident: add
                      |                                +- params
 @     :     4        |                                   +- expr 18
 @     :     4        |                                   |  +- Call
-@     :     9        |                                   |     +- expr 64
+@     :     9        |                                   |     +- callee:expr 64
 @   29:     9        |                                   |     |  +- Ident: add
                      |                                   |     +- params
 @     :     4        |                                   |        +- expr 14
 @     :     4        |                                   |        |  +- Call
-@     :     9        |                                   |        |     +- expr 63
+@     :     9        |                                   |        |     +- callee:expr 63
 @   29:     9        |                                   |        |     |  +- Ident: add
                      |                                   |        |     +- params
 @     :     4        |                                   |        |        +- expr 10
 @     :     4        |                                   |        |        |  +- Call
-@     :    12        |                                   |        |        |     +- expr 8
+@     :    12        |                                   |        |        |     +- callee:expr 8
 @   37:    12        |                                   |        |        |     |  +- Ident: f2
                      |                                   |        |        |     +- params
 @     :     4        |                                   |        |        |        +- expr 9
 @   43:     4        |                                   |        |        |           +- Ident: i
 @     :     4        |                                   |        |        +- expr 13
 @     :     4        |                                   |        |           +- Call
-@     :    12        |                                   |        |              +- expr 11
+@     :    12        |                                   |        |              +- callee:expr 11
 @   38:    12        |                                   |        |              |  +- Ident: f3
                      |                                   |        |              +- params
 @     :     4        |                                   |        |                 +- expr 12
 @   43:     4        |                                   |        |                    +- Ident: i
 @     :     4        |                                   |        +- expr 17
 @     :     4        |                                   |           +- Call
-@     :    12        |                                   |              +- expr 15
+@     :    12        |                                   |              +- callee:expr 15
 @   39:    12        |                                   |              |  +- Ident: f4
                      |                                   |              +- params
 @     :     4        |                                   |                 +- expr 16
 @   43:     4        |                                   |                    +- Ident: i
 @     :     4        |                                   +- expr 21
 @     :     4        |                                      +- Call
-@     :    12        |                                         +- expr 19
+@     :    12        |                                         +- callee:expr 19
 @   40:    12        |                                         |  +- Ident: f5
                      |                                         +- params
 @     :     4        |                                            +- expr 20
@@ -115,14 +115,14 @@ expression: s
 =   47:     7        |           |  +- Let name=inner
 @     :     7        |           |     +- expr 30
 @   42:     7        |           |        +- Access
-@     :     8        |           |           +- expr 29
+@     :     8        |           |           +- lhs:expr 29
 @   46:     8        |           |           |  +- Ident: outer
 @   42:     7        |           |           +- ident=field
                      |           +- stmt 14
 @     :     4        |              +- Ret
 @     :     4        |                 +- expr 32
 @   41:     4        |                    +- Access
-@     :     7        |                       +- expr 31
+@     :     7        |                       +- lhs:expr 31
 @   47:     7        |                       |  +- Ident: inner
 @   41:     4        |                       +- ident=field
                      +- stmt 19
@@ -151,9 +151,9 @@ expression: s
 @     :     4        |              +- Ret
 @     :     4        |                 +- expr 40
 @   41:     4        |                    +- Access
-@     :     7        |                       +- expr 39
+@     :     7        |                       +- lhs:expr 39
 @   42:     7        |                       |  +- Access
-@     :     8        |                       |     +- expr 38
+@     :     8        |                       |     +- lhs:expr 38
 @   50:     8        |                       |     |  +- Ident: outer
 @   42:     7        |                       |     +- ident=field
 @   41:     4        |                       +- ident=field
@@ -179,14 +179,14 @@ expression: s
 =   53:     7        |           |  +- Let name=inner
 @     :     7        |           |     +- expr 46
 @   42:     7        |           |        +- Access
-@     :     8        |           |           +- expr 45
+@     :     8        |           |           +- lhs:expr 45
 @   52:     8        |           |           |  +- Ident: outer
 @   42:     7        |           |           +- ident=field
                      |           +- stmt 22
 @     :     4        |              +- Ret
 @     :     4        |                 +- expr 48
 @   41:     4        |                    +- Access
-@     :     7        |                       +- expr 47
+@     :     7        |                       +- lhs:expr 47
 @   53:     7        |                       |  +- Ident: inner
 @   41:     4        |                       +- ident=field
                      +- stmt 26
@@ -211,9 +211,9 @@ expression: s
 @     :     4        |              +- Ret
 @     :     4        |                 +- expr 55
 @   41:     4        |                    +- Access
-@     :     7        |                       +- expr 54
+@     :     7        |                       +- lhs:expr 54
 @   42:     7        |                       |  +- Access
-@     :     8        |                       |     +- expr 53
+@     :     8        |                       |     +- lhs:expr 53
 @   55:     8        |                       |     |  +- Ident: outer
 @   42:     7        |                       |     +- ident=field
 @   41:     4        |                       +- ident=field

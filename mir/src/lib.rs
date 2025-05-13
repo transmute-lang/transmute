@@ -607,26 +607,12 @@ impl Transformer {
         span: Span,
         type_id: TypeId,
         callee_expr_id: ExprId,
-        params: Vec<ExprId>,
+        mut params: Vec<ExprId>,
         remove_implicit_rets: bool,
     ) -> (Vec<SymbolId>, BTreeMap<SymbolId, Variable>) {
         let expr = hir.expressions.remove(callee_expr_id).unwrap();
         let (mut mutated_symbol_ids, mut variables) =
             self.transform_expression(hir, parent, expr, remove_implicit_rets);
-
-        let expression = &self.expressions[callee_expr_id];
-        let symbol_id = match &expression.kind {
-            ExpressionKind::Literal(lit) => match &lit.kind {
-                LiteralKind::Identifier(symbol_id) => *symbol_id,
-                _ => panic!("Literal(Identifier) expected, got {expression:?}"),
-            },
-            ExpressionKind::Access(_, symbol_id) => {
-                // todo add support for non-symbolic function calls (i.e. functions as values):
-                //  if x { f1; } else { f2; }(...)
-                *symbol_id
-            }
-            _ => panic!("Literal(Literal) expected, got {expression:?}"),
-        };
 
         for expr_id in params.iter() {
             let expression = hir.expressions.remove(*expr_id).unwrap();
@@ -635,6 +621,30 @@ impl Transformer {
             mutated_symbol_ids.extend(new_mutated_symbol_ids);
             variables.extend(new_variables);
         }
+
+        let expression = &self.expressions[callee_expr_id];
+        let symbol_id = match &expression.kind {
+            ExpressionKind::Literal(lit) => match &lit.kind {
+                LiteralKind::Identifier(symbol_id) => *symbol_id,
+                _ => panic!("Literal(Identifier) expected, got {expression:?}"),
+            },
+            ExpressionKind::Access(first_parameter, symbol_id) => {
+                // todo add support for non-symbolic function calls (i.e. functions as values):
+                //  if x { f1; } else { f2; }(...)
+
+                // todo:refactoring maybe there is a better way to skip using a namespace as first
+                //  parameter?
+                if !matches!(
+                    hir.types[self.expressions[*first_parameter].type_id],
+                    HirType::Void
+                ) {
+                    params.insert(0, *first_parameter);
+                }
+
+                *symbol_id
+            }
+            _ => panic!("Literal(Literal) expected, got {expression:?}"),
+        };
 
         self.expressions.insert(
             expr_id,
@@ -1395,4 +1405,11 @@ mod tests {
             f();
         }
     "#);
+    // todo replicate the ones from hir
+    // t!(test_function_call_on_value => r#"
+    //     let print(n: number) {}
+    //     let f() {
+    //         1.print();
+    //     }
+    // "#);
 }

@@ -21,17 +21,17 @@ expression: s
 =   37:     4        |           |  +- Let name=n
 @     :     4        |           |     +- expr 6
 @     :     4        |           |        +- Call
-@     :    16        |           |           +- expr 0
+@     :    16        |           |           +- callee:expr 0
 @   33:    16        |           |           |  +- Ident: number_parse
                      |           |           +- params
 @     :     6        |           |              +- expr 5
 @     :     6        |           |                 +- Call
-@     :    14        |           |                    +- expr 1
+@     :    14        |           |                    +- callee:expr 1
 @   31:    14        |           |                    |  +- Ident: list_get
                      |           |                    +- params
 @     :     5        |           |                       +- expr 3
 @     :     5        |           |                       |  +- Call
-@     :    13        |           |                       |     +- expr 2
+@     :    13        |           |                       |     +- callee:expr 2
 @   30:    13        |           |                       |     |  +- Ident: args
                      |           |                       |     +- params=[]
 @     :     4        |           |                       +- expr 4
@@ -43,7 +43,7 @@ expression: s
 @   36:     4        |           |           +- field name=field
 @     :     4        |           |              +- expr 9
 @     :     4        |           |                 +- Call
-@     :     8        |           |                    +- expr 29
+@     :     8        |           |                    +- callee:expr 29
 @   20:     8        |           |                    |  +- Ident: mul
                      |           |                    +- params
 @     :     4        |           |                       +- expr 7
@@ -56,17 +56,17 @@ expression: s
 @     :     4        |           |        +- Assignment
 @     :     4        |           |           +- target:expr 12
 @   36:     4        |           |           |  +- Access
-@     :     7        |           |           |     +- expr 11
+@     :     7        |           |           |     +- lhs:expr 11
 @   38:     7        |           |           |     |  +- Ident: s
 @   36:     4        |           |           |     +- ident=field
 @     :     4        |           |           +- value:expr 16
 @     :     4        |           |              +- Call
-@     :     8        |           |                 +- expr 30
+@     :     8        |           |                 +- callee:expr 30
 @   28:     8        |           |                 |  +- Ident: add
                      |           |                 +- params
 @     :     4        |           |                    +- expr 14
 @   36:     4        |           |                    |  +- Access
-@     :     7        |           |                    |     +- expr 13
+@     :     7        |           |                    |     +- lhs:expr 13
 @   38:     7        |           |                    |     |  +- Ident: s
 @   36:     4        |           |                    |     +- ident=field
 @     :     4        |           |                    +- expr 15
@@ -75,12 +75,12 @@ expression: s
 @     :     1        |              +- Ret
 @     :     1        |                 +- expr 21
 @     :     1        |                    +- Call
-@     :    15        |                       +- expr 18
+@     :    15        |                       +- callee:expr 18
 @   32:    15        |                       |  +- Ident: print
                      |                       +- params
 @     :     4        |                          +- expr 20
 @   36:     4        |                             +- Access
-@     :     7        |                                +- expr 19
+@     :     7        |                                +- lhs:expr 19
 @   38:     7        |                                |  +- Ident: s
 @   36:     4        |                                +- ident=field
                      +- stmt 18

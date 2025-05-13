@@ -24,7 +24,7 @@ expression: s
 @     :     1        |              +- Ret
 @     :     1        |                 +- expr 6
 @     :     1        |                    +- Call
-@     :    14        |                       +- expr 2
+@     :    14        |                       +- callee:expr 2
 @   31:    14        |                       |  +- Ident: print
                      |                       +- params
 @     :     4        |                          +- expr 5

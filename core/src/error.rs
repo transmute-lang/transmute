@@ -38,6 +38,8 @@ impl<I> Diagnostics<I> {
         span: Span,
         generated_at: (&'static str, u32),
     ) {
+        #[cfg(any(test, feature = "backtraces"))]
+        println!("Backtrace: {}", std::backtrace::Backtrace::force_capture());
         self.push(Diagnostic::new(message, span, Level::Error, generated_at));
     }
 }

@@ -18,17 +18,17 @@ expression: s
 =   35:     4        |           |  +- Let name=n
 @     :     4        |           |     +- expr 6
 @     :     4        |           |        +- Call
-@     :    15        |           |           +- expr 0
+@     :    15        |           |           +- callee:expr 0
 @   32:    15        |           |           |  +- Ident: number_parse
                      |           |           +- params
 @     :     6        |           |              +- expr 5
 @     :     6        |           |                 +- Call
-@     :    13        |           |                    +- expr 1
+@     :    13        |           |                    +- callee:expr 1
 @   30:    13        |           |                    |  +- Ident: list_get
                      |           |                    +- params
 @     :     5        |           |                       +- expr 3
 @     :     5        |           |                       |  +- Call
-@     :    12        |           |                       |     +- expr 2
+@     :    12        |           |                       |     +- callee:expr 2
 @   29:    12        |           |                       |     |  +- Ident: args
                      |           |                       |     +- params=[]
 @     :     4        |           |                       +- expr 4
@@ -99,7 +99,7 @@ expression: s
 @     :     1        |              +- Ret
 @     :     1        |                 +- expr 37
 @     :     1        |                    +- Call
-@     :    14        |                       +- expr 35
+@     :    14        |                       +- callee:expr 35
 @   31:    14        |                       |  +- Ident: print
                      |                       +- params
 @     :     4        |                          +- expr 36
