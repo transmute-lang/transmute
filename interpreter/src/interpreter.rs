@@ -49,6 +49,7 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
                                         _,
                                         _,
                                         Implementation::Provided(main_expr_id),
+                                        _,
                                     ) => Some(*main_expr_id),
                                     _ => None,
                                 }
@@ -127,12 +128,12 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
 
                 Val::none()
             }
-            StatementKind::LetFn(_, _, _, _, _) => Val::none(),
+            StatementKind::LetFn(..) => Val::none(),
             StatementKind::Ret(None, _) => Val::of_option_ret(None),
             StatementKind::Ret(Some(e), _) => {
                 Val::of_option_ret(self.visit_expression(*e).value_ref)
             }
-            StatementKind::Struct(_, _, _) => Val::none(),
+            StatementKind::Struct(..) => Val::none(),
             StatementKind::Annotation(_) => Val::none(),
             StatementKind::Use(_) => Val::none(),
             StatementKind::Namespace(_, _, _) => Val::none(),
@@ -314,7 +315,7 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
             SymbolKind::LetFn(ident_id, stmt, _, _) => {
                 let stmt = &self.hir.statements[*stmt];
                 match &stmt.kind {
-                    StatementKind::LetFn(_, _, parameters, _, implementation) => {
+                    StatementKind::LetFn(_, _, parameters, _, implementation, _) => {
                         match implementation {
                             Implementation::Provided(expr_id) => {
                                 let mut env = HashMap::with_capacity(parameters.len());

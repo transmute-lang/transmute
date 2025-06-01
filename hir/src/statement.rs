@@ -60,6 +60,7 @@ impl From<AstStatement> for Statement<Untyped, Unbound> {
                             .collect::<Vec<Parameter<Untyped, Unbound>>>(),
                         Return::from(ret_type),
                         Implementation::Provided(expr_id),
+                        None,
                     )
                 }
                 AstStatementKind::Struct(identifier, annotations, fields) => StatementKind::Struct(
@@ -74,6 +75,7 @@ impl From<AstStatement> for Statement<Untyped, Unbound> {
                             .map(Field::from)
                             .collect::<Vec<Field<Untyped, Unbound>>>(),
                     ),
+                    None,
                 ),
                 AstStatementKind::Annotation(identifier) => {
                     StatementKind::Annotation(Identifier::from(identifier))
@@ -102,11 +104,15 @@ where
         Vec<Parameter<T, B>>,
         Return<T>,
         Implementation<ExprId>,
+        /// The `LetFn` `StmtId` in which the struct is defined, if a nested struct
+        Option<StmtId>,
     ),
     Struct(
         Identifier<B>,
         Vec<Annotation>,
         Implementation<Vec<Field<T, B>>>,
+        /// The `LetFn` `StmtId` in which the struct is defined, if a nested struct
+        Option<StmtId>,
     ),
     Annotation(Identifier<B>),
     Use(Vec<IdentRefId>),

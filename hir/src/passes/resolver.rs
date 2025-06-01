@@ -302,7 +302,7 @@ impl Resolver {
         // STEP 6 ----------------------------------------------------------------------------------
         debug_assert_eq!(self.namespaces.len(), 1, "{:?}", self.namespaces);
         let root_namespace = hir.statements.remove(root).unwrap();
-        self.resolve_statement(&mut hir, root_namespace);
+        self.resolve_statement(&mut hir, root_namespace, None);
         debug_assert_eq!(self.namespaces.len(), 1, "{:?}", self.namespaces);
 
         if !self.diagnostics.is_empty() {
@@ -362,13 +362,13 @@ impl Resolver {
             .statements
             .iter()
             .filter_map(|(_, stmt)| match &stmt.kind {
-                StatementKind::LetFn(_, annotations, _, _, _) => Some(
+                StatementKind::LetFn(_, annotations, _, _, _, _) => Some(
                     annotations
                         .iter()
                         .flat_map(|a| &a.ident_ref_ids)
                         .collect::<Vec<_>>(),
                 ),
-                StatementKind::Struct(_, annotations, _) => Some(
+                StatementKind::Struct(_, annotations, _, _) => Some(
                     annotations
                         .iter()
                         .flat_map(|a| &a.ident_ref_ids)
@@ -519,6 +519,7 @@ impl Resolver {
         hir: &mut UnresolvedHir,
         expr_id: ExprId,
         param_types: Option<&[TypeId]>,
+        fn_stmt_id: Option<StmtId>,
     ) -> (TypeId, Option<SymbolId>) {
         if let Some(expr) = self.expressions.get(expr_id) {
             let symbol_id = match &expr.kind {
@@ -541,14 +542,15 @@ impl Resolver {
             .expect("expr is not resolved");
 
         let (type_id, symbol_id) = match &expr.kind {
-            ExpressionKind::Assignment(Target::Direct(ident_ref), expr) => {
-                (self.resolve_direct_assignment(hir, *ident_ref, *expr), None)
-            }
+            ExpressionKind::Assignment(Target::Direct(ident_ref), expr) => (
+                self.resolve_direct_assignment(hir, *ident_ref, *expr, fn_stmt_id),
+                None,
+            ),
             ExpressionKind::Assignment(Target::Indirect(lhs_expr_id), rhs_expr_id) => {
-                self.resolve_indirect_assignment(hir, lhs_expr_id, rhs_expr_id)
+                self.resolve_indirect_assignment(hir, lhs_expr_id, rhs_expr_id, fn_stmt_id)
             }
             ExpressionKind::If(cond, true_branch, false_branch) => (
-                self.resolve_if(hir, *cond, *true_branch, *false_branch),
+                self.resolve_if(hir, *cond, *true_branch, *false_branch, fn_stmt_id),
                 None,
             ),
             ExpressionKind::Literal(literal) => match literal.kind {
@@ -570,25 +572,40 @@ impl Resolver {
                     (type_id, symbol_ids.first().cloned())
                 }
             },
-            ExpressionKind::Access(expr_id, ident_ref_id) => {
-                self.resolve_access(hir, &expr.span, *expr_id, *ident_ref_id, param_types)
-            }
+            ExpressionKind::Access(expr_id, ident_ref_id) => self.resolve_access(
+                hir,
+                &expr.span,
+                *expr_id,
+                *ident_ref_id,
+                param_types,
+                fn_stmt_id,
+            ),
             ExpressionKind::FunctionCall(expr_id, params) => (
-                self.resolve_function_call(hir, *expr_id, params.clone().as_slice()),
+                self.resolve_function_call(hir, *expr_id, params.clone().as_slice(), fn_stmt_id),
                 None,
             ),
-            ExpressionKind::While(cond, expr) => self.resolve_while(hir, *cond, *expr),
-            ExpressionKind::Block(stmts) => (self.resolve_block(hir, &stmts.clone()), None),
+            ExpressionKind::While(cond, expr) => self.resolve_while(hir, *cond, *expr, fn_stmt_id),
+            ExpressionKind::Block(stmts) => {
+                (self.resolve_block(hir, &stmts.clone(), fn_stmt_id), None)
+            }
             ExpressionKind::StructInstantiation(ident_ref_id, fields) => (
-                self.resolve_struct_instantiation(hir, *ident_ref_id, fields, &expr.span),
+                self.resolve_struct_instantiation(
+                    hir,
+                    *ident_ref_id,
+                    fields,
+                    &expr.span,
+                    fn_stmt_id,
+                ),
                 None,
             ),
-            ExpressionKind::ArrayInstantiation(values) => {
-                (self.resolve_array_instantiation(hir, values), None)
-            }
-            ExpressionKind::ArrayAccess(expr, index) => {
-                (self.resolve_array_access(hir, *expr, *index), None)
-            }
+            ExpressionKind::ArrayInstantiation(values) => (
+                self.resolve_array_instantiation(hir, values, fn_stmt_id),
+                None,
+            ),
+            ExpressionKind::ArrayAccess(expr, index) => (
+                self.resolve_array_access(hir, *expr, *index, fn_stmt_id),
+                None,
+            ),
         };
 
         self.expressions.insert(expr_id, expr.typed(type_id));
@@ -601,6 +618,7 @@ impl Resolver {
         hir: &mut UnresolvedHir,
         ident_ref: IdentRefId,
         expr: ExprId,
+        fn_stmt_id: Option<StmtId>,
     ) -> TypeId {
         // If we have the following:
         //   let add(a: number, b: number): number = {}
@@ -623,7 +641,7 @@ impl Resolver {
         //
         // todo:feature:fn-value implement the above...
 
-        let rhs_type_id = self.resolve_expression(hir, expr, None).0;
+        let rhs_type_id = self.resolve_expression(hir, expr, None, fn_stmt_id).0;
 
         // todo:feature:fn-value to search for method, we need to extract the parameter types from the
         //  expr_type, if it corresponds to a function type. We don't have this
@@ -665,9 +683,14 @@ impl Resolver {
         hir: &mut UnresolvedHir,
         lhs_expr_id: &ExprId,
         rhs_expr_id: &ExprId,
+        fn_stmt_id: Option<StmtId>,
     ) -> (TypeId, Option<SymbolId>) {
-        let lhs_type_id = self.resolve_expression(hir, *lhs_expr_id, None).0;
-        let rhs_type_id = self.resolve_expression(hir, *rhs_expr_id, None).0;
+        let lhs_type_id = self
+            .resolve_expression(hir, *lhs_expr_id, None, fn_stmt_id)
+            .0;
+        let rhs_type_id = self
+            .resolve_expression(hir, *rhs_expr_id, None, fn_stmt_id)
+            .0;
 
         if lhs_type_id == self.find_type_id_by_type(&Type::Invalid)
             || rhs_type_id == self.find_type_id_by_type(&Type::Invalid)
@@ -695,8 +718,9 @@ impl Resolver {
         cond: ExprId,
         true_branch: ExprId,
         false_branch: Option<ExprId>,
+        fn_stmt_id: Option<StmtId>,
     ) -> TypeId {
-        let cond_type = self.resolve_expression(hir, cond, None).0;
+        let cond_type = self.resolve_expression(hir, cond, None, fn_stmt_id).0;
 
         if cond_type != self.find_type_id_by_type(&Type::Boolean)
             && cond_type != self.find_type_id_by_type(&Type::Invalid)
@@ -712,10 +736,12 @@ impl Resolver {
             );
         }
 
-        let true_branch_type_id = self.resolve_expression(hir, true_branch, None).0;
+        let true_branch_type_id = self
+            .resolve_expression(hir, true_branch, None, fn_stmt_id)
+            .0;
         let false_branch_type_id = match false_branch {
             None => self.find_type_id_by_type(&Type::Void),
-            Some(e) => self.resolve_expression(hir, e, None).0,
+            Some(e) => self.resolve_expression(hir, e, None, fn_stmt_id).0,
         };
 
         let true_branch_type = self.find_type_by_type_id(true_branch_type_id);
@@ -816,8 +842,9 @@ impl Resolver {
         expr_id: ExprId,
         ident_ref_id: IdentRefId,
         param_types: Option<&[TypeId]>,
+        fn_stmt_id: Option<StmtId>,
     ) -> (TypeId, Option<SymbolId>) {
-        let (expr_type_id, symbol_id) = self.resolve_expression(hir, expr_id, None);
+        let (expr_type_id, symbol_id) = self.resolve_expression(hir, expr_id, None, fn_stmt_id);
 
         // todo:feature make sure that fq names start form the root namespace (resolve_expression
         //  crawl the scoped up until it finds the symbol, but we don't want to start descending
@@ -900,11 +927,11 @@ impl Resolver {
             Type::Struct(stmt_id) if param_types.is_none() => {
                 let stmt_id = *stmt_id;
                 if let Some(stmt) = hir.statements.remove(stmt_id) {
-                    self.resolve_statement(hir, stmt);
+                    self.resolve_statement(hir, stmt, fn_stmt_id);
                 }
 
                 match &self.statements[stmt_id].kind {
-                    StatementKind::Struct(ident, _, Implementation::Provided(fields)) => {
+                    StatementKind::Struct(ident, _, Implementation::Provided(fields), _) => {
                         match fields
                             .iter()
                             .enumerate()
@@ -936,7 +963,7 @@ impl Resolver {
                             }
                         }
                     }
-                    StatementKind::Struct(ident, _, _) => {
+                    StatementKind::Struct(ident, _, _, _) => {
                         self.diagnostics.report_err(
                             format!(
                                 "Native struct {} fields cannot be accessed",
@@ -987,12 +1014,13 @@ impl Resolver {
         hir: &mut UnresolvedHir,
         expr_id: ExprId,
         params: &[ExprId],
+        fn_stmt_id: Option<StmtId>,
     ) -> TypeId {
         let invalid_type_id = self.find_type_id_by_type(&Type::Invalid);
 
         let mut param_types = Vec::with_capacity(params.len());
         for param in params {
-            let param_type = self.resolve_expression(hir, *param, None).0;
+            let param_type = self.resolve_expression(hir, *param, None, fn_stmt_id).0;
 
             if param_type != invalid_type_id {
                 param_types.push(param_type)
@@ -1003,7 +1031,7 @@ impl Resolver {
             return self.find_type_id_by_type(&Type::Invalid);
         }
 
-        self.resolve_expression(hir, expr_id, Some(&param_types))
+        self.resolve_expression(hir, expr_id, Some(&param_types), fn_stmt_id)
             .1
             .map(|symbol_id| match &self.symbols[symbol_id].kind {
                 SymbolKind::LetFn(_, _, _, ret_type) => *ret_type,
@@ -1022,8 +1050,9 @@ impl Resolver {
         hir: &mut UnresolvedHir,
         cond: ExprId,
         expr: ExprId,
+        fn_stmt_id: Option<StmtId>,
     ) -> (TypeId, Option<SymbolId>) {
-        let cond_type = self.resolve_expression(hir, cond, None).0;
+        let cond_type = self.resolve_expression(hir, cond, None, fn_stmt_id).0;
 
         if cond_type != self.find_type_id_by_type(&Type::Boolean)
             && cond_type != self.find_type_id_by_type(&Type::Invalid)
@@ -1039,14 +1068,19 @@ impl Resolver {
             );
         }
 
-        self.resolve_expression(hir, expr, None)
+        self.resolve_expression(hir, expr, None, fn_stmt_id)
     }
 
-    fn resolve_block(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId]) -> TypeId {
+    fn resolve_block(
+        &mut self,
+        hir: &mut UnresolvedHir,
+        stmts: &[StmtId],
+        fn_stmt_id: Option<StmtId>,
+    ) -> TypeId {
         self.scopes.push();
 
         self.insert_functions(hir, stmts, false);
-        let stmts_type_id = self.resolve_statements(hir, stmts);
+        let stmts_type_id = self.resolve_statements(hir, stmts, fn_stmt_id);
 
         self.scopes.pop();
 
@@ -1059,10 +1093,11 @@ impl Resolver {
         ident_ref_id: IdentRefId,
         field_exprs: &[(IdentRefId, ExprId)],
         span: &Span,
+        fn_stmt_id: Option<StmtId>,
     ) -> TypeId {
         let mut expr_type_ids = Vec::with_capacity(field_exprs.len());
         for (_, field_expr_id) in field_exprs {
-            let expr_type_id = self.resolve_expression(hir, *field_expr_id, None);
+            let expr_type_id = self.resolve_expression(hir, *field_expr_id, None, fn_stmt_id);
             expr_type_ids.push(expr_type_id);
         }
         debug_assert!(expr_type_ids.len() == field_exprs.len());
@@ -1083,14 +1118,14 @@ impl Resolver {
             None => return self.find_type_id_by_type(&Type::Invalid),
             Some(stmt_id) => {
                 if let Some(stmt) = hir.statements.remove(*stmt_id) {
-                    self.resolve_statement(hir, stmt);
+                    self.resolve_statement(hir, stmt, fn_stmt_id);
                 }
                 *stmt_id
             }
         };
 
         let (struct_identifier, implementation) = match &self.statements[struct_stmt_id].kind {
-            StatementKind::Struct(struct_identifier, _, struct_fields) => {
+            StatementKind::Struct(struct_identifier, _, struct_fields, _) => {
                 (struct_identifier, struct_fields)
             }
             _ => panic!("must be a struct"),
@@ -1169,12 +1204,14 @@ impl Resolver {
         &mut self,
         hir: &mut UnresolvedHir,
         values: &[ExprId],
+        fn_stmt_id: Option<StmtId>,
     ) -> TypeId {
         let expected_type_id = self
             .resolve_expression(
                 hir,
                 *values.first().expect("array has at least one element"),
                 None,
+                fn_stmt_id,
             )
             .0;
 
@@ -1191,7 +1228,7 @@ impl Resolver {
         }
 
         for (index, expr_id) in values.iter().enumerate().skip(1) {
-            let type_id = self.resolve_expression(hir, *expr_id, None).0;
+            let type_id = self.resolve_expression(hir, *expr_id, None, fn_stmt_id).0;
             if type_id != expected_type_id {
                 self.diagnostics.report_err(
                     format!(
@@ -1213,8 +1250,11 @@ impl Resolver {
         hir: &mut UnresolvedHir,
         base_expr_id: ExprId,
         value_expr_id: ExprId,
+        fn_stmt_id: Option<StmtId>,
     ) -> TypeId {
-        let array_type_id = self.resolve_expression(hir, base_expr_id, None).0;
+        let array_type_id = self
+            .resolve_expression(hir, base_expr_id, None, fn_stmt_id)
+            .0;
         let array_type = self.find_type_by_type_id(array_type_id);
 
         let type_id = match array_type {
@@ -1229,7 +1269,9 @@ impl Resolver {
             }
         };
 
-        let index_type_id = self.resolve_expression(hir, value_expr_id, None).0;
+        let index_type_id = self
+            .resolve_expression(hir, value_expr_id, None, fn_stmt_id)
+            .0;
         if !matches!(self.find_type_by_type_id(index_type_id), Type::Number) {
             self.diagnostics.report_err(
                 format!(
@@ -1245,7 +1287,12 @@ impl Resolver {
     }
 
     // todo:refactoring think about passing the Statement directly
-    fn resolve_statements(&mut self, hir: &mut UnresolvedHir, stmts: &[StmtId]) -> TypeId {
+    fn resolve_statements(
+        &mut self,
+        hir: &mut UnresolvedHir,
+        stmts: &[StmtId],
+        fn_stmt_id: Option<StmtId>,
+    ) -> TypeId {
         let mut ret_type = self.find_type_id_by_type(&Type::Void);
 
         for &stmt_id in stmts {
@@ -1258,7 +1305,7 @@ impl Resolver {
                     );
                     return self.find_type_id_by_type(&Type::Invalid);
                 }
-                self.resolve_statement(hir, stmt)
+                self.resolve_statement(hir, stmt, fn_stmt_id)
             } else {
                 let stmt = self
                     .statements
@@ -1294,6 +1341,7 @@ impl Resolver {
         &mut self,
         hir: &mut UnresolvedHir,
         stmt: Statement<Untyped, Unbound>,
+        fn_stmt_id: Option<StmtId>,
     ) -> TypeId {
         let stmt_id = stmt.id;
         let span = stmt.span.clone();
@@ -1305,10 +1353,10 @@ impl Resolver {
                     Statement::new(stmt_id, StatementKind::Expression(expr), span),
                 );
 
-                self.resolve_expression(hir, expr, None).0
+                self.resolve_expression(hir, expr, None, fn_stmt_id).0
             }
             StatementKind::Let(ident, expr) => {
-                let symbol_id = self.resolve_let(hir, stmt_id, &ident, expr);
+                let symbol_id = self.resolve_let(hir, stmt_id, &ident, expr, fn_stmt_id);
 
                 self.statements.insert(
                     stmt_id,
@@ -1323,7 +1371,7 @@ impl Resolver {
             }
             StatementKind::Ret(expr, ret_mode) => {
                 if let Some(expr) = expr {
-                    self.resolve_expression(hir, expr, None);
+                    self.resolve_expression(hir, expr, None, fn_stmt_id);
                 }
 
                 self.statements.insert(
@@ -1339,6 +1387,7 @@ impl Resolver {
                 params,
                 ret_type,
                 Implementation::Provided(expr),
+                _,
             ) => {
                 let (identifier, parameters, ret_type, implementation) = self.resolve_function(
                     hir,
@@ -1358,6 +1407,7 @@ impl Resolver {
                             parameters,
                             ret_type,
                             implementation,
+                            fn_stmt_id,
                         ),
                         span,
                     ),
@@ -1366,14 +1416,14 @@ impl Resolver {
                 self.find_type_id_by_type(&Type::Void)
             }
             #[cfg(debug_assertions)]
-            StatementKind::LetFn(_, _, _, _, Implementation::Native(_)) => {
+            StatementKind::LetFn(_, _, _, _, Implementation::Native(_), _) => {
                 panic!("body type must be implemented before resolution");
             }
             #[cfg(not(debug_assertions))]
-            StatementKind::LetFn(_, _, _, _, Implementation::Native) => {
+            StatementKind::LetFn(_, _, _, _, Implementation::Native, _) => {
                 panic!("body type must be implemented before resolution");
             }
-            StatementKind::Struct(ident, annotations, implementation) => {
+            StatementKind::Struct(ident, annotations, implementation, _) => {
                 let fields = match implementation {
                     Implementation::Provided(fields) => fields,
                     _ => panic!("implementation required"),
@@ -1385,7 +1435,7 @@ impl Resolver {
                     stmt_id,
                     Statement::new(
                         stmt_id,
-                        StatementKind::Struct(ident, annotations, fields),
+                        StatementKind::Struct(ident, annotations, fields, fn_stmt_id),
                         span,
                     ),
                 );
@@ -1437,8 +1487,9 @@ impl Resolver {
         stmt: StmtId,
         ident: &Identifier<Unbound>,
         expr: ExprId,
+        fn_stmt_id: Option<StmtId>,
     ) -> SymbolId {
-        let expr_type_id = self.resolve_expression(hir, expr, None).0;
+        let expr_type_id = self.resolve_expression(hir, expr, None, fn_stmt_id).0;
 
         if expr_type_id == self.find_type_id_by_type(&Type::None) {
             let expr = &self.expressions[expr];
@@ -1484,7 +1535,7 @@ impl Resolver {
                 })
                 .copied()
                 .collect::<Vec<StmtId>>();
-            self.insert_structs(hir, &stmt_ids, false);
+            self.insert_structs(hir, &stmt_ids, Some(stmt_id));
         }
 
         let (fn_symbol_id, param_types, ret_type_id) = self
@@ -1578,7 +1629,7 @@ impl Resolver {
         // we want to visit the expression, hence no short-circuit
         // note that we resolve the expression even for native function (even though we don't
         // report any error whatsoever so that we don't have "holes" in the resolved expressions)
-        self.resolve_expression(hir, body_expr_id, None);
+        self.resolve_expression(hir, body_expr_id, None, Some(stmt_id));
 
         if !is_native && ret_type_id != self.find_type_id_by_type(&Type::Invalid) {
             let exit_points = hir
@@ -1608,7 +1659,10 @@ impl Resolver {
             for (exit_expr_id, explicit) in exit_points {
                 let expr_type_id = match exit_expr_id {
                     None => self.find_type_id_by_type(&Type::Void),
-                    Some(exit_expr_id) => self.resolve_expression(hir, exit_expr_id, None).0,
+                    Some(exit_expr_id) => {
+                        self.resolve_expression(hir, exit_expr_id, None, Some(stmt_id))
+                            .0
+                    }
                 };
 
                 if expr_type_id == self.find_type_id_by_type(&Type::Invalid) {
@@ -1804,7 +1858,7 @@ impl Resolver {
 
         for stmt_id in stmts.iter() {
             if let Some(statement) = hir.statements.remove(*stmt_id) {
-                self.resolve_statement(hir, statement);
+                self.resolve_statement(hir, statement, None);
             }
         }
 
@@ -2129,7 +2183,7 @@ impl Resolver {
 
                 self.insert_namespaces(hir, &stmts);
                 self.insert_annotations(hir, &stmts);
-                self.insert_structs(hir, &stmts, true);
+                self.insert_structs(hir, &stmts, None);
 
                 self.scopes.pop();
                 self.namespaces.pop();
@@ -2200,7 +2254,7 @@ impl Resolver {
             let stmt = hir.statements.remove(*stmt_id).unwrap();
 
             match &stmt.kind {
-                StatementKind::LetFn(ident, _, params, ret, _) => {
+                StatementKind::LetFn(ident, _, params, ret, _, _) => {
                     let parameter_types = params
                         .iter()
                         .map(|p| p.type_def_id)
@@ -2264,16 +2318,21 @@ impl Resolver {
 
     /// Inserts all structs found in `stmts` into `self.struct_symbols` (which itself contains
     /// reference to `self.symbols`) as well as the current stack frame's symbol table, and if
-    /// `top_level` is `true` into the current namespace. While doing so, we perform the following:
+    /// `fn_stmt_id` is `None` into the current namespace. While doing so, we perform the following:
     ///  - insert a type corresponding to the struct in `self.types`;
     ///  - verify that no struct with the same name already exist in the current scope;
     ///  - resolve the fields' types.
-    fn insert_structs(&mut self, hir: &UnresolvedHir, stmts: &[StmtId], top_level: bool) {
+    fn insert_structs(
+        &mut self,
+        hir: &UnresolvedHir,
+        stmts: &[StmtId],
+        fn_stmt_id: Option<StmtId>,
+    ) {
         let structs = stmts
             .iter()
             .filter_map(|stmt| hir.statements.get(*stmt))
             .filter_map(|stmt| match &stmt.kind {
-                StatementKind::Struct(ident, _, _) => Some((stmt.id, ident.clone())),
+                StatementKind::Struct(ident, _, _, _) => Some((stmt.id, ident.clone())),
                 _ => None,
             })
             .collect::<Vec<(StmtId, Identifier<Unbound>)>>();
@@ -2295,7 +2354,7 @@ impl Resolver {
                 let struct_type_id = self.insert_type(Type::Struct(stmt_id));
                 let symbol_id = self.insert_symbol(ident_id, symbol_kind, struct_type_id);
 
-                if top_level {
+                if fn_stmt_id.is_none() {
                     self.bring_symbol_into_namespace(ident_id, symbol_id);
                 }
 
@@ -2771,7 +2830,7 @@ mod tests {
             self.statements
                 .iter()
                 .filter_map(|(_, stmt)| match &stmt.kind {
-                    StatementKind::LetFn(_, _, params, ret, _) => {
+                    StatementKind::LetFn(_, _, params, ret, _, _) => {
                         if ret.resolved_type_id() == crate::TypeId::from(0) {
                             return Some(stmt);
                         }
@@ -2783,7 +2842,7 @@ mod tests {
                         }
                         None
                     }
-                    StatementKind::Struct(_, _, Implementation::Provided(fields)) => {
+                    StatementKind::Struct(_, _, Implementation::Provided(fields), _) => {
                         if fields
                             .iter()
                             .any(|f| f.resolved_type_id() == crate::TypeId::from(0))
@@ -2835,7 +2894,7 @@ mod tests {
                             None
                         }
                     }
-                    StatementKind::LetFn(ident, _, parameters, _, _) => {
+                    StatementKind::LetFn(ident, _, parameters, _, _, _) => {
                         if ident.resolved_symbol_id() == crate::SymbolId::from(0) {
                             return Some(stmt);
                         }
@@ -2847,7 +2906,7 @@ mod tests {
                         }
                         None
                     }
-                    StatementKind::Struct(ident, _, fields) => {
+                    StatementKind::Struct(ident, _, fields, _) => {
                         if ident.resolved_symbol_id() == crate::SymbolId::from(0) {
                             return Some(stmt);
                         }
@@ -3334,6 +3393,21 @@ mod tests {
             let s = S {
                 field: 1
             };
+        }
+        "#
+    );
+    test_resolution!(
+        structs_in_functions,
+        r#"
+        let f() {
+            struct Sf {
+                field: number
+            }
+        }
+        let g() {
+            struct Sg {
+                field: number
+            }
         }
         "#
     );

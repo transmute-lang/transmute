@@ -32,6 +32,7 @@ struct Transformer {
     structs: VecMap<StructId, Struct>,
     // todo:refactoring only keep one of SymbolId or StructId?
     structs_map: VecMap<StmtId, (SymbolId, StructId)>,
+    fn_map: VecMap<StmtId, FunctionId>,
     expressions: VecMap<ExprId, Expression>,
     statements: VecMap<StmtId, Statement>,
 }
@@ -42,6 +43,7 @@ impl Transformer {
             functions: Default::default(),
             structs: Default::default(),
             structs_map: Default::default(),
+            fn_map: Default::default(),
             expressions: Default::default(),
             statements: Default::default(),
         }
@@ -166,31 +168,38 @@ impl Transformer {
 
     fn transform_namespace(&mut self, hir: &mut Hir, stmt_ids: Vec<StmtId>) {
         for stmt_id in stmt_ids.into_iter() {
-            let stmt = hir.statements.remove(stmt_id).unwrap();
-            match stmt.kind {
-                HirStatementKind::Namespace(_ident_id, _, statements) => {
-                    self.transform_namespace(hir, statements)
-                }
-                HirStatementKind::LetFn(identifier, _, parameters, ret_type, implementation) => {
-                    self.transform_function(
+            if let Some(stmt) = hir.statements.remove(stmt_id) {
+                match stmt.kind {
+                    HirStatementKind::Namespace(_ident_id, _, statements) => {
+                        self.transform_namespace(hir, statements)
+                    }
+                    HirStatementKind::LetFn(
+                        identifier,
+                        _,
+                        parameters,
+                        ret_type,
+                        implementation,
+                        _,
+                    ) => self.transform_function(
                         hir,
                         None,
+                        stmt_id,
                         identifier,
                         parameters,
                         ret_type,
                         implementation,
-                    )
+                    ),
+                    HirStatementKind::Struct(identifier, _, implementation, _) => {
+                        self.transform_struct(None, stmt_id, identifier, implementation)
+                    }
+                    HirStatementKind::Annotation(_) => {
+                        self.statements.remove(stmt_id);
+                    }
+                    kind => panic!(
+                        "namespace, annotation, function or struct expected, got {:?}",
+                        kind
+                    ),
                 }
-                HirStatementKind::Struct(identifier, _, implementation) => {
-                    self.transform_struct(None, stmt_id, identifier, implementation)
-                }
-                HirStatementKind::Annotation(_) => {
-                    self.statements.remove(stmt_id);
-                }
-                kind => panic!(
-                    "namespace, annotation, function or struct expected, got {:?}",
-                    kind
-                ),
             }
         }
     }
@@ -199,12 +208,15 @@ impl Transformer {
         &mut self,
         hir: &mut Hir,
         parent: Option<FunctionId>,
+        stmt_id: StmtId,
         identifier: HirIdentifier,
         parameters: Vec<HirParameter>,
         ret: HirReturn,
         implementation: Implementation<ExprId>,
     ) {
         let function_id = self.functions.create();
+
+        self.fn_map.insert(stmt_id, function_id);
 
         let (expr_id, mutated_symbol_ids, mut variables) = match implementation {
             Implementation::Provided(expr_id) => {
@@ -751,10 +763,12 @@ impl Transformer {
                     ));
                     kept_stmt_ids.push(stmt.id)
                 }
-                HirStatementKind::LetFn(identifier, _, parameters, ret_type, expr_id) => {
-                    self.transform_function(hir, parent, identifier, parameters, ret_type, expr_id);
+                HirStatementKind::LetFn(identifier, _, parameters, ret_type, expr_id, _) => {
+                    self.transform_function(
+                        hir, parent, stmt_id, identifier, parameters, ret_type, expr_id,
+                    );
                 }
-                HirStatementKind::Struct(identifier, _, fields) => {
+                HirStatementKind::Struct(identifier, _, fields, _) => {
                     self.transform_struct(parent, stmt_id, identifier, fields)
                 }
                 HirStatementKind::Annotation(_) | HirStatementKind::Use(_) => {
@@ -819,7 +833,26 @@ impl Transformer {
             match &hir.symbols[hir.identifier_refs[ident_ref_id].resolved_symbol_id()].kind {
                 HirSymbolKind::Struct(_, stmt_id) => stmt_id,
                 _ => panic!("symbol must be a struct"),
-            };
+            }
+            .clone();
+
+        if let Some(struct_stmt) = hir.statements.remove(stmt_id) {
+            match struct_stmt.kind {
+                HirStatementKind::Struct(identifier, _, implementation, fn_stmt_id) => {
+                    if let Some(fn_stmt_id) = fn_stmt_id {
+                        self.transform_function_rec(hir, fn_stmt_id);
+                    }
+
+                    self.transform_struct(
+                        fn_stmt_id.map(|stmt_id| self.fn_map[stmt_id]),
+                        struct_stmt.id,
+                        identifier,
+                        implementation,
+                    )
+                }
+                _ => panic!("expected struct statement"),
+            }
+        }
 
         // we need to guarantee that the fields are sorted by declaration order
         transformed_fields.sort_by(|a, b| a.0.cmp(&b.0));
@@ -829,8 +862,8 @@ impl Transformer {
             Expression {
                 id: expr_id,
                 kind: ExpressionKind::StructInstantiation(
-                    self.structs_map[*stmt_id].0,
-                    self.structs_map[*stmt_id].1,
+                    self.structs_map[stmt_id].0,
+                    self.structs_map[stmt_id].1,
                     transformed_fields
                         .into_iter()
                         .map(|(_, symbol_id, expr_id)| (symbol_id, expr_id))
@@ -842,6 +875,35 @@ impl Transformer {
         );
 
         (mutated_symbol_ids, variables)
+    }
+
+    fn transform_function_rec(&mut self, hir: &mut Hir, stmt_id: StmtId) {
+        if let Some(fn_stmt) = hir.statements.remove(stmt_id) {
+            match fn_stmt.kind {
+                HirStatementKind::LetFn(
+                    identifier,
+                    _,
+                    parameters,
+                    ret,
+                    implementation,
+                    fn_stmt_id,
+                ) => {
+                    if let Some(fn_stmt_id) = fn_stmt_id {
+                        self.transform_function_rec(hir, fn_stmt_id);
+                    }
+                    self.transform_function(
+                        hir,
+                        fn_stmt_id.map(|stmt_id| self.fn_map[stmt_id]),
+                        stmt_id,
+                        identifier,
+                        parameters,
+                        ret,
+                        implementation,
+                    )
+                }
+                _ => panic!("expected let fn struct statement"),
+            }
+        }
     }
 
     #[allow(clippy::too_many_arguments)]

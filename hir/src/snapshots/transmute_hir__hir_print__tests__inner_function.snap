@@ -46,7 +46,7 @@ expression: s
 @     :     4        |           |                       +- expr 6
 @     :     4        |           |                          +- Number: 1
                      |           +- stmt 12
-=   37:    10        |           |  +- Fn name=fibo
+=   37:    10        |           |  +- Fn name=fibo, fn_stmt_id=14
                      |           |     +- annotations=[]
                      |           |     +- params
 =   39:     4        |           |     |  +- n: number

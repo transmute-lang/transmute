@@ -384,16 +384,19 @@ impl HirPrint for Statement<Typed, Bound> {
                     mode = mode.as_str()
                 )?;
             }
-            StatementKind::LetFn(ident, annotations, parameters, ret_type, expr_id) => {
+            StatementKind::LetFn(ident, annotations, parameters, ret_type, expr_id, fn_stmt_id) => {
                 writeln!(
                     f,
-                    "{indent}Fn name={ident}{native}",
+                    "{indent}Fn name={ident}{native}{fn_stmt_id}",
                     indent = ctx.indent_symbol_def(ident.resolved_symbol_id()),
                     ident = ctx.identifier(ident.id),
                     native = match expr_id {
                         Implementation::Provided(_) => "",
                         _ => " (native)",
-                    }
+                    },
+                    fn_stmt_id = fn_stmt_id
+                        .map(|id| format!(", fn_stmt_id={id}"))
+                        .unwrap_or_default()
                 )?;
                 ctx.last = true;
                 ctx.next_level();
@@ -464,17 +467,20 @@ impl HirPrint for Statement<Typed, Bound> {
 
                 ctx.prev_level();
             }
-            StatementKind::Struct(ident, _annotations, fields) => {
+            StatementKind::Struct(ident, _annotations, fields, fn_stmt_id) => {
                 // todo use annotations
                 writeln!(
                     f,
-                    "{indent}Struct name={ident}{native}",
+                    "{indent}Struct name={ident}{native}{fn_stmt_id}",
                     indent = ctx.indent_symbol_def(ident.resolved_symbol_id()),
                     ident = ctx.identifier(ident.id),
                     native = match fields {
                         Implementation::Provided(_) => "",
                         _ => " (native)",
-                    }
+                    },
+                    fn_stmt_id = fn_stmt_id
+                        .map(|id| format!(", fn_stmt_id={id}"))
+                        .unwrap_or_default()
                 )?;
                 ctx.last = true;
                 ctx.next_level();
@@ -589,7 +595,7 @@ impl Hir<Typed, Bound> {
             }
             Type::Struct(stmt_id) => {
                 let symbol_id = match &self.statements[*stmt_id].kind {
-                    StatementKind::Struct(ident, _, _) => ident.resolved_symbol_id(),
+                    StatementKind::Struct(ident, _, _, _) => ident.resolved_symbol_id(),
                     _ => panic!("struct expected"),
                 };
                 write!(f, "struct {}", id!(symbol_id))

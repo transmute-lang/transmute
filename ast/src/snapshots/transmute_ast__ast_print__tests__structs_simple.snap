@@ -12,73 +12,73 @@ expression: s
       |  +- Use std.numbers.number_parse
       +- stmt 4
       |  +- Use std.numbers.print
-      +- stmt 5
-      |  +- Struct name=Struct
-      |     +- field: number
+      +- stmt 9
+      |  +- Fn name=main
+      |     +- annotations=[]
+      |     +- params=[]
+      |     +- ret=[]
+      |     +- body:expr 22
+      |        +- Block
+      |           +- stmt 5
+      |           |  +- Let name=n
+      |           |     +- expr 6
+      |           |        +- Call
+      |           |           +- expr 0
+      |           |           |  +- Ident: number_parse
+      |           |           +- params
+      |           |              +- expr 5
+      |           |                 +- Call
+      |           |                    +- expr 1
+      |           |                    |  +- Ident: list_get
+      |           |                    +- params
+      |           |                       +- expr 3
+      |           |                       |  +- Call
+      |           |                       |     +- expr 2
+      |           |                       |     |  +- Ident: args
+      |           |                       |     +- params=[]
+      |           |                       +- expr 4
+      |           |                          +- Number: 1
+      |           +- stmt 6
+      |           |  +- Let name=s
+      |           |     +- expr 10
+      |           |        +- StructInstantiate name=Struct
+      |           |           +- field name=field
+      |           |              +- expr 9
+      |           |                 +- Binary *
+      |           |                    +- lhs:expr 7
+      |           |                    |  +- Ident: n
+      |           |                    +- rhs:expr 8
+      |           |                       +- Number: 2
+      |           +- stmt 7
+      |           |  +- Expression
+      |           |     +- expr 17
+      |           |        +- Assignment
+      |           |           +- target:expr 12
+      |           |           |  +- Access
+      |           |           |     +- expr 11
+      |           |           |     |  +- Ident: s
+      |           |           |     +- ident=field
+      |           |           +- value:expr 16
+      |           |              +- Binary +
+      |           |                 +- lhs:expr 14
+      |           |                 |  +- Access
+      |           |                 |     +- expr 13
+      |           |                 |     |  +- Ident: s
+      |           |                 |     +- ident=field
+      |           |                 +- rhs:expr 15
+      |           |                    +- Number: 1
+      |           +- stmt 8
+      |              +- Expression
+      |                 +- expr 21
+      |                    +- Call
+      |                       +- expr 18
+      |                       |  +- Ident: print
+      |                       +- params
+      |                          +- expr 20
+      |                             +- Access
+      |                                +- expr 19
+      |                                |  +- Ident: s
+      |                                +- ident=field
       +- stmt 10
-         +- Fn name=main
-            +- annotations=[]
-            +- params=[]
-            +- ret=[]
-            +- body:expr 22
-               +- Block
-                  +- stmt 6
-                  |  +- Let name=n
-                  |     +- expr 6
-                  |        +- Call
-                  |           +- expr 0
-                  |           |  +- Ident: number_parse
-                  |           +- params
-                  |              +- expr 5
-                  |                 +- Call
-                  |                    +- expr 1
-                  |                    |  +- Ident: list_get
-                  |                    +- params
-                  |                       +- expr 3
-                  |                       |  +- Call
-                  |                       |     +- expr 2
-                  |                       |     |  +- Ident: args
-                  |                       |     +- params=[]
-                  |                       +- expr 4
-                  |                          +- Number: 1
-                  +- stmt 7
-                  |  +- Let name=s
-                  |     +- expr 10
-                  |        +- StructInstantiate name=Struct
-                  |           +- field name=field
-                  |              +- expr 9
-                  |                 +- Binary *
-                  |                    +- lhs:expr 7
-                  |                    |  +- Ident: n
-                  |                    +- rhs:expr 8
-                  |                       +- Number: 2
-                  +- stmt 8
-                  |  +- Expression
-                  |     +- expr 17
-                  |        +- Assignment
-                  |           +- target:expr 12
-                  |           |  +- Access
-                  |           |     +- expr 11
-                  |           |     |  +- Ident: s
-                  |           |     +- ident=field
-                  |           +- value:expr 16
-                  |              +- Binary +
-                  |                 +- lhs:expr 14
-                  |                 |  +- Access
-                  |                 |     +- expr 13
-                  |                 |     |  +- Ident: s
-                  |                 |     +- ident=field
-                  |                 +- rhs:expr 15
-                  |                    +- Number: 1
-                  +- stmt 9
-                     +- Expression
-                        +- expr 21
-                           +- Call
-                              +- expr 18
-                              |  +- Ident: print
-                              +- params
-                                 +- expr 20
-                                    +- Access
-                                       +- expr 19
-                                       |  +- Ident: s
-                                       +- ident=field
+         +- Struct name=Struct
+            +- field: number

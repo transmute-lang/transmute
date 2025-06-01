@@ -82,6 +82,9 @@ Ok(
                     Provided(
                         ExprId(0),
                     ),
+                    Some(
+                        StmtId(2),
+                    ),
                 ),
                 span: 1:11; [10, 20],
             },
@@ -102,6 +105,7 @@ Ok(
                     Provided(
                         ExprId(1),
                     ),
+                    None,
                 ),
                 span: 1:1; [0, 22],
             },

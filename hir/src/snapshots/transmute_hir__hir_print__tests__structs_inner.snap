@@ -19,11 +19,11 @@ expression: s
 @     :     2        |     +- body:expr 24
 @     :     2        |        +- Block
                      |           +- stmt 7
-=   38:    19        |           |  +- Struct name=Point
+=   38:    19        |           |  +- Struct name=Point, fn_stmt_id=11
 =   41:     4        |           |     +- x: number
 =   42:     4        |           |     +- y: number
                      |           +- stmt 9
-=   40:    20        |           |  +- Fn name=f
+=   40:    20        |           |  +- Fn name=f, fn_stmt_id=11
                      |           |     +- annotations=[]
                      |           |     +- params
 =   43:    19        |           |     |  +- a: Point
