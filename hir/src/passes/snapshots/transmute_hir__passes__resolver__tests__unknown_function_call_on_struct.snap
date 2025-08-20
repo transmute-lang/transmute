@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Function 'print' not found",
+                span: 3:17; [35, 40],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

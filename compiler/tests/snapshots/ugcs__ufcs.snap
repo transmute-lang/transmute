@@ -1,0 +1,255 @@
+---
+source: compiler/tests/ugcs.rs
+expression: "format!\n(\"success:{}\\nstdout:\\n{}\\n\\nstderr:\\n{}\", output.status.success(), String ::\nfrom_utf8(output.stdout).unwrap(), String ::\nfrom_utf8(output.stderr).unwrap())"
+---
+success:true
+stdout:
+[1] gc_init                | Initialize GC with log level: 2
+[2] gc_init                | Allocate test GC memory pool (16416 bytes): mmap returned 0x10000 (Success)
+1
+1
+[2] gc_malloc              | alloc 12 bytes, align 1
+[2] gc_run                 | Start GC [1]
+[2] gc_run                 | no allocated blocks
+[1] gc_malloc              | allocated block of size 60 at 0x10010, returning object of size 12 at 0x10040(+48)
+[2] gc_take_ownership      | mark block at 0x10010 (object at 0x10040: '') as owned
+[2] gc_malloc              | alloc 24 bytes, align 8
+[2] gc_run                 | Start GC [2]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): owned
+[2] gc_run                 | Phase: mark
+[2] gc_run                 |   frame 0 (1 roots):
+[2] gc_run                 |     root 0: skipped (null)
+[2] gc_run                 |   frame 1 (4 roots):
+[2] gc_run                 |     root 0: skipped (null)
+[2] gc_run                 |     root 1: skipped (null)
+[2] gc_run                 |     root 2: skipped (null)
+[2] gc_run                 |     root 3: skipped (null)
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block 0x10010 (object at 0x10040, size: 12: ''): owned
+[1] gc_malloc              | allocated block of size 72 at 0x10050, returning object of size 24 at 0x10080(+48)
+[2] gc_take_ownership      | mark block at 0x10050 (object at 0x10080: '') as owned
+[2] gc_set_callbacks       | set callback of block at 0x10050 (object at 0x10080: '')
+[2] gc_release_ownership   | mark block at 0x10050 (object at 0x10080: '') as unreachable
+[2] gc_release_ownership   | mark block at 0x10010 (object at 0x10040: '') as unreachable
+hello, world
+[2] gc_malloc              | alloc 8 bytes, align 1
+[2] gc_run                 | Start GC [3]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10050 (object at 0x10080: ''): unreachable
+[2] gc_run                 |   block at 0x10010 (object at 0x10040: ''): unreachable
+[2] gc_run                 | Phase: mark
+[2] gc_run                 |   frame 0 (4 roots):
+[2] gc_run                 |     root 0: skipped (null)
+[2] gc_run                 |     root 1: skipped (null)
+[2] gc_run                 |     root 2: skipped (null)
+[2] gc_run                 |     root 3: skipped (null)
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   freeing block at 0x10050 (object at 0x10080, size: 24: '')
+[2] gc_free                |     0x10050: recursive free(object at 0x10080)
+[1] gc_run                 |   freeing block at 0x10010 (object at 0x10040, size: 12: '')
+[2] gc_run                 | Phase: sweep (1)
+[1] gc_malloc              | allocated block of size 56 at 0x10098, returning object of size 8 at 0x100c8(+48)
+[2] gc_take_ownership      | mark block at 0x10098 (object at 0x100c8: '') as owned
+[2] gc_malloc              | alloc 24 bytes, align 8
+[2] gc_run                 | Start GC [4]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10098 (object at 0x100c8: ''): owned
+[2] gc_run                 | Phase: mark
+[2] gc_run                 |   frame 0 (4 roots):
+[2] gc_run                 |     root 0: skipped (null)
+[2] gc_run                 |     root 1: skipped (null)
+[2] gc_run                 |     root 2: skipped (null)
+[2] gc_run                 |     root 3: skipped (null)
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block 0x10098 (object at 0x100c8, size: 8: ''): owned
+[1] gc_malloc              | allocated block of size 72 at 0x100d0, returning object of size 24 at 0x10100(+48)
+[2] gc_take_ownership      | mark block at 0x100d0 (object at 0x10100: '') as owned
+[2] gc_set_callbacks       | set callback of block at 0x100d0 (object at 0x10100: '')
+[2] gc_release_ownership   | mark block at 0x100d0 (object at 0x10100: '') as unreachable
+[2] gc_release_ownership   | mark block at 0x10098 (object at 0x100c8: '') as unreachable
+[2] gc_malloc              | alloc 8 bytes, align 8
+[2] gc_run                 | Start GC [5]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x100d0 (object at 0x10100: ''): unreachable
+[2] gc_run                 |   block at 0x10098 (object at 0x100c8: ''): unreachable
+[2] gc_run                 | Phase: mark
+[2] gc_run                 |   frame 0 (4 roots):
+[2] gc_run                 |     root 0: skipped (null)
+[2] gc_run                 |     root 1: skipped (null)
+[2] gc_run                 |     root 2:
+[2] gc_mark                |       mark unreachable block 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |         0x100d0: recursive mark(object at 0x10100: '')
+[2] gc_mark_managed        |       mark unreachable block at 0x10098 (object at 0x100c8: '') as reachable
+[2] gc_mark_managed        |         0x10098: skip recursive mark (object at 0x100c8: ''): no mark callback
+[2] gc_run                 |     root 3: skipped (null)
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block 0x100d0 (object at 0x10100, size: 24: ''): reachable
+[1] gc_run                 |   keeping block 0x10098 (object at 0x100c8, size: 8: ''): reachable
+[1] gc_malloc              | allocated block of size 56 at 0x10118, returning object of size 8 at 0x10148(+48)
+amazing1
+[2] gc_malloc              | alloc 8 bytes, align 1
+[2] gc_run                 | Start GC [6]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10118 (object at 0x10148: ''): unreachable
+[2] gc_run                 |   block at 0x100d0 (object at 0x10100: ''): unreachable
+[2] gc_run                 |   block at 0x10098 (object at 0x100c8: ''): unreachable
+[2] gc_run                 | Phase: mark
+[2] gc_run                 |   frame 0 (4 roots):
+[2] gc_run                 |     root 0: skipped (null)
+[2] gc_run                 |     root 1:
+[2] gc_mark                |       mark unreachable block 0x10118 (object at 0x10148: '')
+[2] gc_mark                |         0x10118: recursive mark(object at 0x10148: '')
+[2] gc_mark                |       mark unreachable block 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |         0x100d0: recursive mark(object at 0x10100: '')
+[2] gc_mark_managed        |       mark unreachable block at 0x10098 (object at 0x100c8: '') as reachable
+[2] gc_mark_managed        |         0x10098: skip recursive mark (object at 0x100c8: ''): no mark callback
+[2] gc_run                 |     root 2:
+[2] gc_mark                |       mark reachable block 0x100d0 (object at 0x10100: '')
+[2] gc_run                 |     root 3: skipped (null)
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block 0x10118 (object at 0x10148, size: 8: ''): reachable
+[1] gc_run                 |   keeping block 0x100d0 (object at 0x10100, size: 24: ''): reachable
+[1] gc_run                 |   keeping block 0x10098 (object at 0x100c8, size: 8: ''): reachable
+[1] gc_malloc              | allocated block of size 56 at 0x10150, returning object of size 8 at 0x10180(+48)
+[2] gc_take_ownership      | mark block at 0x10150 (object at 0x10180: '') as owned
+[2] gc_malloc              | alloc 24 bytes, align 8
+[2] gc_run                 | Start GC [7]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10150 (object at 0x10180: ''): owned
+[2] gc_run                 |   block at 0x10118 (object at 0x10148: ''): unreachable
+[2] gc_run                 |   block at 0x100d0 (object at 0x10100: ''): unreachable
+[2] gc_run                 |   block at 0x10098 (object at 0x100c8: ''): unreachable
+[2] gc_run                 | Phase: mark
+[2] gc_run                 |   frame 0 (4 roots):
+[2] gc_run                 |     root 0: skipped (null)
+[2] gc_run                 |     root 1:
+[2] gc_mark                |       mark unreachable block 0x10118 (object at 0x10148: '')
+[2] gc_mark                |         0x10118: recursive mark(object at 0x10148: '')
+[2] gc_mark                |       mark unreachable block 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |         0x100d0: recursive mark(object at 0x10100: '')
+[2] gc_mark_managed        |       mark unreachable block at 0x10098 (object at 0x100c8: '') as reachable
+[2] gc_mark_managed        |         0x10098: skip recursive mark (object at 0x100c8: ''): no mark callback
+[2] gc_run                 |     root 2:
+[2] gc_mark                |       mark reachable block 0x100d0 (object at 0x10100: '')
+[2] gc_run                 |     root 3: skipped (null)
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block 0x10150 (object at 0x10180, size: 8: ''): owned
+[1] gc_run                 |   keeping block 0x10118 (object at 0x10148, size: 8: ''): reachable
+[1] gc_run                 |   keeping block 0x100d0 (object at 0x10100, size: 24: ''): reachable
+[1] gc_run                 |   keeping block 0x10098 (object at 0x100c8, size: 8: ''): reachable
+[1] gc_malloc              | allocated block of size 72 at 0x10188, returning object of size 24 at 0x101b8(+48)
+[2] gc_take_ownership      | mark block at 0x10188 (object at 0x101b8: '') as owned
+[2] gc_set_callbacks       | set callback of block at 0x10188 (object at 0x101b8: '')
+[2] gc_release_ownership   | mark block at 0x10188 (object at 0x101b8: '') as unreachable
+[2] gc_release_ownership   | mark block at 0x10150 (object at 0x10180: '') as unreachable
+[2] gc_malloc              | alloc 8 bytes, align 8
+[2] gc_run                 | Start GC [8]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x10188 (object at 0x101b8: ''): unreachable
+[2] gc_run                 |   block at 0x10150 (object at 0x10180: ''): unreachable
+[2] gc_run                 |   block at 0x10118 (object at 0x10148: ''): unreachable
+[2] gc_run                 |   block at 0x100d0 (object at 0x10100: ''): unreachable
+[2] gc_run                 |   block at 0x10098 (object at 0x100c8: ''): unreachable
+[2] gc_run                 | Phase: mark
+[2] gc_run                 |   frame 0 (4 roots):
+[2] gc_run                 |     root 0:
+[2] gc_mark                |       mark unreachable block 0x10188 (object at 0x101b8: '')
+[2] gc_mark                |         0x10188: recursive mark(object at 0x101b8: '')
+[2] gc_mark_managed        |       mark unreachable block at 0x10150 (object at 0x10180: '') as reachable
+[2] gc_mark_managed        |         0x10150: skip recursive mark (object at 0x10180: ''): no mark callback
+[2] gc_run                 |     root 1:
+[2] gc_mark                |       mark unreachable block 0x10118 (object at 0x10148: '')
+[2] gc_mark                |         0x10118: recursive mark(object at 0x10148: '')
+[2] gc_mark                |       mark unreachable block 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |         0x100d0: recursive mark(object at 0x10100: '')
+[2] gc_mark_managed        |       mark unreachable block at 0x10098 (object at 0x100c8: '') as reachable
+[2] gc_mark_managed        |         0x10098: skip recursive mark (object at 0x100c8: ''): no mark callback
+[2] gc_run                 |     root 2:
+[2] gc_mark                |       mark reachable block 0x100d0 (object at 0x10100: '')
+[2] gc_run                 |     root 3: skipped (null)
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block 0x10188 (object at 0x101b8, size: 24: ''): reachable
+[1] gc_run                 |   keeping block 0x10150 (object at 0x10180, size: 8: ''): reachable
+[1] gc_run                 |   keeping block 0x10118 (object at 0x10148, size: 8: ''): reachable
+[1] gc_run                 |   keeping block 0x100d0 (object at 0x10100, size: 24: ''): reachable
+[1] gc_run                 |   keeping block 0x10098 (object at 0x100c8, size: 8: ''): reachable
+[1] gc_malloc              | allocated block of size 56 at 0x101d0, returning object of size 8 at 0x10200(+48)
+[2] gc_run                 | Start GC [9]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x101d0 (object at 0x10200: ''): unreachable
+[2] gc_run                 |   block at 0x10188 (object at 0x101b8: ''): unreachable
+[2] gc_run                 |   block at 0x10150 (object at 0x10180: ''): unreachable
+[2] gc_run                 |   block at 0x10118 (object at 0x10148: ''): unreachable
+[2] gc_run                 |   block at 0x100d0 (object at 0x10100: ''): unreachable
+[2] gc_run                 |   block at 0x10098 (object at 0x100c8: ''): unreachable
+[2] gc_run                 | Phase: mark
+[2] gc_run                 |   frame 0 (4 roots):
+[2] gc_run                 |     root 0:
+[2] gc_mark                |       mark unreachable block 0x10188 (object at 0x101b8: '')
+[2] gc_mark                |         0x10188: recursive mark(object at 0x101b8: '')
+[2] gc_mark_managed        |       mark unreachable block at 0x10150 (object at 0x10180: '') as reachable
+[2] gc_mark_managed        |         0x10150: skip recursive mark (object at 0x10180: ''): no mark callback
+[2] gc_run                 |     root 1:
+[2] gc_mark                |       mark unreachable block 0x10118 (object at 0x10148: '')
+[2] gc_mark                |         0x10118: recursive mark(object at 0x10148: '')
+[2] gc_mark                |       mark unreachable block 0x100d0 (object at 0x10100: '')
+[2] gc_mark                |         0x100d0: recursive mark(object at 0x10100: '')
+[2] gc_mark_managed        |       mark unreachable block at 0x10098 (object at 0x100c8: '') as reachable
+[2] gc_mark_managed        |         0x10098: skip recursive mark (object at 0x100c8: ''): no mark callback
+[2] gc_run                 |     root 2:
+[2] gc_mark                |       mark reachable block 0x100d0 (object at 0x10100: '')
+[2] gc_run                 |     root 3:
+[2] gc_mark                |       mark unreachable block 0x101d0 (object at 0x10200: '')
+[2] gc_mark                |         0x101d0: recursive mark(object at 0x10200: '')
+[2] gc_mark                |       mark reachable block 0x10188 (object at 0x101b8: '')
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   keeping block 0x101d0 (object at 0x10200, size: 8: ''): reachable
+[1] gc_run                 |   keeping block 0x10188 (object at 0x101b8, size: 24: ''): reachable
+[1] gc_run                 |   keeping block 0x10150 (object at 0x10180, size: 8: ''): reachable
+[1] gc_run                 |   keeping block 0x10118 (object at 0x10148, size: 8: ''): reachable
+[1] gc_run                 |   keeping block 0x100d0 (object at 0x10100, size: 24: ''): reachable
+[1] gc_run                 |   keeping block 0x10098 (object at 0x100c8, size: 8: ''): reachable
+amazing2
+[2] gc_teardown            | GC Teardown
+[2] gc_run                 | Start GC [10]
+[2] gc_run                 | Phase: init.
+[2] gc_run                 |   block at 0x101d0 (object at 0x10200: ''): unreachable
+[2] gc_run                 |   block at 0x10188 (object at 0x101b8: ''): unreachable
+[2] gc_run                 |   block at 0x10150 (object at 0x10180: ''): unreachable
+[2] gc_run                 |   block at 0x10118 (object at 0x10148: ''): unreachable
+[2] gc_run                 |   block at 0x100d0 (object at 0x10100: ''): unreachable
+[2] gc_run                 |   block at 0x10098 (object at 0x100c8: ''): unreachable
+[2] gc_run                 | Phase: mark
+[2] gc_run                 | Phase: sweep (0)
+[1] gc_run                 |   freeing block at 0x101d0 (object at 0x10200, size: 8: '')
+[1] gc_run                 |   freeing block at 0x10188 (object at 0x101b8, size: 24: '')
+[2] gc_free                |     0x10188: recursive free(object at 0x101b8)
+[1] gc_run                 |   freeing block at 0x10150 (object at 0x10180, size: 8: '')
+[1] gc_run                 |   freeing block at 0x10118 (object at 0x10148, size: 8: '')
+[1] gc_run                 |   freeing block at 0x100d0 (object at 0x10100, size: 24: '')
+[2] gc_free                |     0x100d0: recursive free(object at 0x10100)
+[1] gc_run                 |   freeing block at 0x10098 (object at 0x100c8, size: 8: '')
+[2] gc_run                 | Phase: sweep (1)
+
+Statistics:
+
+  Executions ......  10
+  Allocated .......   8 blocks
+    Total
+      objects       116 bytes
+      blocks        500 bytes
+    Max
+      objects        80 bytes
+      blocks        368 bytes
+    End
+      objects         0 bytes
+      blocks          0 bytes
+  Freed ...........   8 blocks
+    Total
+      objects       116 bytes
+      blocks        500 bytes
+
+
+
+stderr:

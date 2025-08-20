@@ -991,11 +991,24 @@ impl Resolver {
                         (self.symbols[*symbol_id].type_id, Some(*symbol_id))
                     }
                     None => {
-                        self.diagnostics.report_err(
-                            format!("Expected namespace or struct type, got {}", ty),
-                            self.expressions[expr_id].span.clone(),
-                            (file!(), line!()),
-                        );
+                        if param_types.is_none() {
+                            self.diagnostics.report_err(
+                                format!("Expected namespace or struct type, got {}", ty),
+                                self.expressions[expr_id].span.clone(),
+                                (file!(), line!()),
+                            );
+                        } else {
+                            self.diagnostics.report_err(
+                                format!(
+                                    "Function '{}' not found",
+                                    self.identifiers
+                                        .get_by_left(&ident_ref.ident.id)
+                                        .expect("ident exists")
+                                ),
+                                ident_ref.ident.span.clone(),
+                                (file!(), line!()),
+                            );
+                        }
 
                         // this it not always true (the left hand side can be a symbol), but it not
                         // being a struct field anyway, considering we did not find any symbol is
@@ -4028,14 +4041,23 @@ mod tests {
         }
         "#
     );
-    // test_resolution!(
-    //     function_call_on_struct,
-    //     r#"
-    //     let f() {
-    //         S{}.print();
-    //     }
-    //     struct S {}
-    //     let print(n: S) {}
-    //     "#
-    // );
+    test_resolution!(
+        function_call_on_struct,
+        r#"
+        let f() {
+            S{}.print();
+        }
+        struct S {}
+        let print(n: S) {}
+        "#
+    );
+    test_resolution!(
+        unknown_function_call_on_struct,
+        r#"
+        let f() {
+            S{}.print();
+        }
+        struct S {}
+        "#
+    );
 }
