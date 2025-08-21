@@ -830,11 +830,10 @@ impl Transformer {
         }
 
         let stmt_id =
-            match &hir.symbols[hir.identifier_refs[ident_ref_id].resolved_symbol_id()].kind {
+            *match &hir.symbols[hir.identifier_refs[ident_ref_id].resolved_symbol_id()].kind {
                 HirSymbolKind::Struct(_, stmt_id) => stmt_id,
                 _ => panic!("symbol must be a struct"),
-            }
-            .clone();
+            };
 
         if let Some(struct_stmt) = hir.statements.remove(stmt_id) {
             match struct_stmt.kind {

@@ -104,14 +104,14 @@ where
         Vec<Parameter<T, B>>,
         Return<T>,
         Implementation<ExprId>,
-        /// The `LetFn` `StmtId` in which the struct is defined, if a nested struct
+        /// The `LetFn`'s `StmtId` in which the struct is defined, if a nested struct
         Option<StmtId>,
     ),
     Struct(
         Identifier<B>,
         Vec<Annotation>,
         Implementation<Vec<Field<T, B>>>,
-        /// The `LetFn` `StmtId` in which the struct is defined, if a nested struct
+        /// The `LetFn`'s `StmtId` in which the struct is defined, if a nested struct
         Option<StmtId>,
     ),
     Annotation(Identifier<B>),
