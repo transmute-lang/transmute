@@ -1,4 +1,4 @@
-use crate::literal::Literal;
+use crate::literal::{Literal, LiteralKind};
 use crate::typed::{Typed, TypedState, Untyped};
 use std::fmt::Debug;
 use transmute_ast::expression::Expression as AstExpression;
@@ -16,6 +16,33 @@ where
     pub kind: ExpressionKind,
     pub span: Span,
     typed: T,
+}
+
+impl<T> Expression<T>
+where
+    T: TypedState,
+{
+    pub fn collect_ident_ref_ids(&self) -> Vec<IdentRefId> {
+        match &self.kind {
+            ExpressionKind::Assignment(Target::Direct(ident_ref_id), _) => {
+                vec![*ident_ref_id]
+            }
+            ExpressionKind::Literal(lit) => match &lit.kind {
+                LiteralKind::Identifier(ident_ref_id) => vec![*ident_ref_id],
+                _ => Default::default(),
+            },
+            ExpressionKind::Access(_, ident_ref_id) => vec![*ident_ref_id],
+            ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
+                let mut ident_ref_ids = fields
+                    .iter()
+                    .map(|(ident_ref_id, _)| *ident_ref_id)
+                    .collect::<Vec<_>>();
+                ident_ref_ids.push(*ident_ref_id);
+                ident_ref_ids
+            }
+            _ => Default::default(),
+        }
+    }
 }
 
 impl Expression<Untyped> {

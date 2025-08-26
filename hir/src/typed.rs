@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Formatter};
 use transmute_core::ids::TypeId;
 
-pub trait TypedState {}
+pub trait TypedState: Debug {}
 
 #[derive(Debug)]
 pub struct Untyped;

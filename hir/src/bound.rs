@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Formatter};
 use transmute_core::ids::SymbolId;
 
-pub trait BoundState {}
+pub trait BoundState: Debug {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Unbound;

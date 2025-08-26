@@ -1,8 +1,9 @@
-use crate::bound::{Bound, BoundState, Unbound};
+use crate::bound::{Bound, BoundMultiple, BoundState, Unbound};
 use crate::exit_points::ExitPoints;
-use crate::expression::Expression;
+use crate::expression::{Expression, ExpressionKind};
 use crate::identifier::Identifier;
 use crate::identifier_ref::IdentifierRef;
+use crate::literal::{Literal, LiteralKind};
 use crate::natives::{Natives, Type};
 use crate::passes::exit_points_resolver::{ExitPointsResolver, Output as ExitPointsResolverOutput};
 use crate::passes::implicit_ret_converter::{
@@ -11,7 +12,7 @@ use crate::passes::implicit_ret_converter::{
 use crate::passes::operators_converter::OperatorsConverter;
 use crate::passes::resolver::Resolver;
 use crate::statement::{Field, Parameter, Return, Statement, TypeDef};
-use crate::symbol::Symbol;
+use crate::symbol::{Symbol, SymbolKind};
 use crate::typed::{Typed, TypedState, Untyped};
 use transmute_ast::statement::StatementKind as AstStatementKind;
 use transmute_ast::Ast;
@@ -173,17 +174,71 @@ impl ResolvedHir {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+enum RequiredSymbolKind<'a> {
+    Function(&'a [TypeId]),
+    Other,
+}
+
+impl RequiredSymbolKind<'_> {
+    pub fn matches(&self, symbol_kind: &SymbolKind) -> bool {
+        match self {
+            RequiredSymbolKind::Function(required_parameter_types) => match symbol_kind {
+                SymbolKind::LetFn(_, _, parameter_types, _)
+                | SymbolKind::Native(_, parameter_types, ..) => {
+                    *required_parameter_types == parameter_types.as_slice()
+                }
+                _ => false,
+            },
+            RequiredSymbolKind::Other => {
+                !(matches!(symbol_kind, SymbolKind::LetFn(..))
+                    || matches!(symbol_kind, SymbolKind::Native(..)))
+            }
+        }
+    }
+}
+
 trait FindSymbol {
-    // todo:refactor instead of param_types, pass a RequiredSymbolKind
-    /// deprecated: this is quite useless, the caller knows better what it wants to get, and this
-    /// function does not crawl any scope up... `find_symbol_id_by_ident_and_param_types` does.
-    /// Note that `find_type_id_by_identifier` does crawl the scope stack too, through
-    /// `find_symbol_id_by_ident_and_param_types`
-    #[deprecated]
     fn find(
         &self,
         all_symbols: &VecMap<SymbolId, Symbol>,
         ident: IdentId,
-        param_types: Option<&[TypeId]>,
+        kind: RequiredSymbolKind,
     ) -> Option<SymbolId>;
+}
+
+impl FindSymbol for IdMap<IdentId, Vec<SymbolId>> {
+    fn find(
+        &self,
+        all_symbols: &VecMap<SymbolId, Symbol>,
+        ident: IdentId,
+        kind: RequiredSymbolKind,
+    ) -> Option<SymbolId> {
+        self.get(&ident).and_then(|symbols| {
+            symbols
+                .iter()
+                .rev()
+                .find(|s| kind.matches(&all_symbols[**s].kind))
+                .copied()
+        })
+    }
+}
+
+impl ResolvedExpression {
+    fn symbol_id(
+        &self,
+        identifier_refs: &VecMap<IdentRefId, IdentifierRef<BoundMultiple>>,
+    ) -> Option<SymbolId> {
+        match &self.kind {
+            ExpressionKind::Literal(Literal {
+                kind: LiteralKind::Identifier(ident_ref_id),
+                ..
+            }) => {
+                let symbol_ids = identifier_refs[*ident_ref_id].resolved_symbol_ids();
+                assert_eq!(symbol_ids.len(), 1);
+                Some(symbol_ids[0])
+            }
+            _ => None,
+        }
+    }
 }

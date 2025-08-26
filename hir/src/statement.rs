@@ -24,6 +24,47 @@ where
     pub span: Span,
 }
 
+impl<T, B> Statement<T, B>
+where
+    T: TypedState,
+    B: BoundState,
+{
+    pub fn collect_ident_ref_ids(&self) -> Vec<IdentRefId> {
+        match &self.kind {
+            StatementKind::LetFn(_, annotations, ..)
+            | StatementKind::Struct(_, annotations, ..) => annotations
+                .iter()
+                .flat_map(|a| a.ident_ref_ids.clone())
+                .collect::<Vec<_>>(),
+            _ => Default::default(),
+        }
+    }
+
+    #[allow(clippy::type_complexity)]
+    pub fn as_struct(
+        &self,
+    ) -> (
+        &Identifier<B>,
+        &Vec<Annotation>,
+        &Implementation<Vec<Field<T, B>>>,
+        Option<&StmtId>,
+    ) {
+        match &self.kind {
+            StatementKind::Struct(identifier, annotations, implementation, stmt_id) => {
+                (identifier, annotations, implementation, stmt_id.as_ref())
+            }
+            _ => panic!("struct expected, got {:?}", self),
+        }
+    }
+
+    pub fn as_namespace(&self) -> (&Identifier<B>, &InputId, &Vec<StmtId>) {
+        match &self.kind {
+            StatementKind::Namespace(identifier, input_id, stmts) => (identifier, input_id, stmts),
+            _ => panic!("namespace expected, got {:?}", self),
+        }
+    }
+}
+
 impl Statement<Typed, Bound> {
     pub fn new(
         id: StmtId,
@@ -162,10 +203,28 @@ pub enum Implementation<T> {
     Native(T),
 }
 
+impl<T> Implementation<T> {
+    pub fn get(self) -> T {
+        match self {
+            Implementation::Provided(fields) => fields,
+            _ => panic!("implementation required"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeDef {
     pub kind: TypeDefKind,
     pub span: Span,
+}
+
+impl TypeDef {
+    pub fn collect_ident_ref_ids(&self) -> Vec<IdentRefId> {
+        match &self.kind {
+            TypeDefKind::Simple(ident_ref_ids) => ident_ref_ids.clone(),
+            TypeDefKind::Array(..) => Vec::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
