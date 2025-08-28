@@ -752,7 +752,6 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                 LiteralKind::Boolean(bool) => self.bool_type.const_int(*bool as u64, false).into(),
                 LiteralKind::Identifier(symbol_id) => self.gen_expression_ident(mir, *symbol_id),
                 LiteralKind::Number(number) => {
-                    // todo:check check what happens for negative numbers
                     self.i64_type.const_int(*number as u64, false).into()
                 }
                 LiteralKind::String(string) => {

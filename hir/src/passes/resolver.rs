@@ -1018,7 +1018,7 @@ impl Resolver {
                 SymbolKind::LetFn(_, _, _, ret_type) => *ret_type,
                 SymbolKind::Native(_, _, ret_type, _) => *ret_type,
                 SymbolKind::NotFound => invalid_type_id,
-                _ => unreachable!("we resolved the ident_ref as a function")
+                _ => unreachable!("we resolved the ident_ref as a function"),
             })
             .unwrap_or_else(|| invalid_type_id)
     }
