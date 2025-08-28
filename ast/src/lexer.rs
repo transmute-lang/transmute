@@ -6,7 +6,6 @@ use std::str::Chars;
 use transmute_core::error::{Diagnostic, Diagnostics, Level};
 use transmute_core::ids::InputId;
 use transmute_core::span::Span;
-// fixme:span comments dont move spans (they behave as if the do not exist at all)
 
 #[derive(Debug)]
 pub struct Lexer<'s> {
@@ -45,6 +44,8 @@ impl<'s> Lexer<'s> {
                 self.advance_consumed(1);
                 if let Some(span) = self.take_while(|c| c != '\n') {
                     self.advance_consumed(span.len + 1);
+                    self.location.line += 1;
+                    self.location.column = 1;
                 }
                 read = true;
             }

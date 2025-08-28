@@ -4,5 +4,5 @@ expression: actual
 ---
 Token {
     kind: Plus,
-    span: 1:11; [12, 13],
+    span: 2:1; [12, 13],
 }
