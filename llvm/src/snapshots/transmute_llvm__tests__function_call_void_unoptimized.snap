@@ -23,14 +23,14 @@ entry:
   unreachable
 }
 
-define void @_TM0_1g0() gc "shadow-stack" {
+define void @_TM0_F1g0() gc "shadow-stack" {
 entry:
   ret void
 }
 
-define void @_TM0_1f0() gc "shadow-stack" {
+define void @_TM0_F1f0() gc "shadow-stack" {
 entry:
-  call void @_TM0_1g0()
+  call void @_TM0_F1g0()
   ret void
 }
 

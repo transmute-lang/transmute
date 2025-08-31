@@ -7,7 +7,7 @@ source_filename = "main"
 
 %"S#id0" = type { i64 }
 
-@"gc_callbacks#a1s1S" = global { ptr, ptr } { ptr @"gc_callback#mark#a1s1S", ptr null }
+@"gc_callbacks#s1s1S" = global { ptr, ptr } { ptr @"gc_callback#mark#s1s1S", ptr null }
 
 ; Function Attrs: nounwind
 declare void @llvm.gcroot(ptr, ptr) #0
@@ -27,7 +27,7 @@ entry:
   unreachable
 }
 
-define void @"gc_callback#mark#a1s1S"(ptr %0) {
+define void @"gc_callback#mark#s1s1S"(ptr %0) {
 entry:
   %"local#size" = alloca i64, align 8
   store i64 1, ptr %"local#size", align 4
@@ -50,7 +50,7 @@ end_while:                                        ; preds = %cond
   ret void
 }
 
-define i64 @_TM0_1f0() gc "shadow-stack" {
+define i64 @_TM0_F1f0() gc "shadow-stack" {
 entry:
   %"gcroot#heap#struct#S#id0#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#struct#S#id0#", align 8
@@ -62,7 +62,7 @@ entry:
   store ptr %"heap#struct#S#id0#", ptr %"gcroot#heap#struct#S#id0#", align 8
   %"heap#struct#S#id0#.field#idx0#sym21" = getelementptr inbounds %"S#id0", ptr %"heap#struct#S#id0#", i32 0, i32 0
   store i64 0, ptr %"heap#struct#S#id0#.field#idx0#sym21", align 4
-  %"heap#array#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr ([1 x ptr], ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, [1 x ptr] }, ptr null, i64 0, i32 1) to i64), ptr @"gc_callbacks#a1s1S")
+  %"heap#array#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr ([1 x ptr], ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, [1 x ptr] }, ptr null, i64 0, i32 1) to i64), ptr @"gc_callbacks#s1s1S")
   %"heap#array#1" = load [1 x ptr], ptr %"heap#array#", align 8
   %"heap#array#[0]#" = insertvalue [1 x ptr] %"heap#array#1", ptr %"heap#struct#S#id0#", 0
   store [1 x ptr] %"heap#array#[0]#", ptr %"heap#array#", align 8

@@ -25,13 +25,13 @@ entry:
   unreachable
 }
 
-define i64 @_TM0_1f0() gc "shadow-stack" {
+define i64 @_TM0_F1f0() gc "shadow-stack" {
 entry:
-  %"g#res#" = call i64 @_TM0_N1f01g0()
+  %"g#res#" = call i64 @_TM0_F1f0F1g0()
   ret i64 %"g#res#"
 }
 
-define i64 @_TM0_N1f01g0() gc "shadow-stack" {
+define i64 @_TM0_F1f0F1g0() gc "shadow-stack" {
 entry:
   ret i64 1
 }

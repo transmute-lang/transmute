@@ -13,7 +13,9 @@ Ok(
                 },
                 symbol_id: SymbolId(5),
                 fields: None,
-                parent: None,
+                parent: Namespace(
+                    NamespaceId(0),
+                ),
             },
         ],
         identifiers: [
@@ -39,6 +41,24 @@ Ok(
         ],
         expressions: [],
         statements: [
+        ],
+        namespaces: [
+            NamespaceId(0) => (
+                None,
+                IdentId(0),
+            ),
+            NamespaceId(1) => (
+                Some(
+                    NamespaceId(0),
+                ),
+                IdentId(1),
+            ),
+            NamespaceId(2) => (
+                Some(
+                    NamespaceId(0),
+                ),
+                IdentId(4),
+            ),
         ],
         symbols: [
             SymbolId(5) => Symbol {

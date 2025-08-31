@@ -25,7 +25,9 @@ Ok(
                         },
                     ],
                 ),
-                parent: None,
+                parent: Namespace(
+                    NamespaceId(0),
+                ),
             },
             StructId(1) => Struct {
                 identifier: Identifier {
@@ -46,7 +48,9 @@ Ok(
                         },
                     ],
                 ),
-                parent: None,
+                parent: Namespace(
+                    NamespaceId(0),
+                ),
             },
         ],
         identifiers: [
@@ -72,6 +76,18 @@ Ok(
         ],
         expressions: [],
         statements: [
+        ],
+        namespaces: [
+            NamespaceId(0) => (
+                None,
+                IdentId(0),
+            ),
+            NamespaceId(1) => (
+                Some(
+                    NamespaceId(0),
+                ),
+                IdentId(5),
+            ),
         ],
         symbols: [
             SymbolId(3) => Symbol {

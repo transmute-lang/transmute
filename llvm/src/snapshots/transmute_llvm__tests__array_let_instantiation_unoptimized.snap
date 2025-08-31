@@ -23,7 +23,7 @@ entry:
   unreachable
 }
 
-define void @_TM0_1f0() gc "shadow-stack" {
+define void @_TM0_F1f0() gc "shadow-stack" {
 entry:
   %"a#local#sym20#" = alloca ptr, align 8
   store ptr null, ptr %"a#local#sym20#", align 8

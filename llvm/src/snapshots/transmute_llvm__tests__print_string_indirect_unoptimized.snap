@@ -26,9 +26,9 @@ entry:
   unreachable
 }
 
-declare void @_TM0_5print1s6string(ptr)
+declare void @_TM0_F5print1sN3stdN3str6string(ptr)
 
-define void @_TM0_1f0() gc "shadow-stack" {
+define void @_TM0_F1f0() gc "shadow-stack" {
 entry:
   %"world#local#sym27#" = alloca ptr, align 8
   %"hello#local#sym26#" = alloca ptr, align 8
@@ -43,9 +43,9 @@ entry:
   store ptr %new_str1, ptr %"world#local#sym27#", align 8
   call void @gc_run()
   %"hello#local#sym26#2" = load ptr, ptr %"hello#local#sym26#", align 8
-  call void @_TM0_5print1s6string(ptr %"hello#local#sym26#2")
+  call void @_TM0_F5print1sN3stdN3str6string(ptr %"hello#local#sym26#2")
   %"world#local#sym27#3" = load ptr, ptr %"world#local#sym27#", align 8
-  call void @_TM0_5print1s6string(ptr %"world#local#sym27#3")
+  call void @_TM0_F5print1sN3stdN3str6string(ptr %"world#local#sym27#3")
   ret void
 }
 

@@ -17,7 +17,9 @@ Ok(
                     ExprId(4),
                 ),
                 ret: TypeId(1),
-                parent: None,
+                parent: Namespace(
+                    NamespaceId(0),
+                ),
             },
         ],
         structs: [],
@@ -138,6 +140,18 @@ Ok(
                 ),
                 span: 1:11; [10, 24],
             },
+        ],
+        namespaces: [
+            NamespaceId(0) => (
+                None,
+                IdentId(0),
+            ),
+            NamespaceId(1) => (
+                Some(
+                    NamespaceId(0),
+                ),
+                IdentId(2),
+            ),
         ],
         symbols: [
             SymbolId(3) => Symbol {

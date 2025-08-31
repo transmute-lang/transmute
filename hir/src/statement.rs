@@ -63,6 +63,13 @@ where
             _ => panic!("namespace expected, got {:?}", self),
         }
     }
+
+    pub fn into_namespace(self) -> (Identifier<B>, InputId, Vec<StmtId>) {
+        match self.kind {
+            StatementKind::Namespace(identifier, input_id, stmts) => (identifier, input_id, stmts),
+            _ => panic!("namespace expected, got {:?}", self),
+        }
+    }
 }
 
 impl Statement<Typed, Bound> {

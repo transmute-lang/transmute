@@ -7,7 +7,7 @@
 
 static List *args = NULL;
 
-List *_TM0_4args0() {
+List *_TM0_N3stdN3envF4args0() {
     if (args == NULL) {
         args = stdlib_list_new();
         gc_take_ownership(args); // to make sure it's not GC-ed

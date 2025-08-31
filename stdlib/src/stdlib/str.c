@@ -2,7 +2,6 @@
 
 #include "bindings.h"
 
-// print(string) -> _TM0_5print1s
-void _TM0_5print1s6string(Str *str) {
+void _TM0_N3stdN3strF5print1sN3stdN3str6string(Str *str) {
     printf("%.*s\n", (int)str->len, (char *)str->ptr);
 }

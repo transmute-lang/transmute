@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-// print(boolean) -> _TM0_5print1b
-void _TM0_5print1b(int8_t b) {
+void _TM0_N3stdN8booleansF5print1b(int8_t b) {
     if (b) {
         printf("true\n");
     } else {

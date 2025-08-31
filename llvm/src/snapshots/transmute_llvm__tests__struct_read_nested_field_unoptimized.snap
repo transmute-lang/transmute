@@ -36,7 +36,7 @@ entry:
   ret void
 }
 
-define i64 @_TM0_1f0() gc "shadow-stack" {
+define i64 @_TM0_F1f0() gc "shadow-stack" {
 entry:
   %"gcroot#heap#struct#Inner#id0#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#struct#Inner#id0#", align 8

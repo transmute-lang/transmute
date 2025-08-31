@@ -23,6 +23,6 @@ entry:
   unreachable
 }
 
-declare i64 @_TM0_6native1n(i64)
+declare i64 @_TM0_F6native1n(i64)
 
 attributes #0 = { nounwind }

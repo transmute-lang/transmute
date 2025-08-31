@@ -25,7 +25,7 @@ entry:
   unreachable
 }
 
-define i64 @_TM0_1f1n(i64 %"n#param#sym20#") gc "shadow-stack" {
+define i64 @_TM0_F1f1n(i64 %"n#param#sym20#") gc "shadow-stack" {
 entry:
   switch i64 %"n#param#sym20#", label %end_if3 [
     i64 0, label %common.ret

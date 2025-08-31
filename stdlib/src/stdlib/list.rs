@@ -93,8 +93,10 @@ pub extern "C" fn stdlib_list_pop(list: *mut List) -> ListElement {
 }
 
 #[no_mangle]
-// list_get(List, number) -> _TM0_8list_get2s4Listn
-pub extern "C" fn _TM0_8list_get2s4Listn(list: *const List, index: usize) -> ListElement {
+pub extern "C" fn _TM0_N3stdN4listF8list_get2sN3stdN4list4Listn(
+    list: *const List,
+    index: usize,
+) -> ListElement {
     let list_ptr = ObjectPtr::from_raw(list as *mut List).unwrap();
     let list = Vec::from(list_ptr.as_ref());
 

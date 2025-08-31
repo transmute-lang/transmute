@@ -25,12 +25,12 @@ entry:
   unreachable
 }
 
-define i64 @_TM0_1f0() gc "shadow-stack" {
+define i64 @_TM0_F1f0() gc "shadow-stack" {
 entry:
   %"s#local#sym23#" = alloca ptr, align 8
   store ptr null, ptr %"s#local#sym23#", align 8
   call void @llvm.gcroot(ptr nonnull %"s#local#sym23#", ptr null)
-  %"g#res#" = call ptr @_TM0_1g0()
+  %"g#res#" = call ptr @_TM0_F1g0()
   store ptr %"g#res#", ptr %"s#local#sym23#", align 8
   call void @gc_run()
   %"s#local#sym23#1" = load ptr, ptr %"s#local#sym23#", align 8
@@ -38,7 +38,7 @@ entry:
   ret i64 %"s#local#sym23#1.field#idx0#sym22#2"
 }
 
-define ptr @_TM0_1g0() gc "shadow-stack" {
+define ptr @_TM0_F1g0() gc "shadow-stack" {
 entry:
   %"gcroot#heap#struct#Struct#id0#" = alloca ptr, align 8
   store ptr null, ptr %"gcroot#heap#struct#Struct#id0#", align 8

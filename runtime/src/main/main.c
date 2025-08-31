@@ -7,8 +7,7 @@
 #include "main.h"
 #include "../gc/gc.h"
 
-// main() -> _TM0_4main0
-void _TM0_4main0(void);
+void _TM0_F4main0(void);
 
 static Args args = {0};
 
@@ -18,7 +17,7 @@ int main(int argc, char **argv) {
     args.argc = argc;
     args.argv = argv;
 
-    _TM0_4main0();
+    _TM0_F4main0();
 
     gc_teardown();
 

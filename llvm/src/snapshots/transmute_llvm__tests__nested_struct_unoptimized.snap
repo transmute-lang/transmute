@@ -23,12 +23,12 @@ entry:
   unreachable
 }
 
-define void @_TM0_1f1n(i64 %"n#param#sym21#") gc "shadow-stack" {
+define void @_TM0_F1f1n(i64 %"n#param#sym21#") gc "shadow-stack" {
 entry:
   ret void
 }
 
-define void @_TM0_N1f1n1g1sN1f1n8MyStruct(ptr %"p#param#sym23#") gc "shadow-stack" {
+define void @_TM0_F1f1nF1g1sF1f1n8MyStruct(ptr %"p#param#sym23#") gc "shadow-stack" {
 entry:
   ret void
 }

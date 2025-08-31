@@ -23,7 +23,7 @@ entry:
   unreachable
 }
 
-define i1 @_TM0_1f1n(i64 %"n#param#sym20#") gc "shadow-stack" {
+define i1 @_TM0_F1f1n(i64 %"n#param#sym20#") gc "shadow-stack" {
 entry:
   %"m#local#sym21#" = alloca i64, align 8
   %"eq#" = icmp eq i64 %"n#param#sym20#", 42
