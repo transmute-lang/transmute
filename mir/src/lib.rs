@@ -1377,6 +1377,7 @@ mod tests {
     use transmute_ast::parser::Parser;
     use transmute_ast::CompilationUnit;
     use transmute_core::ids::InputId;
+    use transmute_nst::nodes::Nst;
 
     macro_rules! t {
         ($name:ident => $src:expr) => {
@@ -1391,7 +1392,8 @@ mod tests {
                 )
                 .parse();
 
-                let hir = transmute_hir::resolve(compilation_unit.into_ast().unwrap()).unwrap();
+                let hir = transmute_hir::resolve(Nst::from(compilation_unit.into_ast().unwrap()))
+                    .unwrap();
                 assert_debug_snapshot!(make_mir(hir));
             }
         };

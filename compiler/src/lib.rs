@@ -7,6 +7,7 @@ use transmute_hir::hir_print::Options as HirPrintOptions;
 use transmute_hir::resolve;
 use transmute_llvm::{LlvmIr, LlvmIrGen};
 use transmute_mir::make_mir;
+use transmute_nst::nodes::Nst;
 
 #[derive(Debug, Default)]
 pub struct Options {
@@ -89,6 +90,7 @@ pub fn compile_file<S: AsRef<Path>, D: AsRef<Path>>(
         OutputFormat::Hir => {
             let (inputs, ast) = parse(inputs);
             match ast
+                .map(Nst::from)
                 .and_then(resolve)
                 .map_err(|d| d.with_inputs(inputs).to_string())
                 .map(|hir| {
@@ -117,6 +119,7 @@ pub fn compile_inputs<D: AsRef<Path>>(
 
     let (inputs, result) = parse(src);
     result
+        .map(Nst::from)
         .and_then(resolve)
         .and_then(make_mir)
         .and_then(|mir| ir_gen.gen(&mir))

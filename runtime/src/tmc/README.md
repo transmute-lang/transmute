@@ -1,4 +1,4 @@
-This src folder contains compiler intrinsics. The function are not available un "userland", only the compiler can use
+This src folder contains compiler intrinsics. The function are not available in "userland", only the compiler can use
 them.
 
 Functions not available in "userland" that are provided by the stdlib follow the same naming conventions.

@@ -1,0 +1,354 @@
+---
+source: nst/src/exit_points_resolver.rs
+expression: "(ast, block_exit_points)"
+---
+(
+    Ast {
+        identifiers: [
+            IdentId(0) => "<root>",
+            IdentId(1) => "x",
+            IdentId(2) => "a",
+            IdentId(3) => "add",
+        ],
+        identifier_refs: [
+            IdentRefId(0) => IdentifierRef {
+                id: IdentRefId(0),
+                ident: Identifier {
+                    id: IdentId(3),
+                    span: 3:17; [33, 36],
+                },
+            },
+        ],
+        expressions: [
+            ExprId(0) => Expression {
+                id: ExprId(0),
+                kind: Literal(
+                    Literal {
+                        kind: IdentRefId(0),
+                        span: 3:17; [33, 36],
+                    },
+                ),
+                span: 3:17; [33, 36],
+            },
+            ExprId(1) => Expression {
+                id: ExprId(1),
+                kind: Literal(
+                    Literal {
+                        kind: Boolean(true),
+                        span: 4:16; [53, 57],
+                    },
+                ),
+                span: 4:16; [53, 57],
+            },
+            ExprId(2) => Expression {
+                id: ExprId(2),
+                kind: Literal(
+                    Literal {
+                        kind: Number(42),
+                        span: 4:27; [64, 66],
+                    },
+                ),
+                span: 4:27; [64, 66],
+            },
+            ExprId(3) => Expression {
+                id: ExprId(3),
+                kind: Block(
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 4:21; [58, 69],
+            },
+            ExprId(4) => Expression {
+                id: ExprId(4),
+                kind: Literal(
+                    Literal {
+                        kind: Number(43),
+                        span: 4:44; [81, 83],
+                    },
+                ),
+                span: 4:44; [81, 83],
+            },
+            ExprId(5) => Expression {
+                id: ExprId(5),
+                kind: Block(
+                    [
+                        StmtId(2),
+                    ],
+                ),
+                span: 4:38; [75, 86],
+            },
+            ExprId(6) => Expression {
+                id: ExprId(6),
+                kind: If(
+                    ExprId(1),
+                    ExprId(3),
+                    Some(
+                        ExprId(5),
+                    ),
+                ),
+                span: 4:13; [50, 86],
+            },
+            ExprId(7) => Expression {
+                id: ExprId(7),
+                kind: Literal(
+                    Literal {
+                        kind: Boolean(false),
+                        span: 5:16; [103, 108],
+                    },
+                ),
+                span: 5:16; [103, 108],
+            },
+            ExprId(8) => Expression {
+                id: ExprId(8),
+                kind: Literal(
+                    Literal {
+                        kind: Number(44),
+                        span: 5:28; [115, 117],
+                    },
+                ),
+                span: 5:28; [115, 117],
+            },
+            ExprId(9) => Expression {
+                id: ExprId(9),
+                kind: Block(
+                    [
+                        StmtId(3),
+                    ],
+                ),
+                span: 5:22; [109, 120],
+            },
+            ExprId(10) => Expression {
+                id: ExprId(10),
+                kind: Literal(
+                    Literal {
+                        kind: Number(45),
+                        span: 5:45; [132, 134],
+                    },
+                ),
+                span: 5:45; [132, 134],
+            },
+            ExprId(11) => Expression {
+                id: ExprId(11),
+                kind: Block(
+                    [
+                        StmtId(4),
+                    ],
+                ),
+                span: 5:39; [126, 137],
+            },
+            ExprId(12) => Expression {
+                id: ExprId(12),
+                kind: If(
+                    ExprId(7),
+                    ExprId(9),
+                    Some(
+                        ExprId(11),
+                    ),
+                ),
+                span: 5:13; [100, 137],
+            },
+            ExprId(13) => Expression {
+                id: ExprId(13),
+                kind: FunctionCall(
+                    ExprId(0),
+                    [
+                        ExprId(6),
+                        ExprId(12),
+                    ],
+                ),
+                span: 3:17; [33, 147],
+            },
+            ExprId(14) => Expression {
+                id: ExprId(14),
+                kind: Literal(
+                    Literal {
+                        kind: Number(46),
+                        span: 7:13; [161, 163],
+                    },
+                ),
+                span: 7:13; [161, 163],
+            },
+            ExprId(15) => Expression {
+                id: ExprId(15),
+                kind: Block(
+                    [
+                        StmtId(5),
+                        StmtId(6),
+                    ],
+                ),
+                span: 2:15; [15, 170],
+            },
+        ],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    InputId(0),
+                    [
+                        StmtId(7),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: Ret(
+                    Some(
+                        ExprId(2),
+                    ),
+                    Explicit,
+                ),
+                span: 4:23; [60, 67],
+            },
+            StmtId(2) => Statement {
+                id: StmtId(2),
+                kind: Ret(
+                    Some(
+                        ExprId(4),
+                    ),
+                    Explicit,
+                ),
+                span: 4:40; [77, 84],
+            },
+            StmtId(3) => Statement {
+                id: StmtId(3),
+                kind: Ret(
+                    Some(
+                        ExprId(8),
+                    ),
+                    Explicit,
+                ),
+                span: 5:24; [111, 118],
+            },
+            StmtId(4) => Statement {
+                id: StmtId(4),
+                kind: Ret(
+                    Some(
+                        ExprId(10),
+                    ),
+                    Explicit,
+                ),
+                span: 5:41; [128, 135],
+            },
+            StmtId(5) => Statement {
+                id: StmtId(5),
+                kind: Let(
+                    Identifier {
+                        id: IdentId(2),
+                        span: 3:13; [29, 30],
+                    },
+                    ExprId(13),
+                ),
+                span: 3:9; [25, 148],
+            },
+            StmtId(6) => Statement {
+                id: StmtId(6),
+                kind: Ret(
+                    Some(
+                        ExprId(14),
+                    ),
+                    Explicit,
+                ),
+                span: 7:9; [157, 164],
+            },
+            StmtId(7) => Statement {
+                id: StmtId(7),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(1),
+                        span: 2:9; [9, 10],
+                    },
+                    [],
+                    [],
+                    Return {
+                        type_def_id: None,
+                    },
+                    ExprId(15),
+                ),
+                span: 2:5; [5, 170],
+            },
+        ],
+        type_defs: [],
+        root: StmtId(0),
+    },
+    [
+        (
+            ExprId(3),
+            Output {
+                exit_points: [
+                    Explicit(
+                        Some(
+                            ExprId(2),
+                        ),
+                    ),
+                ],
+                unreachable: [],
+            },
+        ),
+        (
+            ExprId(5),
+            Output {
+                exit_points: [
+                    Explicit(
+                        Some(
+                            ExprId(4),
+                        ),
+                    ),
+                ],
+                unreachable: [],
+            },
+        ),
+        (
+            ExprId(9),
+            Output {
+                exit_points: [
+                    Explicit(
+                        Some(
+                            ExprId(8),
+                        ),
+                    ),
+                ],
+                unreachable: [],
+            },
+        ),
+        (
+            ExprId(11),
+            Output {
+                exit_points: [
+                    Explicit(
+                        Some(
+                            ExprId(10),
+                        ),
+                    ),
+                ],
+                unreachable: [],
+            },
+        ),
+        (
+            ExprId(15),
+            Output {
+                exit_points: [
+                    Explicit(
+                        Some(
+                            ExprId(2),
+                        ),
+                    ),
+                    Explicit(
+                        Some(
+                            ExprId(4),
+                        ),
+                    ),
+                ],
+                unreachable: [
+                    ExprId(12),
+                    ExprId(14),
+                ],
+            },
+        ),
+    ],
+)

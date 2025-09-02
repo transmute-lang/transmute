@@ -1,9 +1,0 @@
----
-source: hir/src/passes/implicit_ret_converter.rs
-expression: w
----
-struct S {
-  field: number,
-}
-let s = S {field: 1,};
-s.field = false;

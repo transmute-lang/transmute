@@ -589,6 +589,7 @@ mod tests {
     use transmute_core::ids::InputId;
     use transmute_hir::natives::Natives;
     use transmute_hir::UnresolvedHir;
+    use transmute_nst::nodes::Nst;
 
     macro_rules! eval {
         ($name:ident, $src:expr => $value:expr) => {
@@ -602,7 +603,8 @@ mod tests {
                 )
                 .parse();
 
-                let hir = UnresolvedHir::from(compilation_unit.into_ast().unwrap())
+                let nst = Nst::from(compilation_unit.into_ast().unwrap());
+                let hir = UnresolvedHir::from(nst)
                     .resolve(Natives::default())
                     .unwrap();
                 let context = crate::natives::InterpreterNatives::new(&[]);

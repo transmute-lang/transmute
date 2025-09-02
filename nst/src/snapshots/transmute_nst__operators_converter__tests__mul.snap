@@ -1,0 +1,5 @@
+---
+source: nst/src/operators_converter.rs
+expression: w
+---
+mul(lhs, rhs);

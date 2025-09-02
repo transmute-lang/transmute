@@ -1,7 +1,7 @@
 use crate::bound::{Bound, BoundMultiple, BoundState, Unbound};
-use transmute_ast::identifier::Identifier as AstIdentifier;
 use transmute_core::ids::{IdentId, SymbolId};
 use transmute_core::span::Span;
+use transmute_nst::nodes::Identifier as NstIdentifier;
 
 /// Represents an identifier when not used as a reference
 #[derive(Debug, Clone, PartialEq)]
@@ -42,8 +42,8 @@ impl Identifier<Unbound> {
     }
 }
 
-impl From<AstIdentifier> for Identifier<Unbound> {
-    fn from(value: AstIdentifier) -> Self {
+impl From<NstIdentifier> for Identifier<Unbound> {
+    fn from(value: NstIdentifier) -> Self {
         Identifier {
             id: value.id,
             span: value.span,

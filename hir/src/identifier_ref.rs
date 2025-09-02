@@ -1,8 +1,8 @@
 use crate::bound::{Bound, BoundMultiple, BoundState, Unbound};
 use crate::identifier::Identifier;
 use std::fmt::Debug;
-use transmute_ast::identifier_ref::IdentifierRef as AstIdentifierRef;
 use transmute_core::ids::{IdentRefId, SymbolId};
+use transmute_nst::nodes::IdentifierRef as NstIdentifierRef;
 
 /// Represents an identifier when used as a reference
 #[derive(Debug, Clone, PartialEq)]
@@ -29,8 +29,8 @@ impl IdentifierRef<Unbound> {
     }
 }
 
-impl From<AstIdentifierRef> for IdentifierRef<Unbound> {
-    fn from(value: AstIdentifierRef) -> Self {
+impl From<NstIdentifierRef> for IdentifierRef<Unbound> {
+    fn from(value: NstIdentifierRef) -> Self {
         Self {
             id: value.id,
             ident: Identifier::from(value.ident),

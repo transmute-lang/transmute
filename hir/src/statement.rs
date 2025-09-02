@@ -1,17 +1,17 @@
 use crate::bound::{Bound, BoundState, Unbound};
 use crate::identifier::Identifier;
 use crate::typed::{Typed, TypedState, Untyped};
-use transmute_ast::annotation::Annotation as AstAnnotation;
-use transmute_ast::statement::Field as AstField;
-use transmute_ast::statement::Parameter as AstParameter;
-use transmute_ast::statement::RetMode as AstRetMode;
-use transmute_ast::statement::Return as AstReturn;
-use transmute_ast::statement::Statement as AstStatement;
-use transmute_ast::statement::StatementKind as AstStatementKind;
-use transmute_ast::statement::TypeDef as AstTypeDef;
-use transmute_ast::statement::TypeDefKind as AstTypeDefKind;
 use transmute_core::ids::{ExprId, IdentRefId, InputId, StmtId, SymbolId, TypeDefId, TypeId};
 use transmute_core::span::Span;
+use transmute_nst::nodes::Annotation as NstAnnotation;
+use transmute_nst::nodes::Field as NstField;
+use transmute_nst::nodes::Parameter as NstParameter;
+use transmute_nst::nodes::RetMode as NstRetMode;
+use transmute_nst::nodes::Return as NstReturn;
+use transmute_nst::nodes::Statement as NstStatement;
+use transmute_nst::nodes::StatementKind as NstStatementKind;
+use transmute_nst::nodes::TypeDef as NstTypeDef;
+use transmute_nst::nodes::TypeDefKind as NstTypeDefKind;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Statement<T, B>
@@ -82,20 +82,20 @@ impl Statement<Typed, Bound> {
     }
 }
 
-impl From<AstStatement> for Statement<Untyped, Unbound> {
-    fn from(value: AstStatement) -> Self {
+impl From<NstStatement> for Statement<Untyped, Unbound> {
+    fn from(value: NstStatement) -> Self {
         Self {
             id: value.id,
             span: value.span.clone(),
             kind: match value.kind {
-                AstStatementKind::Expression(expr_id) => StatementKind::Expression(expr_id),
-                AstStatementKind::Let(identifier, expr_id) => {
+                NstStatementKind::Expression(expr_id) => StatementKind::Expression(expr_id),
+                NstStatementKind::Let(identifier, expr_id) => {
                     StatementKind::Let(Identifier::from(identifier), expr_id)
                 }
-                AstStatementKind::Ret(expr_id, ret_mode) => {
+                NstStatementKind::Ret(expr_id, ret_mode) => {
                     StatementKind::Ret(expr_id, RetMode::from(ret_mode))
                 }
-                AstStatementKind::LetFn(identifier, annotations, params, ret_type, expr_id) => {
+                NstStatementKind::LetFn(identifier, annotations, params, ret_type, expr_id) => {
                     StatementKind::LetFn(
                         Identifier::from(identifier),
                         annotations
@@ -111,7 +111,7 @@ impl From<AstStatement> for Statement<Untyped, Unbound> {
                         None,
                     )
                 }
-                AstStatementKind::Struct(identifier, annotations, fields) => StatementKind::Struct(
+                NstStatementKind::Struct(identifier, annotations, fields) => StatementKind::Struct(
                     Identifier::from(identifier),
                     annotations
                         .into_iter()
@@ -125,11 +125,11 @@ impl From<AstStatement> for Statement<Untyped, Unbound> {
                     ),
                     None,
                 ),
-                AstStatementKind::Annotation(identifier) => {
+                NstStatementKind::Annotation(identifier) => {
                     StatementKind::Annotation(Identifier::from(identifier))
                 }
-                AstStatementKind::Use(ident_ref_ids) => StatementKind::Use(ident_ref_ids),
-                AstStatementKind::Namespace(identifier, input_id, statements) => {
+                NstStatementKind::Use(ident_ref_ids) => StatementKind::Use(ident_ref_ids),
+                NstStatementKind::Namespace(identifier, input_id, statements) => {
                     StatementKind::Namespace(Identifier::from(identifier), input_id, statements)
                 }
             },
@@ -189,11 +189,11 @@ impl RetMode {
     }
 }
 
-impl From<AstRetMode> for RetMode {
-    fn from(value: AstRetMode) -> Self {
+impl From<NstRetMode> for RetMode {
+    fn from(value: NstRetMode) -> Self {
         match value {
-            AstRetMode::Explicit => RetMode::Explicit,
-            AstRetMode::Implicit => RetMode::Implicit,
+            NstRetMode::Explicit => RetMode::Explicit,
+            NstRetMode::Implicit => RetMode::Implicit,
         }
     }
 }
@@ -240,18 +240,17 @@ pub enum TypeDefKind {
     Array(TypeDefId, usize),
 }
 
-impl From<AstTypeDef> for TypeDef {
-    fn from(value: AstTypeDef) -> Self {
+impl From<NstTypeDef> for TypeDef {
+    fn from(value: NstTypeDef) -> Self {
         match value.kind {
-            AstTypeDefKind::Simple(ident_ref_ids) => TypeDef {
+            NstTypeDefKind::Simple(ident_ref_ids) => TypeDef {
                 kind: TypeDefKind::Simple(ident_ref_ids),
                 span: value.span,
             },
-            AstTypeDefKind::Array(type_def_id, len) => TypeDef {
+            NstTypeDefKind::Array(type_def_id, len) => TypeDef {
                 kind: TypeDefKind::Array(type_def_id, len),
                 span: value.span,
             },
-            AstTypeDefKind::Dummy => panic!("Cannot convert AstType::Dummy"),
         }
     }
 }
@@ -262,8 +261,8 @@ pub struct Annotation {
     pub span: Span,
 }
 
-impl From<AstAnnotation> for Annotation {
-    fn from(value: AstAnnotation) -> Self {
+impl From<NstAnnotation> for Annotation {
+    fn from(value: NstAnnotation) -> Self {
         Annotation {
             ident_ref_ids: value.ident_ref_ids,
             span: value.span,
@@ -297,8 +296,8 @@ impl Parameter<Untyped, Unbound> {
     }
 }
 
-impl From<AstParameter> for Parameter<Untyped, Unbound> {
-    fn from(value: AstParameter) -> Self {
+impl From<NstParameter> for Parameter<Untyped, Unbound> {
+    fn from(value: NstParameter) -> Self {
         Self {
             span: value.span.clone(),
             type_def_id: value.type_def_id,
@@ -344,8 +343,8 @@ impl Return<Untyped> {
     }
 }
 
-impl From<AstReturn> for Return<Untyped> {
-    fn from(value: AstReturn) -> Self {
+impl From<NstReturn> for Return<Untyped> {
+    fn from(value: NstReturn) -> Self {
         Self {
             type_def_id: value.type_def_id,
             typed: Untyped,
@@ -384,8 +383,8 @@ impl Field<Untyped, Unbound> {
     }
 }
 
-impl From<AstField> for Field<Untyped, Unbound> {
-    fn from(value: AstField) -> Self {
+impl From<NstField> for Field<Untyped, Unbound> {
+    fn from(value: NstField) -> Self {
         Self {
             type_def_id: value.type_def_id,
             span: value.span,

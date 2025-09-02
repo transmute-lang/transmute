@@ -1895,6 +1895,7 @@ mod tests {
     use transmute_hir::natives::Natives;
     use transmute_hir::UnresolvedHir;
     use transmute_mir::make_mir;
+    use transmute_nst::nodes::Nst;
 
     const FLAVOR: &str = "";
 
@@ -1906,7 +1907,8 @@ mod tests {
                     let mut compilation_unit = CompilationUnit::default();
                     Parser::new(&mut compilation_unit, None, Lexer::new(InputId::from(0), &format!("{}\nnamespace core {{}}", $src))).parse();
                     let ast = compilation_unit.into_ast().unwrap();
-                    let hir = UnresolvedHir::from(ast).resolve(Natives::new()).unwrap();
+                    let nst = Nst::from(ast);
+                    let hir = UnresolvedHir::from(nst).resolve(Natives::new()).unwrap();
                     let mir = make_mir(hir).unwrap();
 
                     Target::initialize_all(&InitializationConfig::default());
@@ -1938,7 +1940,8 @@ mod tests {
                     let mut compilation_unit = CompilationUnit::default();
                     Parser::new(&mut compilation_unit, None, Lexer::new(InputId::from(0), &format!("{}\nnamespace core {{}}", $src))).parse();
                     let ast = compilation_unit.into_ast().unwrap();
-                    let hir = UnresolvedHir::from(ast).resolve(Natives::new()).unwrap();
+                    let nst = Nst::from(ast);
+                    let hir = UnresolvedHir::from(nst).resolve(Natives::new()).unwrap();
                     let mir = make_mir(hir).unwrap();
 
                     Target::initialize_all(&InitializationConfig::default());

@@ -735,6 +735,7 @@ mod tests {
     use std::path::PathBuf;
     use transmute_ast::parse;
     use transmute_core::input::Input;
+    use transmute_nst::nodes::Nst;
 
     macro_rules! t {
         ($name:ident) => {
@@ -758,7 +759,8 @@ mod tests {
                 ];
 
                 let ast = parse(inputs).1.unwrap();
-                let hir = UnresolvedHir::from(ast).resolve(Natives::new()).unwrap();
+                let nst = Nst::from(ast);
+                let hir = UnresolvedHir::from(nst).resolve(Natives::new()).unwrap();
 
                 let mut s = String::new();
                 hir.hir_print(&Options::default(), &mut s)

@@ -1,5 +1,0 @@
----
-source: hir/src/passes/operators_converter.rs
-expression: w
----
-div(lhs, rhs);

@@ -1,0 +1,8 @@
+---
+source: nst/src/implicit_ret_converter.rs
+expression: w
+---
+let f(): number = {
+  41;
+  ret 42;
+}

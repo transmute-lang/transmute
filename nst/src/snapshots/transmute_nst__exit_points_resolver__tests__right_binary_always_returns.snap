@@ -1,0 +1,258 @@
+---
+source: nst/src/exit_points_resolver.rs
+expression: "(ast, block_exit_points)"
+---
+(
+    Ast {
+        identifiers: [
+            IdentId(0) => "<root>",
+            IdentId(1) => "x",
+            IdentId(2) => "a",
+            IdentId(3) => "add",
+        ],
+        identifier_refs: [
+            IdentRefId(0) => IdentifierRef {
+                id: IdentRefId(0),
+                ident: Identifier {
+                    id: IdentId(3),
+                    span: 3:17; [33, 36],
+                },
+            },
+        ],
+        expressions: [
+            ExprId(0) => Expression {
+                id: ExprId(0),
+                kind: Literal(
+                    Literal {
+                        kind: IdentRefId(0),
+                        span: 3:17; [33, 36],
+                    },
+                ),
+                span: 3:17; [33, 36],
+            },
+            ExprId(1) => Expression {
+                id: ExprId(1),
+                kind: Literal(
+                    Literal {
+                        kind: Number(42),
+                        span: 3:21; [37, 39],
+                    },
+                ),
+                span: 3:21; [37, 39],
+            },
+            ExprId(2) => Expression {
+                id: ExprId(2),
+                kind: Literal(
+                    Literal {
+                        kind: Boolean(false),
+                        span: 3:28; [44, 49],
+                    },
+                ),
+                span: 3:28; [44, 49],
+            },
+            ExprId(3) => Expression {
+                id: ExprId(3),
+                kind: Literal(
+                    Literal {
+                        kind: Number(43),
+                        span: 3:40; [56, 58],
+                    },
+                ),
+                span: 3:40; [56, 58],
+            },
+            ExprId(4) => Expression {
+                id: ExprId(4),
+                kind: Block(
+                    [
+                        StmtId(1),
+                    ],
+                ),
+                span: 3:34; [50, 61],
+            },
+            ExprId(5) => Expression {
+                id: ExprId(5),
+                kind: Literal(
+                    Literal {
+                        kind: Number(44),
+                        span: 3:57; [73, 75],
+                    },
+                ),
+                span: 3:57; [73, 75],
+            },
+            ExprId(6) => Expression {
+                id: ExprId(6),
+                kind: Block(
+                    [
+                        StmtId(2),
+                    ],
+                ),
+                span: 3:51; [67, 78],
+            },
+            ExprId(7) => Expression {
+                id: ExprId(7),
+                kind: If(
+                    ExprId(2),
+                    ExprId(4),
+                    Some(
+                        ExprId(6),
+                    ),
+                ),
+                span: 3:25; [41, 78],
+            },
+            ExprId(8) => Expression {
+                id: ExprId(8),
+                kind: FunctionCall(
+                    ExprId(0),
+                    [
+                        ExprId(1),
+                        ExprId(7),
+                    ],
+                ),
+                span: 3:17; [33, 79],
+            },
+            ExprId(9) => Expression {
+                id: ExprId(9),
+                kind: Literal(
+                    Literal {
+                        kind: Number(45),
+                        span: 4:13; [93, 95],
+                    },
+                ),
+                span: 4:13; [93, 95],
+            },
+            ExprId(10) => Expression {
+                id: ExprId(10),
+                kind: Block(
+                    [
+                        StmtId(3),
+                        StmtId(4),
+                    ],
+                ),
+                span: 2:15; [15, 102],
+            },
+        ],
+        statements: [
+            StmtId(0) => Statement {
+                id: StmtId(0),
+                kind: Namespace(
+                    Identifier {
+                        id: IdentId(0),
+                        span: 0:0; [0, 0],
+                    },
+                    InputId(0),
+                    [
+                        StmtId(5),
+                    ],
+                ),
+                span: 0:0; [0, 0],
+            },
+            StmtId(1) => Statement {
+                id: StmtId(1),
+                kind: Ret(
+                    Some(
+                        ExprId(3),
+                    ),
+                    Explicit,
+                ),
+                span: 3:36; [52, 59],
+            },
+            StmtId(2) => Statement {
+                id: StmtId(2),
+                kind: Ret(
+                    Some(
+                        ExprId(5),
+                    ),
+                    Explicit,
+                ),
+                span: 3:53; [69, 76],
+            },
+            StmtId(3) => Statement {
+                id: StmtId(3),
+                kind: Let(
+                    Identifier {
+                        id: IdentId(2),
+                        span: 3:13; [29, 30],
+                    },
+                    ExprId(8),
+                ),
+                span: 3:9; [25, 80],
+            },
+            StmtId(4) => Statement {
+                id: StmtId(4),
+                kind: Ret(
+                    Some(
+                        ExprId(9),
+                    ),
+                    Explicit,
+                ),
+                span: 4:9; [89, 96],
+            },
+            StmtId(5) => Statement {
+                id: StmtId(5),
+                kind: LetFn(
+                    Identifier {
+                        id: IdentId(1),
+                        span: 2:9; [9, 10],
+                    },
+                    [],
+                    [],
+                    Return {
+                        type_def_id: None,
+                    },
+                    ExprId(10),
+                ),
+                span: 2:5; [5, 102],
+            },
+        ],
+        type_defs: [],
+        root: StmtId(0),
+    },
+    [
+        (
+            ExprId(4),
+            Output {
+                exit_points: [
+                    Explicit(
+                        Some(
+                            ExprId(3),
+                        ),
+                    ),
+                ],
+                unreachable: [],
+            },
+        ),
+        (
+            ExprId(6),
+            Output {
+                exit_points: [
+                    Explicit(
+                        Some(
+                            ExprId(5),
+                        ),
+                    ),
+                ],
+                unreachable: [],
+            },
+        ),
+        (
+            ExprId(10),
+            Output {
+                exit_points: [
+                    Explicit(
+                        Some(
+                            ExprId(3),
+                        ),
+                    ),
+                    Explicit(
+                        Some(
+                            ExprId(5),
+                        ),
+                    ),
+                ],
+                unreachable: [
+                    ExprId(9),
+                ],
+            },
+        ),
+    ],
+)

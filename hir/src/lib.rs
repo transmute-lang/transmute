@@ -1,28 +1,21 @@
 use crate::bound::{Bound, BoundMultiple, BoundState, Unbound};
-use crate::exit_points::ExitPoints;
 use crate::expression::{Expression, ExpressionKind};
 use crate::identifier::Identifier;
 use crate::identifier_ref::IdentifierRef;
 use crate::literal::{Literal, LiteralKind};
 use crate::natives::{Natives, Type};
-use crate::passes::exit_points_resolver::{ExitPointsResolver, Output as ExitPointsResolverOutput};
-use crate::passes::implicit_ret_converter::{
-    ImplicitRetResolver, Output as ImplicitRetResolverOutput,
-};
-use crate::passes::operators_converter::OperatorsConverter;
 use crate::passes::resolver::Resolver;
 use crate::statement::{Field, Parameter, Return, Statement, TypeDef};
 use crate::symbol::{Symbol, SymbolKind};
 use crate::typed::{Typed, TypedState, Untyped};
-use transmute_ast::statement::StatementKind as AstStatementKind;
-use transmute_ast::Ast;
 use transmute_core::error::Diagnostics;
 use transmute_core::id_map::IdMap;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeDefId, TypeId};
 use transmute_core::vec_map::VecMap;
+use transmute_nst::nodes::Nst;
+pub use transmute_nst::nodes::{ExitPoint, ExitPoints};
 
 pub mod bound;
-pub mod exit_points;
 pub mod expression;
 pub mod hir_print;
 pub mod identifier;
@@ -45,8 +38,8 @@ pub type ResolvedParameter = Parameter<Typed, Bound>;
 pub type ResolvedReturn = Return<Typed>;
 pub type ResolvedField = Field<Typed, Bound>;
 
-pub fn resolve(ast: Ast) -> Result<ResolvedHir, Diagnostics<()>> {
-    UnresolvedHir::from(ast).resolve(Natives::default())
+pub fn resolve(nst: Nst) -> Result<ResolvedHir, Diagnostics<()>> {
+    UnresolvedHir::from(nst).resolve(Natives::default())
 }
 
 #[derive(Debug, PartialEq)]
@@ -81,77 +74,34 @@ impl UnresolvedHir {
     }
 }
 
-impl From<Ast> for UnresolvedHir {
-    fn from(ast: Ast) -> Self {
-        // convert operators to function calls
-        let operator_free =
-            OperatorsConverter::new(ast.identifiers, ast.identifier_refs).convert(ast.expressions);
-
-        let expressions = operator_free.expressions;
-        let identifiers = operator_free.identifiers;
-        let identifier_refs = operator_free.identifier_refs;
-
-        // convert implicit return statements/expressions to `Ret(..., RetMode::Implicit)`
-        // statements
-        let ImplicitRetResolverOutput {
-            statements,
-            expressions,
-        } = ImplicitRetResolver::new().resolve(ast.root, ast.statements, expressions);
-
-        // here, we have two kind of `Ret` statements:
-        //  - explicit, which are present in the source code (`ret x;`)
-        //  - implicit, which are not present in the source code but that happen to be the last
-        //    statements on their execution path in their function
-
-        // compute exit points, i.e. Ret statements (explicit or implicit) that are actually
-        // reachable. we also compute the set of unreachable expression.
-        let mut exit_points = IdMap::new();
-        let mut unreachable = Vec::new();
-
-        for (_, stmt) in statements.iter() {
-            if let &AstStatementKind::LetFn(_, _, _, _, expr_id) = &stmt.kind {
-                let ExitPointsResolverOutput {
-                    exit_points: new_exit_points,
-                    unreachable: mut new_unreachable,
-                } = ExitPointsResolver::new(&expressions, &statements).resolve(expr_id);
-
-                #[cfg(test)]
-                println!("{}:{}: Computed exit points={new_exit_points:?} and unreachable={new_unreachable:?} for {expr_id:?}", file!(), line!());
-
-                exit_points.insert(expr_id, new_exit_points);
-                unreachable.append(&mut new_unreachable);
-            }
-        }
-
-        unreachable.sort();
-        unreachable.dedup();
-
+impl From<Nst> for UnresolvedHir {
+    fn from(nst: Nst) -> Self {
         Self {
-            identifiers,
-            identifier_refs: identifier_refs
+            identifiers: nst.identifiers,
+            identifier_refs: nst
+                .identifier_refs
                 .into_iter()
                 .map(|i| (i.0, IdentifierRef::from(i.1)))
                 .collect::<VecMap<IdentRefId, IdentifierRef<Unbound>>>(),
-            expressions: expressions
+            expressions: nst
+                .expressions
                 .into_iter()
                 .map(|e| (e.0, Expression::from(e.1)))
                 .collect::<VecMap<ExprId, Expression<Untyped>>>(),
-            statements: statements
+            statements: nst
+                .statements
                 .into_iter()
                 .map(|s| (s.0, Statement::from(s.1)))
                 .collect::<VecMap<StmtId, Statement<Untyped, Unbound>>>(),
-            type_defs: ast
+            type_defs: nst
                 .type_defs
                 .into_iter()
                 .map(|e| (e.0, TypeDef::from(e.1)))
                 .collect::<VecMap<TypeDefId, TypeDef>>(),
-            root: ast.root,
+            root: nst.root,
             symbols: Default::default(),
             types: Default::default(),
-            exit_points: ExitPoints {
-                exit_points,
-                unreachable,
-            },
+            exit_points: nst.exit_points,
         }
     }
 }

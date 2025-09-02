@@ -8,6 +8,7 @@ use transmute_ast::pretty_print::Options;
 use transmute_core::ids::IdentId;
 use transmute_core::input::Input;
 use transmute_hir::resolve;
+use transmute_nst::nodes::Nst;
 
 mod interpreter;
 pub mod natives;
@@ -38,6 +39,7 @@ pub fn exec<S: Into<String>, C: NativeContext>(source: S, print_ast: bool, conte
                 print!("Parsed AST:\n{w}\n");
             }
         })
+        .map(Nst::from)
         .and_then(resolve)
         .map(|hir| Interpreter::new(&hir, context).start())
         .map_err(|d| d.with_inputs(inputs).to_string())

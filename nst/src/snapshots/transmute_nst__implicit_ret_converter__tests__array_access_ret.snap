@@ -1,0 +1,12 @@
+---
+source: nst/src/implicit_ret_converter.rs
+expression: w
+---
+let f() = {
+  a[if true {
+    ret 1;
+  }
+  else {
+    ret 2;
+  }]
+}

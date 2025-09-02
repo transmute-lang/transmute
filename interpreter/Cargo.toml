@@ -7,6 +7,7 @@ edition = "2021"
 transmute-core = { path = "../core" }
 transmute-hir = { path = "../hir" }
 transmute-ast = { path = "../ast" }
+transmute-nst = { path = "../nst" }
 clap = { version = "4.5.8", features = ["derive"] }
 
 [dev-dependencies]

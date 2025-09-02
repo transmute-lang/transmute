@@ -1,8 +1,8 @@
 use std::fmt::{Debug, Formatter};
-use transmute_ast::literal::Literal as AstLiteral;
-use transmute_ast::literal::LiteralKind as AstLiteralKind;
 use transmute_core::ids::IdentRefId;
 use transmute_core::span::Span;
+use transmute_nst::nodes::Literal as NstLiteral;
+use transmute_nst::nodes::LiteralKind as NstLiteralKind;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Literal {
@@ -16,8 +16,8 @@ impl Literal {
     }
 }
 
-impl From<AstLiteral> for Literal {
-    fn from(value: AstLiteral) -> Self {
+impl From<NstLiteral> for Literal {
+    fn from(value: NstLiteral) -> Self {
         Self {
             span: value.span.clone(),
             kind: LiteralKind::from(value.kind),
@@ -33,13 +33,13 @@ pub enum LiteralKind {
     String(String),
 }
 
-impl From<AstLiteralKind> for LiteralKind {
-    fn from(value: AstLiteralKind) -> Self {
+impl From<NstLiteralKind> for LiteralKind {
+    fn from(value: NstLiteralKind) -> Self {
         match value {
-            AstLiteralKind::Boolean(b) => Self::Boolean(b),
-            AstLiteralKind::Identifier(i) => Self::Identifier(i),
-            AstLiteralKind::Number(n) => Self::Number(n),
-            AstLiteralKind::String(s) => Self::String(s),
+            NstLiteralKind::Boolean(b) => Self::Boolean(b),
+            NstLiteralKind::Identifier(i) => Self::Identifier(i),
+            NstLiteralKind::Number(n) => Self::Number(n),
+            NstLiteralKind::String(s) => Self::String(s),
         }
     }
 }

@@ -1,0 +1,12 @@
+---
+source: nst/src/implicit_ret_converter.rs
+expression: w
+---
+let f(): number = {
+  ret if c {
+    42;
+  }
+  else {
+    43;
+  };
+}

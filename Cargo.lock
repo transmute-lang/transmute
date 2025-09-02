@@ -478,6 +478,7 @@ dependencies = [
  "transmute-hir",
  "transmute-llvm",
  "transmute-mir",
+ "transmute-nst",
  "transmute-runtime",
 ]
 
@@ -491,6 +492,7 @@ dependencies = [
  "transmute-ast",
  "transmute-core",
  "transmute-hir",
+ "transmute-nst",
 ]
 
 [[package]]
@@ -514,6 +516,7 @@ dependencies = [
  "insta",
  "transmute-ast",
  "transmute-core",
+ "transmute-nst",
 ]
 
 [[package]]
@@ -527,6 +530,7 @@ dependencies = [
  "transmute-core",
  "transmute-hir",
  "transmute-mir",
+ "transmute-nst",
  "zstd",
 ]
 
@@ -538,6 +542,17 @@ dependencies = [
  "transmute-ast",
  "transmute-core",
  "transmute-hir",
+ "transmute-nst",
+]
+
+[[package]]
+name = "transmute-nst"
+version = "0.1.0"
+dependencies = [
+ "bimap",
+ "insta",
+ "transmute-ast",
+ "transmute-core",
 ]
 
 [[package]]

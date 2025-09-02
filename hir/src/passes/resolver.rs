@@ -4,7 +4,6 @@ use crate::identifier::Identifier;
 use crate::identifier_ref::IdentifierRef;
 use crate::literal::{Literal, LiteralKind};
 use crate::natives::{Native, Natives, Type};
-use crate::passes::exit_points_resolver::ExitPoint;
 use crate::statement::{
     Annotation, Field, Implementation, Parameter, RetMode, Return, Statement, StatementKind,
     TypeDefKind,
@@ -25,6 +24,7 @@ use transmute_core::span::Span;
 use transmute_core::stack::Iter;
 use transmute_core::stack::Stack;
 use transmute_core::vec_map::VecMap;
+use transmute_nst::nodes::ExitPoint;
 
 static NATIVE_ANNOTATION: [&str; 2] = ["std", "native"];
 
@@ -2684,6 +2684,7 @@ mod tests {
     use transmute_ast::parser::Parser;
     use transmute_ast::CompilationUnit;
     use transmute_core::ids::InputId;
+    use transmute_nst::nodes::Nst;
 
     impl ResolvedHir {
         fn symbols_with_invalid_type(&self) -> Vec<&Symbol> {
@@ -2810,8 +2811,8 @@ mod tests {
                 )
                 .parse();
 
-                let resolved_hir =
-                    UnresolvedHir::from(compilation_unit.into_ast().unwrap()).resolve($natives);
+                let nst = Nst::from(compilation_unit.into_ast().unwrap());
+                let resolved_hir = UnresolvedHir::from(nst).resolve($natives);
 
                 if let Ok(hir) = &resolved_hir {
                     let symbols_with_invalid_type = hir.symbols_with_invalid_type();

@@ -1,0 +1,11 @@
+---
+source: nst/src/implicit_ret_converter.rs
+expression: w
+---
+if if true {
+  ret 42;
+}
+else {
+  ret 43;
+} {
+}

@@ -1,0 +1,17 @@
+[package]
+name = "transmute-nst"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+transmute-core = { path = "../core" }
+transmute-ast = { path = "../ast" }
+bimap = "0.6.3"
+
+[dev-dependencies]
+insta = "1.34.0"
+transmute-ast = { path = "../ast", features = ["allow-any-root-kind"] }
+transmute-core = { path = "../core", features = ["backtraces"] }
+
+[features]
+print_generated_at_in_diagnostic_debug = ["transmute-core/print_generated_at_in_diagnostic_debug"]

@@ -1,11 +1,11 @@
 use crate::literal::{Literal, LiteralKind};
 use crate::typed::{Typed, TypedState, Untyped};
 use std::fmt::Debug;
-use transmute_ast::expression::Expression as AstExpression;
-use transmute_ast::expression::ExpressionKind as AstExpressionKind;
-use transmute_ast::expression::Target as AstTarget;
 use transmute_core::ids::{ExprId, IdentRefId, StmtId, TypeId};
 use transmute_core::span::Span;
+use transmute_nst::nodes::Expression as NstExpression;
+use transmute_nst::nodes::ExpressionKind as NstExpressionKind;
+use transmute_nst::nodes::Target as NstTarget;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expression<T>
@@ -56,43 +56,38 @@ impl Expression<Untyped> {
     }
 }
 
-impl From<AstExpression> for Expression<Untyped> {
-    fn from(value: AstExpression) -> Self {
+impl From<NstExpression> for Expression<Untyped> {
+    fn from(value: NstExpression) -> Self {
         Self {
             id: value.id,
             span: value.span.clone(),
             kind: match value.kind {
-                AstExpressionKind::Assignment(target, expr_id) => {
+                NstExpressionKind::Assignment(target, expr_id) => {
                     ExpressionKind::Assignment(Target::from(target), expr_id)
                 }
-                AstExpressionKind::If(cond, true_branch, false_branch) => {
+                NstExpressionKind::If(cond, true_branch, false_branch) => {
                     ExpressionKind::If(cond, true_branch, false_branch)
                 }
-                AstExpressionKind::Literal(literal) => {
+                NstExpressionKind::Literal(literal) => {
                     ExpressionKind::Literal(Literal::from(literal))
                 }
-                AstExpressionKind::Access(expr_id, ident_ref_id) => {
+                NstExpressionKind::Access(expr_id, ident_ref_id) => {
                     ExpressionKind::Access(expr_id, ident_ref_id)
                 }
-                AstExpressionKind::FunctionCall(expr_id, expr_ids) => {
+                NstExpressionKind::FunctionCall(expr_id, expr_ids) => {
                     ExpressionKind::FunctionCall(expr_id, expr_ids)
                 }
-                AstExpressionKind::While(cond, expr_id) => ExpressionKind::While(cond, expr_id),
-                AstExpressionKind::Block(expr_ids) => ExpressionKind::Block(expr_ids),
-                AstExpressionKind::StructInstantiation(ident_ref_id, fields) => {
+                NstExpressionKind::While(cond, expr_id) => ExpressionKind::While(cond, expr_id),
+                NstExpressionKind::Block(expr_ids) => ExpressionKind::Block(expr_ids),
+                NstExpressionKind::StructInstantiation(ident_ref_id, fields) => {
                     ExpressionKind::StructInstantiation(ident_ref_id, fields)
                 }
-                AstExpressionKind::ArrayInstantiation(values) => {
+                NstExpressionKind::ArrayInstantiation(values) => {
                     ExpressionKind::ArrayInstantiation(values)
                 }
-                AstExpressionKind::ArrayAccess(expr, index) => {
+                NstExpressionKind::ArrayAccess(expr, index) => {
                     ExpressionKind::ArrayAccess(expr, index)
                 }
-                AstExpressionKind::Unary(_, _) => panic!("Cannot convert AstExpressionKind::Unary"),
-                AstExpressionKind::Binary(_, _, _) => {
-                    panic!("Cannot convert AstExpressionKind::Binary")
-                }
-                AstExpressionKind::Dummy => panic!("Cannot convert AstExpressionKind::Dummy"),
             },
             typed: Untyped,
         }
@@ -126,11 +121,11 @@ pub enum Target {
     Indirect(ExprId),
 }
 
-impl From<AstTarget> for Target {
-    fn from(value: AstTarget) -> Self {
+impl From<NstTarget> for Target {
+    fn from(value: NstTarget) -> Self {
         match value {
-            AstTarget::Direct(ident_ref_id) => Self::Direct(ident_ref_id),
-            AstTarget::Indirect(expr_id) => Self::Indirect(expr_id),
+            NstTarget::Direct(ident_ref_id) => Self::Direct(ident_ref_id),
+            NstTarget::Indirect(expr_id) => Self::Indirect(expr_id),
         }
     }
 }
