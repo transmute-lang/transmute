@@ -17,7 +17,7 @@ impl<I> Diagnostics<I> {
         self.diagnostics.is_empty()
     }
 
-    pub fn iter(&self) -> DiagnosticsIterator<I> {
+    pub fn iter(&self) -> DiagnosticsIterator<'_, I> {
         DiagnosticsIterator {
             diagnostics: self,
             index: 0,

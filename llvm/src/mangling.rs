@@ -43,7 +43,7 @@ fn mangle_function_name_internal(
     format!("{prefix}{parent_mangled_name}{FUNCTION_PREFIX}{identifier}{parameters}")
 }
 
-fn mangle_parent(mir: &Mir, parent_kind: ParentKind, level: usize) -> Cow<str> {
+fn mangle_parent(mir: &Mir, parent_kind: ParentKind, level: usize) -> Cow<'_, str> {
     match parent_kind {
         ParentKind::Function(function_id) => {
             let function = &mir.functions[function_id];

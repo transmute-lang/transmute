@@ -39,7 +39,7 @@ pub struct LlvmIrGen {
 }
 
 impl LlvmIrGen {
-    pub fn gen(&self, mir: &Mir) -> Result<LlvmIr, Diagnostics<()>> {
+    pub fn gen(&self, mir: &Mir) -> Result<LlvmIr<'_>, Diagnostics<()>> {
         Target::initialize_all(&InitializationConfig::default());
         let target = Target::from_triple(&self.target_triple).unwrap();
         let target_machine = target
