@@ -23,7 +23,8 @@ transmute-hir = { path = "../hir" }
 tmc = { path = ".", features = ["gc-functions"] }
 
 [features]
-default = []
+default = ["static-nst"]
+static-nst = []
 gc-test = ["transmute-runtime/gc-test"]
 gc-logs = ["transmute-runtime/gc-logs"]
 gc-logs-stable = ["transmute-runtime/gc-logs-stable"]

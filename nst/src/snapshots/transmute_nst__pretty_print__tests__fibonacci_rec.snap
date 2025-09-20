@@ -1,0 +1,11 @@
+---
+source: nst/src/pretty_print.rs
+expression: w
+---
+let f(n: number): number = {
+  if le(n, 1) {
+    ret n;
+  }
+  add(f(sub(n, 1)), f(sub(n, 2)));
+}
+add(f(9), 8);

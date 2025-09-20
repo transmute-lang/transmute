@@ -10,10 +10,12 @@ use transmute_core::id_map::IdMap;
 use transmute_core::ids::{ExprId, StmtId, TypeDefId};
 use transmute_core::vec_map::VecMap;
 
+pub mod builder;
 mod exit_points_resolver;
 mod implicit_ret_converter;
 pub mod nodes;
 mod operators_converter;
+pub mod pretty_print;
 
 impl From<AstAst> for Nst {
     fn from(ast: AstAst) -> Self {

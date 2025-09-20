@@ -1,0 +1,7 @@
+---
+source: nst/src/pretty_print.rs
+expression: w
+---
+let f(p: a.b.c): ns1.ns2.type = {
+  ;
+}

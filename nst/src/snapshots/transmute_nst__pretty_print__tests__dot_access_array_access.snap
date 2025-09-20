@@ -1,0 +1,5 @@
+---
+source: nst/src/pretty_print.rs
+expression: w
+---
+a.b[1];

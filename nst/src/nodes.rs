@@ -20,6 +20,7 @@ use transmute_core::ids::{ExprId, IdentId, IdentRefId, InputId, StmtId, TypeDefI
 use transmute_core::span::Span;
 use transmute_core::vec_map::VecMap;
 
+#[derive(Debug, PartialEq)]
 pub struct Nst {
     /// Unique identifiers names
     pub identifiers: VecMap<IdentId, String>,
@@ -47,6 +48,13 @@ pub struct Expression {
 impl Expression {
     pub fn new(id: ExprId, kind: ExpressionKind, span: Span) -> Self {
         Self { id, kind, span }
+    }
+
+    pub fn as_block(&self) -> &Vec<StmtId> {
+        match &self.kind {
+            ExpressionKind::Block(stmts) => stmts,
+            _ => panic!("{:?} is not a block", self),
+        }
     }
 }
 

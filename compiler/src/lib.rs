@@ -127,6 +127,17 @@ pub fn compile_inputs<D: AsRef<Path>>(
         .map_err(|d| d.with_inputs(inputs).to_string())
 }
 
+pub fn compile_nst<D: AsRef<Path>>(nst: Nst, dst: D, options: &Options) -> Result<(), String> {
+    let mut ir_gen = LlvmIrGen::default();
+    ir_gen.set_optimize(options.optimize);
+
+    resolve(nst)
+        .and_then(make_mir)
+        .and_then(|mir| ir_gen.gen(&mir))
+        .and_then(|ir| produce_output(ir, dst.as_ref(), options))
+        .map_err(|d| d.to_string())
+}
+
 fn produce_output(llvm_ir: LlvmIr, dst: &Path, options: &Options) -> Result<(), Diagnostics<()>> {
     match options.output_format {
         OutputFormat::Object => llvm_ir.build_bin(

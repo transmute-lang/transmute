@@ -157,6 +157,13 @@ where
             .collect::<Vec<I>>()
     }
 
+    pub fn values(self) -> Vec<T> {
+        let len = self.vec.len();
+        let vec = self.vec.into_iter().flatten().collect::<Vec<T>>();
+        debug_assert_eq!(len, vec.len());
+        vec
+    }
+
     pub fn into_reversed<B>(self) -> B
     where
         B: FromIterator<(T, I)>,
