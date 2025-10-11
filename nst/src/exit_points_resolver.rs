@@ -181,7 +181,7 @@ impl<'a> ExitPointsResolver<'a> {
 
                 (collected, always_returns)
             }
-            ExpressionKind::StructInstantiation(_, fields) => {
+            ExpressionKind::StructInstantiation(_, _, fields) => {
                 let mut always_returns = false;
                 let mut collected = Collected::default();
 
@@ -249,11 +249,11 @@ impl<'a> ExitPointsResolver<'a> {
 
                 (collected, true)
             }
-            StatementKind::LetFn(_, _, _, _, _) => (Collected::default(), false),
-            StatementKind::Struct(_, _, _) => (Collected::default(), false),
-            StatementKind::Annotation(_) => (Collected::default(), false),
-            StatementKind::Use(_) => (Collected::default(), false),
-            StatementKind::Namespace(_, _, _) => (Collected::default(), false),
+            StatementKind::LetFn(..) => (Collected::default(), false),
+            StatementKind::Struct(..) => (Collected::default(), false),
+            StatementKind::Annotation(..) => (Collected::default(), false),
+            StatementKind::Use(..) => (Collected::default(), false),
+            StatementKind::Namespace(..) => (Collected::default(), false),
         }
     }
 }

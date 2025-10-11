@@ -71,8 +71,8 @@ impl From<AstExpression> for Expression {
                 }
                 AstExpressionKind::While(cond, expr_id) => ExpressionKind::While(cond, expr_id),
                 AstExpressionKind::Block(expr_ids) => ExpressionKind::Block(expr_ids),
-                AstExpressionKind::StructInstantiation(ident_ref_id, fields) => {
-                    ExpressionKind::StructInstantiation(ident_ref_id, fields)
+                AstExpressionKind::StructInstantiation(ident_ref_id, type_parameters, fields) => {
+                    ExpressionKind::StructInstantiation(ident_ref_id, type_parameters, fields)
                 }
                 AstExpressionKind::ArrayInstantiation(values) => {
                     ExpressionKind::ArrayInstantiation(values)
@@ -99,7 +99,7 @@ pub enum ExpressionKind {
     FunctionCall(ExprId, Vec<ExprId>),
     While(ExprId, ExprId),
     Block(Vec<StmtId>),
-    StructInstantiation(IdentRefId, Vec<(IdentRefId, ExprId)>),
+    StructInstantiation(IdentRefId, Vec<TypeDefId>, Vec<(IdentRefId, ExprId)>),
     ArrayInstantiation(Vec<ExprId>),
     ArrayAccess(ExprId, ExprId),
 }
@@ -138,8 +138,8 @@ impl From<AstStatement> for Statement {
                 AstStatementKind::LetFn(identifier, annotations, params, ret_type, expr_id) => {
                     StatementKind::LetFn(identifier, annotations, params, ret_type, expr_id)
                 }
-                AstStatementKind::Struct(identifier, annotations, fields) => {
-                    StatementKind::Struct(identifier, annotations, fields)
+                AstStatementKind::Struct(identifier, annotations, type_parameters, fields) => {
+                    StatementKind::Struct(identifier, annotations, type_parameters, fields)
                 }
                 AstStatementKind::Annotation(identifier) => StatementKind::Annotation(identifier),
                 AstStatementKind::Use(ident_ref_ids) => StatementKind::Use(ident_ref_ids),
@@ -157,7 +157,7 @@ pub enum StatementKind {
     Let(Identifier, ExprId),
     Ret(Option<ExprId>, RetMode),
     LetFn(Identifier, Vec<Annotation>, Vec<Parameter>, Return, ExprId),
-    Struct(Identifier, Vec<Annotation>, Vec<Field>),
+    Struct(Identifier, Vec<Annotation>, Vec<Identifier>, Vec<Field>),
     Annotation(Identifier),
     Use(Vec<IdentRefId>),
     Namespace(
