@@ -127,6 +127,8 @@ impl ResolvedHir {
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 enum RequiredSymbolKind<'a> {
     Function(&'a [TypeId]),
+    Struct,
+    // todo:refactoring: remove and use only explicit, if possible
     Other,
 }
 
@@ -140,6 +142,7 @@ impl RequiredSymbolKind<'_> {
                 }
                 _ => false,
             },
+            RequiredSymbolKind::Struct => matches!(symbol_kind, SymbolKind::Struct(..)),
             RequiredSymbolKind::Other => {
                 !(matches!(symbol_kind, SymbolKind::LetFn(..))
                     || matches!(symbol_kind, SymbolKind::Native(..)))

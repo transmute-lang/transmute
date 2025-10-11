@@ -46,13 +46,24 @@ where
     ) -> (
         &Identifier<B>,
         &Vec<Annotation>,
+        &Vec<Identifier<B>>,
         &Implementation<Vec<Field<T, B>>>,
         Option<&StmtId>,
     ) {
         match &self.kind {
-            StatementKind::Struct(identifier, annotations, implementation, stmt_id) => {
-                (identifier, annotations, implementation, stmt_id.as_ref())
-            }
+            StatementKind::Struct(
+                identifier,
+                annotations,
+                type_parameters,
+                implementation,
+                stmt_id,
+            ) => (
+                identifier,
+                annotations,
+                type_parameters,
+                implementation,
+                stmt_id.as_ref(),
+            ),
             _ => panic!("struct expected, got {:?}", self),
         }
     }
@@ -111,20 +122,26 @@ impl From<NstStatement> for Statement<Untyped, Unbound> {
                         None,
                     )
                 }
-                NstStatementKind::Struct(identifier, annotations, fields) => StatementKind::Struct(
-                    Identifier::from(identifier),
-                    annotations
-                        .into_iter()
-                        .map(Annotation::from)
-                        .collect::<Vec<Annotation>>(),
-                    Implementation::Provided(
-                        fields
+                NstStatementKind::Struct(identifier, annotations, type_parameters, fields) => {
+                    StatementKind::Struct(
+                        Identifier::from(identifier),
+                        annotations
                             .into_iter()
-                            .map(Field::from)
-                            .collect::<Vec<Field<Untyped, Unbound>>>(),
-                    ),
-                    None,
-                ),
+                            .map(Annotation::from)
+                            .collect::<Vec<Annotation>>(),
+                        type_parameters
+                            .into_iter()
+                            .map(Identifier::from)
+                            .collect::<Vec<_>>(),
+                        Implementation::Provided(
+                            fields
+                                .into_iter()
+                                .map(Field::from)
+                                .collect::<Vec<Field<Untyped, Unbound>>>(),
+                        ),
+                        None,
+                    )
+                }
                 NstStatementKind::Annotation(identifier) => {
                     StatementKind::Annotation(Identifier::from(identifier))
                 }
@@ -158,6 +175,7 @@ where
     Struct(
         Identifier<B>,
         Vec<Annotation>,
+        Vec<Identifier<B>>,
         Implementation<Vec<Field<T, B>>>,
         /// The `LetFn`'s `StmtId` in which the struct is defined, if a nested struct
         Option<StmtId>,

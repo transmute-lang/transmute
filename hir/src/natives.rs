@@ -275,12 +275,20 @@ pub enum Type {
     /// The type is invalid
     Invalid,
 
+    /// The type of types
+    Type,
+
     Boolean,
     Number,
 
     Function(Vec<TypeId>, TypeId),
 
-    Struct(StmtId),
+    Struct(
+        /// the `StmtId` defining the struct
+        StmtId,
+        /// the type parameters
+        Vec<TypeId>,
+    ),
     Array(TypeId, usize),
 
     /// This value is used when the statement/expression does not have any value. This is the
@@ -297,6 +305,7 @@ impl Type {
     pub fn identifier(&self) -> &'static str {
         match self {
             Type::Invalid
+            | Type::Type
             | Type::None
             | Type::Function(..)
             | Type::Struct(..)
@@ -317,7 +326,7 @@ impl Type {
             Type::Boolean
                 | Type::Number
                 | Type::Function(_, _)
-                | Type::Struct(_)
+                | Type::Struct(_, _)
                 | Type::Array(_, _)
         )
     }
@@ -333,6 +342,7 @@ impl Display for Type {
             Type::Array(_, len) => write!(f, "array[{len}]"),
             Type::Void => write!(f, "void"),
             Type::None => write!(f, "no type"),
+            Type::Type => write!(f, "type"),
             Type::Invalid => write!(f, "invalid"),
         }
     }

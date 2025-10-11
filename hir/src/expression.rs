@@ -1,7 +1,7 @@
 use crate::literal::{Literal, LiteralKind};
 use crate::typed::{Typed, TypedState, Untyped};
 use std::fmt::Debug;
-use transmute_core::ids::{ExprId, IdentRefId, StmtId, TypeId};
+use transmute_core::ids::{ExprId, IdentRefId, StmtId, TypeDefId, TypeId};
 use transmute_core::span::Span;
 use transmute_nst::nodes::Expression as NstExpression;
 use transmute_nst::nodes::ExpressionKind as NstExpressionKind;
@@ -32,7 +32,7 @@ where
                 _ => Default::default(),
             },
             ExpressionKind::Access(_, ident_ref_id) => vec![*ident_ref_id],
-            ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
+            ExpressionKind::StructInstantiation(ident_ref_id, type_parameters, fields) => {
                 let mut ident_ref_ids = fields
                     .iter()
                     .map(|(ident_ref_id, _)| *ident_ref_id)
@@ -79,8 +79,8 @@ impl From<NstExpression> for Expression<Untyped> {
                 }
                 NstExpressionKind::While(cond, expr_id) => ExpressionKind::While(cond, expr_id),
                 NstExpressionKind::Block(expr_ids) => ExpressionKind::Block(expr_ids),
-                NstExpressionKind::StructInstantiation(ident_ref_id, fields) => {
-                    ExpressionKind::StructInstantiation(ident_ref_id, fields)
+                NstExpressionKind::StructInstantiation(ident_ref_id, type_parameters, fields) => {
+                    ExpressionKind::StructInstantiation(ident_ref_id, type_parameters, fields)
                 }
                 NstExpressionKind::ArrayInstantiation(values) => {
                     ExpressionKind::ArrayInstantiation(values)
@@ -109,7 +109,7 @@ pub enum ExpressionKind {
     FunctionCall(ExprId, Vec<ExprId>),
     While(ExprId, ExprId),
     Block(Vec<StmtId>),
-    StructInstantiation(IdentRefId, Vec<(IdentRefId, ExprId)>),
+    StructInstantiation(IdentRefId, Vec<TypeDefId>, Vec<(IdentRefId, ExprId)>),
     ArrayInstantiation(Vec<ExprId>),
     ArrayAccess(ExprId, ExprId),
 }

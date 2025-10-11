@@ -15,8 +15,9 @@ use crate::{
     UnresolvedHir,
 };
 use bimap::BiHashMap;
+use std::any::Any;
 use std::collections::HashMap;
-use std::mem;
+use std::{mem, vec};
 use transmute_core::error::Diagnostics;
 use transmute_core::id_map::IdMap;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeDefId, TypeId};
@@ -169,6 +170,9 @@ impl Resolver {
 
         let number_type_id = TypeId::from(self.types.len());
         self.types.insert(number_type_id, Type::Number);
+
+        let type_type_id = TypeId::from(self.types.len());
+        self.types.insert(type_type_id, Type::Type);
 
         // init. symbols
         self.not_found_symbol_id = self.symbols.create();
@@ -532,8 +536,14 @@ impl Resolver {
             ),
             ExpressionKind::While(cond, expr) => self.resolve_while(hir, *cond, *expr),
             ExpressionKind::Block(stmts) => (self.resolve_block(hir, &stmts.clone()), None),
-            ExpressionKind::StructInstantiation(ident_ref_id, fields) => (
-                self.resolve_struct_instantiation(hir, *ident_ref_id, fields, &expr.span),
+            ExpressionKind::StructInstantiation(ident_ref_id, type_parameters, fields) => (
+                self.resolve_struct_instantiation(
+                    hir,
+                    *ident_ref_id,
+                    type_parameters,
+                    fields,
+                    &expr.span,
+                ),
                 None,
             ),
             ExpressionKind::ArrayInstantiation(values) => {
@@ -744,11 +754,13 @@ impl Resolver {
                             (file!(), line!()),
                         );
                     }
-                    RequiredSymbolKind::Other => {
+                    RequiredSymbolKind::Struct | RequiredSymbolKind::Other => {
                         self.diagnostics.report_err(
                             format!(
                                 "Identifier '{}' not found",
-                                self.identifiers.get_by_left(&ident_id).unwrap()
+                                self.identifiers
+                                    .get_by_left(&ident_id)
+                                    .expect("Identifier {ident_id} found")
                             ),
                             ident_ref.ident.span.clone(),
                             (file!(), line!()),
@@ -831,15 +843,17 @@ impl Resolver {
                                     (file!(), line!()),
                                 );
                             }
-                            RequiredSymbolKind::Other => self.diagnostics.report_err(
-                                format!(
-                                    "No symbol '{}' found in '{}'",
-                                    self.identifiers.get_by_left(&ident_ref.ident.id).unwrap(),
-                                    self.identifiers.get_by_left(ns_ident_id).unwrap(),
-                                ),
-                                ident_ref.ident.span.clone(),
-                                (file!(), line!()),
-                            ),
+                            RequiredSymbolKind::Struct | RequiredSymbolKind::Other => {
+                                self.diagnostics.report_err(
+                                    format!(
+                                        "No symbol '{}' found in '{}'",
+                                        self.identifiers.get_by_left(&ident_ref.ident.id).unwrap(),
+                                        self.identifiers.get_by_left(ns_ident_id).unwrap(),
+                                    ),
+                                    ident_ref.ident.span.clone(),
+                                    (file!(), line!()),
+                                )
+                            }
                         }
 
                         self.not_found_symbol_id
@@ -854,14 +868,14 @@ impl Resolver {
         // otherwise, we use the type_id
         let ty = self.find_type_by_type_id(expr_type_id);
         match ty {
-            Type::Struct(stmt_id) if matches!(ident_ref_kind, RequiredSymbolKind::Other) => {
+            Type::Struct(stmt_id, _) if matches!(ident_ref_kind, RequiredSymbolKind::Other) => {
                 let stmt_id = *stmt_id;
                 if let Some(stmt) = hir.statements.remove(stmt_id) {
                     self.resolve_statement(hir, stmt);
                 }
 
                 match &self.statements[stmt_id].kind {
-                    StatementKind::Struct(ident, _, Implementation::Provided(fields), _) => {
+                    StatementKind::Struct(ident, _, _, Implementation::Provided(fields), _) => {
                         match fields
                             .iter()
                             .enumerate()
@@ -934,6 +948,11 @@ impl Resolver {
                                     (file!(), line!()),
                                 );
                             }
+                            RequiredSymbolKind::Struct => self.diagnostics.report_err(
+                                format!("Expected struct type, got {}", ty),
+                                self.expressions[expr_id].span.clone(),
+                                (file!(), line!()),
+                            ),
                             RequiredSymbolKind::Other => self.diagnostics.report_err(
                                 format!("Expected namespace or struct type, got {}", ty),
                                 self.expressions[expr_id].span.clone(),
@@ -1063,6 +1082,7 @@ impl Resolver {
         &mut self,
         hir: &mut UnresolvedHir,
         ident_ref_id: IdentRefId,
+        type_parameters: &Vec<TypeDefId>,
         field_exprs: &[(IdentRefId, ExprId)],
         span: &Span,
     ) -> TypeId {
@@ -1074,14 +1094,11 @@ impl Resolver {
         debug_assert!(expr_type_ids.len() == field_exprs.len());
 
         let struct_stmt_ids = self
-            .resolve_ident_ref(hir, ident_ref_id, RequiredSymbolKind::Other)
-            .iter()
-            .map(|sid| &self.symbols[*sid])
-            .filter_map(|s| match s.kind {
-                SymbolKind::Struct(_, stmt_id) => Some(stmt_id),
-                _ => None,
-            })
+            .resolve_ident_ref(hir, ident_ref_id, RequiredSymbolKind::Struct)
+            .into_iter()
+            .map(|sid| self.symbols[sid].as_struct().1)
             .collect::<Vec<_>>();
+
         debug_assert!(struct_stmt_ids.len() <= 1);
 
         let struct_stmt_id = match struct_stmt_ids.first() {
@@ -1094,8 +1111,12 @@ impl Resolver {
             }
         };
 
-        let (struct_identifier, _, implementation, ..) =
+        let (struct_identifier, _, type_parameters, implementation, ..) =
             self.statements[struct_stmt_id].as_struct();
+
+        if !type_parameters.is_empty() {
+            todo!("Use {type_parameters:?}")
+        }
 
         let field_types = match implementation {
             Implementation::Provided(field_types) => field_types,
@@ -1163,7 +1184,10 @@ impl Resolver {
             }
         }
 
-        self.find_type_id_by_identifier(struct_identifier.id)
+        // todo!(
+        //     "this is not correct, we need to find the type where the type parameters are resolved"
+        // );
+        self.find_type_id_by_identifier(struct_identifier.id, vec![])
             .expect("type exists")
     }
 
@@ -1375,10 +1399,10 @@ impl Resolver {
             StatementKind::LetFn(_, _, _, _, Implementation::Native, _) => {
                 panic!("body type must be implemented before resolution");
             }
-            StatementKind::Struct(ident, annotations, implementation, _) => {
+            StatementKind::Struct(ident, annotations, type_parameters, implementation, _) => {
                 let fields = implementation.get();
-                let (ident, fields) =
-                    self.resolve_struct(hir, stmt_id, ident, fields, &annotations);
+                let (ident, type_parameters, fields) =
+                    self.resolve_struct(hir, stmt_id, ident, type_parameters, fields, &annotations);
 
                 self.statements.insert(
                     stmt_id,
@@ -1387,6 +1411,7 @@ impl Resolver {
                         StatementKind::Struct(
                             ident,
                             annotations,
+                            type_parameters,
                             fields,
                             self.current_fn.last().cloned(),
                         ),
@@ -1666,11 +1691,37 @@ impl Resolver {
         hir: &mut UnresolvedHir,
         stmt_id: StmtId,
         identifier: Identifier<Unbound>,
+        type_parameters: Vec<Identifier<Unbound>>,
         fields: Vec<Field<Untyped, Unbound>>,
         annotations: &[Annotation],
-    ) -> (Identifier<Bound>, Implementation<Vec<Field<Typed, Bound>>>) {
+    ) -> (
+        Identifier<Bound>,
+        Vec<Identifier<Bound>>,
+        Implementation<Vec<Field<Typed, Bound>>>,
+    ) {
         for annotation in annotations {
             self.resolve_ident_refs(hir, &annotation.ident_ref_ids, false);
+        }
+
+        let type_parameters = type_parameters
+            .into_iter()
+            .map(|tp| {
+                let type_id = self.find_type_id_by_type(&Type::Number);
+                let symbol_id =
+                    self.insert_symbol(tp.id, SymbolKind::TypeParameter(tp.id, stmt_id), type_id);
+                tp.bind(symbol_id)
+            })
+            .collect::<Vec<_>>();
+
+        if !type_parameters.is_empty() {
+            let type_parameters = type_parameters
+                .iter()
+                .map(|ident| ident.resolved_symbol_id())
+                .map(|symbol_id| &self.symbols[symbol_id])
+                .map(|symbol| symbol.type_id)
+                .collect::<Vec<_>>();
+
+            todo!("do something with {type_parameters:?}")
         }
 
         let is_native = self.is_native_annotation_present(annotations);
@@ -1746,6 +1797,7 @@ impl Resolver {
 
         (
             identifier.bind(symbol_id),
+            type_parameters,
             if is_native {
                 #[cfg(debug_assertions)]
                 {
@@ -1960,7 +2012,7 @@ impl Resolver {
     ) -> TypeId {
         match &hir.type_defs[type_def_id].kind {
             TypeDefKind::Simple(ident_ref_ids) => {
-                let ident_ref_ids = ident_ref_ids.clone();
+                let ident_ref_ids = ident_ref_ids.clone(); // todo why clone()?
                 self.resolve_ident_refs(hir, &ident_ref_ids, false);
 
                 let ident_ref_id = *ident_ref_ids.last().unwrap();
@@ -1972,7 +2024,18 @@ impl Resolver {
                 let symbol_id = symbol_ids[0];
 
                 let ty = match &self.symbols[symbol_id].kind {
-                    SymbolKind::Struct(_, stmt_id) => Type::Struct(*stmt_id),
+                    SymbolKind::Struct(_, stmt_id) => {
+                        let type_parameters_count = hir
+                            .statements
+                            .get(*stmt_id)
+                            .map(|s| s.as_struct().2.len())
+                            .unwrap_or_else(|| hir.statements[*stmt_id].as_struct().2.len());
+
+                        Type::Struct(
+                            *stmt_id,
+                            vec![self.find_type_id_by_type(&Type::Type); type_parameters_count],
+                        )
+                    }
                     SymbolKind::NativeType(_, ty) => ty.clone(),
                     SymbolKind::NotFound => {
                         // nothing, we reported already
@@ -2265,12 +2328,15 @@ impl Resolver {
             .iter()
             .filter_map(|stmt| hir.statements.get(*stmt))
             .filter_map(|stmt| match &stmt.kind {
-                StatementKind::Struct(ident, ..) => Some((stmt.id, ident.clone())),
+                StatementKind::Struct(ident, _, type_parameters, ..) => {
+                    Some((stmt.id, ident.clone(), type_parameters.len()))
+                }
                 _ => None,
             })
-            .collect::<Vec<(StmtId, Identifier<Unbound>)>>();
+            // todo get rid of the collect
+            .collect::<Vec<(StmtId, Identifier<Unbound>, usize)>>();
 
-        for (stmt_id, identifier) in structs.into_iter() {
+        for (stmt_id, identifier, type_parameters) in structs.into_iter() {
             let ident_id = identifier.id;
             let symbol_kind = SymbolKind::Struct(ident_id, stmt_id);
 
@@ -2282,9 +2348,11 @@ impl Resolver {
                     ),
                     identifier.span.clone(),
                     (file!(), line!()),
-                )
+                );
             } else {
-                let struct_type_id = self.insert_type(Type::Struct(stmt_id));
+                let types_parameters =
+                    vec![self.find_type_id_by_type(&Type::Type); type_parameters];
+                let struct_type_id = self.insert_type(Type::Struct(stmt_id, types_parameters));
                 let symbol_id = self.insert_symbol(ident_id, symbol_kind, struct_type_id);
 
                 if self.current_fn.last().is_none() {
@@ -2362,22 +2430,32 @@ impl Resolver {
     ) -> Option<TypeId> {
         match &hir.type_defs[type_def_id].kind {
             TypeDefKind::Simple(ident_ref_ids) => {
-                if ident_ref_ids.clone().len() == 1 {
-                    // todo merge with the more general case in order to lift the documented
-                    //  assumption
-                    let ident_id = self.identifier_refs[ident_ref_ids.clone()[0]].ident.id;
-                    self.find_type_id_by_identifier(ident_id)
-                } else {
-                    let symbol_id = self.find_symbol_by_ident_ref_ids(hir, ident_ref_ids)?;
+                // if ident_ref_ids.clone().len() == 1 {
+                //     todo merge with the more general case in order to lift the documented
+                //      assumption
+                // let ident_id = self.identifier_refs[ident_ref_ids[0]].ident.id;
+                //
+                // self.find_type_id_by_identifier(ident_id)
+                // } else {
+                let symbol_id = self.find_symbol_by_ident_ref_ids(hir, ident_ref_ids)?;
 
-                    match &self.symbols[symbol_id].kind {
-                        SymbolKind::NativeType(_, ty) => Some(self.find_type_id_by_type(ty)),
-                        SymbolKind::Struct(_, stmt) => {
-                            Some(self.find_type_id_by_type(&Type::Struct(*stmt)))
-                        }
-                        _ => None,
+                match &self.symbols[symbol_id].kind {
+                    SymbolKind::NativeType(_, ty) => Some(self.find_type_id_by_type(ty)),
+                    SymbolKind::Struct(_, stmt_id) => {
+                        let type_parameters_count = hir
+                            .statements
+                            .get(*stmt_id)
+                            .map(|s| s.as_struct().2.len())
+                            .unwrap_or_else(|| hir.statements[*stmt_id].as_struct().2.len());
+
+                        Some(self.find_type_id_by_type(&Type::Struct(
+                            *stmt_id,
+                            vec![self.find_type_id_by_type(&Type::Type); type_parameters_count],
+                        )))
                     }
+                    _ => None,
                 }
+                // }
             }
             TypeDefKind::Array(type_def_id, len) => self
                 .find_type_id_by_type_def_id(hir, *type_def_id)
@@ -2386,12 +2464,16 @@ impl Resolver {
         }
     }
 
-    fn find_type_id_by_identifier(&self, ident_id: IdentId) -> Option<TypeId> {
+    fn find_type_id_by_identifier(
+        &self,
+        ident_id: IdentId,
+        type_parameters: Vec<TypeId>,
+    ) -> Option<TypeId> {
         self.find_symbol_id_by_ident_and_kind(ident_id, RequiredSymbolKind::Other)
             .and_then(|symbol_id| match &self.symbols[symbol_id].kind {
                 SymbolKind::NativeType(_, ty) => Some(self.find_type_id_by_type(ty)),
                 SymbolKind::Struct(_, stmt) => {
-                    Some(self.find_type_id_by_type(&Type::Struct(*stmt)))
+                    Some(self.find_type_id_by_type(&Type::Struct(*stmt, type_parameters)))
                 }
                 _ => None,
             })
@@ -2712,7 +2794,7 @@ mod tests {
                         }
                         None
                     }
-                    StatementKind::Struct(_, _, Implementation::Provided(fields), _) => {
+                    StatementKind::Struct(_, _, _, Implementation::Provided(fields), _) => {
                         if fields
                             .iter()
                             .any(|f| f.resolved_type_id() == crate::TypeId::from(0))
@@ -2776,7 +2858,7 @@ mod tests {
                         }
                         None
                     }
-                    StatementKind::Struct(ident, _, fields, _) => {
+                    StatementKind::Struct(ident, _, _, fields, _) => {
                         if ident.resolved_symbol_id() == crate::SymbolId::from(0) {
                             return Some(stmt);
                         }
@@ -3237,6 +3319,20 @@ mod tests {
         struct Inner { field: number };
         struct Outer { field: Inner };
         let s = Outer { field: Inner { field: 1 } };
+        "#
+    );
+    test_resolution!(
+        struct_instantiation_with_type_parameter,
+        r#"
+        struct Struct<T> { field: T };
+        let s = Struct!<number> { field: 1 };
+        "#
+    );
+    test_resolution!(
+        struct_instantiation_missing_type_parameter,
+        r#"
+        struct Struct<T> { field: T };
+        let s = Struct { field: 1 };
         "#
     );
 

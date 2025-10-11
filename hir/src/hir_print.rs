@@ -234,7 +234,7 @@ impl HirPrint for Expression<Typed> {
                     ctx.prev_level();
                 }
             }
-            ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
+            ExpressionKind::StructInstantiation(ident_ref_id, type_parameters, fields) => {
                 writeln!(
                     f,
                     "{indent}StructInstantiate name={ident}",
@@ -467,8 +467,9 @@ impl HirPrint for Statement<Typed, Bound> {
 
                 ctx.prev_level();
             }
-            StatementKind::Struct(ident, _annotations, fields, fn_stmt_id) => {
+            StatementKind::Struct(ident, _type_parameters, _annotations, fields, fn_stmt_id) => {
                 // todo use annotations
+                // todo use type parameters
                 writeln!(
                     f,
                     "{indent}Struct name={ident}{native}{fn_stmt_id}",
@@ -593,9 +594,9 @@ impl Hir<Typed, Bound> {
                 }
                 write!(f, ") : {}", id!(*ret))
             }
-            Type::Struct(stmt_id) => {
+            Type::Struct(stmt_id, type_parameters) => {
                 let symbol_id = match &self.statements[*stmt_id].kind {
-                    StatementKind::Struct(ident, _, _, _) => ident.resolved_symbol_id(),
+                    StatementKind::Struct(ident, ..) => ident.resolved_symbol_id(),
                     _ => panic!("struct expected"),
                 };
                 write!(f, "struct {}", id!(symbol_id))
@@ -604,6 +605,7 @@ impl Hir<Typed, Bound> {
                 write!(f, "[{type_id}; {size}]", type_id = id!(*type_id))
             }
             Type::Void => write!(f, "void"),
+            Type::Type => write!(f, "type"),
             Type::None => write!(f, "none"),
         }
     }

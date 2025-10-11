@@ -120,7 +120,7 @@ Ok(
                             },
                             type_def_id: TypeDefId(0),
                             span: 3:20; [42, 48],
-                            typed: Typed(6),
+                            typed: Typed(7),
                         },
                     ],
                     Return {
@@ -142,6 +142,7 @@ Ok(
                         span: 4:20; [72, 73],
                         bound: Bound(3),
                     },
+                    [],
                     [],
                     Provided(
                         [],
@@ -184,7 +185,7 @@ Ok(
                             },
                             type_def_id: TypeDefId(1),
                             span: 7:20; [128, 134],
-                            typed: Typed(5),
+                            typed: Typed(6),
                         },
                     ],
                     Return {
@@ -206,6 +207,7 @@ Ok(
                         span: 8:20; [158, 159],
                         bound: Bound(5),
                     },
+                    [],
                     [],
                     Provided(
                         [],
@@ -326,7 +328,7 @@ Ok(
                     IdentId(5),
                     StmtId(2),
                 ),
-                type_id: TypeId(5),
+                type_id: TypeId(6),
             },
             SymbolId(4) => Symbol {
                 id: SymbolId(4),
@@ -349,7 +351,7 @@ Ok(
                     IdentId(4),
                     StmtId(5),
                 ),
-                type_id: TypeId(6),
+                type_id: TypeId(7),
             },
             SymbolId(6) => Symbol {
                 id: SymbolId(6),
@@ -439,7 +441,7 @@ Ok(
                     TypeId(4),
                     SubNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(8),
             },
             SymbolId(11) => Symbol {
                 id: SymbolId(11),
@@ -452,7 +454,7 @@ Ok(
                     TypeId(3),
                     NeqNumberNumber,
                 ),
-                type_id: TypeId(8),
+                type_id: TypeId(9),
             },
             SymbolId(12) => Symbol {
                 id: SymbolId(12),
@@ -465,7 +467,7 @@ Ok(
                     TypeId(3),
                     NeqBooleanBoolean,
                 ),
-                type_id: TypeId(9),
+                type_id: TypeId(10),
             },
             SymbolId(13) => Symbol {
                 id: SymbolId(13),
@@ -477,7 +479,7 @@ Ok(
                     TypeId(4),
                     NegNumber,
                 ),
-                type_id: TypeId(10),
+                type_id: TypeId(11),
             },
             SymbolId(14) => Symbol {
                 id: SymbolId(14),
@@ -490,7 +492,7 @@ Ok(
                     TypeId(4),
                     MulNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(8),
             },
             SymbolId(15) => Symbol {
                 id: SymbolId(15),
@@ -503,7 +505,7 @@ Ok(
                     TypeId(3),
                     LtNumberNumber,
                 ),
-                type_id: TypeId(8),
+                type_id: TypeId(9),
             },
             SymbolId(16) => Symbol {
                 id: SymbolId(16),
@@ -516,7 +518,7 @@ Ok(
                     TypeId(3),
                     LeNumberNumber,
                 ),
-                type_id: TypeId(8),
+                type_id: TypeId(9),
             },
             SymbolId(17) => Symbol {
                 id: SymbolId(17),
@@ -529,7 +531,7 @@ Ok(
                     TypeId(3),
                     GtNumberNumber,
                 ),
-                type_id: TypeId(8),
+                type_id: TypeId(9),
             },
             SymbolId(18) => Symbol {
                 id: SymbolId(18),
@@ -542,7 +544,7 @@ Ok(
                     TypeId(3),
                     GeNumberNumber,
                 ),
-                type_id: TypeId(8),
+                type_id: TypeId(9),
             },
             SymbolId(19) => Symbol {
                 id: SymbolId(19),
@@ -555,7 +557,7 @@ Ok(
                     TypeId(3),
                     EqNumberNumber,
                 ),
-                type_id: TypeId(8),
+                type_id: TypeId(9),
             },
             SymbolId(20) => Symbol {
                 id: SymbolId(20),
@@ -568,7 +570,7 @@ Ok(
                     TypeId(3),
                     EqBooleanBoolean,
                 ),
-                type_id: TypeId(9),
+                type_id: TypeId(10),
             },
             SymbolId(21) => Symbol {
                 id: SymbolId(21),
@@ -581,7 +583,7 @@ Ok(
                     TypeId(4),
                     DivNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(8),
             },
             SymbolId(22) => Symbol {
                 id: SymbolId(22),
@@ -594,7 +596,7 @@ Ok(
                     TypeId(4),
                     AddNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(8),
             },
             SymbolId(23) => Symbol {
                 id: SymbolId(23),
@@ -602,11 +604,11 @@ Ok(
                     IdentId(2),
                     StmtId(1),
                     [
-                        TypeId(6),
+                        TypeId(7),
                     ],
                     TypeId(1),
                 ),
-                type_id: TypeId(11),
+                type_id: TypeId(12),
             },
             SymbolId(24) => Symbol {
                 id: SymbolId(24),
@@ -614,11 +616,11 @@ Ok(
                     IdentId(6),
                     StmtId(4),
                     [
-                        TypeId(5),
+                        TypeId(6),
                     ],
                     TypeId(1),
                 ),
-                type_id: TypeId(12),
+                type_id: TypeId(13),
             },
             SymbolId(25) => Symbol {
                 id: SymbolId(25),
@@ -627,7 +629,7 @@ Ok(
                     StmtId(1),
                     0,
                 ),
-                type_id: TypeId(6),
+                type_id: TypeId(7),
             },
             SymbolId(26) => Symbol {
                 id: SymbolId(26),
@@ -636,7 +638,7 @@ Ok(
                     StmtId(4),
                     0,
                 ),
-                type_id: TypeId(5),
+                type_id: TypeId(6),
             },
         ],
         types: [
@@ -645,48 +647,49 @@ Ok(
             TypeId(2) => None,
             TypeId(3) => Boolean,
             TypeId(4) => Number,
-            TypeId(5) => Struct(
+            TypeId(5) => Type,
+            TypeId(6) => Struct(
                 StmtId(2),
             ),
-            TypeId(6) => Struct(
+            TypeId(7) => Struct(
                 StmtId(5),
-            ),
-            TypeId(7) => Function(
-                [
-                    TypeId(4),
-                    TypeId(4),
-                ],
-                TypeId(4),
             ),
             TypeId(8) => Function(
                 [
                     TypeId(4),
                     TypeId(4),
                 ],
-                TypeId(3),
+                TypeId(4),
             ),
             TypeId(9) => Function(
                 [
-                    TypeId(3),
-                    TypeId(3),
+                    TypeId(4),
+                    TypeId(4),
                 ],
                 TypeId(3),
             ),
             TypeId(10) => Function(
                 [
+                    TypeId(3),
+                    TypeId(3),
+                ],
+                TypeId(3),
+            ),
+            TypeId(11) => Function(
+                [
                     TypeId(4),
                 ],
                 TypeId(4),
             ),
-            TypeId(11) => Function(
+            TypeId(12) => Function(
                 [
-                    TypeId(6),
+                    TypeId(7),
                 ],
                 TypeId(1),
             ),
-            TypeId(12) => Function(
+            TypeId(13) => Function(
                 [
-                    TypeId(5),
+                    TypeId(6),
                 ],
                 TypeId(1),
             ),

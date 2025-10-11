@@ -67,7 +67,7 @@ Ok(
                     },
                 ),
                 span: 1:42; [41, 42],
-                typed: Typed(5),
+                typed: Typed(6),
             },
             ExprId(1) => Expression {
                 id: ExprId(1),
@@ -107,6 +107,7 @@ Ok(
                         bound: Bound(3),
                     },
                     [],
+                    [],
                     Provided(
                         [
                             Field {
@@ -117,7 +118,7 @@ Ok(
                                 },
                                 type_def_id: TypeDefId(0),
                                 span: 1:12; [11, 15],
-                                typed: Typed(5),
+                                typed: Typed(6),
                             },
                         ],
                     ),
@@ -153,7 +154,7 @@ Ok(
                             },
                             type_def_id: TypeDefId(1),
                             span: 1:25; [24, 28],
-                            typed: Typed(5),
+                            typed: Typed(6),
                         },
                         Parameter {
                             identifier: Identifier {
@@ -163,14 +164,14 @@ Ok(
                             },
                             type_def_id: TypeDefId(2),
                             span: 1:31; [30, 34],
-                            typed: Typed(5),
+                            typed: Typed(6),
                         },
                     ],
                     Return {
                         type_def_id: Some(
                             TypeDefId(3),
                         ),
-                        typed: Typed(5),
+                        typed: Typed(6),
                     },
                     Provided(
                         ExprId(1),
@@ -266,7 +267,7 @@ Ok(
                     IdentId(1),
                     StmtId(1),
                 ),
-                type_id: TypeId(5),
+                type_id: TypeId(6),
             },
             SymbolId(4) => Symbol {
                 id: SymbolId(4),
@@ -274,12 +275,12 @@ Ok(
                     IdentId(2),
                     StmtId(3),
                     [
-                        TypeId(5),
-                        TypeId(5),
+                        TypeId(6),
+                        TypeId(6),
                     ],
-                    TypeId(5),
+                    TypeId(6),
                 ),
-                type_id: TypeId(6),
+                type_id: TypeId(7),
             },
             SymbolId(5) => Symbol {
                 id: SymbolId(5),
@@ -288,7 +289,7 @@ Ok(
                     StmtId(1),
                     0,
                 ),
-                type_id: TypeId(5),
+                type_id: TypeId(6),
             },
             SymbolId(6) => Symbol {
                 id: SymbolId(6),
@@ -297,7 +298,7 @@ Ok(
                     StmtId(3),
                     0,
                 ),
-                type_id: TypeId(5),
+                type_id: TypeId(6),
             },
             SymbolId(7) => Symbol {
                 id: SymbolId(7),
@@ -306,7 +307,7 @@ Ok(
                     StmtId(3),
                     1,
                 ),
-                type_id: TypeId(5),
+                type_id: TypeId(6),
             },
         ],
         types: [
@@ -315,15 +316,16 @@ Ok(
             TypeId(2) => None,
             TypeId(3) => Boolean,
             TypeId(4) => Number,
-            TypeId(5) => Struct(
+            TypeId(5) => Type,
+            TypeId(6) => Struct(
                 StmtId(1),
             ),
-            TypeId(6) => Function(
+            TypeId(7) => Function(
                 [
-                    TypeId(5),
-                    TypeId(5),
+                    TypeId(6),
+                    TypeId(6),
                 ],
-                TypeId(5),
+                TypeId(6),
             ),
         ],
         exit_points: ExitPoints {

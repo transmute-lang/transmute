@@ -8,10 +8,10 @@ expression: s
 =    2:     1        |  +- Namespace name=core
                      |     +- stmts=[]
                      +- stmt 6
-=   12:     7        |  +- Struct name=Point
+=   12:     8        |  +- Struct name=Point
 =   37:     4        |     +- a: number
                      +- stmt 11
-=   35:    11        |  +- Fn name=area
+=   35:    12        |  +- Fn name=area
                      |     +- annotations=[]
                      |     +- params
 =   39:     4        |     |  +- n: number
@@ -19,15 +19,15 @@ expression: s
 @     :     2        |     +- body:expr 24
 @     :     2        |        +- Block
                      |           +- stmt 7
-=   38:    19        |           |  +- Struct name=Point, fn_stmt_id=11
+=   38:    20        |           |  +- Struct name=Point, fn_stmt_id=11
 =   41:     4        |           |     +- x: number
 =   42:     4        |           |     +- y: number
                      |           +- stmt 9
-=   40:    20        |           |  +- Fn name=f, fn_stmt_id=11
+=   40:    21        |           |  +- Fn name=f, fn_stmt_id=11
                      |           |     +- annotations=[]
                      |           |     +- params
-=   43:    19        |           |     |  +- a: Point
-=   44:    19        |           |     |  +- b: Point
+=   43:    20        |           |     |  +- a: Point
+=   44:    20        |           |     |  +- b: Point
 @     :     2        |           |     +- ret=number
 @     :     2        |           |     +- body:expr 11
 @     :     2        |           |        +- Block
@@ -35,61 +35,61 @@ expression: s
 @     :     4        |           |              +- Ret
 @     :     4        |           |                 +- expr 10
 @     :     4        |           |                    +- Call
-@     :     8        |           |                       +- callee:expr 45
-@   20:     8        |           |                       |  +- Ident: mul
+@     :     9        |           |                       +- callee:expr 45
+@   20:     9        |           |                       |  +- Ident: mul
                      |           |                       +- params
 @     :     4        |           |                          +- expr 4
 @     :     4        |           |                          |  +- Call
-@     :     8        |           |                          |     +- callee:expr 43
-@   16:     8        |           |                          |     |  +- Ident: sub
+@     :     9        |           |                          |     +- callee:expr 43
+@   16:     9        |           |                          |     |  +- Ident: sub
                      |           |                          |     +- params
 @     :     4        |           |                          |        +- expr 1
 @   41:     4        |           |                          |        |  +- Access
-@     :    19        |           |                          |        |     +- lhs:expr 0
-@   44:    19        |           |                          |        |     |  +- Ident: b
+@     :    20        |           |                          |        |     +- lhs:expr 0
+@   44:    20        |           |                          |        |     |  +- Ident: b
 @   41:     4        |           |                          |        |     +- ident=x
 @     :     4        |           |                          |        +- expr 3
 @   41:     4        |           |                          |           +- Access
-@     :    19        |           |                          |              +- lhs:expr 2
-@   43:    19        |           |                          |              |  +- Ident: a
+@     :    20        |           |                          |              +- lhs:expr 2
+@   43:    20        |           |                          |              |  +- Ident: a
 @   41:     4        |           |                          |              +- ident=x
 @     :     4        |           |                          +- expr 9
 @     :     4        |           |                             +- Call
-@     :     8        |           |                                +- callee:expr 44
-@   16:     8        |           |                                |  +- Ident: sub
+@     :     9        |           |                                +- callee:expr 44
+@   16:     9        |           |                                |  +- Ident: sub
                      |           |                                +- params
 @     :     4        |           |                                   +- expr 6
 @   42:     4        |           |                                   |  +- Access
-@     :    19        |           |                                   |     +- lhs:expr 5
-@   44:    19        |           |                                   |     |  +- Ident: b
+@     :    20        |           |                                   |     +- lhs:expr 5
+@   44:    20        |           |                                   |     |  +- Ident: b
 @   42:     4        |           |                                   |     +- ident=y
 @     :     4        |           |                                   +- expr 8
 @   42:     4        |           |                                      +- Access
-@     :    19        |           |                                         +- lhs:expr 7
-@   43:    19        |           |                                         |  +- Ident: a
+@     :    20        |           |                                         +- lhs:expr 7
+@   43:    20        |           |                                         |  +- Ident: a
 @   42:     4        |           |                                         +- ident=y
                      |           +- stmt 10
 @     :     4        |              +- Ret
 @     :     4        |                 +- expr 23
 @     :     4        |                    +- Call
-@     :    20        |                       +- callee:expr 12
-@   40:    20        |                       |  +- Ident: f
+@     :    21        |                       +- callee:expr 12
+@   40:    21        |                       |  +- Ident: f
                      |                       +- params
-@     :    19        |                          +- expr 15
-@   38:    19        |                          |  +- StructInstantiate name=Point
+@     :    20        |                          +- expr 15
+@   38:    20        |                          |  +- StructInstantiate name=Point
 @   41:     4        |                          |     +- field name=x
 @     :     4        |                          |     |  +- expr 13
 @     :     4        |                          |     |     +- Number: 1
 @   42:     4        |                          |     +- field name=y
 @     :     4        |                          |        +- expr 14
 @     :     4        |                          |           +- Number: 1
-@     :    19        |                          +- expr 22
-@   38:    19        |                             +- StructInstantiate name=Point
+@     :    20        |                          +- expr 22
+@   38:    20        |                             +- StructInstantiate name=Point
 @   41:     4        |                                +- field name=x
 @     :     4        |                                |  +- expr 18
 @     :     4        |                                |     +- Call
-@     :     8        |                                |        +- callee:expr 46
-@   28:     8        |                                |        |  +- Ident: add
+@     :     9        |                                |        +- callee:expr 46
+@   28:     9        |                                |        |  +- Ident: add
                      |                                |        +- params
 @     :     4        |                                |           +- expr 16
 @   39:     4        |                                |           |  +- Ident: n
@@ -98,15 +98,15 @@ expression: s
 @   42:     4        |                                +- field name=y
 @     :     4        |                                   +- expr 21
 @     :     4        |                                      +- Call
-@     :     8        |                                         +- callee:expr 47
-@   28:     8        |                                         |  +- Ident: add
+@     :     9        |                                         +- callee:expr 47
+@   28:     9        |                                         |  +- Ident: add
                      |                                         +- params
 @     :     4        |                                            +- expr 19
 @   39:     4        |                                            |  +- Ident: n
 @     :     4        |                                            +- expr 20
 @     :     4        |                                               +- Number: 8
                      +- stmt 13
-=   36:    18        |  +- Fn name=main
+=   36:    19        |  +- Fn name=main
                      |     +- annotations=[]
                      |     +- params=[]
 @     :     1        |     +- ret=[]
@@ -116,28 +116,28 @@ expression: s
 @     :     1        |              +- Ret
 @     :     1        |                 +- expr 35
 @     :     1        |                    +- Call
-@     :    15        |                       +- callee:expr 25
-@   32:    15        |                       |  +- Ident: print
+@     :    16        |                       +- callee:expr 25
+@   32:    16        |                       |  +- Ident: print
                      |                       +- params
 @     :     4        |                          +- expr 34
 @     :     4        |                             +- Call
-@     :    11        |                                +- callee:expr 26
-@   35:    11        |                                |  +- Ident: area
+@     :    12        |                                +- callee:expr 26
+@   35:    12        |                                |  +- Ident: area
                      |                                +- params
 @     :     4        |                                   +- expr 33
 @     :     4        |                                      +- Call
-@     :    16        |                                         +- callee:expr 27
-@   33:    16        |                                         |  +- Ident: number_parse
+@     :    17        |                                         +- callee:expr 27
+@   33:    17        |                                         |  +- Ident: number_parse
                      |                                         +- params
-@     :     6        |                                            +- expr 32
-@     :     6        |                                               +- Call
-@     :    14        |                                                  +- callee:expr 28
-@   31:    14        |                                                  |  +- Ident: list_get
+@     :     7        |                                            +- expr 32
+@     :     7        |                                               +- Call
+@     :    15        |                                                  +- callee:expr 28
+@   31:    15        |                                                  |  +- Ident: list_get
                      |                                                  +- params
-@     :     5        |                                                     +- expr 30
-@     :     5        |                                                     |  +- Call
-@     :    13        |                                                     |     +- callee:expr 29
-@   30:    13        |                                                     |     |  +- Ident: args
+@     :     6        |                                                     +- expr 30
+@     :     6        |                                                     |  +- Call
+@     :    14        |                                                     |     +- callee:expr 29
+@   30:    14        |                                                     |     |  +- Ident: args
                      |                                                     |     +- params=[]
 @     :     4        |                                                     +- expr 31
 @     :     4        |                                                        +- Number: 1
@@ -148,7 +148,7 @@ expression: s
                            +- stmt 15
 =    4:     1              |  +- Namespace name=booleans
                            |     +- stmt 28
-=   29:    12              |        +- Fn name=print (native)
+=   29:    13              |        +- Fn name=print (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
@@ -157,49 +157,49 @@ expression: s
                            +- stmt 16
 =    5:     1              |  +- Namespace name=env
                            |     +- stmt 27
-=   30:    13              |        +- Fn name=args (native)
+=   30:    14              |        +- Fn name=args (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params=[]
-@     :     5              |           +- ret=std.list.List
+@     :     6              |           +- ret=std.list.List
                            +- stmt 17
 =    6:     1              |  +- Namespace name=list
                            |     +- stmt 25
-=    7:     5              |     |  +- Struct name=List (native)
+=    7:     6              |     |  +- Struct name=List (native)
                            |     +- stmt 26
-=   31:    14              |        +- Fn name=list_get (native)
+=   31:    15              |        +- Fn name=list_get (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
-=   46:     5              |           |  +- list: List
+=   46:     6              |           |  +- list: List
 =   47:     4              |           |  +- index: number
-@     :     6              |           +- ret=std.str.string
+@     :     7              |           +- ret=std.str.string
                            +- stmt 18
 =    8:     1              |  +- Namespace name=numbers
                            |     +- stmt 23
-=   32:    15              |     |  +- Fn name=print (native)
+=   32:    16              |     |  +- Fn name=print (native)
                            |     |     +- annotations
 @   11:     1              |     |     |  +- std.native
                            |     |     +- params
 =   48:     4              |     |     |  +- n: core.number
 @     :     1              |     |     +- ret=[]
                            |     +- stmt 24
-=   33:    16              |        +- Fn name=number_parse (native)
+=   33:    17              |        +- Fn name=number_parse (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
-=   49:     6              |           |  +- s: std.str.string
+=   49:     7              |           |  +- s: std.str.string
 @     :     2              |           +- ret=core.number
                            +- stmt 19
 =    9:     1                 +- Namespace name=str
                                  +- stmt 21
-=   10:     6                    |  +- Struct name=string (native)
+=   10:     7                    |  +- Struct name=string (native)
                                  +- stmt 22
-=   34:    17                       +- Fn name=print (native)
+=   34:    18                       +- Fn name=print (native)
                                        +- annotations
 @   11:     1                          |  +- std.native
                                        +- params
-=   50:     6                          |  +- s: string
+=   50:     7                          |  +- s: string
 @     :     1                          +- ret=[]
 
 --- types ---
@@ -208,19 +208,20 @@ expression: s
 2: none
 3: boolean
 4: number
-5: struct 7
-6: struct 10
-7: struct 12
-8: f(4, 4) : 4
-9: f(4, 4) : 3
-10: f(3, 3) : 3
-11: f(4) : 4
-12: f(3) : 1
-13: f() : 5
-14: f(5, 4) : 6
-15: f(4) : 1
-16: f(6) : 4
-17: f(6) : 1
-18: f() : 1
-19: struct 38
-20: f(19, 19) : 4
+5: type
+6: struct 7
+7: struct 10
+8: struct 12
+9: f(4, 4) : 4
+10: f(4, 4) : 3
+11: f(3, 3) : 3
+12: f(4) : 4
+13: f(3) : 1
+14: f() : 6
+15: f(6, 4) : 7
+16: f(4) : 1
+17: f(7) : 4
+18: f(7) : 1
+19: f() : 1
+20: struct 38
+21: f(20, 20) : 4

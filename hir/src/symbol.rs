@@ -10,6 +10,13 @@ pub struct Symbol {
 }
 
 impl Symbol {
+    pub fn as_struct(&self) -> (IdentId, StmtId) {
+        match &self.kind {
+            SymbolKind::Struct(ident_id, stmt_id) => (*ident_id, *stmt_id),
+            _ => panic!("{:?} is not a struct", self),
+        }
+    }
+
     pub fn as_function(&self) -> (&Vec<TypeId>, TypeId) {
         match &self.kind {
             SymbolKind::LetFn(_, _, params, ret_type_id) => (params, *ret_type_id),
@@ -53,7 +60,20 @@ pub enum SymbolKind {
     //  on types...
     LetFn(IdentId, StmtId, Vec<TypeId>, TypeId),
     // todo:refactoring could StmtId be replaced with SymbolId (the symbol that defines the function)
-    Parameter(IdentId, StmtId, usize),
+    Parameter(
+        /// The parameter identifier
+        IdentId,
+        /// The `LetFn` statement in which the parameter is defined
+        StmtId,
+        /// The parameters' index withing the `LetFn` statement
+        usize,
+    ),
+    TypeParameter(
+        /// The type parameter identifier
+        IdentId,
+        /// The `LetFn`/`Struct` statement in which the parameter is defined
+        StmtId,
+    ),
     Struct(IdentId, StmtId),
     Annotation(IdentId, StmtId),
     // todo:refactoring could StmtId be replaced with SymbolId (the symbol that defines the struct)

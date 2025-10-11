@@ -201,7 +201,7 @@ Ok(
                     [],
                     TypeId(1),
                 ),
-                type_id: TypeId(5),
+                type_id: TypeId(6),
             },
         ],
         types: [
@@ -210,7 +210,8 @@ Ok(
             TypeId(2) => None,
             TypeId(3) => Boolean,
             TypeId(4) => Number,
-            TypeId(5) => Function(
+            TypeId(5) => Type,
+            TypeId(6) => Function(
                 [],
                 TypeId(1),
             ),
