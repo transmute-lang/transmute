@@ -1243,6 +1243,7 @@ pub struct Variable {
 pub struct Struct {
     pub identifier: Identifier,
     pub symbol_id: SymbolId,
+    // todo why not just a Vec<Field> that can be empty?
     pub fields: Option<Vec<Field>>,
     pub parent: ParentKind,
 }
