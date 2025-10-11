@@ -1,0 +1,16 @@
+---
+source: ast/src/parser.rs
+expression: compilation_unit.into_ast()
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Unexpected identifier(Integer), expected one of (2) `,`, `>`",
+                span: 1:11; [10, 17],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

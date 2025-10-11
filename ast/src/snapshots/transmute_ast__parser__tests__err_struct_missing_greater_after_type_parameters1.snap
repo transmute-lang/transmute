@@ -1,0 +1,16 @@
+---
+source: ast/src/parser.rs
+expression: compilation_unit.into_ast()
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Expected `>` to close `<` at 1:10, got `{`",
+                span: 1:13; [12, 13],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

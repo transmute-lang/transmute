@@ -14,10 +14,12 @@ expression: s
       |  +- Use std.numbers.print
       +- stmt 5
       |  +- Struct name=Point
+      |     +- types=[]
       |     +- x: number
       |     +- y: number
       +- stmt 6
       |  +- Struct name=Square
+      |     +- types=[]
       |     +- a: Point
       |     +- b: Point
       +- stmt 10
@@ -114,9 +116,11 @@ expression: s
                   |  +- Let name=square
                   |     +- expr 35
                   |        +- StructInstantiate name=Square
+                  |           +- types=[]
                   |           +- field name=a
                   |           |  +- expr 31
                   |           |     +- StructInstantiate name=Point
+                  |           |        +- types=[]
                   |           |        +- field name=x
                   |           |        |  +- expr 29
                   |           |        |     +- Number: 0
@@ -126,6 +130,7 @@ expression: s
                   |           +- field name=b
                   |              +- expr 34
                   |                 +- StructInstantiate name=Point
+                  |                    +- types=[]
                   |                    +- field name=x
                   |                    |  +- expr 32
                   |                    |     +- Ident: n

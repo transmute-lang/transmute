@@ -2,7 +2,9 @@
 source: ast/src/pretty_print.rs
 expression: w
 ---
-Point {
-  x: 1,
-  y: 2,
-};
+struct Point<
+  T,  U,
+> {
+  x: T,
+  y: U,
+}

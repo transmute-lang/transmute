@@ -42,7 +42,8 @@ expression: s
       |           |  +- Let name=s
       |           |     +- expr 10
       |           |        +- StructInstantiate name=Struct
-      |           |           +- types=[]
+      |           |           +- types
+      |           |           |  +- number
       |           |           +- field name=field
       |           |              +- expr 9
       |           |                 +- Binary *
@@ -82,5 +83,6 @@ expression: s
       |                                +- ident=field
       +- stmt 10
          +- Struct name=Struct
-            +- types=[]
-            +- field: number
+            +- types
+            |  +- T
+            +- field: T

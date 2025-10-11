@@ -7,15 +7,16 @@ Ok(
         identifiers: [
             IdentId(0) => "<root>",
             IdentId(1) => "S",
-            IdentId(2) => "field",
-            IdentId(3) => "number",
+            IdentId(2) => "T",
+            IdentId(3) => "U",
+            IdentId(4) => "a",
         ],
         identifier_refs: [
             IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
-                    id: IdentId(3),
-                    span: 1:21; [20, 26],
+                    id: IdentId(2),
+                    span: 1:20; [19, 20],
                 },
             },
         ],
@@ -43,19 +44,28 @@ Ok(
                         span: 1:8; [7, 8],
                     },
                     [],
-                    [],
+                    [
+                        Identifier {
+                            id: IdentId(2),
+                            span: 1:10; [9, 10],
+                        },
+                        Identifier {
+                            id: IdentId(3),
+                            span: 1:12; [11, 12],
+                        },
+                    ],
                     [
                         Field {
                             identifier: Identifier {
-                                id: IdentId(2),
-                                span: 1:12; [11, 16],
+                                id: IdentId(4),
+                                span: 1:17; [16, 17],
                             },
-                            type_def_id: TypeDefId(2),
-                            span: 1:12; [11, 34],
+                            type_def_id: TypeDefId(0),
+                            span: 1:17; [16, 20],
                         },
                     ],
                 ),
-                span: 1:1; [0, 36],
+                span: 1:1; [0, 22],
             },
         ],
         type_defs: [
@@ -65,21 +75,7 @@ Ok(
                         IdentRefId(0),
                     ],
                 ),
-                span: 1:21; [20, 26],
-            },
-            TypeDefId(1) => TypeDef {
-                kind: Array(
-                    TypeDefId(0),
-                    2,
-                ),
-                span: 1:20; [19, 30],
-            },
-            TypeDefId(2) => TypeDef {
-                kind: Array(
-                    TypeDefId(1),
-                    4,
-                ),
-                span: 1:19; [18, 34],
+                span: 1:20; [19, 20],
             },
         ],
         root: StmtId(0),

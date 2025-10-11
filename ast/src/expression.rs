@@ -1,7 +1,7 @@
 use crate::literal::Literal;
 use crate::operators::{BinaryOperator, UnaryOperator};
 use std::fmt::Debug;
-use transmute_core::ids::{ExprId, IdentRefId, StmtId};
+use transmute_core::ids::{ExprId, IdentRefId, StmtId, TypeDefId};
 use transmute_core::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -28,7 +28,7 @@ pub enum ExpressionKind {
     FunctionCall(ExprId, Vec<ExprId>),
     While(ExprId, ExprId),
     Block(Vec<StmtId>),
-    StructInstantiation(IdentRefId, Vec<(IdentRefId, ExprId)>),
+    StructInstantiation(IdentRefId, Vec<TypeDefId>, Vec<(IdentRefId, ExprId)>),
     ArrayInstantiation(Vec<ExprId>),
     ArrayAccess(ExprId, ExprId),
     /// A dummy expression kind, inserted by the parser when the expression could not be parsed

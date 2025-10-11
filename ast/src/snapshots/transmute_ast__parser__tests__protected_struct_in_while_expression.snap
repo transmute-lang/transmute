@@ -23,6 +23,7 @@ Ok(
                 kind: StructInstantiation(
                     IdentRefId(0),
                     [],
+                    [],
                 ),
                 span: 1:7; [6, 17],
             },

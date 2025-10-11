@@ -14,10 +14,12 @@ expression: s
       |  +- Use std.numbers.print
       +- stmt 5
       |  +- Struct name=Point
+      |     +- types=[]
       |     +- x: number
       |     +- y: number
       +- stmt 6
       |  +- Struct name=Rect
+      |     +- types=[]
       |     +- a: Point
       |     +- b: Point
       +- stmt 19
@@ -57,6 +59,7 @@ expression: s
       |           |  +- Let name=p1
       |           |     +- expr 11
       |           |        +- StructInstantiate name=Point
+      |           |           +- types=[]
       |           |           +- field name=x
       |           |           |  +- expr 9
       |           |           |     +- Ident: n
@@ -67,6 +70,7 @@ expression: s
       |           |  +- Let name=r1
       |           |     +- expr 14
       |           |        +- StructInstantiate name=Rect
+      |           |           +- types=[]
       |           |           +- field name=a
       |           |           |  +- expr 12
       |           |           |     +- Ident: origin
@@ -79,6 +83,7 @@ expression: s
       |           |        +- Assignment target=r1
       |           |           +- expr 17
       |           |              +- StructInstantiate name=Rect
+      |           |                 +- types=[]
       |           |                 +- field name=a
       |           |                 |  +- expr 15
       |           |                 |     +- Ident: p1
@@ -98,6 +103,7 @@ expression: s
       |           |  +- Let name=p2
       |           |     +- expr 28
       |           |        +- StructInstantiate name=Point
+      |           |           +- types=[]
       |           |           +- field name=x
       |           |           |  +- expr 24
       |           |           |     +- Binary *
@@ -116,6 +122,7 @@ expression: s
       |           |  +- Let name=r2
       |           |     +- expr 31
       |           |        +- StructInstantiate name=Rect
+      |           |           +- types=[]
       |           |           +- field name=a
       |           |           |  +- expr 29
       |           |           |     +- Ident: origin
@@ -137,6 +144,7 @@ expression: s
       |           |        +- ArrayInstantiate
       |           |           +- expr 37
       |           |           |  +- StructInstantiate name=Point
+      |           |           |     +- types=[]
       |           |           |     +- field name=x
       |           |           |     |  +- expr 35
       |           |           |     |     +- Number: 1
@@ -145,6 +153,7 @@ expression: s
       |           |           |           +- Number: 1
       |           |           +- expr 40
       |           |           |  +- StructInstantiate name=Point
+      |           |           |     +- types=[]
       |           |           |     +- field name=x
       |           |           |     |  +- expr 38
       |           |           |     |     +- Number: 2
@@ -153,6 +162,7 @@ expression: s
       |           |           |           +- Number: 2
       |           |           +- expr 43
       |           |              +- StructInstantiate name=Point
+      |           |                 +- types=[]
       |           |                 +- field name=x
       |           |                 |  +- expr 41
       |           |                 |     +- Number: 3
@@ -187,6 +197,7 @@ expression: s
       |              +- Expression
       |                 +- expr 54
       |                    +- StructInstantiate name=Point
+      |                       +- types=[]
       |                       +- field name=x
       |                       |  +- expr 52
       |                       |     +- Number: 0

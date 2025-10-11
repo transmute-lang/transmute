@@ -218,13 +218,30 @@ impl AstPrint for Expression {
                     ctx.prev_level();
                 }
             }
-            ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
+            ExpressionKind::StructInstantiation(ident_ref_id, generics, fields) => {
                 writeln!(
                     f,
                     "{indent}StructInstantiate name={ident}",
                     indent = ctx.indent(),
                     ident = ctx.identifier_ref(*ident_ref_id)
                 )?;
+
+                ctx.last = true;
+                ctx.next_level();
+                if generics.is_empty() {
+                    writeln!(f, "{indent}types=[]", indent = ctx.indent(),)?;
+                } else {
+                    writeln!(f, "{indent}types", indent = ctx.indent(),)?;
+                    ctx.next_level();
+                    for type_def_id in generics.iter() {
+                        write!(f, "{indent}", indent = ctx.indent(),)?;
+                        type_def_id.ast_print(ctx, opts, f)?;
+                        writeln!(f)?;
+                    }
+                    ctx.prev_level();
+                }
+                ctx.prev_level();
+
                 ctx.last = true;
                 ctx.next_level();
                 for (i, (field_ident, field_value)) in fields.iter().enumerate() {
@@ -416,7 +433,7 @@ impl AstPrint for Statement {
 
                 ctx.prev_level();
             }
-            StatementKind::Struct(ident, _annotations, fields) => {
+            StatementKind::Struct(ident, _annotations, type_parameters, fields) => {
                 // todo use annotations
                 writeln!(
                     f,
@@ -424,9 +441,28 @@ impl AstPrint for Statement {
                     indent = ctx.indent(),
                     ident = ctx.identifier(ident.id)
                 )?;
+
                 ctx.last = true;
                 ctx.next_level();
+                if type_parameters.is_empty() {
+                    writeln!(f, "{indent}types=[]", indent = ctx.indent())?;
+                } else {
+                    writeln!(f, "{indent}types", indent = ctx.indent(),)?;
+                    ctx.next_level();
+                    for parameter in type_parameters.iter() {
+                        writeln!(
+                            f,
+                            "{indent}{ident}",
+                            indent = ctx.indent(),
+                            ident = ctx.identifier(parameter.id),
+                        )?;
+                    }
+                    ctx.prev_level();
+                }
+                ctx.prev_level();
 
+                ctx.last = true;
+                ctx.next_level();
                 if fields.is_empty() {
                     writeln!(f, "{indent}fields=[]", indent = ctx.indent())?;
                 } else {
@@ -629,5 +665,6 @@ mod tests {
     t!(structs_nested);
     t!(structs_of_arrays);
     t!(structs_simple);
+    t!(structs_type_parameters);
     t!(void_fn);
 }
