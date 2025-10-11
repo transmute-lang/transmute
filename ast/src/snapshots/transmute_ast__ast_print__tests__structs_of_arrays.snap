@@ -14,6 +14,7 @@ expression: s
       |  +- Use std.numbers.print
       +- stmt 5
       |  +- Struct name=Point
+      |     +- types=[]
       |     +- xy: [number; 2]
       +- stmt 14
          +- Fn name=main
@@ -45,6 +46,7 @@ expression: s
                   |  +- Let name=p1
                   |     +- expr 10
                   |        +- StructInstantiate name=Point
+                  |           +- types=[]
                   |           +- field name=xy
                   |              +- expr 9
                   |                 +- ArrayInstantiate
@@ -56,6 +58,7 @@ expression: s
                   |  +- Let name=p2
                   |     +- expr 14
                   |        +- StructInstantiate name=Point
+                  |           +- types=[]
                   |           +- field name=xy
                   |              +- expr 13
                   |                 +- ArrayInstantiate

@@ -150,16 +150,32 @@ impl PrettyPrint for Expression {
                 }
                 Ok(())
             }
-            ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
-                write!(f, "{} {{", ctx.identifier_ref(*ident_ref_id))?;
-                for (i, (ident_ref_id, expr_id)) in fields.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " ")?;
+            ExpressionKind::StructInstantiation(ident_ref_id, generics, fields) => {
+                write!(f, "{}", ctx.identifier_ref(*ident_ref_id))?;
+                if !generics.is_empty() {
+                    writeln!(f, "!<")?;
+                    ctx.level += 1;
+                    for type_def_id in generics {
+                        write!(f, "{}", ctx.indent())?;
+                        type_def_id.pretty_print(ctx, opts, f)?;
+                        writeln!(f, ",")?;
                     }
-                    write!(f, "{}: ", ctx.identifier_ref(*ident_ref_id))?;
-                    ctx.pretty_print_expression(*expr_id, opts, f)?;
-                    write!(f, ",")?;
+                    ctx.level -= 1;
+                    write!(f, ">")?;
                 }
+                writeln!(f, " {{")?;
+                ctx.level += 1;
+                for (ident_ref_id, expr_id) in fields {
+                    write!(
+                        f,
+                        "{indent}{ident}: ",
+                        indent = ctx.indent(),
+                        ident = ctx.identifier_ref(*ident_ref_id)
+                    )?;
+                    ctx.pretty_print_expression(*expr_id, opts, f)?;
+                    writeln!(f, ",")?;
+                }
+                ctx.level -= 1;
                 write!(f, "}}")
             }
             ExpressionKind::ArrayInstantiation(values) => {
@@ -296,7 +312,7 @@ impl PrettyPrint for Statement {
                 ctx.level -= 1;
                 writeln!(f, "{indent}}}")
             }
-            StatementKind::Struct(ident, annotations, fields) => {
+            StatementKind::Struct(ident, annotations, type_parameters, fields) => {
                 let indent = ctx.indent();
                 for annotation in annotations {
                     writeln!(
@@ -310,11 +326,25 @@ impl PrettyPrint for Statement {
                             .join(".")
                     )?;
                 }
-                writeln!(
+                write!(
                     f,
-                    "{indent}struct {ident} {{",
+                    "{indent}struct {ident}",
                     ident = ctx.identifier(ident.id)
                 )?;
+
+                if !type_parameters.is_empty() {
+                    writeln!(f, "<",)?;
+                    for parameter in type_parameters.iter() {
+                        write!(
+                            f,
+                            "{indent}  {ident},",
+                            ident = ctx.identifier(parameter.id)
+                        )?;
+                    }
+                    write!(f, "\n{indent}>",)?;
+                }
+
+                writeln!(f, " {{",)?;
 
                 for field in fields.iter() {
                     write!(
@@ -1120,12 +1150,48 @@ mod tests {
     }
 
     #[test]
+    fn struct_declaration_with_type_parameters() {
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "struct Point <T, U> { x: T, y: U }"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_snapshot!(w);
+    }
+
+    #[test]
     fn struct_instantiation() {
         let mut compilation_unit = CompilationUnit::default();
         Parser::new(
             &mut compilation_unit,
             None,
             Lexer::new(InputId::from(0), "Point { x: 1, y: 2 };"),
+        )
+        .parse();
+        let ast = compilation_unit.into_ast().unwrap();
+
+        let mut w = String::new();
+
+        ast.pretty_print(&Options::default(), &mut w).unwrap();
+
+        assert_snapshot!(w);
+    }
+
+    #[test]
+    fn struct_instantiation_with_type_parameters() {
+        let mut compilation_unit = CompilationUnit::default();
+        Parser::new(
+            &mut compilation_unit,
+            None,
+            Lexer::new(InputId::from(0), "Point!<String, Integer> { x: 1, y: 2 };"),
         )
         .parse();
         let ast = compilation_unit.into_ast().unwrap();

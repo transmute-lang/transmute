@@ -14,9 +14,11 @@ expression: s
       |  +- Use std.numbers.print
       +- stmt 5
       |  +- Struct name=Inner
+      |     +- types=[]
       |     +- field: number
       +- stmt 6
       |  +- Struct name=Outer
+      |     +- types=[]
       |     +- field: Inner
       +- stmt 9
       |  +- Fn name=main
@@ -97,6 +99,7 @@ expression: s
       |           |  +- Let name=inner
       |           |     +- expr 26
       |           |        +- StructInstantiate name=Inner
+      |           |           +- types=[]
       |           |           +- field name=field
       |           |              +- expr 25
       |           |                 +- Ident: i
@@ -104,6 +107,7 @@ expression: s
       |           |  +- Let name=outer
       |           |     +- expr 28
       |           |        +- StructInstantiate name=Outer
+      |           |           +- types=[]
       |           |           +- field name=field
       |           |              +- expr 27
       |           |                 +- Ident: inner
@@ -133,6 +137,7 @@ expression: s
       |           |  +- Let name=inner
       |           |     +- expr 35
       |           |        +- StructInstantiate name=Inner
+      |           |           +- types=[]
       |           |           +- field name=field
       |           |              +- expr 34
       |           |                 +- Ident: i
@@ -140,6 +145,7 @@ expression: s
       |           |  +- Let name=outer
       |           |     +- expr 37
       |           |        +- StructInstantiate name=Outer
+      |           |           +- types=[]
       |           |           +- field name=field
       |           |              +- expr 36
       |           |                 +- Ident: inner
@@ -165,9 +171,11 @@ expression: s
       |           |  +- Let name=outer
       |           |     +- expr 44
       |           |        +- StructInstantiate name=Outer
+      |           |           +- types=[]
       |           |           +- field name=field
       |           |              +- expr 43
       |           |                 +- StructInstantiate name=Inner
+      |           |                    +- types=[]
       |           |                    +- field name=field
       |           |                       +- expr 42
       |           |                          +- Ident: i
@@ -197,9 +205,11 @@ expression: s
                   |  +- Let name=outer
                   |     +- expr 52
                   |        +- StructInstantiate name=Outer
+                  |           +- types=[]
                   |           +- field name=field
                   |              +- expr 51
                   |                 +- StructInstantiate name=Inner
+                  |                    +- types=[]
                   |                    +- field name=field
                   |                       +- expr 50
                   |                          +- Ident: i

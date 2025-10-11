@@ -123,7 +123,11 @@ impl<'s> Lexer<'s> {
                     self.advance_consumed(span.len);
                     (TokenKind::ExclaimEqual, span)
                 }
-                _ => todo!("issue a NOT here"),
+                _ => {
+                    self.advance_columns(1);
+                    self.advance_consumed(span.len);
+                    (TokenKind::Exclaim, span)
+                }
             },
             '>' => match chars.next().unwrap_or_default() {
                 '=' => {
@@ -592,6 +596,7 @@ pub enum TokenKind {
     Else,
     Equal,
     EqualEqual,
+    Exclaim,
     ExclaimEqual,
     False,
     Greater,
@@ -635,6 +640,7 @@ impl TokenKind {
             TokenKind::Else => Cow::from("`else`"),
             TokenKind::Equal => Cow::from("`=`"),
             TokenKind::EqualEqual => Cow::from("`==`"),
+            TokenKind::Exclaim => Cow::from("`!`"),
             TokenKind::ExclaimEqual => Cow::from("`!=`"),
             TokenKind::False => Cow::from("`false`"),
             TokenKind::Greater => Cow::from("`>`"),
@@ -701,17 +707,19 @@ impl TokenKind {
             TokenKind::Minus => 25,
             TokenKind::Plus => 26,
 
-            TokenKind::EqualEqual => 27,
-            TokenKind::ExclaimEqual => 28,
-            TokenKind::Greater => 29,
-            TokenKind::GreaterEqual => 30,
-            TokenKind::Smaller => 31,
-            TokenKind::SmallerEqual => 32,
+            TokenKind::Exclaim => 27,
 
-            TokenKind::CloseBracket => 33,
-            TokenKind::OpenBracket => 34,
+            TokenKind::EqualEqual => 28,
+            TokenKind::ExclaimEqual => 29,
+            TokenKind::Greater => 30,
+            TokenKind::GreaterEqual => 31,
+            TokenKind::Smaller => 32,
+            TokenKind::SmallerEqual => 33,
 
-            TokenKind::At => 35,
+            TokenKind::CloseBracket => 34,
+            TokenKind::OpenBracket => 35,
+
+            TokenKind::At => 36,
 
             TokenKind::Eof => 254,
             TokenKind::Bad(_) => 255,
@@ -767,6 +775,9 @@ impl Display for TokenKind {
             }
             TokenKind::EqualEqual => {
                 write!(f, "`==`")
+            }
+            TokenKind::Exclaim => {
+                write!(f, "`!`")
             }
             TokenKind::ExclaimEqual => {
                 write!(f, "`!=`")
@@ -936,6 +947,7 @@ mod tests {
     lexer_test_next!(next_star, "*");
     lexer_test_next!(next_slash, "/");
     lexer_test_next!(next_equal, "=");
+    lexer_test_next!(next_explaim, "!");
     lexer_test_next!(next_equal_equal, "==");
     lexer_test_next!(next_exclam_equal, "!=");
     lexer_test_next!(next_greater, ">");

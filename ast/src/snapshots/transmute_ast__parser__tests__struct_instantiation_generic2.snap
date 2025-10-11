@@ -7,18 +7,34 @@ Ok(
         identifiers: [
             IdentId(0) => "<root>",
             IdentId(1) => "S",
-            IdentId(2) => "x",
+            IdentId(2) => "String",
+            IdentId(3) => "Integer",
+            IdentId(4) => "s",
         ],
         identifier_refs: [
             IdentRefId(0) => IdentifierRef {
                 id: IdentRefId(0),
                 ident: Identifier {
                     id: IdentId(2),
-                    span: 1:5; [4, 5],
+                    span: 1:4; [3, 9],
                 },
             },
             IdentRefId(1) => IdentifierRef {
                 id: IdentRefId(1),
+                ident: Identifier {
+                    id: IdentId(3),
+                    span: 1:12; [11, 18],
+                },
+            },
+            IdentRefId(2) => IdentifierRef {
+                id: IdentRefId(2),
+                ident: Identifier {
+                    id: IdentId(4),
+                    span: 1:23; [22, 23],
+                },
+            },
+            IdentRefId(3) => IdentifierRef {
+                id: IdentRefId(3),
                 ident: Identifier {
                     id: IdentId(1),
                     span: 1:1; [0, 1],
@@ -30,25 +46,28 @@ Ok(
                 id: ExprId(0),
                 kind: Literal(
                     Literal {
-                        kind: Number(1),
-                        span: 1:8; [7, 8],
+                        kind: String(string),
+                        span: 1:26; [25, 33],
                     },
                 ),
-                span: 1:8; [7, 8],
+                span: 1:26; [25, 33],
             },
             ExprId(1) => Expression {
                 id: ExprId(1),
                 kind: StructInstantiation(
-                    IdentRefId(1),
-                    [],
+                    IdentRefId(3),
+                    [
+                        TypeDefId(0),
+                        TypeDefId(1),
+                    ],
                     [
                         (
-                            IdentRefId(0),
+                            IdentRefId(2),
                             ExprId(0),
                         ),
                     ],
                 ),
-                span: 1:1; [0, 10],
+                span: 1:1; [0, 35],
             },
         ],
         statements: [
@@ -71,10 +90,27 @@ Ok(
                 kind: Expression(
                     ExprId(1),
                 ),
-                span: 1:1; [0, 11],
+                span: 1:1; [0, 36],
             },
         ],
-        type_defs: [],
+        type_defs: [
+            TypeDefId(0) => TypeDef {
+                kind: Simple(
+                    [
+                        IdentRefId(0),
+                    ],
+                ),
+                span: 1:4; [3, 9],
+            },
+            TypeDefId(1) => TypeDef {
+                kind: Simple(
+                    [
+                        IdentRefId(1),
+                    ],
+                ),
+                span: 1:12; [11, 18],
+            },
+        ],
         root: StmtId(0),
     },
 )

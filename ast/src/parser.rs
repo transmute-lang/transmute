@@ -230,14 +230,12 @@ impl<'s, 'c> Parser<'s, 'c> {
 
         while let Some(statement) = self.parse_statement() {
             match &statement.kind {
-                StatementKind::LetFn(_, _, _, _, _)
-                | StatementKind::Struct(_, _, _)
-                | StatementKind::Annotation(_)
-                | StatementKind::Use(_)
-                | StatementKind::Namespace(_, _, _) => statements.push(statement.id),
-                StatementKind::Expression(_)
-                | StatementKind::Let(_, _)
-                | StatementKind::Ret(_, _) => {
+                StatementKind::LetFn(..)
+                | StatementKind::Struct(..)
+                | StatementKind::Annotation(..)
+                | StatementKind::Use(..)
+                | StatementKind::Namespace(..) => statements.push(statement.id),
+                StatementKind::Expression(..) | StatementKind::Let(..) | StatementKind::Ret(..) => {
                     // when testing we are fine with having any statement as top level... while
                     // not perfect, this eases things a lot
                     #[cfg(any(test, feature = "allow-any-root-kind"))]
@@ -973,7 +971,7 @@ impl<'s, 'c> Parser<'s, 'c> {
     }
 
     fn parse_struct(&mut self, annotations: Vec<Annotation>) -> Option<&Statement> {
-        // 'struct ident { ident : ident , ... }
+        // 'struct ident < type , ... > { ident : ident , ... }
         let token_struct = self.lexer.next_token();
         let identifier_token = self.lexer.next_token();
         let identifier = match &identifier_token.kind {
@@ -992,10 +990,109 @@ impl<'s, 'c> Parser<'s, 'c> {
             }
         };
 
-        // struct ident '{ ident : ident , ... }
+        // struct ident '< type , ... > { ident : ident , ... }
+        let token = self.lexer.peek();
+
+        let type_parameters = if matches!(token.kind, TokenKind::Smaller) {
+            let open_span = token.span.clone();
+            self.lexer.next_token();
+            // struct ident < 'type , ... > { ident : ident , ... }
+            let mut type_parameters = vec![];
+            let mut expect_type = true;
+
+            loop {
+                let token = self.lexer.next_token();
+
+                match &token.kind {
+                    TokenKind::Greater => {
+                        // struct ident < ... '> { ... }
+                        break;
+                    }
+                    TokenKind::Identifier => {
+                        if !expect_type {
+                            // we did not finish the previous type parameter with a comma but got
+                            // the identifier of a new one. report the error and continue as if the
+                            // comma was there
+                            report_unexpected_token!(
+                                self,
+                                token,
+                                [
+                                    expected_token!(TokenKind::Comma),
+                                    expected_token!(TokenKind::Greater),
+                                ]
+                            );
+                        }
+
+                        let ident =
+                            Identifier::new(self.push_identifier(&token.span), token.span.clone());
+                        type_parameters.push(ident);
+
+                        expect_type = false;
+                    }
+                    TokenKind::Comma => {
+                        if expect_type {
+                            // we already read a comma, and we got another one. report the error
+                            // and continue as if the comma was not there
+                            report_unexpected_token!(
+                                self,
+                                token,
+                                [
+                                    expected_token!(TokenKind::Identifier),
+                                    expected_token!(TokenKind::Greater),
+                                ]
+                            );
+                        }
+
+                        expect_type = true;
+                    }
+                    _ => {
+                        // we got some random token... let's see if next one is an opening curly
+                        // bracket
+                        // let next_token = self.lexer.next_token();
+                        if matches!(&token.kind, TokenKind::OpenCurlyBracket) {
+                            // report the error and pretend we got the >
+                            report_missing_closing_token!(
+                                self,
+                                token,
+                                TokenKind::Greater,
+                                TokenKind::Smaller,
+                                open_span
+                            );
+                            self.lexer.push_next(token);
+                        } else if expect_type {
+                            report_unexpected_token!(
+                                self,
+                                token,
+                                [
+                                    expected_token!(TokenKind::Greater),
+                                    expected_token!(TokenKind::Identifier),
+                                ]
+                            );
+                        } else {
+                            report_unexpected_token!(
+                                self,
+                                token,
+                                [
+                                    expected_token!(TokenKind::Greater),
+                                    expected_token!(TokenKind::Comma),
+                                ]
+                            );
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            type_parameters
+        } else {
+            vec![]
+        };
+
         let token = self.lexer.next_token();
-        if token.kind != TokenKind::OpenCurlyBracket {
-            if self.lexer.peek().kind == TokenKind::OpenCurlyBracket {
+
+        if !matches!(token.kind, TokenKind::OpenCurlyBracket) {
+            if matches!(self.lexer.peek().kind, TokenKind::OpenCurlyBracket) {
                 report_unexpected_token!(
                     self,
                     token,
@@ -1159,7 +1256,7 @@ impl<'s, 'c> Parser<'s, 'c> {
         };
 
         let stmt_id = self.push_statement(
-            StatementKind::Struct(identifier, annotations, fields),
+            StatementKind::Struct(identifier, annotations, type_parameters, fields),
             token_struct.span.extend_to(&last_token.span),
         );
         Some(&self.compilation_unit.statements[stmt_id])
@@ -1206,13 +1303,88 @@ impl<'s, 'c> Parser<'s, 'c> {
                 let identifier =
                     Identifier::new(self.push_identifier(&token.span), token.span.clone());
 
+                let mut generic_types = match self.lexer.peek().kind {
+                    TokenKind::Exclaim => {
+                        // identifier '! < ... > ...
+                        let span = self.lexer.next_token().span;
+                        let mut generic_types = vec![];
+
+                        let angle_bracket = self.lexer.next_token();
+                        if !matches!(angle_bracket.kind, TokenKind::Smaller) {
+                            report_missing_token_and_push_back!(self, token, TokenKind::Smaller);
+                        }
+
+                        let mut expect_type = true;
+                        loop {
+                            let token = self.lexer.next_token();
+                            match token.kind {
+                                TokenKind::Greater => {
+                                    span.extend_to(&token.span);
+                                    break;
+                                }
+                                TokenKind::Comma => {
+                                    if expect_type {
+                                        report_unexpected_token!(
+                                            self,
+                                            token,
+                                            [
+                                                expected_token!(TokenKind::Identifier),
+                                                expected_token!(TokenKind::OpenBracket),
+                                            ]
+                                        );
+                                    }
+                                    expect_type = true;
+                                }
+                                TokenKind::OpenCurlyBracket | TokenKind::Semicolon => {
+                                    span.extend_to(&token.span);
+                                    report_missing_closing_token!(
+                                        self,
+                                        token,
+                                        TokenKind::Greater,
+                                        TokenKind::Smaller,
+                                        span
+                                    );
+                                    self.lexer.push_next(token);
+                                    break;
+                                }
+                                _ if expect_type => {
+                                    self.lexer.push_next(token);
+                                    generic_types.push(self.parse_type(true));
+                                    expect_type = false;
+                                }
+                                _ => {
+                                    report_unexpected_token!(
+                                        self,
+                                        token,
+                                        [
+                                            expected_token!(TokenKind::Comma),
+                                            expected_token!(TokenKind::Greater),
+                                        ]
+                                    );
+                                }
+                            }
+                        }
+
+                        Some((span, generic_types))
+                    }
+                    _ => None,
+                };
+
                 match &self.lexer.peek().kind {
-                    // ident '{ ...
+                    // ident!<t...> '{ ...
                     TokenKind::OpenCurlyBracket if allow_struct => {
                         allow_assignment = false;
-                        self.parse_struct_instantiation(identifier)
+                        self.parse_struct_instantiation(
+                            identifier,
+                            generic_types
+                                .take()
+                                .map(|(_, type_defs_ids)| type_defs_ids)
+                                .unwrap_or_default(),
+                        )
                     }
-                    // ident '= ...
+                    // ident!<t...> '. f ( ) -> loop
+                    // ident!<t...> '[ 1 ]   -> loop
+                    // ident!<t...> '( )     -> loop
                     _ => {
                         if allow_struct {
                             self.potential_tokens
@@ -1373,6 +1545,8 @@ impl<'s, 'c> Parser<'s, 'c> {
                 }
             }
         };
+
+        // expr '...
 
         loop {
             match &self.lexer.peek().kind {
@@ -1963,7 +2137,11 @@ impl<'s, 'c> Parser<'s, 'c> {
         (arguments, span)
     }
 
-    fn parse_struct_instantiation(&mut self, struct_identifier: Identifier) -> ExprId {
+    fn parse_struct_instantiation(
+        &mut self,
+        struct_identifier: Identifier,
+        generic_types: Vec<TypeDefId>,
+    ) -> ExprId {
         // ident '{ ident : expr , ... }
         let open_curly_bracket_token = self.lexer.next_token();
         self.potential_tokens.clear();
@@ -2113,7 +2291,7 @@ impl<'s, 'c> Parser<'s, 'c> {
         let struct_ident_ref_id = self.push_identifier_ref(struct_identifier);
 
         self.push_expression(
-            ExpressionKind::StructInstantiation(struct_ident_ref_id, fields),
+            ExpressionKind::StructInstantiation(struct_ident_ref_id, generic_types, fields),
             span,
         )
     }
@@ -2293,6 +2471,9 @@ mod tests {
     test_syntax!(struct_valid_one_field => "struct S { a: number }");
     test_syntax!(struct_valid_several_fields => "struct S { a: number, b: number }");
     test_syntax!(struct_valid_trailing_comma => "struct S { a: number, }");
+    test_syntax!(struct_valid_type_param => "struct S<T> { a: T }");
+    test_syntax!(struct_valid_type_params => "struct S<T,U> { a: T }");
+    test_syntax!(struct_valid_type_params_trailing_comma => "struct S<T,U,> { a: T }");
     test_syntax!(structs_as_root => "struct S { } struct S { }");
     test_syntax!(protected_struct_in_if_expression => "if (Struct {}) {}");
     test_syntax!(protected_struct_in_while_expression => "while (Struct {}) {}");
@@ -2300,6 +2481,11 @@ mod tests {
     test_syntax!(struct_instantiation_one_field => "S { x: 1 };");
     test_syntax!(struct_instantiation_two_fields => "S { x: 1, y: 2 };");
     test_syntax!(struct_instantiation_two_fields_trailing_coma => "S { x: 1, y: 2, };");
+    test_syntax!(struct_instantiation_generic => "S!<String> { s: \"string\" };");
+    test_syntax!(struct_instantiation_generic2 => "S!<String, Integer> { s: \"string\" };");
+    test_syntax!(struct_instantiation_generic3 => "S!<String, > { s: \"string\" };");
+    test_syntax!(err_struct_instantiation_generic_missing_closing => "S!<String { s: \"string\" };");
+    test_syntax!(err_struct_instantiation_generic_missing_commma => "S!<String Integer> { s: \"string\" };");
     test_syntax!(array_instantiation_one_element => "[0];");
     test_syntax!(array_instantiation_two_elements => "[0, 2];");
     test_syntax!(array_instantiation_trailing_comma => "[0, 2, ];");
@@ -2349,6 +2535,14 @@ mod tests {
     test_syntax!(err_struct_missing_first_field_type => "struct S { a: , b: number, c: number }");
     test_syntax!(err_struct_missing_second_field_type => "struct S { a: number, b: , c: number }");
     test_syntax!(err_struct_missing_third_field_type => "struct S { a: number, b: number, c: }");
+    test_syntax!(err_struct_missing_comma_in_type_parameters => "struct S <A B> { }");
+    test_syntax!(err_struct_missing_identifier_in_type_parameters => "struct S <, B> { }");
+    test_syntax!(err_struct_missing_greater_after_type_parameters1 => "struct S <A { }");
+    test_syntax!(err_struct_missing_greater_after_type_parameters2 => "struct S <A, { }");
+    test_syntax!(err_struct_missing_greater_after_type_parameters3 => "struct S < { }");
+    test_syntax!(err_struct_missing_greater_after_type_parameters4 => "struct S <A 0 { }");
+    test_syntax!(err_struct_missing_greater_after_type_parameters5 => "struct S <A, 0 { }");
+    test_syntax!(err_struct_missing_greater_after_type_parameters6 => "struct S < 0 { }");
     test_syntax!(err_struct_instantiation_missing_open_curly_one_field => "S a: a }");
     test_syntax!(err_struct_instantiation_missing_open_curly_no_fields => "S }");
     test_syntax!(err_struct_instantiation_missing_close_curly_one_field => "S { a: a");

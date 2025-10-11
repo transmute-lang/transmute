@@ -14,6 +14,7 @@ expression: s
       |  +- Use std.numbers.print
       +- stmt 5
       |  +- Struct name=Point
+      |     +- types=[]
       |     +- x: number
       |     +- y: number
       +- stmt 13
@@ -48,6 +49,7 @@ expression: s
                   |        +- ArrayInstantiate
                   |           +- expr 9
                   |           |  +- StructInstantiate name=Point
+                  |           |     +- types=[]
                   |           |     +- field name=x
                   |           |     |  +- expr 7
                   |           |     |     +- Number: 0
@@ -56,6 +58,7 @@ expression: s
                   |           |           +- Number: 0
                   |           +- expr 12
                   |              +- StructInstantiate name=Point
+                  |                 +- types=[]
                   |                 +- field name=x
                   |                 |  +- expr 10
                   |                 |     +- Ident: n

@@ -58,6 +58,7 @@ Ok(
                 id: ExprId(2),
                 kind: StructInstantiation(
                     IdentRefId(2),
+                    [],
                     [
                         (
                             IdentRefId(0),
