@@ -168,6 +168,7 @@ expression: "(ast, block_exit_points)"
                 id: ExprId(10),
                 kind: StructInstantiation(
                     IdentRefId(6),
+                    [],
                     [
                         (
                             IdentRefId(3),
@@ -214,6 +215,7 @@ expression: "(ast, block_exit_points)"
                         id: IdentId(1),
                         span: 2:12; [12, 13],
                     },
+                    [],
                     [],
                     [
                         Field {

@@ -7,7 +7,10 @@ struct S {
   y: number,
 }
 let f(): number = {
-  ret S {x: if true {
-    ret 1;
-  }, y: 1,};
+  ret S {
+    x: if true {
+      ret 1;
+    },
+    y: 1,
+};
 }

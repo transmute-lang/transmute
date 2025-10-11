@@ -324,7 +324,7 @@ impl ImplicitRetResolver {
 
                 ret
             }
-            ExpressionKind::StructInstantiation(_, fields) => {
+            ExpressionKind::StructInstantiation(_, _, fields) => {
                 let mut always_return = false;
                 for (_, expr_id) in fields {
                     let field_expression = expressions.remove(*expr_id).unwrap();
@@ -459,9 +459,7 @@ impl ImplicitRetResolver {
 
                 false
             }
-            StatementKind::Struct(_, _, _)
-            | StatementKind::Annotation(_)
-            | StatementKind::Use(_) => {
+            StatementKind::Struct(..) | StatementKind::Annotation(..) | StatementKind::Use(..) => {
                 self.statements.insert(statement.id, statement);
                 false
             }

@@ -71,8 +71,8 @@ impl From<AstExpression> for Expression {
                 }
                 AstExpressionKind::While(cond, expr_id) => ExpressionKind::While(cond, expr_id),
                 AstExpressionKind::Block(expr_ids) => ExpressionKind::Block(expr_ids),
-                AstExpressionKind::StructInstantiation(ident_ref_id, fields) => {
-                    ExpressionKind::StructInstantiation(ident_ref_id, fields)
+                AstExpressionKind::StructInstantiation(ident_ref_id, type_parameters, fields) => {
+                    ExpressionKind::StructInstantiation(ident_ref_id, type_parameters, fields)
                 }
                 AstExpressionKind::ArrayInstantiation(values) => {
                     ExpressionKind::ArrayInstantiation(values)
@@ -99,7 +99,7 @@ pub enum ExpressionKind {
     FunctionCall(ExprId, Vec<ExprId>),
     While(ExprId, ExprId),
     Block(Vec<StmtId>),
-    StructInstantiation(IdentRefId, Vec<(IdentRefId, ExprId)>),
+    StructInstantiation(IdentRefId, Vec<TypeDefId>, Vec<(IdentRefId, ExprId)>),
     ArrayInstantiation(Vec<ExprId>),
     ArrayAccess(ExprId, ExprId),
 }

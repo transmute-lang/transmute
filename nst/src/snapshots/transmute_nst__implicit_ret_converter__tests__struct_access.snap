@@ -5,5 +5,7 @@ expression: w
 struct S {
   field: number,
 }
-let s = S {field: 1,};
+let s = S {
+  field: 1,
+};
 s.field = false;
