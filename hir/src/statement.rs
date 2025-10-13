@@ -13,6 +13,8 @@ use transmute_nst::nodes::StatementKind as NstStatementKind;
 use transmute_nst::nodes::TypeDef as NstTypeDef;
 use transmute_nst::nodes::TypeDefKind as NstTypeDefKind;
 
+// todo: review T, B type params, and how we go from Ast -> Untypesd,Unbound -> Typed,Bound.
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Statement<T, B>
 where
@@ -40,6 +42,20 @@ where
         }
     }
 
+    pub fn as_use(&self) -> &Vec<IdentRefId> {
+        match &self.kind {
+            StatementKind::Use(idents) => idents,
+            _ => panic!("use expected, got {:?}", self),
+        }
+    }
+
+    pub fn as_annotation(&self) -> &Identifier<B> {
+        match &self.kind {
+            StatementKind::Annotation(ident) => ident,
+            _ => panic!("annotation expected, got {:?}", self),
+        }
+    }
+
     #[allow(clippy::type_complexity)]
     pub fn as_struct(
         &self,
@@ -61,6 +77,23 @@ where
         match &self.kind {
             StatementKind::Namespace(identifier, input_id, stmts) => (identifier, input_id, stmts),
             _ => panic!("namespace expected, got {:?}", self),
+        }
+    }
+
+    #[allow(clippy::type_complexity)]
+    pub fn as_function(
+        &self,
+    ) -> (
+        &Identifier<B>,
+        &Vec<Annotation>,
+        &Vec<Parameter<T, B>>,
+        &Implementation<ExprId>,
+    ) {
+        match &self.kind {
+            StatementKind::LetFn(ident, annotations, parameters, _, implementation, _) => {
+                (ident, annotations, parameters, implementation)
+            }
+            _ => panic!("function expected, got {:?}", self),
         }
     }
 
@@ -144,29 +177,29 @@ where
     B: BoundState,
 {
     Expression(ExprId),
-    Let(Identifier<B>, ExprId),
+    Let(Identifier<B>, ExprId), // let_bindings
     Ret(Option<ExprId>, RetMode),
     LetFn(
-        Identifier<B>,
+        Identifier<B>, // let_fn_bindings
         Vec<Annotation>,
-        Vec<Parameter<T, B>>,
+        Vec<Parameter<T, B>>, // parameters_types / parameters_bindings
         Return<T>,
         Implementation<ExprId>,
-        /// The `LetFn`'s `StmtId` in which the struct is defined, if a nested struct
+        /// The `LetFn`'s `StmtId` in which the function is defined, if a nested function
         Option<StmtId>,
     ),
     Struct(
-        Identifier<B>,
+        Identifier<B>, // struct_bindings
         Vec<Annotation>,
-        Implementation<Vec<Field<T, B>>>,
+        Implementation<Vec<Field<T, B>>>, // parameters_types / parameters_bindings
         /// The `LetFn`'s `StmtId` in which the struct is defined, if a nested struct
         Option<StmtId>,
     ),
-    Annotation(Identifier<B>),
+    Annotation(Identifier<B>), // annotation_bindings
     Use(Vec<IdentRefId>),
     Namespace(
         /// Namespace identifier
-        Identifier<B>,
+        Identifier<B>, // namespace_bindings
         /// `InputId` this namespace is coming from
         InputId,
         /// Statements included in this namespace
@@ -198,6 +231,7 @@ impl From<NstRetMode> for RetMode {
     }
 }
 
+// todo:refactoring check if two native are still useful
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Implementation<T> {
     /// Denotes an implementation that is provided as transmute source code
@@ -212,6 +246,13 @@ pub enum Implementation<T> {
 
 impl<T> Implementation<T> {
     pub fn get(self) -> T {
+        match self {
+            Implementation::Provided(fields) => fields,
+            _ => panic!("implementation required"),
+        }
+    }
+
+    pub fn get_ref(&self) -> &T {
         match self {
             Implementation::Provided(fields) => fields,
             _ => panic!("implementation required"),

@@ -1,8 +1,7 @@
-use crate::bound::{Bound, BoundMultiple, BoundState, Unbound};
-use crate::expression::{Expression, ExpressionKind};
+use crate::bound::{Bound, BoundState, Unbound};
+use crate::expression::{Expression};
 use crate::identifier::Identifier;
 use crate::identifier_ref::IdentifierRef;
-use crate::literal::{Literal, LiteralKind};
 use crate::natives::{Natives, Type};
 use crate::passes::resolver::Resolver;
 use crate::statement::{Field, Parameter, Return, Statement, TypeDef};
@@ -171,24 +170,5 @@ impl FindSymbol for IdMap<IdentId, Vec<SymbolId>> {
                 .find(|s| kind.matches(&all_symbols[**s].kind))
                 .copied()
         })
-    }
-}
-
-impl ResolvedExpression {
-    fn symbol_id(
-        &self,
-        identifier_refs: &VecMap<IdentRefId, IdentifierRef<BoundMultiple>>,
-    ) -> Option<SymbolId> {
-        match &self.kind {
-            ExpressionKind::Literal(Literal {
-                kind: LiteralKind::Identifier(ident_ref_id),
-                ..
-            }) => {
-                let symbol_ids = identifier_refs[*ident_ref_id].resolved_symbol_ids();
-                assert_eq!(symbol_ids.len(), 1);
-                Some(symbol_ids[0])
-            }
-            _ => None,
-        }
     }
 }

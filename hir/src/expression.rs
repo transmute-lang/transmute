@@ -43,6 +43,13 @@ where
             _ => Default::default(),
         }
     }
+
+    pub fn try_as_literal(&self) -> Option<&Literal> {
+        match &self.kind {
+            ExpressionKind::Literal(lit) => Some(lit),
+            _ => None,
+        }
+    }
 }
 
 impl Expression<Untyped> {
