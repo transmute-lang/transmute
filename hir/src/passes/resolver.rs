@@ -53,36 +53,25 @@ pub struct Resolver {
     expression_types: HashMap<ExprId, TypeId>,
 
     /// Maps a `Parameter` (from the `StmtId` where it's defined and its index in the list) to a
-    /// `TypeId`.
-    parameter_types: HashMap<(StmtId, usize), TypeId>,
-
-    /// Maps a `Parameter` (from the `StmtId` where it's defined and its index in the list) to a
     /// `SymbolId`.
-    parameter_bindings: HashMap<(StmtId, usize), SymbolId>,
+    parameter_bindings: HashMap<(StmtId, usize), (SymbolId, TypeId)>,
 
     /// Maps a `Field` (from the `StmtId` where it's defined and its index in the list) to a
-    /// `TypeId`.
-    field_types: HashMap<(StmtId, usize), TypeId>,
-
-    // todo:refactoring can be merged with field_types, with (TypeId, SymbolId) as the value
-    /// Maps a `Field` (from the `StmtId` where it's defined and its index in the list) to a
     /// `SymbolId`.
-    field_bindings: HashMap<(StmtId, usize), SymbolId>,
+    field_bindings: HashMap<(StmtId, usize), (SymbolId, TypeId)>,
 
     /// Maps a `Let` statement's `Identifier` to a `SymbolId`.
     let_bindings: HashMap<StmtId, SymbolId>,
 
-    // todo:refactoring: is it the same as function_symbols? (not even used)
-    // todo:refactoring: is it a subset of let_bindings?
     /// Maps a `LetFn` statement's `Identifier` to a `SymbolId`.
     fn_bindings: HashMap<StmtId, SymbolId>,
 
     /// Maps a `LetFn` statement's return type to a `TypeId`.
     fn_return_types: HashMap<StmtId, TypeId>,
 
-    // todo: refactoring: is it the same as struct_symbols?
-    /// Maps a `Struct` statement's `Identifier` to a `SymbolId`.
-    struct_bindings: HashMap<StmtId, SymbolId>,
+    /// Maps a `Struct` statement's `Identifier` to a `SymbolId` (the boolean is used to tell
+    /// whether the struct was inserted only (`false`) or also resolved (`true`).
+    struct_bindings: HashMap<StmtId, (SymbolId, bool)>,
 
     /// Maps a `Namespace` statement's `Identifier` to a `SymbolId`.
     namespace_bindings: HashMap<StmtId, SymbolId>,
@@ -94,21 +83,10 @@ pub struct Resolver {
     native_symbols: HashSet<SymbolId>,
 
     // work
-    namespaces: Stack<SymbolId>,
+    namespace_stack: Stack<SymbolId>,
     scopes: Scopes,
-    current_fn: Stack<StmtId>,
+    fn_stack: Stack<StmtId>,
 
-    /// maps functions (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
-    function_symbols: HashMap<StmtId, SymbolId>,
-    /// maps structs (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
-    struct_symbols: HashMap<StmtId, SymbolId>,
-    /// maps annotations (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
-    annotation_symbols: HashMap<StmtId, SymbolId>,
-    /// maps parameters and struct fields (by their (`StmtId`, `index`)) to the corresponding symbol
-    /// (by their `SymbolId`)
-    stmt_symbols: HashMap<(StmtId, usize), SymbolId>,
-    /// maps namespaces (by their `StmtId`) to the corresponding symbol (by their `SymbolId`)
-    namespace_symbols: HashMap<StmtId, SymbolId>,
     /// maps `TypeId`s to functions
     type_functions: HashMap<TypeId, HashMap<IdentId, SymbolId>>,
 
@@ -127,9 +105,7 @@ impl Resolver {
             parent: Default::default(),
             identifier_ref_bindings: Default::default(),
             expression_types: Default::default(),
-            parameter_types: Default::default(),
             parameter_bindings: Default::default(),
-            field_types: Default::default(),
             field_bindings: Default::default(),
             let_bindings: Default::default(),
             fn_bindings: Default::default(),
@@ -139,15 +115,10 @@ impl Resolver {
             annotation_bindings: Default::default(),
 
             native_symbols: Default::default(),
-            namespaces: Default::default(),
+            namespace_stack: Default::default(),
             scopes: Default::default(),
-            current_fn: Default::default(),
+            fn_stack: Default::default(),
 
-            function_symbols: Default::default(),
-            struct_symbols: Default::default(),
-            annotation_symbols: Default::default(),
-            stmt_symbols: Default::default(),
-            namespace_symbols: Default::default(),
             type_functions: Default::default(),
 
             diagnostics: Default::default(),
@@ -238,12 +209,12 @@ impl Resolver {
         // STEP 1 ----------------------------------------------------------------------------------
         self.scopes.push();
         let root_root_namespace_symbol_id = self.insert_namespace(&hir, root);
-        self.namespaces.push(root_root_namespace_symbol_id);
-        debug_assert_eq!(self.namespaces.len(), 1, "{:?}", &self.namespaces);
+        self.namespace_stack.push(root_root_namespace_symbol_id);
+        debug_assert_eq!(self.namespace_stack.len(), 1, "{:?}", &self.namespace_stack);
 
         // STEP 2 ----------------------------------------------------------------------------------
         let core_namespace_ident_id = *self.identifiers.get_by_right("core").unwrap();
-        let core_namespace_symbol_id = self.symbols[*self.namespaces.root().unwrap()]
+        let core_namespace_symbol_id = self.symbols[*self.namespace_stack.root().unwrap()]
             .as_namespace()
             .get(&core_namespace_ident_id)
             .unwrap()
@@ -258,7 +229,7 @@ impl Resolver {
             .next()
             .expect("core namespace exists");
 
-        debug_assert_eq!(self.namespaces.len(), 1, "{:?}", &self.namespaces);
+        debug_assert_eq!(self.namespace_stack.len(), 1, "{:?}", &self.namespace_stack);
         for native in natives.into_iter() {
             let (ident, symbol_id) = match native {
                 Native::Fn(native) => {
@@ -301,7 +272,7 @@ impl Resolver {
                 .or_default()
                 .push(symbol_id);
         }
-        debug_assert_eq!(self.namespaces.len(), 1, "{:?}", &self.namespaces);
+        debug_assert_eq!(self.namespace_stack.len(), 1, "{:?}", &self.namespace_stack);
 
         // we discard all inserted symbols, they are not part of any scope, but only of the 'core'
         // root package
@@ -319,15 +290,15 @@ impl Resolver {
         self.bring_namespace_symbols_into_scope(root_root_namespace_symbol_id);
 
         // STEP 4 ----------------------------------------------------------------------------------
-        debug_assert_eq!(self.scopes.len(), 1, "{:?}", self.namespaces);
+        debug_assert_eq!(self.scopes.len(), 1, "{:?}", self.namespace_stack);
         self.insert_namespace_functions(&mut hir, root);
-        debug_assert_eq!(self.scopes.len(), 1, "{:?}", self.namespaces);
+        debug_assert_eq!(self.scopes.len(), 1, "{:?}", self.namespace_stack);
 
         // STEP 5 ----------------------------------------------------------------------------------
         // insert root namespace's fn symbols into the first scope
         // todo:refactoring try to use bring_namespace_symbols_into_scope
         let root_scope = self.scopes.last_symbols_mut().unwrap();
-        let root_symbols = self.symbols[*self.namespaces.root().unwrap()].as_namespace();
+        let root_symbols = self.symbols[*self.namespace_stack.root().unwrap()].as_namespace();
         for ident_id in root_symbols.keys() {
             for symbol_id in root_symbols.get(ident_id).unwrap() {
                 if matches!(self.symbols[*symbol_id].kind, SymbolKind::LetFn(..)) {
@@ -337,9 +308,9 @@ impl Resolver {
         }
 
         // STEP 6 ----------------------------------------------------------------------------------
-        debug_assert_eq!(self.namespaces.len(), 1, "{:?}", self.namespaces);
+        debug_assert_eq!(self.namespace_stack.len(), 1, "{:?}", self.namespace_stack);
         self.resolve_statement(&hir, root);
-        debug_assert_eq!(self.namespaces.len(), 1, "{:?}", self.namespaces);
+        debug_assert_eq!(self.namespace_stack.len(), 1, "{:?}", self.namespace_stack);
 
         if !self.diagnostics.is_empty() {
             return Err(self.diagnostics);
@@ -447,14 +418,11 @@ impl Resolver {
                                         .into_iter()
                                         .enumerate()
                                         .map(|(index, parameter)| {
-                                            parameter.bind(
-                                                self.parameter_types
-                                                    .remove(&(stmt_id, index))
-                                                    .expect("was typed"),
-                                                self.parameter_bindings
-                                                    .remove(&(stmt_id, index))
-                                                    .expect("was bound"),
-                                            )
+                                            let (symbol_id, type_id) = self
+                                                .parameter_bindings
+                                                .remove(&(stmt_id, index))
+                                                .expect("was bound");
+                                            parameter.bind(type_id, symbol_id)
                                         })
                                         .collect(),
                                     ret.typed(
@@ -480,7 +448,8 @@ impl Resolver {
                             let symbol_id = self
                                 .struct_bindings
                                 .remove(&stmt_id)
-                                .unwrap_or_else(|| panic!("{stmt_id:?} was bound"));
+                                .unwrap_or_else(|| panic!("{stmt_id:?} was bound"))
+                                .0;
                             let implementation = if self.native_symbols.contains(&symbol_id) {
                                 #[cfg(not(debug_assertions))]
                                 {
@@ -496,17 +465,11 @@ impl Resolver {
                                         .into_iter()
                                         .enumerate()
                                         .map(|(index, field)| {
-                                            field
-                                                .bind(
-                                                    self.field_bindings
-                                                        .remove(&(stmt_id, index))
-                                                        .expect("was bound"),
-                                                )
-                                                .typed(
-                                                    self.field_types
-                                                        .remove(&(stmt_id, index))
-                                                        .expect("was typed"),
-                                                )
+                                            let (symbol_id, type_id) = self
+                                                .field_bindings
+                                                .remove(&(stmt_id, index))
+                                                .expect("was bound");
+                                            field.bind(symbol_id).typed(type_id)
                                         })
                                         .collect(),
                                 )
@@ -1054,8 +1017,9 @@ impl Resolver {
                 match &hir.statements[stmt_id].kind {
                     StatementKind::Struct(ident, _, Implementation::Provided(fields), _) => {
                         let struct_symbol_id =
-                            self.struct_bindings.get(&stmt_id).expect("was bound");
-                        if self.native_symbols.contains(struct_symbol_id) {
+                            self.struct_bindings.get(&stmt_id).expect("was bound").0;
+
+                        if self.native_symbols.contains(&struct_symbol_id) {
                             self.diagnostics.report_err(
                                 format!(
                                     "Native struct {} fields cannot be accessed",
@@ -1072,16 +1036,16 @@ impl Resolver {
                                 .find(|(_, field)| field.identifier.id == ident_ref.ident.id)
                             {
                                 Some((index, _)) => {
-                                    let field_symbol_id = self
-                                        .find_symbol_id_for_struct_field(stmt_id, index)
-                                        .expect("field exists");
-                                    self.field_bindings
-                                        .insert((stmt_id, index), field_symbol_id);
+                                    let (field_symbol_id, field_type_id) = self
+                                        .field_bindings
+                                        .get(&(stmt_id, index))
+                                        .expect("was bound");
+
                                     self.identifier_ref_bindings
-                                        .insert(ident_ref.id, vec![field_symbol_id]);
+                                        .insert(ident_ref.id, vec![*field_symbol_id]);
 
                                     // the field's type was resolved
-                                    (self.field_types[&(stmt_id, index)], Some(field_symbol_id))
+                                    (*field_type_id, Some(*field_symbol_id))
                                 }
                                 None => {
                                     self.diagnostics.report_err(
@@ -1295,10 +1259,11 @@ impl Resolver {
         let (struct_identifier, _, implementation, ..) = hir.statements[struct_stmt_id].as_struct();
 
         let symbol_id = self
-            .struct_symbols
+            .struct_bindings
             .get(&struct_stmt_id)
-            .expect("struct symbol exists");
-        if self.native_symbols.contains(symbol_id) {
+            .expect("struct symbol exists")
+            .0;
+        if self.native_symbols.contains(&symbol_id) {
             self.diagnostics.report_err(
                 format!(
                     "Native struct {} cannot be instantiated",
@@ -1346,16 +1311,19 @@ impl Resolver {
                 .find(|(_, field)| field.identifier.id == field_ident_ref.ident.id)
             {
                 let field_symbol_id = self
-                    .find_symbol_id_for_struct_field(struct_stmt_id, index)
-                    .expect("symbol exists");
+                    .field_bindings
+                    .get(&(struct_stmt_id, index))
+                    .expect("field bound")
+                    .0;
 
                 self.identifier_ref_bindings
                     .insert(field_ident_ref_id, vec![field_symbol_id]);
 
-                let field_type_id = *self
-                    .field_types
+                let field_type_id = self
+                    .field_bindings
                     .get(&(struct_stmt_id, index))
-                    .expect("was typed");
+                    .expect("was bound")
+                    .1;
 
                 if expr_type_id != field_type_id {
                     self.diagnostics.report_err(
@@ -1513,10 +1481,7 @@ impl Resolver {
                 self.resolve_struct(hir, stmt_id);
                 self.find_type_id_by_type(&Type::Void)
             }
-            StatementKind::Annotation(..) => {
-                self.resolve_annotation(hir, stmt_id);
-                self.find_type_id_by_type(&Type::Void)
-            }
+            StatementKind::Annotation(..) => self.find_type_id_by_type(&Type::Void),
             StatementKind::Use(..) => {
                 self.resolve_use(hir, stmt_id);
                 self.find_type_id_by_type(&Type::Void)
@@ -1566,14 +1531,13 @@ impl Resolver {
     /// Resolves a function, starting by inserting all structs contained in the function (but not
     /// in nested functions). See `insert_structs`.
     fn resolve_function(&mut self, hir: &UnresolvedHir, stmt_id: StmtId) {
-        if let Some(parent) = self.current_fn.last().cloned() {
+        if let Some(parent) = self.fn_stack.last().cloned() {
             self.parent.insert(stmt_id, parent);
         }
 
-        let (ident, annotations, params, implementation) =
-            hir.statements[stmt_id].as_function();
+        let (ident, annotations, params, implementation) = hir.statements[stmt_id].as_function();
         let body_expr_id = implementation.get();
-        self.current_fn.push(stmt_id);
+        self.fn_stack.push(stmt_id);
         self.scopes.push();
 
         if let ExpressionKind::Block(stmt_ids) = &hir.expressions[body_expr_id].kind {
@@ -1590,7 +1554,7 @@ impl Resolver {
         let invalid_type_id = self.find_type_id_by_type(&Type::Invalid);
 
         let (fn_symbol_id, param_types, ret_type_id) = self
-            .function_symbols
+            .fn_bindings
             .get(&stmt_id)
             .cloned()
             .map(|symbol_id| {
@@ -1631,8 +1595,8 @@ impl Resolver {
             } else {
                 let symbol_id = self.insert_symbol(ident_id, symbol_kind, type_id);
 
-                self.parameter_bindings.insert((stmt_id, index), symbol_id);
-                self.parameter_types.insert((stmt_id, index), type_id);
+                self.parameter_bindings
+                    .insert((stmt_id, index), (symbol_id, type_id));
             }
         }
 
@@ -1736,16 +1700,21 @@ impl Resolver {
             }
         }
 
-        self.current_fn.pop();
+        self.fn_stack.pop();
         self.scopes.pop();
     }
 
     fn resolve_struct(&mut self, hir: &UnresolvedHir, stmt_id: StmtId) {
-        if self.struct_bindings.contains_key(&stmt_id) {
+        if self
+            .struct_bindings
+            .get(&stmt_id)
+            .map(|b| b.1)
+            .unwrap_or(false)
+        {
             return;
         }
 
-        if let Some(parent) = self.current_fn.last().cloned() {
+        if let Some(parent) = self.fn_stack.last().cloned() {
             self.parent.insert(stmt_id, parent);
         }
 
@@ -1773,29 +1742,18 @@ impl Resolver {
             );
         }
 
-        // we resolve the typedefs
-        for field in fields.iter() {
-            self.resolve_type_def(hir, field.type_def_id, false);
-        }
-
-        for (index, field) in fields.iter().enumerate() {
-            let type_id = self
-                .find_type_id_by_type_def_id(hir, field.type_def_id)
-                .unwrap_or(self.find_type_id_by_type(&Type::Invalid));
-
-            self.field_types.insert((stmt_id, index), type_id);
-        }
-
         // struct fields are in the scope of the struct itself, we want to make sure that no other
         // field with the same name exists in the current struct, but the same identifier might
         // exist outside and this is not an issue
         self.scopes.push();
 
         for (index, field) in fields.iter().enumerate() {
+            let type_id = self.resolve_type_def(hir, field.type_def_id, false);
+
             let ident_id = field.identifier.id;
             let symbol_kind = SymbolKind::Field(ident_id, stmt_id, index);
 
-            if self.is_symbol_in_current_scope(ident_id, &symbol_kind) {
+            let symbol_id = if self.is_symbol_in_current_scope(ident_id, &symbol_kind) {
                 self.diagnostics.report_err(
                     format!(
                         "Field '{ident}' is already defined",
@@ -1804,22 +1762,18 @@ impl Resolver {
                     field.identifier.span.clone(),
                     (file!(), line!()),
                 );
-                self.field_bindings
-                    .insert((stmt_id, index), self.not_found_symbol_id);
+                self.not_found_symbol_id
             } else {
-                let type_id = *self
-                    .field_types
-                    .get(&(stmt_id, index))
-                    .expect("field type was resolved");
-                let symbol_id = self.insert_symbol(ident_id, symbol_kind, type_id);
-                self.field_bindings.insert((stmt_id, index), symbol_id);
-            }
+                self.insert_symbol(ident_id, symbol_kind, type_id)
+            };
+            self.field_bindings
+                .insert((stmt_id, index), (symbol_id, type_id));
         }
 
         let symbol_id = self
-            .struct_symbols
+            .struct_bindings
             .get(&stmt_id)
-            .cloned()
+            .map(|b| b.0)
             // it may happen that the struct is not found in case of duplicate def.
             .unwrap_or(self.not_found_symbol_id);
 
@@ -1827,24 +1781,12 @@ impl Resolver {
             self.native_symbols.insert(symbol_id);
         }
 
-        self.struct_bindings.insert(stmt_id, symbol_id);
+        self.struct_bindings
+            .entry(stmt_id)
+            .and_modify(|(_, resolved)| *resolved = true)
+            .or_insert((symbol_id, true));
 
         self.scopes.pop();
-    }
-
-    fn resolve_annotation(&mut self, _hir: &UnresolvedHir, stmt_id: StmtId) {
-        if self.annotation_bindings.contains_key(&stmt_id) {
-            return;
-        }
-
-        let symbol_id = self
-            .annotation_symbols
-            .get(&stmt_id)
-            .cloned()
-            // it may happen that the annotation is not found in case of duplicate def.
-            .unwrap_or(self.not_found_symbol_id);
-
-        self.annotation_bindings.insert(stmt_id, symbol_id);
     }
 
     fn resolve_use(&mut self, hir: &UnresolvedHir, stmt_id: StmtId) {
@@ -1865,20 +1807,11 @@ impl Resolver {
         let stmt_ids = stmt_ids.clone(); // todo:refactoring can we avoid clone?
         self.scopes.push();
 
-        let namespace_symbol_id = *self.namespace_symbols.get(&stmt_id).unwrap();
-        self.bring_namespace_symbols_into_scope(namespace_symbol_id);
+        self.bring_namespace_symbols_into_scope(*self.namespace_bindings.get(&stmt_id).unwrap());
 
         for stmt_id in stmt_ids.iter() {
             self.resolve_statement(hir, *stmt_id);
         }
-
-        let symbol_id = self
-            .namespace_symbols
-            .get(&stmt_id)
-            .cloned()
-            .unwrap_or(self.not_found_symbol_id);
-
-        self.namespace_bindings.insert(stmt_id, symbol_id);
     }
 
     /// Resolve `ident_refs` involved in fully qualified names. Intermediate identifier refs are
@@ -1897,7 +1830,7 @@ impl Resolver {
         }
 
         let mut parent_found = true;
-        let mut namespace_id = *self.namespaces.root().unwrap();
+        let mut namespace_id = *self.namespace_stack.root().unwrap();
 
         for ident_ref_id in ident_ref_ids[0..ident_ref_ids.len() - 1].iter() {
             if self.identifier_ref_bindings.contains_key(ident_ref_id) {
@@ -2136,14 +2069,6 @@ impl Resolver {
     fn insert_symbol(&mut self, ident_id: IdentId, kind: SymbolKind, ty: TypeId) -> SymbolId {
         let symbol_id = self.symbols.create();
 
-        match &kind {
-            SymbolKind::Parameter(_, stmt_id, index) | SymbolKind::Field(_, stmt_id, index) => {
-                debug_assert!(self.scopes.len() > 1);
-                self.stmt_symbols.insert((*stmt_id, *index), symbol_id);
-            }
-            _ => (),
-        };
-
         self.symbols.insert(
             symbol_id,
             Symbol {
@@ -2164,7 +2089,7 @@ impl Resolver {
         let statement = &hir.statements[stmt_id];
         let (namespace_ident, _, namespace_stmts) = statement.as_namespace();
 
-        if let Some(namespace_symbol_id) = self.namespaces.last() {
+        if let Some(namespace_symbol_id) = self.namespace_stack.last() {
             if self.symbols[*namespace_symbol_id]
                 .as_namespace()
                 .contains_key(&namespace_ident.id)
@@ -2185,11 +2110,11 @@ impl Resolver {
             SymbolKind::Namespace(namespace_ident.id, Default::default()),
             self.find_type_id_by_type(&Type::Void),
         );
-        self.namespace_symbols.insert(stmt_id, symbol_id);
+        self.namespace_bindings.insert(stmt_id, symbol_id);
 
         self.bring_symbol_into_namespace(namespace_ident.id, symbol_id);
 
-        self.namespaces.push(symbol_id);
+        self.namespace_stack.push(symbol_id);
         self.scopes.push();
 
         self.insert_namespaces(hir, namespace_stmts);
@@ -2197,7 +2122,7 @@ impl Resolver {
         self.insert_structs(hir, namespace_stmts);
 
         self.scopes.pop();
-        self.namespaces.pop();
+        self.namespace_stack.pop();
 
         symbol_id
     }
@@ -2218,11 +2143,11 @@ impl Resolver {
     }
 
     fn insert_namespace_functions(&mut self, hir: &mut UnresolvedHir, stmt_id: StmtId) {
-        self.namespaces
-            .push(*self.namespace_symbols.get(&stmt_id).unwrap());
+        let namespace_symbol_id = *self.namespace_bindings.get(&stmt_id).unwrap();
+
+        self.namespace_stack.push(namespace_symbol_id);
         self.scopes.push();
 
-        let namespace_symbol_id = *self.namespace_symbols.get(&stmt_id).unwrap();
         self.bring_namespace_symbols_into_scope(namespace_symbol_id);
 
         let (_, _, stmts) = hir.statements[stmt_id].as_namespace();
@@ -2231,7 +2156,7 @@ impl Resolver {
         self.insert_functions(hir, &stmts, true);
 
         self.scopes.pop();
-        self.namespaces.pop();
+        self.namespace_stack.pop();
     }
 
     /// Inserts all top level functions contained in namespaces which `StmtId` are provided.
@@ -2250,7 +2175,7 @@ impl Resolver {
             .for_each(|stmt| self.insert_namespace_functions(hir, stmt));
     }
 
-    /// Inserts all functions found in `stmts` into `self.function_symbols` (which itself contains
+    /// Inserts all functions found in `stmts` into `self.function_bindings` (which itself contains
     /// reference to `self.symbols`) as well as the current scope's symbol table, and if
     /// `top_level` is `true` into the current namespace.
     fn insert_functions(&mut self, hir: &UnresolvedHir, stmts: &[StmtId], top_level: bool) {
@@ -2264,10 +2189,6 @@ impl Resolver {
                         .map(|p| p.type_def_id)
                         .map(|type_def_id| self.resolve_type_def(hir, type_def_id, false))
                         .collect::<Vec<_>>();
-
-                    for (index, type_id) in parameter_types.iter().enumerate() {
-                        self.parameter_types.insert((*stmt_id, index), *type_id);
-                    }
 
                     let ret_type = ret
                         .type_def_id
@@ -2301,7 +2222,6 @@ impl Resolver {
                             self.bring_symbol_into_namespace(ident.id, symbol_id);
                         }
 
-                        self.function_symbols.insert(*stmt_id, symbol_id);
                         if let Some(target_type_id) = target_type_id {
                             self.type_functions
                                 .entry(target_type_id)
@@ -2359,11 +2279,11 @@ impl Resolver {
                 let struct_type_id = self.insert_type(Type::Struct(stmt_id));
                 let symbol_id = self.insert_symbol(ident_id, symbol_kind, struct_type_id);
 
-                if self.current_fn.last().is_none() {
+                if self.fn_stack.last().is_none() {
                     self.bring_symbol_into_namespace(ident_id, symbol_id);
                 }
 
-                self.struct_symbols.insert(stmt_id, symbol_id);
+                self.struct_bindings.insert(stmt_id, (symbol_id, false));
             }
         }
     }
@@ -2400,7 +2320,7 @@ impl Resolver {
 
                 self.bring_symbol_into_namespace(ident_id, symbol_id);
 
-                self.annotation_symbols.insert(stmt_id, symbol_id);
+                self.annotation_bindings.insert(stmt_id, symbol_id);
             }
         }
     }
@@ -2481,7 +2401,7 @@ impl Resolver {
             }
 
             let mut ns_symbols =
-                resolver.symbols[*resolver.namespaces.root().unwrap()].as_namespace();
+                resolver.symbols[*resolver.namespace_stack.root().unwrap()].as_namespace();
             for &name in &path[0..path.len() - 1] {
                 let ident_id = *resolver.identifiers.get_by_right(name)?;
                 let symbols = ns_symbols
@@ -2541,16 +2461,6 @@ impl Resolver {
             .find_map(|scope| scope.symbols.find(&self.symbols, ident, kind))
     }
 
-    fn find_symbol_id_for_struct_field(&self, stmt_id: StmtId, index: usize) -> Option<SymbolId> {
-        self.stmt_symbols
-            .get(&(stmt_id, index))
-            .and_then(|sid| self.symbols.get(*sid))
-            .and_then(|s| match s.kind {
-                SymbolKind::Field(..) => Some(s.id),
-                _ => None,
-            })
-    }
-
     /// Finds the `SymbolId` that the `ident_ids` refer to. Does not try to resolve `IdentifierRef`
     /// on the way.
     fn find_symbol_by_ident_ref_ids(
@@ -2589,7 +2499,7 @@ impl Resolver {
 
         let mut visited_ident_ids = Vec::<IdentId>::with_capacity(ident_ref_ids.len());
 
-        let mut ns_symbols = self.symbols[*self.namespaces.root().unwrap()].as_namespace();
+        let mut ns_symbols = self.symbols[*self.namespace_stack.root().unwrap()].as_namespace();
         for ident_ref_id in &ident_ref_ids[0..ident_ref_ids.len() - 1] {
             let (ident_id, span) = extract_ident_and_span(hir, *ident_ref_id);
             let symbols = ns_symbols.get(&ident_id).unwrap(); // {
@@ -2652,7 +2562,7 @@ impl Resolver {
     }
 
     fn bring_symbol_into_namespace(&mut self, ident_id: IdentId, symbol_id: SymbolId) {
-        if let Some(namespace_symbol_id) = self.namespaces.last() {
+        if let Some(namespace_symbol_id) = self.namespace_stack.last() {
             self.symbols
                 .get_mut(*namespace_symbol_id)
                 .unwrap()

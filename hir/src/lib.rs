@@ -1,5 +1,5 @@
 use crate::bound::{Bound, BoundState, Unbound};
-use crate::expression::{Expression};
+use crate::expression::Expression;
 use crate::identifier::Identifier;
 use crate::identifier_ref::IdentifierRef;
 use crate::natives::{Natives, Type};

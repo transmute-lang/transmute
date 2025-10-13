@@ -50,7 +50,7 @@ pub enum SymbolKind {
     //  structs for instance? this may allow to implement insert_function as we do for insert_struct
     //  but what would be the drawbacks? when searching for a symbol with
     //  find_symbol_id_by_ident_and_param_types we would need to dereference the SymbolId to match
-    //  on types...
+    //  on types... this would allow clones and duplicated `Vec`s (in `SymbolKind` and `LetFn`).
     LetFn(IdentId, StmtId, Vec<TypeId>, TypeId),
     // todo:refactoring could StmtId be replaced with SymbolId (the symbol that defines the function)
     Parameter(IdentId, StmtId, usize),
