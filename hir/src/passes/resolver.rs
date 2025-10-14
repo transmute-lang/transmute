@@ -17,6 +17,7 @@ use transmute_core::span::Span;
 use transmute_core::stack::{Iter, Stack};
 use transmute_core::vec_map::VecMap;
 use transmute_nst::nodes::{Nst, StatementKind as NstStatementKind};
+use transmute_nst::nodes::Nst;
 
 static NATIVE_ANNOTATION: [&str; 2] = ["std", "native"];
 
