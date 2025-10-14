@@ -30,7 +30,7 @@ Ok(
                 ident: Identifier {
                     id: IdentId(1),
                     span: 3:10; [32, 33],
-                    bound: Bound(3),
+                    symbol_id: SymbolId(3),
                 },
             },
         ],
@@ -43,7 +43,7 @@ Ok(
                     ],
                 ),
                 span: 4:17; [50, 61],
-                typed: Typed(2),
+                type_id: TypeId(2),
             },
         ],
         statements: [
@@ -53,7 +53,7 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 0:0; [0, 0],
-                        bound: Bound(1),
+                        symbol_id: SymbolId(1),
                     },
                     InputId(0),
                     [
@@ -70,7 +70,7 @@ Ok(
                     Identifier {
                         id: IdentId(1),
                         span: 2:20; [20, 21],
-                        bound: Bound(3),
+                        symbol_id: SymbolId(3),
                     },
                 ),
                 span: 2:9; [9, 22],
@@ -81,7 +81,7 @@ Ok(
                     Identifier {
                         id: IdentId(2),
                         span: 4:13; [46, 47],
-                        bound: Bound(20),
+                        symbol_id: SymbolId(20),
                     },
                     [
                         Annotation {
@@ -94,7 +94,7 @@ Ok(
                     [],
                     Return {
                         type_def_id: None,
-                        typed: Typed(1),
+                        typed_id: TypeId(1),
                     },
                     Provided(
                         ExprId(0),
@@ -109,7 +109,7 @@ Ok(
                     Identifier {
                         id: IdentId(3),
                         span: 7:11; [81, 85],
-                        bound: Bound(2),
+                        symbol_id: SymbolId(2),
                     },
                     InputId(0),
                     [],

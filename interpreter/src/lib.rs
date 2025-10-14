@@ -7,7 +7,7 @@ use transmute_ast::parse;
 use transmute_ast::pretty_print::Options;
 use transmute_core::ids::IdentId;
 use transmute_core::input::Input;
-use transmute_hir::resolve;
+use transmute_hir::Resolve;
 use transmute_nst::nodes::Nst;
 
 mod interpreter;
@@ -40,7 +40,7 @@ pub fn exec<S: Into<String>, C: NativeContext>(source: S, print_ast: bool, conte
             }
         })
         .map(Nst::from)
-        .and_then(resolve)
+        .and_then(Nst::resolve)
         .map(|hir| Interpreter::new(&hir, context).start())
         .map_err(|d| d.with_inputs(inputs).to_string())
     {

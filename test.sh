@@ -5,7 +5,7 @@ source setenv
 cargo fmt                                                                                                     || exit 1
 
 ## prepare stdlib
-./build-stdlib.sh                                                                                              || exit 1
+./build-stdlib.sh                                                                                             || exit 1
 
 ## test runtime
 pushd runtime                                                                                                 || exit 1

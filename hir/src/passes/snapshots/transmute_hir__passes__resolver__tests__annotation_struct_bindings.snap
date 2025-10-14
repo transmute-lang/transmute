@@ -19,7 +19,7 @@ Ok(
                 ident: Identifier {
                     id: IdentId(1),
                     span: 1:16; [15, 16],
-                    bound: Bound(3),
+                    symbol_id: SymbolId(3),
                 },
             },
         ],
@@ -31,7 +31,7 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 0:0; [0, 0],
-                        bound: Bound(1),
+                        symbol_id: SymbolId(1),
                     },
                     InputId(0),
                     [
@@ -48,7 +48,7 @@ Ok(
                     Identifier {
                         id: IdentId(1),
                         span: 1:12; [11, 12],
-                        bound: Bound(3),
+                        symbol_id: SymbolId(3),
                     },
                 ),
                 span: 1:1; [0, 13],
@@ -59,7 +59,7 @@ Ok(
                     Identifier {
                         id: IdentId(2),
                         span: 1:25; [24, 25],
-                        bound: Bound(4),
+                        symbol_id: SymbolId(4),
                     },
                     [
                         Annotation {
@@ -82,7 +82,7 @@ Ok(
                     Identifier {
                         id: IdentId(3),
                         span: 2:11; [39, 43],
-                        bound: Bound(2),
+                        symbol_id: SymbolId(2),
                     },
                     InputId(0),
                     [],

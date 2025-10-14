@@ -4,9 +4,9 @@ use transmute_ast::parse;
 use transmute_core::error::Diagnostics;
 use transmute_core::input::Input;
 use transmute_hir::hir_print::Options as HirPrintOptions;
-use transmute_hir::resolve;
+use transmute_hir::Resolve;
 use transmute_llvm::{LlvmIr, LlvmIrGen};
-use transmute_mir::make_mir;
+use transmute_mir::Mir;
 use transmute_nst::nodes::Nst;
 
 #[derive(Debug, Default)]
@@ -91,7 +91,7 @@ pub fn compile_file<S: AsRef<Path>, D: AsRef<Path>>(
             let (inputs, ast) = parse(inputs);
             match ast
                 .map(Nst::from)
-                .and_then(resolve)
+                .and_then(Nst::resolve)
                 .map_err(|d| d.with_inputs(inputs).to_string())
                 .map(|hir| {
                     let mut out = String::new();
@@ -117,11 +117,10 @@ pub fn compile_inputs<D: AsRef<Path>>(
     let mut ir_gen = LlvmIrGen::default();
     ir_gen.set_optimize(options.optimize);
 
-    let (inputs, result) = parse(src);
-    result
-        .map(Nst::from)
-        .and_then(resolve)
-        .and_then(make_mir)
+    let (inputs, ast) = parse(src);
+    ast.map(Nst::from)
+        .and_then(Nst::resolve)
+        .and_then(Mir::try_from)
         .and_then(|mir| ir_gen.gen(&mir))
         .and_then(|ir| produce_output(ir, dst.as_ref(), options))
         .map_err(|d| d.with_inputs(inputs).to_string())

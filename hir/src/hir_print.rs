@@ -1,9 +1,8 @@
-use crate::bound::Bound;
-use crate::expression::{Expression, ExpressionKind, Target};
-use crate::literal::{Literal, LiteralKind};
 use crate::natives::Type;
-use crate::statement::{Implementation, Statement, StatementKind, TypeDefKind};
-use crate::typed::Typed;
+use crate::nodes::{
+    Expression, ExpressionKind, Implementation, Literal, LiteralKind, Statement, StatementKind,
+    Target, TypeDefKind,
+};
 use crate::Hir;
 use bimap::BiHashMap;
 use std::fmt::Write;
@@ -65,7 +64,7 @@ impl HirPrint for Literal {
     }
 }
 
-impl HirPrint for Expression<Typed> {
+impl HirPrint for Expression {
     fn hir_print<W>(
         &self,
         ctx: &mut HirPrintContext<'_>,
@@ -292,7 +291,7 @@ impl HirPrint for Expression<Typed> {
     }
 }
 
-impl HirPrint for Statement<Typed, Bound> {
+impl HirPrint for Statement {
     fn hir_print<W>(
         &self,
         ctx: &mut HirPrintContext<'_>,
@@ -551,7 +550,7 @@ impl HirPrint for TypeDefId {
     }
 }
 
-impl Hir<Typed, Bound> {
+impl Hir {
     pub fn hir_print<W>(&self, opts: &Options, f: &mut W) -> std::fmt::Result
     where
         W: Write,
@@ -610,7 +609,7 @@ impl Hir<Typed, Bound> {
 }
 
 pub struct HirPrintContext<'a> {
-    hir: &'a Hir<Typed, Bound>,
+    hir: &'a Hir,
     types: BiHashMap<TypeId, &'a Type>,
     indent: String,
     tag: Option<&'static str>,
@@ -729,7 +728,6 @@ impl HirPrintContext<'_> {
 mod tests {
     use super::*;
     use crate::Natives;
-    use crate::UnresolvedHir;
     use insta::assert_snapshot;
     use std::env;
     use std::path::PathBuf;
@@ -741,7 +739,6 @@ mod tests {
         ($name:ident) => {
             #[test]
             fn $name() {
-                // fn f() {
                 let stdlib_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
                     .parent()
                     .unwrap()
@@ -760,7 +757,7 @@ mod tests {
 
                 let ast = parse(inputs).1.unwrap();
                 let nst = Nst::from(ast);
-                let hir = UnresolvedHir::from(nst).resolve(Natives::new()).unwrap();
+                let hir = crate::Resolver::new().resolve(Natives::new(), nst).unwrap();
 
                 let mut s = String::new();
                 hir.hir_print(&Options::default(), &mut s)

@@ -2,15 +2,15 @@ use crate::value::{Ref, Value};
 use crate::{Heap, NativeContext, Stack};
 use std::collections::HashMap;
 use transmute_core::ids::{ExprId, IdentRefId, StmtId};
-use transmute_hir::expression::{ExpressionKind, Target};
-use transmute_hir::literal::{Literal, LiteralKind};
 use transmute_hir::natives::NativeFnKind;
-use transmute_hir::statement::{Implementation, StatementKind};
+use transmute_hir::nodes::{ExpressionKind, Target};
+use transmute_hir::nodes::{Implementation, StatementKind};
+use transmute_hir::nodes::{Literal, LiteralKind};
 use transmute_hir::symbol::SymbolKind;
-use transmute_hir::ResolvedHir;
+use transmute_hir::Hir;
 
 pub struct Interpreter<'a, C> {
-    hir: &'a ResolvedHir,
+    hir: &'a Hir,
     context: C,
     /// Maps an identifier in the current frame to the value's index in the heap
     // todo:refactoring IdentId should be SymbolId
@@ -20,7 +20,7 @@ pub struct Interpreter<'a, C> {
 }
 
 impl<'a, C: NativeContext> Interpreter<'a, C> {
-    pub fn new(ast: &'a ResolvedHir, context: C) -> Self {
+    pub fn new(ast: &'a Hir, context: C) -> Self {
         Self {
             hir: ast,
             context,
@@ -587,8 +587,7 @@ mod tests {
     use transmute_ast::parser::Parser;
     use transmute_ast::CompilationUnit;
     use transmute_core::ids::InputId;
-    use transmute_hir::natives::Natives;
-    use transmute_hir::UnresolvedHir;
+    use transmute_hir::Resolve;
     use transmute_nst::nodes::Nst;
 
     macro_rules! eval {
@@ -604,9 +603,7 @@ mod tests {
                 .parse();
 
                 let nst = Nst::from(compilation_unit.into_ast().unwrap());
-                let hir = UnresolvedHir::from(nst)
-                    .resolve(Natives::default())
-                    .unwrap();
+                let hir = nst.resolve().unwrap();
                 let context = crate::natives::InterpreterNatives::new(&[]);
 
                 let mut interpreter = Interpreter::new(&hir, context);

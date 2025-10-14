@@ -5,27 +5,24 @@ use transmute_core::ids::{
 };
 use transmute_core::span::Span;
 use transmute_core::vec_map::VecMap;
-use transmute_hir::expression::{ExpressionKind as HirExpressionKind, Target as HirTarget};
-use transmute_hir::literal::{Literal as HirLiteral, LiteralKind as HirLiteralKind};
+pub use transmute_hir::natives::NativeFnKind; // todo move to nodes package
 use transmute_hir::natives::Type as HirType;
-use transmute_hir::statement::{RetMode, StatementKind as HirStatementKind};
+use transmute_hir::nodes::Expression as HirExpression;
+use transmute_hir::nodes::ExpressionKind as HirExpressionKind;
+use transmute_hir::nodes::Field as HirField;
+use transmute_hir::nodes::Identifier as HirIdentifier;
+use transmute_hir::nodes::IdentifierRef as HirIdentifierRef;
+use transmute_hir::nodes::Implementation;
+use transmute_hir::nodes::Literal as HirLiteral;
+use transmute_hir::nodes::LiteralKind as HirLiteralKind;
+use transmute_hir::nodes::Parameter as HirParameter;
+use transmute_hir::nodes::RetMode;
+use transmute_hir::nodes::Return as HirReturn;
+use transmute_hir::nodes::StatementKind as HirStatementKind;
+use transmute_hir::nodes::Target as HirTarget;
 use transmute_hir::symbol::SymbolKind as HirSymbolKind;
-use transmute_hir::{
-    ResolvedExpression as HirExpression, ResolvedField as HirField,
-    ResolvedIdentifier as HirIdentifier, ResolvedIdentifierRef as HirIdentifierRef,
-    ResolvedParameter as HirParameter,
-};
-use transmute_hir::{ResolvedHir as Hir, ResolvedReturn as HirReturn};
-// todo:refactoring move to MIR?
-pub use transmute_hir::natives::NativeFnKind;
-// todo:refactoring copy to MIR?
-pub use transmute_hir::statement::Implementation;
-
+use transmute_hir::Hir;
 // todo:refactor:style get rid of the `#[allow(clippy::too_many_arguments)]`
-
-pub fn make_mir(hir: Hir) -> Result<Mir, Diagnostics<()>> {
-    Mir::try_from(hir)
-}
 
 // todo:refactoring should not be `VecMap`s, they are sparse
 struct Transformer {
@@ -1372,12 +1369,13 @@ pub enum SymbolKind {
 
 #[cfg(test)]
 mod tests {
-    use crate::make_mir;
+    use crate::Mir;
     use insta::assert_debug_snapshot;
     use transmute_ast::lexer::Lexer;
     use transmute_ast::parser::Parser;
     use transmute_ast::CompilationUnit;
     use transmute_core::ids::InputId;
+    use transmute_hir::Resolve;
     use transmute_nst::nodes::Nst;
 
     macro_rules! t {
@@ -1393,9 +1391,10 @@ mod tests {
                 )
                 .parse();
 
-                let hir = transmute_hir::resolve(Nst::from(compilation_unit.into_ast().unwrap()))
-                    .unwrap();
-                assert_debug_snapshot!(make_mir(hir));
+                let nst = Nst::from(compilation_unit.into_ast().unwrap());
+                let hir = nst.resolve().unwrap();
+                let mir = Mir::try_from(hir);
+                assert_debug_snapshot!(mir);
             }
         };
     }

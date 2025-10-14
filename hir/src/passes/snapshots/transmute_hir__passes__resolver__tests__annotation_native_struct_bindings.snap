@@ -20,7 +20,7 @@ Ok(
                 ident: Identifier {
                     id: IdentId(1),
                     span: 1:39; [38, 41],
-                    bound: Bound(2),
+                    symbol_id: SymbolId(2),
                 },
             },
             IdentRefId(1) => IdentifierRef {
@@ -28,7 +28,7 @@ Ok(
                 ident: Identifier {
                     id: IdentId(2),
                     span: 1:43; [42, 48],
-                    bound: Bound(3),
+                    symbol_id: SymbolId(3),
                 },
             },
         ],
@@ -40,7 +40,7 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 0:0; [0, 0],
-                        bound: Bound(1),
+                        symbol_id: SymbolId(1),
                     },
                     InputId(0),
                     [
@@ -57,7 +57,7 @@ Ok(
                     Identifier {
                         id: IdentId(2),
                         span: 1:28; [27, 33],
-                        bound: Bound(3),
+                        symbol_id: SymbolId(3),
                     },
                 ),
                 span: 1:17; [16, 34],
@@ -68,7 +68,7 @@ Ok(
                     Identifier {
                         id: IdentId(1),
                         span: 1:11; [10, 13],
-                        bound: Bound(2),
+                        symbol_id: SymbolId(2),
                     },
                     InputId(0),
                     [
@@ -83,7 +83,7 @@ Ok(
                     Identifier {
                         id: IdentId(3),
                         span: 1:57; [56, 57],
-                        bound: Bound(5),
+                        symbol_id: SymbolId(5),
                     },
                     [
                         Annotation {
@@ -107,7 +107,7 @@ Ok(
                     Identifier {
                         id: IdentId(4),
                         span: 2:11; [71, 75],
-                        bound: Bound(4),
+                        symbol_id: SymbolId(4),
                     },
                     InputId(0),
                     [],

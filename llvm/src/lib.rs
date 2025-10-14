@@ -26,11 +26,11 @@ use std::process::{exit, Command};
 use std::{env, fs};
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{ExprId, StructId, SymbolId, TypeId};
+use transmute_mir::NativeFnKind;
 use transmute_mir::{
-    Expression, ExpressionKind, Function, Mir, Statement, StatementKind, Struct, Type,
+    Expression, ExpressionKind, Function, LiteralKind, Mir, Statement, StatementKind, Struct,
+    SymbolKind, Target as AssignmentTarget, Type, Variable,
 };
-use transmute_mir::{LiteralKind, SymbolKind, Target as AssignmentTarget};
-use transmute_mir::{NativeFnKind, Variable};
 
 pub struct LlvmIrGen {
     context: Context,
@@ -1892,9 +1892,8 @@ mod tests {
     use transmute_ast::parser::Parser;
     use transmute_ast::CompilationUnit;
     use transmute_core::ids::InputId;
-    use transmute_hir::natives::Natives;
-    use transmute_hir::UnresolvedHir;
-    use transmute_mir::make_mir;
+    use transmute_hir::Resolve;
+    use transmute_mir::Mir;
     use transmute_nst::nodes::Nst;
 
     const FLAVOR: &str = "";
@@ -1908,8 +1907,8 @@ mod tests {
                     Parser::new(&mut compilation_unit, None, Lexer::new(InputId::from(0), &format!("{}\nnamespace core {{}}", $src))).parse();
                     let ast = compilation_unit.into_ast().unwrap();
                     let nst = Nst::from(ast);
-                    let hir = UnresolvedHir::from(nst).resolve(Natives::new()).unwrap();
-                    let mir = make_mir(hir).unwrap();
+                    let hir = nst.resolve().unwrap();
+                    let mir = Mir::try_from(hir).unwrap();
 
                     Target::initialize_all(&InitializationConfig::default());
 
@@ -1941,8 +1940,8 @@ mod tests {
                     Parser::new(&mut compilation_unit, None, Lexer::new(InputId::from(0), &format!("{}\nnamespace core {{}}", $src))).parse();
                     let ast = compilation_unit.into_ast().unwrap();
                     let nst = Nst::from(ast);
-                    let hir = UnresolvedHir::from(nst).resolve(Natives::new()).unwrap();
-                    let mir = make_mir(hir).unwrap();
+                    let hir = nst.resolve().unwrap();
+                    let mir = Mir::try_from(hir).unwrap();
 
                     Target::initialize_all(&InitializationConfig::default());
 

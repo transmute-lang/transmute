@@ -11,12 +11,12 @@ pub use transmute_ast::statement::Field;
 pub use transmute_ast::statement::Parameter;
 pub use transmute_ast::statement::RetMode;
 pub use transmute_ast::statement::Return;
-use transmute_ast::statement::Statement as AstStatement;
-use transmute_ast::statement::StatementKind as AstStatementKind;
+pub use transmute_ast::statement::Statement;
+pub use transmute_ast::statement::StatementKind;
 pub use transmute_ast::statement::TypeDef as AstTypeDef;
 pub use transmute_ast::statement::TypeDefKind as AstTypeDefKind;
 use transmute_core::id_map::IdMap;
-use transmute_core::ids::{ExprId, IdentId, IdentRefId, InputId, StmtId, TypeDefId};
+use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, TypeDefId};
 use transmute_core::span::Span;
 use transmute_core::vec_map::VecMap;
 
@@ -102,72 +102,6 @@ pub enum ExpressionKind {
     StructInstantiation(IdentRefId, Vec<(IdentRefId, ExprId)>),
     ArrayInstantiation(Vec<ExprId>),
     ArrayAccess(ExprId, ExprId),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Statement {
-    pub id: StmtId,
-    pub kind: StatementKind,
-    pub span: Span,
-}
-
-impl Statement {
-    pub fn new(id: StmtId, kind: StatementKind, span: Span) -> Self {
-        Self { id, kind, span }
-    }
-
-    pub fn as_namespace(&self) -> (&Identifier, InputId, &[StmtId]) {
-        match &self.kind {
-            StatementKind::Namespace(identifier, input_id, stmts) => (identifier, *input_id, stmts),
-            _ => panic!("{:?} is not a namespace", self),
-        }
-    }
-}
-
-impl From<AstStatement> for Statement {
-    fn from(value: AstStatement) -> Self {
-        Self {
-            id: value.id,
-            span: value.span.clone(),
-            kind: match value.kind {
-                AstStatementKind::Expression(expr_id) => StatementKind::Expression(expr_id),
-                AstStatementKind::Let(identifier, expr_id) => {
-                    StatementKind::Let(identifier, expr_id)
-                }
-                AstStatementKind::Ret(expr_id, ret_mode) => StatementKind::Ret(expr_id, ret_mode),
-                AstStatementKind::LetFn(identifier, annotations, params, ret_type, expr_id) => {
-                    StatementKind::LetFn(identifier, annotations, params, ret_type, expr_id)
-                }
-                AstStatementKind::Struct(identifier, annotations, fields) => {
-                    StatementKind::Struct(identifier, annotations, fields)
-                }
-                AstStatementKind::Annotation(identifier) => StatementKind::Annotation(identifier),
-                AstStatementKind::Use(ident_ref_ids) => StatementKind::Use(ident_ref_ids),
-                AstStatementKind::Namespace(identifier, input_id, statements) => {
-                    StatementKind::Namespace(identifier, input_id, statements)
-                }
-            },
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum StatementKind {
-    Expression(ExprId),
-    Let(Identifier, ExprId),
-    Ret(Option<ExprId>, RetMode),
-    LetFn(Identifier, Vec<Annotation>, Vec<Parameter>, Return, ExprId),
-    Struct(Identifier, Vec<Annotation>, Vec<Field>),
-    Annotation(Identifier),
-    Use(Vec<IdentRefId>),
-    Namespace(
-        /// Namespace identifier
-        Identifier,
-        /// `InputId` this namespace is coming from
-        InputId,
-        /// Statements included in this namespace
-        Vec<StmtId>,
-    ),
 }
 
 #[derive(Debug, Clone, PartialEq)]

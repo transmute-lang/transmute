@@ -1,5 +1,4 @@
 use crate::cli::parse_args;
-use std::fmt::format;
 use std::os::unix::prelude::CommandExt;
 use std::process;
 use tmc::{compile_file, Options, OutputFormat};
@@ -48,6 +47,6 @@ fn main() {
         );
         // https://users.rust-lang.org/t/is-there-a-windows-eauivalent-of-std-exec/70262
         // https://docs.rs/cargo-util/0.1.1/cargo_util/struct.ProcessBuilder.html#method.exec_replace
-        process::Command::new(format!("./{}", &args.output().display())).exec();
+        let _ = process::Command::new(format!("./{}", &args.output().display())).exec();
     }
 }

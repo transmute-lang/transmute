@@ -30,7 +30,7 @@ Ok(
                 ident: Identifier {
                     id: IdentId(3),
                     span: 2:18; [18, 24],
-                    bound: Bound(4),
+                    symbol_id: SymbolId(4),
                 },
             },
             IdentRefId(1) => IdentifierRef {
@@ -38,7 +38,7 @@ Ok(
                 ident: Identifier {
                     id: IdentId(3),
                     span: 2:27; [27, 33],
-                    bound: Bound(4),
+                    symbol_id: SymbolId(4),
                 },
             },
             IdentRefId(2) => IdentifierRef {
@@ -46,7 +46,7 @@ Ok(
                 ident: Identifier {
                     id: IdentId(2),
                     span: 3:19; [56, 57],
-                    bound: Bound(20),
+                    symbol_id: SymbolId(20),
                 },
             },
             IdentRefId(3) => IdentifierRef {
@@ -54,7 +54,7 @@ Ok(
                 ident: Identifier {
                     id: IdentId(2),
                     span: 4:21; [86, 87],
-                    bound: Bound(20),
+                    symbol_id: SymbolId(20),
                 },
             },
             IdentRefId(4) => IdentifierRef {
@@ -62,7 +62,7 @@ Ok(
                 ident: Identifier {
                     id: IdentId(2),
                     span: 6:17; [119, 120],
-                    bound: Bound(20),
+                    symbol_id: SymbolId(20),
                 },
             },
             IdentRefId(5) => IdentifierRef {
@@ -70,7 +70,7 @@ Ok(
                 ident: Identifier {
                     id: IdentId(5),
                     span: 3:21; [58, 60],
-                    bound: Bound(7),
+                    symbol_id: SymbolId(7),
                 },
             },
         ],
@@ -84,7 +84,7 @@ Ok(
                     },
                 ),
                 span: 3:19; [56, 57],
-                typed: Typed(4),
+                type_id: TypeId(4),
             },
             ExprId(1) => Expression {
                 id: ExprId(1),
@@ -95,7 +95,7 @@ Ok(
                     },
                 ),
                 span: 3:24; [61, 63],
-                typed: Typed(4),
+                type_id: TypeId(4),
             },
             ExprId(2) => Expression {
                 id: ExprId(2),
@@ -107,7 +107,7 @@ Ok(
                     ],
                 ),
                 span: 3:19; [56, 63],
-                typed: Typed(3),
+                type_id: TypeId(3),
             },
             ExprId(3) => Expression {
                 id: ExprId(3),
@@ -118,7 +118,7 @@ Ok(
                     },
                 ),
                 span: 4:21; [86, 87],
-                typed: Typed(4),
+                type_id: TypeId(4),
             },
             ExprId(4) => Expression {
                 id: ExprId(4),
@@ -128,7 +128,7 @@ Ok(
                     ],
                 ),
                 span: 3:27; [64, 102],
-                typed: Typed(2),
+                type_id: TypeId(2),
             },
             ExprId(5) => Expression {
                 id: ExprId(5),
@@ -137,7 +137,7 @@ Ok(
                     ExprId(4),
                 ),
                 span: 3:13; [50, 102],
-                typed: Typed(2),
+                type_id: TypeId(2),
             },
             ExprId(6) => Expression {
                 id: ExprId(6),
@@ -148,7 +148,7 @@ Ok(
                     },
                 ),
                 span: 6:17; [119, 120],
-                typed: Typed(4),
+                type_id: TypeId(4),
             },
             ExprId(7) => Expression {
                 id: ExprId(7),
@@ -159,7 +159,7 @@ Ok(
                     ],
                 ),
                 span: 2:36; [36, 131],
-                typed: Typed(2),
+                type_id: TypeId(2),
             },
             ExprId(8) => Expression {
                 id: ExprId(8),
@@ -170,7 +170,7 @@ Ok(
                     },
                 ),
                 span: 3:21; [58, 60],
-                typed: Typed(6),
+                type_id: TypeId(6),
             },
         ],
         statements: [
@@ -180,7 +180,7 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 0:0; [0, 0],
-                        bound: Bound(1),
+                        symbol_id: SymbolId(1),
                     },
                     InputId(0),
                     [
@@ -223,7 +223,7 @@ Ok(
                     Identifier {
                         id: IdentId(1),
                         span: 2:13; [13, 14],
-                        bound: Bound(19),
+                        symbol_id: SymbolId(19),
                     },
                     [],
                     [
@@ -231,18 +231,18 @@ Ok(
                             identifier: Identifier {
                                 id: IdentId(2),
                                 span: 2:15; [15, 16],
-                                bound: Bound(20),
+                                symbol_id: SymbolId(20),
                             },
                             type_def_id: TypeDefId(0),
                             span: 2:15; [15, 24],
-                            typed: Typed(4),
+                            type_id: TypeId(4),
                         },
                     ],
                     Return {
                         type_def_id: Some(
                             TypeDefId(1),
                         ),
-                        typed: Typed(4),
+                        typed_id: TypeId(4),
                     },
                     Provided(
                         ExprId(7),
@@ -257,7 +257,7 @@ Ok(
                     Identifier {
                         id: IdentId(4),
                         span: 9:11; [151, 155],
-                        bound: Bound(2),
+                        symbol_id: SymbolId(2),
                     },
                     InputId(0),
                     [],

@@ -31,7 +31,7 @@ Ok(
                 ident: Identifier {
                     id: IdentId(3),
                     span: 2:22; [22, 28],
-                    bound: Bound(4),
+                    symbol_id: SymbolId(4),
                 },
             },
             IdentRefId(1) => IdentifierRef {
@@ -39,7 +39,7 @@ Ok(
                 ident: Identifier {
                     id: IdentId(1),
                     span: 4:15; [65, 70],
-                    bound: Bound(19),
+                    symbol_id: SymbolId(19),
                 },
             },
         ],
@@ -52,7 +52,7 @@ Ok(
                     ],
                 ),
                 span: 2:30; [30, 32],
-                typed: Typed(2),
+                type_id: TypeId(2),
             },
             ExprId(1) => Expression {
                 id: ExprId(1),
@@ -63,7 +63,7 @@ Ok(
                     },
                 ),
                 span: 4:13; [63, 64],
-                typed: Typed(4),
+                type_id: TypeId(4),
             },
             ExprId(2) => Expression {
                 id: ExprId(2),
@@ -72,7 +72,7 @@ Ok(
                     IdentRefId(1),
                 ),
                 span: 4:13; [63, 70],
-                typed: Typed(9),
+                type_id: TypeId(9),
             },
             ExprId(3) => Expression {
                 id: ExprId(3),
@@ -81,7 +81,7 @@ Ok(
                     [],
                 ),
                 span: 4:13; [63, 72],
-                typed: Typed(1),
+                type_id: TypeId(1),
             },
             ExprId(4) => Expression {
                 id: ExprId(4),
@@ -91,7 +91,7 @@ Ok(
                     ],
                 ),
                 span: 3:17; [49, 83],
-                typed: Typed(2),
+                type_id: TypeId(2),
             },
         ],
         statements: [
@@ -101,7 +101,7 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 0:0; [0, 0],
-                        bound: Bound(1),
+                        symbol_id: SymbolId(1),
                     },
                     InputId(0),
                     [
@@ -118,7 +118,7 @@ Ok(
                     Identifier {
                         id: IdentId(1),
                         span: 2:13; [13, 18],
-                        bound: Bound(19),
+                        symbol_id: SymbolId(19),
                     },
                     [],
                     [
@@ -126,16 +126,16 @@ Ok(
                             identifier: Identifier {
                                 id: IdentId(2),
                                 span: 2:19; [19, 20],
-                                bound: Bound(21),
+                                symbol_id: SymbolId(21),
                             },
                             type_def_id: TypeDefId(0),
                             span: 2:19; [19, 28],
-                            typed: Typed(4),
+                            type_id: TypeId(4),
                         },
                     ],
                     Return {
                         type_def_id: None,
-                        typed: Typed(1),
+                        typed_id: TypeId(1),
                     },
                     Provided(
                         ExprId(0),
@@ -160,13 +160,13 @@ Ok(
                     Identifier {
                         id: IdentId(4),
                         span: 3:13; [45, 46],
-                        bound: Bound(20),
+                        symbol_id: SymbolId(20),
                     },
                     [],
                     [],
                     Return {
                         type_def_id: None,
-                        typed: Typed(1),
+                        typed_id: TypeId(1),
                     },
                     Provided(
                         ExprId(4),
@@ -181,7 +181,7 @@ Ok(
                     Identifier {
                         id: IdentId(5),
                         span: 7:11; [103, 107],
-                        bound: Bound(2),
+                        symbol_id: SymbolId(2),
                     },
                     InputId(0),
                     [],

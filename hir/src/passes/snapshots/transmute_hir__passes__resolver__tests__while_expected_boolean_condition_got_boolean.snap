@@ -33,7 +33,7 @@ Ok(
                     },
                 ),
                 span: 1:7; [6, 10],
-                typed: Typed(3),
+                type_id: TypeId(3),
             },
             ExprId(1) => Expression {
                 id: ExprId(1),
@@ -41,7 +41,7 @@ Ok(
                     [],
                 ),
                 span: 1:12; [11, 13],
-                typed: Typed(1),
+                type_id: TypeId(1),
             },
             ExprId(2) => Expression {
                 id: ExprId(2),
@@ -50,7 +50,7 @@ Ok(
                     ExprId(1),
                 ),
                 span: 1:1; [0, 13],
-                typed: Typed(1),
+                type_id: TypeId(1),
             },
         ],
         statements: [
@@ -60,7 +60,7 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 0:0; [0, 0],
-                        bound: Bound(1),
+                        symbol_id: SymbolId(1),
                     },
                     InputId(0),
                     [
@@ -83,7 +83,7 @@ Ok(
                     Identifier {
                         id: IdentId(1),
                         span: 2:11; [24, 28],
-                        bound: Bound(2),
+                        symbol_id: SymbolId(2),
                     },
                     InputId(0),
                     [],

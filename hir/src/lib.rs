@@ -1,60 +1,57 @@
-use crate::bound::{Bound, BoundState, Unbound};
-use crate::expression::Expression;
-use crate::identifier::Identifier;
-use crate::identifier_ref::IdentifierRef;
 use crate::natives::{Natives, Type};
+use crate::nodes::{
+    Annotation, ExitPoints, Expression, ExpressionKind, Field, Identifier, IdentifierRef, Literal,
+    LiteralKind, Parameter, Return, Statement, TypeDef,
+};
 use crate::passes::resolver::Resolver;
-use crate::statement::{Field, Parameter, Return, Statement, TypeDef};
 use crate::symbol::{Symbol, SymbolKind};
-use crate::typed::{Typed, TypedState, Untyped};
 use transmute_core::error::Diagnostics;
 use transmute_core::id_map::IdMap;
 use transmute_core::ids::{ExprId, IdentId, IdentRefId, StmtId, SymbolId, TypeDefId, TypeId};
 use transmute_core::vec_map::VecMap;
+use transmute_nst::nodes::Expression as NstExpression;
+use transmute_nst::nodes::Field as NstField;
+use transmute_nst::nodes::Identifier as NstIdentifier;
+use transmute_nst::nodes::IdentifierRef as NstIdentifierRef;
 use transmute_nst::nodes::Nst;
-pub use transmute_nst::nodes::{ExitPoint, ExitPoints};
+use transmute_nst::nodes::Parameter as NstParameter;
+use transmute_nst::nodes::Return as NstReturn;
+use transmute_nst::nodes::Statement as NstStatement;
+use transmute_nst::nodes::StatementKind as NstStatementKind;
 
-pub mod bound;
-pub mod expression;
 pub mod hir_print;
-pub mod identifier;
-pub mod identifier_ref;
-pub mod literal;
 pub mod natives;
-pub mod passes;
-pub mod statement;
+pub mod nodes;
+mod passes;
 pub mod symbol;
-pub mod typed;
 
-pub type UnresolvedHir = Hir<Untyped, Unbound>;
-pub type ResolvedHir = Hir<Typed, Bound>;
+pub trait Resolve {
+    fn resolve(self) -> Result<Hir, Diagnostics<()>>
+    where
+        Self: Sized,
+    {
+        self.resolve_with_natives(Natives::default())
+    }
 
-pub type ResolvedExpression = Expression<Typed>;
-pub type ResolvedStatement = Statement<Typed, Bound>;
-pub type ResolvedIdentifier = Identifier<Bound>;
-pub type ResolvedIdentifierRef = IdentifierRef<Bound>;
-pub type ResolvedParameter = Parameter<Typed, Bound>;
-pub type ResolvedReturn = Return<Typed>;
-pub type ResolvedField = Field<Typed, Bound>;
+    fn resolve_with_natives(self, natives: Natives) -> Result<Hir, Diagnostics<()>>;
+}
 
-pub fn resolve(nst: Nst) -> Result<ResolvedHir, Diagnostics<()>> {
-    UnresolvedHir::from(nst).resolve(Natives::default())
+impl Resolve for Nst {
+    fn resolve_with_natives(self, natives: Natives) -> Result<Hir, Diagnostics<()>> {
+        Resolver::new().resolve(natives, self)
+    }
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Hir<T, B>
-where
-    T: TypedState,
-    B: BoundState,
-{
+pub struct Hir {
     /// Unique identifiers names
     pub identifiers: VecMap<IdentId, String>,
     /// Identifier refs
-    pub identifier_refs: VecMap<IdentRefId, IdentifierRef<B>>,
+    pub identifier_refs: VecMap<IdentRefId, IdentifierRef>,
     /// All expressions
-    pub expressions: VecMap<ExprId, Expression<T>>,
+    pub expressions: VecMap<ExprId, Expression>,
     /// All statements
-    pub statements: VecMap<StmtId, Statement<T, B>>,
+    pub statements: VecMap<StmtId, Statement>,
     /// Types
     pub type_defs: VecMap<TypeDefId, TypeDef>,
     /// Root statements
@@ -67,45 +64,7 @@ where
     pub exit_points: ExitPoints,
 }
 
-impl UnresolvedHir {
-    pub fn resolve(self, natives: Natives) -> Result<ResolvedHir, Diagnostics<()>> {
-        Resolver::new().resolve(natives, self)
-    }
-}
-
-impl From<Nst> for UnresolvedHir {
-    fn from(nst: Nst) -> Self {
-        Self {
-            identifiers: nst.identifiers,
-            identifier_refs: nst
-                .identifier_refs
-                .into_iter()
-                .map(|i| (i.0, IdentifierRef::from(i.1)))
-                .collect::<VecMap<IdentRefId, IdentifierRef<Unbound>>>(),
-            expressions: nst
-                .expressions
-                .into_iter()
-                .map(|e| (e.0, Expression::from(e.1)))
-                .collect::<VecMap<ExprId, Expression<Untyped>>>(),
-            statements: nst
-                .statements
-                .into_iter()
-                .map(|s| (s.0, Statement::from(s.1)))
-                .collect::<VecMap<StmtId, Statement<Untyped, Unbound>>>(),
-            type_defs: nst
-                .type_defs
-                .into_iter()
-                .map(|e| (e.0, TypeDef::from(e.1)))
-                .collect::<VecMap<TypeDefId, TypeDef>>(),
-            root: nst.root,
-            symbols: Default::default(),
-            types: Default::default(),
-            exit_points: nst.exit_points,
-        }
-    }
-}
-
-impl ResolvedHir {
+impl Hir {
     pub fn symbol_by_ident_ref_id(&self, id: IdentRefId) -> &Symbol {
         &self.symbols[self.identifier_refs[id].resolved_symbol_id()]
     }
@@ -143,6 +102,153 @@ impl RequiredSymbolKind<'_> {
                 !(matches!(symbol_kind, SymbolKind::LetFn(..))
                     || matches!(symbol_kind, SymbolKind::Native(..)))
             }
+        }
+    }
+}
+
+trait IntoBound<T> {
+    fn into_bound(self, symbol_id: SymbolId) -> T;
+}
+
+impl IntoBound<IdentifierRef> for NstIdentifierRef {
+    fn into_bound(self, symbol_id: SymbolId) -> IdentifierRef {
+        IdentifierRef {
+            id: self.id,
+            ident: Identifier {
+                id: self.ident.id,
+                span: self.ident.span,
+                symbol_id,
+            },
+        }
+    }
+}
+
+impl IntoBound<Identifier> for NstIdentifier {
+    fn into_bound(self, symbol_id: SymbolId) -> Identifier {
+        Identifier {
+            id: self.id,
+            span: self.span,
+            symbol_id,
+        }
+    }
+}
+
+trait IntoTyped<T> {
+    fn into_typed(self, type_id: TypeId) -> T;
+}
+
+impl IntoTyped<Expression> for NstExpression {
+    fn into_typed(self, type_id: TypeId) -> Expression {
+        Expression {
+            id: self.id,
+            kind: self.kind,
+            span: self.span,
+            type_id,
+        }
+    }
+}
+
+impl IntoTyped<Return> for NstReturn {
+    fn into_typed(self, type_id: TypeId) -> Return {
+        Return {
+            type_def_id: self.type_def_id,
+            typed_id: type_id,
+        }
+    }
+}
+
+trait IntoBoundTyped<T> {
+    fn into_bound_typed(self, symbol_id: SymbolId, type_id: TypeId) -> T;
+}
+
+impl IntoBoundTyped<Parameter> for NstParameter {
+    fn into_bound_typed(self, symbol_id: SymbolId, type_id: TypeId) -> Parameter {
+        Parameter {
+            identifier: Identifier {
+                id: self.identifier.id,
+                span: self.identifier.span,
+                symbol_id,
+            },
+            type_def_id: self.type_def_id,
+            span: self.span,
+            type_id,
+        }
+    }
+}
+
+impl IntoBoundTyped<Field> for NstField {
+    fn into_bound_typed(self, symbol_id: SymbolId, type_id: TypeId) -> Field {
+        Field {
+            identifier: Identifier {
+                id: self.identifier.id,
+                span: self.identifier.span,
+                symbol_id,
+            },
+            type_def_id: self.type_def_id,
+            span: self.span,
+            type_id,
+        }
+    }
+}
+
+trait TryAsLiteral {
+    fn try_as_literal(&self) -> Option<&Literal>;
+}
+
+impl TryAsLiteral for NstExpression {
+    fn try_as_literal(&self) -> Option<&Literal> {
+        match &self.kind {
+            ExpressionKind::Literal(lit) => Some(lit),
+            _ => None,
+        }
+    }
+}
+
+trait As {
+    fn as_struct(&self) -> (&NstIdentifier, &Vec<Annotation>, &Vec<NstField>);
+
+    fn as_function(
+        &self,
+    ) -> (
+        &NstIdentifier,
+        &Vec<Annotation>,
+        &Vec<NstParameter>,
+        &ExprId,
+    );
+
+    fn as_use(&self) -> &Vec<IdentRefId>;
+}
+
+impl As for NstStatement {
+    fn as_struct(&self) -> (&NstIdentifier, &Vec<Annotation>, &Vec<NstField>) {
+        match &self.kind {
+            NstStatementKind::Struct(identifier, annotations, implementation) => {
+                (identifier, annotations, implementation)
+            }
+            _ => panic!("struct expected, got {:?}", self),
+        }
+    }
+
+    fn as_function(
+        &self,
+    ) -> (
+        &NstIdentifier,
+        &Vec<Annotation>,
+        &Vec<NstParameter>,
+        &ExprId,
+    ) {
+        match &self.kind {
+            NstStatementKind::LetFn(ident, annotations, parameters, _, expression) => {
+                (ident, annotations, parameters, expression)
+            }
+            _ => panic!("function expected, got {:?}", self),
+        }
+    }
+
+    fn as_use(&self) -> &Vec<IdentRefId> {
+        match &self.kind {
+            NstStatementKind::Use(idents) => idents,
+            _ => panic!("use expected, got {:?}", self),
         }
     }
 }

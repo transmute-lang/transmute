@@ -33,7 +33,7 @@ Ok(
                     },
                 ),
                 span: 1:4; [3, 7],
-                typed: Typed(3),
+                type_id: TypeId(3),
             },
             ExprId(1) => Expression {
                 id: ExprId(1),
@@ -44,7 +44,7 @@ Ok(
                     },
                 ),
                 span: 1:11; [10, 12],
-                typed: Typed(4),
+                type_id: TypeId(4),
             },
             ExprId(2) => Expression {
                 id: ExprId(2),
@@ -54,7 +54,7 @@ Ok(
                     ],
                 ),
                 span: 1:9; [8, 15],
-                typed: Typed(4),
+                type_id: TypeId(4),
             },
             ExprId(3) => Expression {
                 id: ExprId(3),
@@ -65,7 +65,7 @@ Ok(
                     },
                 ),
                 span: 1:25; [24, 29],
-                typed: Typed(3),
+                type_id: TypeId(3),
             },
             ExprId(4) => Expression {
                 id: ExprId(4),
@@ -76,7 +76,7 @@ Ok(
                     },
                 ),
                 span: 1:33; [32, 33],
-                typed: Typed(4),
+                type_id: TypeId(4),
             },
             ExprId(5) => Expression {
                 id: ExprId(5),
@@ -86,7 +86,7 @@ Ok(
                     ],
                 ),
                 span: 1:31; [30, 36],
-                typed: Typed(4),
+                type_id: TypeId(4),
             },
             ExprId(6) => Expression {
                 id: ExprId(6),
@@ -96,7 +96,7 @@ Ok(
                     None,
                 ),
                 span: 1:22; [21, 36],
-                typed: Typed(1),
+                type_id: TypeId(1),
             },
             ExprId(7) => Expression {
                 id: ExprId(7),
@@ -106,7 +106,7 @@ Ok(
                     ],
                 ),
                 span: 1:22; [21, 36],
-                typed: Typed(1),
+                type_id: TypeId(1),
             },
             ExprId(8) => Expression {
                 id: ExprId(8),
@@ -118,7 +118,7 @@ Ok(
                     ),
                 ),
                 span: 1:1; [0, 36],
-                typed: Typed(1),
+                type_id: TypeId(1),
             },
         ],
         statements: [
@@ -128,7 +128,7 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 0:0; [0, 0],
-                        bound: Bound(1),
+                        symbol_id: SymbolId(1),
                     },
                     InputId(0),
                     [
@@ -172,7 +172,7 @@ Ok(
                     Identifier {
                         id: IdentId(1),
                         span: 2:11; [47, 51],
-                        bound: Bound(2),
+                        symbol_id: SymbolId(2),
                     },
                     InputId(0),
                     [],

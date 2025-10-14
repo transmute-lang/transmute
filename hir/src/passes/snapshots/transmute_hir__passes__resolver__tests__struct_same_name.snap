@@ -34,7 +34,7 @@ Ok(
                     Identifier {
                         id: IdentId(0),
                         span: 0:0; [0, 0],
-                        bound: Bound(1),
+                        symbol_id: SymbolId(1),
                     },
                     InputId(0),
                     [
@@ -50,7 +50,7 @@ Ok(
                     Identifier {
                         id: IdentId(2),
                         span: 3:20; [44, 45],
-                        bound: Bound(5),
+                        symbol_id: SymbolId(5),
                     },
                     [],
                     Provided(
@@ -66,7 +66,7 @@ Ok(
                     Identifier {
                         id: IdentId(2),
                         span: 5:24; [100, 101],
-                        bound: Bound(4),
+                        symbol_id: SymbolId(4),
                     },
                     [],
                     Provided(
@@ -82,7 +82,7 @@ Ok(
                     Identifier {
                         id: IdentId(3),
                         span: 4:23; [71, 74],
-                        bound: Bound(3),
+                        symbol_id: SymbolId(3),
                     },
                     InputId(0),
                     [
@@ -97,7 +97,7 @@ Ok(
                     Identifier {
                         id: IdentId(1),
                         span: 2:19; [19, 22],
-                        bound: Bound(2),
+                        symbol_id: SymbolId(2),
                     },
                     InputId(0),
                     [
@@ -113,7 +113,7 @@ Ok(
                     Identifier {
                         id: IdentId(4),
                         span: 9:11; [148, 152],
-                        bound: Bound(6),
+                        symbol_id: SymbolId(6),
                     },
                     InputId(0),
                     [],
