@@ -233,7 +233,7 @@ impl HirPrint for Expression {
                     ctx.prev_level();
                 }
             }
-            ExpressionKind::StructInstantiation(ident_ref_id, fields) => {
+            ExpressionKind::StructInstantiation(ident_ref_id, _, fields) => {
                 writeln!(
                     f,
                     "{indent}StructInstantiate name={ident}",
@@ -555,6 +555,7 @@ impl Hir {
     where
         W: Write,
     {
+        writeln!(f, "   sym    typ")?;
         let types = self.types.iter().collect::<BiHashMap<_, _>>();
 
         let mut ctx = HirPrintContext {
@@ -592,16 +593,24 @@ impl Hir {
                 }
                 write!(f, ") : {}", id!(*ret))
             }
-            Type::Struct(stmt_id) => {
+            Type::Struct(stmt_id, type_parameters) => {
                 let symbol_id = match &self.statements[*stmt_id].kind {
                     StatementKind::Struct(ident, _, _, _) => ident.resolved_symbol_id(),
                     _ => panic!("struct expected"),
                 };
-                write!(f, "struct {}", id!(symbol_id))
+                write!(f, "struct {}<{}>", id!(symbol_id), type_parameters.len())
             }
             Type::Array(type_id, size) => {
                 write!(f, "[{type_id}; {size}]", type_id = id!(*type_id))
             }
+            Type::Parameter(stmt_id, index) => {
+                let symbol_id = match &self.statements[*stmt_id].kind {
+                    StatementKind::Struct(ident, _, _, _) => ident.resolved_symbol_id(),
+                    _ => panic!("struct expected"),
+                };
+                write!(f, "type parameter {symbol_id}<{stmt_id}.{index}>")
+            },
+            Type::Type => write!(f, "type"),
             Type::Void => write!(f, "void"),
             Type::None => write!(f, "none"),
         }
@@ -788,5 +797,6 @@ mod tests {
     t!(structs_nested);
     t!(structs_of_arrays);
     t!(structs_simple);
+    t!(structs_type_parameters);
     t!(void_fn);
 }

@@ -29,7 +29,16 @@ pub enum StatementKind {
     Let(Identifier, ExprId),
     Ret(Option<ExprId>, RetMode),
     LetFn(Identifier, Vec<Annotation>, Vec<Parameter>, Return, ExprId),
-    Struct(Identifier, Vec<Annotation>, Vec<Identifier>, Vec<Field>),
+    Struct(
+        /// Struct name
+        Identifier,
+        /// Annotations
+        Vec<Annotation>,
+        /// Type parameters
+        Vec<Identifier>,
+        /// Fields
+        Vec<Field>
+    ),
     Annotation(Identifier),
     Use(Vec<IdentRefId>),
     Namespace(

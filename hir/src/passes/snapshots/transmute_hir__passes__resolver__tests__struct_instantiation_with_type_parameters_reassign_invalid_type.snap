@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "RHS expected to be of type struct, got struct",
+                span: 4:13; [71, 84],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

@@ -2,13 +2,14 @@
 source: hir/src/hir_print.rs
 expression: s
 ---
+   sym    typ
                +- stmt 0
 =    1:     1     +- Namespace name=<root>
                      +- stmt 1
 =    2:     1        |  +- Namespace name=core
                      |     +- stmts=[]
                      +- stmt 10
-=   34:    17        |  +- Fn name=main
+=   34:    18        |  +- Fn name=main
                      |     +- annotations=[]
                      |     +- params=[]
 @     :     1        |     +- ret=[]
@@ -18,33 +19,33 @@ expression: s
 =   35:     4        |           |  +- Let name=n
 @     :     4        |           |     +- expr 6
 @     :     4        |           |        +- Call
-@     :    15        |           |           +- callee:expr 0
-@   32:    15        |           |           |  +- Ident: number_parse
+@     :    16        |           |           +- callee:expr 0
+@   32:    16        |           |           |  +- Ident: number_parse
                      |           |           +- params
-@     :     6        |           |              +- expr 5
-@     :     6        |           |                 +- Call
-@     :    13        |           |                    +- callee:expr 1
-@   30:    13        |           |                    |  +- Ident: list_get
+@     :     7        |           |              +- expr 5
+@     :     7        |           |                 +- Call
+@     :    14        |           |                    +- callee:expr 1
+@   30:    14        |           |                    |  +- Ident: list_get
                      |           |                    +- params
-@     :     5        |           |                       +- expr 3
-@     :     5        |           |                       |  +- Call
-@     :    12        |           |                       |     +- callee:expr 2
-@   29:    12        |           |                       |     |  +- Ident: args
+@     :     6        |           |                       +- expr 3
+@     :     6        |           |                       |  +- Call
+@     :    13        |           |                       |     +- callee:expr 2
+@   29:    13        |           |                       |     |  +- Ident: args
                      |           |                       |     +- params=[]
 @     :     4        |           |                       +- expr 4
 @     :     4        |           |                          +- Number: 1
                      |           +- stmt 7
-=   36:    18        |           |  +- Let name=a
-@     :    18        |           |     +- expr 12
-@     :    18        |           |        +- ArrayInstantiate
+=   36:    19        |           |  +- Let name=a
+@     :    19        |           |     +- expr 12
+@     :    19        |           |        +- ArrayInstantiate
 @     :     4        |           |           +- expr 7
 @   35:     4        |           |           |  +- Ident: n
 @     :     4        |           |           +- expr 8
 @     :     4        |           |           |  +- Number: 0
 @     :     4        |           |           +- expr 11
 @     :     4        |           |              +- Call
-@     :     7        |           |                 +- callee:expr 44
-@   27:     7        |           |                 |  +- Ident: add
+@     :     8        |           |                 +- callee:expr 44
+@   27:     8        |           |                 |  +- Ident: add
                      |           |                 +- params
 @     :     4        |           |                    +- expr 9
 @   35:     4        |           |                    |  +- Ident: n
@@ -56,14 +57,14 @@ expression: s
 @     :     4        |           |        +- Assignment
 @     :     4        |           |           +- target:expr 15
 @     :     4        |           |           |  +- ArrayAccess
-@     :    18        |           |           |     +- expr 13
-@   36:    18        |           |           |     |  +- Ident: a
+@     :    19        |           |           |     +- expr 13
+@   36:    19        |           |           |     |  +- Ident: a
 @     :     4        |           |           |     +- expr 14
 @     :     4        |           |           |        +- Number: 1
 @     :     4        |           |           +- value:expr 18
 @     :     4        |           |              +- Call
-@     :     7        |           |                 +- callee:expr 45
-@   27:     7        |           |                 |  +- Ident: add
+@     :     8        |           |                 +- callee:expr 45
+@   27:     8        |           |                 |  +- Ident: add
                      |           |                 +- params
 @     :     4        |           |                    +- expr 16
 @   35:     4        |           |                    |  +- Ident: n
@@ -73,33 +74,33 @@ expression: s
 @     :     1        |              +- Ret
 @     :     1        |                 +- expr 36
 @     :     1        |                    +- Call
-@     :    14        |                       +- callee:expr 20
-@   31:    14        |                       |  +- Ident: print
+@     :    15        |                       +- callee:expr 20
+@   31:    15        |                       |  +- Ident: print
                      |                       +- params
 @     :     4        |                          +- expr 35
 @     :     4        |                             +- Call
-@     :     7        |                                +- callee:expr 49
-@   27:     7        |                                |  +- Ident: add
+@     :     8        |                                +- callee:expr 49
+@   27:     8        |                                |  +- Ident: add
                      |                                +- params
 @     :     4        |                                   +- expr 29
 @     :     4        |                                   |  +- Call
-@     :     7        |                                   |     +- callee:expr 47
-@   27:     7        |                                   |     |  +- Ident: add
+@     :     8        |                                   |     +- callee:expr 47
+@   27:     8        |                                   |     |  +- Ident: add
                      |                                   |     +- params
 @     :     4        |                                   |        +- expr 23
 @     :     4        |                                   |        |  +- ArrayAccess
-@     :    18        |                                   |        |     +- expr 21
-@   36:    18        |                                   |        |     |  +- Ident: a
+@     :    19        |                                   |        |     +- expr 21
+@   36:    19        |                                   |        |     |  +- Ident: a
 @     :     4        |                                   |        |     +- expr 22
 @     :     4        |                                   |        |        +- Number: 0
 @     :     4        |                                   |        +- expr 28
 @     :     4        |                                   |           +- ArrayAccess
-@     :    18        |                                   |              +- expr 24
-@   36:    18        |                                   |              |  +- Ident: a
+@     :    19        |                                   |              +- expr 24
+@   36:    19        |                                   |              |  +- Ident: a
 @     :     4        |                                   |              +- expr 27
 @     :     4        |                                   |                 +- Call
-@     :     7        |                                   |                    +- callee:expr 46
-@   27:     7        |                                   |                    |  +- Ident: add
+@     :     8        |                                   |                    +- callee:expr 46
+@   27:     8        |                                   |                    |  +- Ident: add
                      |                                   |                    +- params
 @     :     4        |                                   |                       +- expr 25
 @     :     4        |                                   |                       |  +- Number: 0
@@ -107,12 +108,12 @@ expression: s
 @     :     4        |                                   |                          +- Number: 1
 @     :     4        |                                   +- expr 34
 @     :     4        |                                      +- ArrayAccess
-@     :    18        |                                         +- expr 30
-@   36:    18        |                                         |  +- Ident: a
+@     :    19        |                                         +- expr 30
+@   36:    19        |                                         |  +- Ident: a
 @     :     4        |                                         +- expr 33
 @     :     4        |                                            +- Call
-@     :     7        |                                               +- callee:expr 48
-@   27:     7        |                                               |  +- Ident: add
+@     :     8        |                                               +- callee:expr 48
+@   27:     8        |                                               |  +- Ident: add
                      |                                               +- params
 @     :     4        |                                                  +- expr 31
 @     :     4        |                                                  |  +- Number: 1
@@ -125,7 +126,7 @@ expression: s
                            +- stmt 12
 =    4:     1              |  +- Namespace name=booleans
                            |     +- stmt 25
-=   28:    11              |        +- Fn name=print (native)
+=   28:    12              |        +- Fn name=print (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
@@ -134,49 +135,49 @@ expression: s
                            +- stmt 13
 =    5:     1              |  +- Namespace name=env
                            |     +- stmt 24
-=   29:    12              |        +- Fn name=args (native)
+=   29:    13              |        +- Fn name=args (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params=[]
-@     :     5              |           +- ret=std.list.List
+@     :     6              |           +- ret=std.list.List
                            +- stmt 14
 =    6:     1              |  +- Namespace name=list
                            |     +- stmt 22
-=    7:     5              |     |  +- Struct name=List (native)
+=    7:     6              |     |  +- Struct name=List (native)
                            |     +- stmt 23
-=   30:    13              |        +- Fn name=list_get (native)
+=   30:    14              |        +- Fn name=list_get (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
-=   38:     5              |           |  +- list: List
+=   38:     6              |           |  +- list: List
 =   39:     4              |           |  +- index: number
-@     :     6              |           +- ret=std.str.string
+@     :     7              |           +- ret=std.str.string
                            +- stmt 15
 =    8:     1              |  +- Namespace name=numbers
                            |     +- stmt 20
-=   31:    14              |     |  +- Fn name=print (native)
+=   31:    15              |     |  +- Fn name=print (native)
                            |     |     +- annotations
 @   11:     1              |     |     |  +- std.native
                            |     |     +- params
 =   40:     4              |     |     |  +- n: core.number
 @     :     1              |     |     +- ret=[]
                            |     +- stmt 21
-=   32:    15              |        +- Fn name=number_parse (native)
+=   32:    16              |        +- Fn name=number_parse (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
-=   41:     6              |           |  +- s: std.str.string
+=   41:     7              |           |  +- s: std.str.string
 @     :     2              |           +- ret=core.number
                            +- stmt 16
 =    9:     1                 +- Namespace name=str
                                  +- stmt 18
-=   10:     6                    |  +- Struct name=string (native)
+=   10:     7                    |  +- Struct name=string (native)
                                  +- stmt 19
-=   33:    16                       +- Fn name=print (native)
+=   33:    17                       +- Fn name=print (native)
                                        +- annotations
 @   11:     1                          |  +- std.native
                                        +- params
-=   42:     6                          |  +- s: string
+=   42:     7                          |  +- s: string
 @     :     1                          +- ret=[]
 
 --- types ---
@@ -185,17 +186,18 @@ expression: s
 2: none
 3: boolean
 4: number
-5: struct 7
-6: struct 10
-7: f(4, 4) : 4
-8: f(4, 4) : 3
-9: f(3, 3) : 3
-10: f(4) : 4
-11: f(3) : 1
-12: f() : 5
-13: f(5, 4) : 6
-14: f(4) : 1
-15: f(6) : 4
-16: f(6) : 1
-17: f() : 1
-18: [4; 3]
+5: type
+6: struct 7<0>
+7: struct 10<0>
+8: f(4, 4) : 4
+9: f(4, 4) : 3
+10: f(3, 3) : 3
+11: f(4) : 4
+12: f(3) : 1
+13: f() : 6
+14: f(6, 4) : 7
+15: f(4) : 1
+16: f(7) : 4
+17: f(7) : 1
+18: f() : 1
+19: [4; 3]

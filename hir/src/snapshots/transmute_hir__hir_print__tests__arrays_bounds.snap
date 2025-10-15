@@ -2,35 +2,36 @@
 source: hir/src/hir_print.rs
 expression: s
 ---
+   sym    typ
                +- stmt 0
 =    1:     1     +- Namespace name=<root>
                      +- stmt 1
 =    2:     1        |  +- Namespace name=core
                      |     +- stmts=[]
                      +- stmt 5
-=   34:    17        |  +- Fn name=main
+=   34:    18        |  +- Fn name=main
                      |     +- annotations=[]
                      |     +- params=[]
 @     :     1        |     +- ret=[]
 @     :     2        |     +- body:expr 7
 @     :     2        |        +- Block
                      |           +- stmt 3
-=   35:    18        |           |  +- Let name=a
-@     :    18        |           |     +- expr 1
-@     :    18        |           |        +- ArrayInstantiate
+=   35:    19        |           |  +- Let name=a
+@     :    19        |           |     +- expr 1
+@     :    19        |           |        +- ArrayInstantiate
 @     :     4        |           |           +- expr 0
 @     :     4        |           |              +- Number: 0
                      |           +- stmt 4
 @     :     1        |              +- Ret
 @     :     1        |                 +- expr 6
 @     :     1        |                    +- Call
-@     :    14        |                       +- callee:expr 2
-@   31:    14        |                       |  +- Ident: print
+@     :    15        |                       +- callee:expr 2
+@   31:    15        |                       |  +- Ident: print
                      |                       +- params
 @     :     4        |                          +- expr 5
 @     :     4        |                             +- ArrayAccess
-@     :    18        |                                +- expr 3
-@   35:    18        |                                |  +- Ident: a
+@     :    19        |                                +- expr 3
+@   35:    19        |                                |  +- Ident: a
 @     :     4        |                                +- expr 4
 @     :     4        |                                   +- Number: 1
                      +- stmt 12
@@ -40,7 +41,7 @@ expression: s
                            +- stmt 7
 =    4:     1              |  +- Namespace name=booleans
                            |     +- stmt 20
-=   28:    11              |        +- Fn name=print (native)
+=   28:    12              |        +- Fn name=print (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
@@ -49,49 +50,49 @@ expression: s
                            +- stmt 8
 =    5:     1              |  +- Namespace name=env
                            |     +- stmt 19
-=   29:    12              |        +- Fn name=args (native)
+=   29:    13              |        +- Fn name=args (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params=[]
-@     :     5              |           +- ret=std.list.List
+@     :     6              |           +- ret=std.list.List
                            +- stmt 9
 =    6:     1              |  +- Namespace name=list
                            |     +- stmt 17
-=    7:     5              |     |  +- Struct name=List (native)
+=    7:     6              |     |  +- Struct name=List (native)
                            |     +- stmt 18
-=   30:    13              |        +- Fn name=list_get (native)
+=   30:    14              |        +- Fn name=list_get (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
-=   37:     5              |           |  +- list: List
+=   37:     6              |           |  +- list: List
 =   38:     4              |           |  +- index: number
-@     :     6              |           +- ret=std.str.string
+@     :     7              |           +- ret=std.str.string
                            +- stmt 10
 =    8:     1              |  +- Namespace name=numbers
                            |     +- stmt 15
-=   31:    14              |     |  +- Fn name=print (native)
+=   31:    15              |     |  +- Fn name=print (native)
                            |     |     +- annotations
 @   11:     1              |     |     |  +- std.native
                            |     |     +- params
 =   39:     4              |     |     |  +- n: core.number
 @     :     1              |     |     +- ret=[]
                            |     +- stmt 16
-=   32:    15              |        +- Fn name=number_parse (native)
+=   32:    16              |        +- Fn name=number_parse (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
-=   40:     6              |           |  +- s: std.str.string
+=   40:     7              |           |  +- s: std.str.string
 @     :     2              |           +- ret=core.number
                            +- stmt 11
 =    9:     1                 +- Namespace name=str
                                  +- stmt 13
-=   10:     6                    |  +- Struct name=string (native)
+=   10:     7                    |  +- Struct name=string (native)
                                  +- stmt 14
-=   33:    16                       +- Fn name=print (native)
+=   33:    17                       +- Fn name=print (native)
                                        +- annotations
 @   11:     1                          |  +- std.native
                                        +- params
-=   41:     6                          |  +- s: string
+=   41:     7                          |  +- s: string
 @     :     1                          +- ret=[]
 
 --- types ---
@@ -100,17 +101,18 @@ expression: s
 2: none
 3: boolean
 4: number
-5: struct 7
-6: struct 10
-7: f(4, 4) : 4
-8: f(4, 4) : 3
-9: f(3, 3) : 3
-10: f(4) : 4
-11: f(3) : 1
-12: f() : 5
-13: f(5, 4) : 6
-14: f(4) : 1
-15: f(6) : 4
-16: f(6) : 1
-17: f() : 1
-18: [4; 1]
+5: type
+6: struct 7<0>
+7: struct 10<0>
+8: f(4, 4) : 4
+9: f(4, 4) : 3
+10: f(3, 3) : 3
+11: f(4) : 4
+12: f(3) : 1
+13: f() : 6
+14: f(6, 4) : 7
+15: f(4) : 1
+16: f(7) : 4
+17: f(7) : 1
+18: f() : 1
+19: [4; 1]

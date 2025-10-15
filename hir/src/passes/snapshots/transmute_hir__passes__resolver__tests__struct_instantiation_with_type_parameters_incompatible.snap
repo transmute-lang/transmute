@@ -1,0 +1,16 @@
+---
+source: hir/src/passes/resolver.rs
+expression: resolved_hir
+---
+Err(
+    Diagnostics {
+        diagnostics: [
+            Diagnostic {
+                message: "Invalid type for field 'f2': expected number, got boolean (T bound at line 3, column 25)",
+                span: 3:32; [69, 73],
+                level: Error,
+            },
+        ],
+        inputs: (),
+    },
+)

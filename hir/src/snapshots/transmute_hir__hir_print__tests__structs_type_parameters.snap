@@ -1,0 +1,170 @@
+---
+source: hir/src/hir_print.rs
+expression: s
+---
+   sym    typ
+               +- stmt 0
+=    1:     1     +- Namespace name=<root>
+                     +- stmt 1
+=    2:     1        |  +- Namespace name=core
+                     |     +- stmts=[]
+                     +- stmt 10
+=   35:    19        |  +- Fn name=main
+                     |     +- annotations=[]
+                     |     +- params=[]
+@     :     1        |     +- ret=[]
+@     :     2        |     +- body:expr 22
+@     :     2        |        +- Block
+                     |           +- stmt 6
+=   36:     4        |           |  +- Let name=n
+@     :     4        |           |     +- expr 6
+@     :     4        |           |        +- Call
+@     :    17        |           |           +- callee:expr 0
+@   33:    17        |           |           |  +- Ident: number_parse
+                     |           |           +- params
+@     :     7        |           |              +- expr 5
+@     :     7        |           |                 +- Call
+@     :    15        |           |                    +- callee:expr 1
+@   31:    15        |           |                    |  +- Ident: list_get
+                     |           |                    +- params
+@     :     6        |           |                       +- expr 3
+@     :     6        |           |                       |  +- Call
+@     :    14        |           |                       |     +- callee:expr 2
+@   30:    14        |           |                       |     |  +- Ident: args
+                     |           |                       |     +- params=[]
+@     :     4        |           |                       +- expr 4
+@     :     4        |           |                          +- Number: 1
+                     |           +- stmt 7
+=   39:    21        |           |  +- Let name=s
+@     :    21        |           |     +- expr 10
+@   12:     8        |           |        +- StructInstantiate name=Struct
+@   38:    20        |           |           +- field name=field
+@     :     4        |           |              +- expr 9
+@     :     4        |           |                 +- Call
+@     :     9        |           |                    +- callee:expr 29
+@   20:     9        |           |                    |  +- Ident: mul
+                     |           |                    +- params
+@     :     4        |           |                       +- expr 7
+@   36:     4        |           |                       |  +- Ident: n
+@     :     4        |           |                       +- expr 8
+@     :     4        |           |                          +- Number: 2
+                     |           +- stmt 8
+@     :     4        |           |  +- Expression
+@     :     4        |           |     +- expr 17
+@     :     4        |           |        +- Assignment
+@     :     4        |           |           +- target:expr 12
+@   38:    20        |           |           |  +- Access
+@     :    21        |           |           |     +- lhs:expr 11
+@   39:    21        |           |           |     |  +- Ident: s
+@   38:    20        |           |           |     +- ident=field
+@     :     4        |           |           +- value:expr 16
+@     :     4        |           |              +- Call
+@     :     9        |           |                 +- callee:expr 30
+@   28:     9        |           |                 |  +- Ident: add
+                     |           |                 +- params
+@     :     4        |           |                    +- expr 14
+@   38:    20        |           |                    |  +- Access
+@     :    21        |           |                    |     +- lhs:expr 13
+@   39:    21        |           |                    |     |  +- Ident: s
+@   38:    20        |           |                    |     +- ident=field
+@     :     4        |           |                    +- expr 15
+@     :     4        |           |                       +- Number: 1
+                     |           +- stmt 9
+@     :     1        |              +- Ret
+@     :     1        |                 +- expr 21
+@     :     1        |                    +- Call
+@     :    16        |                       +- callee:expr 18
+@   32:    16        |                       |  +- Ident: print
+                     |                       +- params
+@     :     4        |                          +- expr 20
+@   38:    20        |                             +- Access
+@     :    21        |                                +- lhs:expr 19
+@   39:    21        |                                |  +- Ident: s
+@   38:    20        |                                +- ident=field
+                     +- stmt 11
+=   12:     8        |  +- Struct name=Struct, fn_stmt_id=10
+=   38:    20        |     +- field: T
+                     +- stmt 18
+=    3:     1           +- Namespace name=std
+                           +- stmt 12
+=   11:     1              |  +- Annotation name=native
+                           +- stmt 13
+=    4:     1              |  +- Namespace name=booleans
+                           |     +- stmt 26
+=   29:    13              |        +- Fn name=print (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   40:     3              |           |  +- b: core.boolean
+@     :     1              |           +- ret=[]
+                           +- stmt 14
+=    5:     1              |  +- Namespace name=env
+                           |     +- stmt 25
+=   30:    14              |        +- Fn name=args (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params=[]
+@     :     6              |           +- ret=std.list.List
+                           +- stmt 15
+=    6:     1              |  +- Namespace name=list
+                           |     +- stmt 23
+=    7:     6              |     |  +- Struct name=List (native)
+                           |     +- stmt 24
+=   31:    15              |        +- Fn name=list_get (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   41:     6              |           |  +- list: List
+=   42:     4              |           |  +- index: number
+@     :     7              |           +- ret=std.str.string
+                           +- stmt 16
+=    8:     1              |  +- Namespace name=numbers
+                           |     +- stmt 21
+=   32:    16              |     |  +- Fn name=print (native)
+                           |     |     +- annotations
+@   11:     1              |     |     |  +- std.native
+                           |     |     +- params
+=   43:     4              |     |     |  +- n: core.number
+@     :     1              |     |     +- ret=[]
+                           |     +- stmt 22
+=   33:    17              |        +- Fn name=number_parse (native)
+                           |           +- annotations
+@   11:     1              |           |  +- std.native
+                           |           +- params
+=   44:     7              |           |  +- s: std.str.string
+@     :     2              |           +- ret=core.number
+                           +- stmt 17
+=    9:     1                 +- Namespace name=str
+                                 +- stmt 19
+=   10:     7                    |  +- Struct name=string (native)
+                                 +- stmt 20
+=   34:    18                       +- Fn name=print (native)
+                                       +- annotations
+@   11:     1                          |  +- std.native
+                                       +- params
+=   45:     7                          |  +- s: string
+@     :     1                          +- ret=[]
+
+--- types ---
+0: invalid
+1: void
+2: none
+3: boolean
+4: number
+5: type
+6: struct 7<0>
+7: struct 10<0>
+8: struct 12<0>
+9: f(4, 4) : 4
+10: f(4, 4) : 3
+11: f(3, 3) : 3
+12: f(4) : 4
+13: f(3) : 1
+14: f() : 6
+15: f(6, 4) : 7
+16: f(4) : 1
+17: f(7) : 4
+18: f(7) : 1
+19: f() : 1
+20: type parameter 12<11.0>
+21: struct 12<1>
