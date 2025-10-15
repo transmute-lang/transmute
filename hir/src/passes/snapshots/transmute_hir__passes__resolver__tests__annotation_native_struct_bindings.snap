@@ -175,7 +175,7 @@ Ok(
                     IdentId(3),
                     StmtId(3),
                 ),
-                type_id: TypeId(5),
+                type_id: TypeId(6),
             },
         ],
         types: [
@@ -184,8 +184,10 @@ Ok(
             TypeId(2) => None,
             TypeId(3) => Boolean,
             TypeId(4) => Number,
-            TypeId(5) => Struct(
+            TypeId(5) => Type,
+            TypeId(6) => Struct(
                 StmtId(3),
+                [],
             ),
         ],
         exit_points: ExitPoints {

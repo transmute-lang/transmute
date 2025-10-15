@@ -14,10 +14,6 @@ use transmute_nst::nodes::Field as NstField;
 use transmute_nst::nodes::Identifier as NstIdentifier;
 use transmute_nst::nodes::IdentifierRef as NstIdentifierRef;
 use transmute_nst::nodes::Nst;
-use transmute_nst::nodes::Expression as NstExpression;
-use transmute_nst::nodes::Field as NstField;
-use transmute_nst::nodes::Identifier as NstIdentifier;
-use transmute_nst::nodes::IdentifierRef as NstIdentifierRef;
 use transmute_nst::nodes::Parameter as NstParameter;
 use transmute_nst::nodes::Return as NstReturn;
 use transmute_nst::nodes::Statement as NstStatement;
@@ -209,7 +205,14 @@ impl TryAsLiteral for NstExpression {
 }
 
 trait As {
-    fn as_struct(&self) -> (&NstIdentifier, &Vec<Annotation>, &Vec<NstField>);
+    fn as_struct(
+        &self,
+    ) -> (
+        &NstIdentifier,
+        &Vec<Annotation>,
+        &Vec<NstIdentifier>,
+        &Vec<NstField>,
+    );
 
     fn as_function(
         &self,
@@ -224,10 +227,17 @@ trait As {
 }
 
 impl As for NstStatement {
-    fn as_struct(&self) -> (&NstIdentifier, &Vec<Annotation>, &Vec<NstField>) {
+    fn as_struct(
+        &self,
+    ) -> (
+        &NstIdentifier,
+        &Vec<Annotation>,
+        &Vec<NstIdentifier>,
+        &Vec<NstField>,
+    ) {
         match &self.kind {
-            NstStatementKind::Struct(identifier, annotations, implementation) => {
-                (identifier, annotations, implementation)
+            NstStatementKind::Struct(identifier, annotations, type_parameters, implementation) => {
+                (identifier, annotations, type_parameters, implementation)
             }
             _ => panic!("struct expected, got {:?}", self),
         }

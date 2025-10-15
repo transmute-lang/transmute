@@ -17,7 +17,6 @@ use transmute_core::span::Span;
 use transmute_core::stack::{Iter, Stack};
 use transmute_core::vec_map::VecMap;
 use transmute_nst::nodes::{Nst, StatementKind as NstStatementKind};
-use transmute_nst::nodes::Nst;
 
 static NATIVE_ANNOTATION: [&str; 2] = ["std", "native"];
 
@@ -168,6 +167,9 @@ impl Resolver {
 
         let number_type_id = TypeId::from(self.types.len());
         self.types.insert(number_type_id, Type::Number);
+
+        let type_type_id = TypeId::from(self.types.len());
+        self.types.insert(type_type_id, Type::Type);
 
         // init. symbols
         self.not_found_symbol_id = self.symbols.create();
@@ -422,7 +424,7 @@ impl Resolver {
                                 span: stmt.span,
                             }
                         }
-                        NstStatementKind::Struct(ident, annotations, fields) => {
+                        NstStatementKind::Struct(ident, annotations, _, fields) => {
                             let symbol_id = self
                                 .struct_bindings
                                 .remove(&stmt_id)
@@ -612,8 +614,14 @@ impl Resolver {
             ),
             ExpressionKind::While(cond, expr) => self.resolve_while(nst, *cond, *expr),
             ExpressionKind::Block(stmts) => (self.resolve_block(nst, &stmts.clone()), None),
-            ExpressionKind::StructInstantiation(ident_ref_id, fields) => (
-                self.resolve_struct_instantiation(nst, *ident_ref_id, fields, &expr.span),
+            ExpressionKind::StructInstantiation(ident_ref_id, type_parameters, fields) => (
+                self.resolve_struct_instantiation(
+                    nst,
+                    *ident_ref_id,
+                    type_parameters,
+                    fields,
+                    &expr.span,
+                ),
                 None,
             ),
             ExpressionKind::ArrayInstantiation(values) => {
@@ -682,6 +690,8 @@ impl Resolver {
         }
 
         if rhs_type_id != lhs_type_id {
+            // todo:ux better error message (see test
+            //  struct_instantiation_with_type_parameters_reassign_invalid_type)
             self.diagnostics.report_err(
                 format!(
                     "RHS expected to be of type {}, got {}",
@@ -918,14 +928,14 @@ impl Resolver {
         }
 
         // otherwise, we use the type_id
-        let ty = self.find_type_by_type_id(expr_type_id);
-        match ty {
-            Type::Struct(stmt_id) if matches!(ident_ref_kind, RequiredSymbolKind::Other) => {
+        let expr_type = self.find_type_by_type_id(expr_type_id);
+        match expr_type {
+            Type::Struct(stmt_id, _) if matches!(ident_ref_kind, RequiredSymbolKind::Other) => {
                 let stmt_id = *stmt_id;
                 self.resolve_statement(nst, stmt_id);
 
                 match &nst.statements[stmt_id].kind {
-                    NstStatementKind::Struct(ident, _, fields) => {
+                    NstStatementKind::Struct(ident, _, _, fields) => {
                         let struct_symbol_id =
                             self.struct_bindings.get(&stmt_id).expect("was bound").0;
 
@@ -946,7 +956,7 @@ impl Resolver {
                                 .find(|(_, field)| field.identifier.id == ident_ref.ident.id)
                             {
                                 Some((index, _)) => {
-                                    let (field_symbol_id, field_type_id) = self
+                                    let (field_symbol_id, mut field_type_id) = self
                                         .field_bindings
                                         .get(&(stmt_id, index))
                                         .expect("was bound");
@@ -954,8 +964,15 @@ impl Resolver {
                                     self.identifier_ref_bindings
                                         .insert(ident_ref.id, vec![*field_symbol_id]);
 
-                                    // the field's type was resolved
-                                    (*field_type_id, Some(*field_symbol_id))
+                                    let field_type_ids = self.find_type_by_type_id(expr_type_id).as_struct().1;
+                                    // if we have at least 1 type parameter, we have a
+                                    // type-parameterized struct, and we need to get the actual
+                                    // field type from the list
+                                    if field_type_ids.len() > 0 {
+                                        field_type_id =field_type_ids[index];
+                                    }
+
+                                    (field_type_id, Some(*field_symbol_id))
                                 }
                                 None => {
                                     self.diagnostics.report_err(
@@ -980,7 +997,7 @@ impl Resolver {
                 }
             }
             _ => {
-                let type_id = self.find_type_id_by_type(ty);
+                let type_id = self.find_type_id_by_type(expr_type);
                 match self
                     .type_functions
                     .get(&type_id)
@@ -1007,7 +1024,7 @@ impl Resolver {
                                 );
                             }
                             RequiredSymbolKind::Other => self.diagnostics.report_err(
-                                format!("Expected namespace or struct type, got {}", ty),
+                                format!("Expected namespace or struct type, got {}", expr_type),
                                 nst.expressions[expr_id].span.clone(),
                                 (file!(), line!()),
                             ),
@@ -1131,38 +1148,53 @@ impl Resolver {
         &mut self,
         nst: &Nst,
         ident_ref_id: IdentRefId,
-        field_exprs: &[(IdentRefId, ExprId)],
+        type_parameters: &[TypeDefId],
+        field_expressions: &[(IdentRefId, ExprId)],
         span: &Span,
     ) -> TypeId {
         self.resolve_ident_ref(nst, ident_ref_id, RequiredSymbolKind::Other);
-        let struct_stmt_ids = self
+        let stmt_id = match self
             .identifier_ref_bindings
             .get(&ident_ref_id)
             .expect("was bound")
             .iter()
-            .map(|sid| &self.symbols[*sid])
-            .filter_map(|s| match s.kind {
-                SymbolKind::Struct(_, stmt_id) => Some(stmt_id),
+            .filter_map(|sid| match &self.symbols[*sid].kind {
+                SymbolKind::Struct(_, stmt_id) => Some(*stmt_id),
                 _ => None,
             })
-            .collect::<Vec<_>>();
-        debug_assert!(struct_stmt_ids.len() <= 1);
-
-        let struct_stmt_id = match struct_stmt_ids.first() {
+            .enumerate()
+            .inspect(|(index, stmt_id)| {
+                debug_assert_eq!(
+                    *index, 0,
+                    "we can have at most one struct, found a 2nd one: {stmt_id}"
+                )
+            })
+            .next()
+            .map(|d| d.1)
+        {
             None => return self.find_type_id_by_type(&Type::Invalid),
-            Some(&stmt_id) => {
-                self.resolve_statement(nst, stmt_id);
-                stmt_id
-            }
+            Some(stmt_id) => stmt_id,
         };
 
-        let (struct_identifier, _, fields) = nst.statements[struct_stmt_id].as_struct();
+        self.resolve_statement(nst, stmt_id);
+
+        let (struct_identifier, _, type_parameter_identifiers, fields) =
+            nst.statements[stmt_id].as_struct();
+
+        if field_expressions.len() != fields.len() {
+            self.diagnostics.report_err(
+                "Struct fields differ in length",
+                span.clone(),
+                (file!(), line!()),
+            );
+        }
 
         let symbol_id = self
             .struct_bindings
-            .get(&struct_stmt_id)
+            .get(&stmt_id)
             .expect("struct symbol exists")
             .0;
+
         if self.native_symbols.contains(&symbol_id) {
             self.diagnostics.report_err(
                 format!(
@@ -1174,35 +1206,35 @@ impl Resolver {
             );
         }
 
-        let mut expr_type_ids = Vec::with_capacity(field_exprs.len());
-        for (_, field_expr_id) in field_exprs {
-            let expr_type_id = self.resolve_expression(nst, *field_expr_id);
-            expr_type_ids.push(expr_type_id);
-        }
-        debug_assert!(expr_type_ids.len() == field_exprs.len());
-
-        // let fields = match implementation {
-        //     Implementation::Provided(field_types) => field_types,
-        //     _ => {
-        //         // fixme: because how the From<NstStatement> for Statement<Untyped, Unbound>
-        //         //  works, we can never have anything else that Implementation::Provided here
-        //         unreachable!();
-        //     }
-        // };
-
-        if field_exprs.len() != fields.len() {
-            self.diagnostics.report_err(
-                "Struct fields differ in length",
-                span.clone(),
-                (file!(), line!()),
-            );
-        }
-
-        for (field_ident_ref_id, field_expr_id, expr_type_id) in field_exprs
+        let mut local_type_parameters_bindings = type_parameters
             .iter()
-            .zip(expr_type_ids.into_iter())
-            .map(|((a, b), (c, _))| (*a, *b, c))
-        {
+            .enumerate()
+            .map(|(index, type_def_id)| {
+                let field_type_id = self
+                    .field_bindings
+                    .get(&(stmt_id, index))
+                    .expect("was bound")
+                    .1;
+
+                let type_def = &nst.type_defs[*type_def_id];
+                let type_id = self.resolve_type_def(nst, *type_def_id, false);
+
+                (field_type_id, (type_def.span.clone(), type_id))
+            })
+            .collect::<HashMap<_, _>>();
+
+        let typed_field_expressions = field_expressions
+            .iter()
+            .map(|(ident_ref_id, expr_id)| {
+                (
+                    *ident_ref_id,
+                    *expr_id,
+                    self.resolve_expression(nst, *expr_id).0,
+                )
+            })
+            .collect::<Vec<_>>();
+
+        for (field_ident_ref_id, field_expr_id, expr_type_id) in typed_field_expressions {
             let field_ident_ref = &nst.identifier_refs[field_ident_ref_id];
 
             if let Some((index, field)) = fields
@@ -1212,7 +1244,7 @@ impl Resolver {
             {
                 let field_symbol_id = self
                     .field_bindings
-                    .get(&(struct_stmt_id, index))
+                    .get(&(stmt_id, index))
                     .expect("field bound")
                     .0;
 
@@ -1221,11 +1253,38 @@ impl Resolver {
 
                 let field_type_id = self
                     .field_bindings
-                    .get(&(struct_stmt_id, index))
+                    .get(&(stmt_id, index))
                     .expect("was bound")
                     .1;
 
-                if expr_type_id != field_type_id {
+                let ty = self.types.get_by_left(&field_type_id).expect("type exists");
+                if let Type::Parameter(_, index) = ty {
+                    let span = nst.expressions[field_expr_id].span.clone();
+                    if let Some(previous_binding) =
+                        local_type_parameters_bindings.insert(field_type_id, (span, expr_type_id))
+                    {
+                        if previous_binding.1 != expr_type_id {
+                            let index = &type_parameter_identifiers[*index];
+                            let type_parameter_ident = self
+                                .identifiers
+                                .get_by_left(&index.id)
+                                .expect("identifier exists");
+                            self.diagnostics.report_err(
+                                format!(
+                                    "Invalid type for field '{}': expected {}, got {} ({} bound at line {}, column {})",
+                                    self.identifiers.get_by_left(&field.identifier.id).unwrap(),
+                                    self.find_type_by_type_id(previous_binding.1),
+                                    self.find_type_by_type_id(expr_type_id),
+                                    type_parameter_ident,
+                                    previous_binding.0.line,
+                                    previous_binding.0.column
+                                ),
+                                nst.expressions[field_expr_id].span.clone(),
+                                (file!(), line!()),
+                            );
+                        }
+                    }
+                } else if expr_type_id != field_type_id {
                     self.diagnostics.report_err(
                         format!(
                             "Invalid type for field '{}': expected {}, got {}",
@@ -1244,8 +1303,30 @@ impl Resolver {
             }
         }
 
-        self.find_type_id_by_identifier(struct_identifier.id)
-            .expect("type exists")
+        if !local_type_parameters_bindings.is_empty() {
+            let mut resolved_type_parameters = local_type_parameters_bindings
+                .into_iter()
+                .map(|(type_param_type_id, (_, type_id))| {
+                    (
+                        self.find_type_by_type_id(type_param_type_id)
+                            .as_parameter()
+                            .1,
+                        type_id,
+                    )
+                })
+                .collect::<Vec<_>>();
+
+            resolved_type_parameters.sort_by(|a, b| a.0.cmp(&b.0));
+            let types = resolved_type_parameters
+                .into_iter()
+                .map(|v| v.1)
+                .collect::<Vec<_>>();
+
+            self.insert_type(Type::Struct(stmt_id, types))
+        } else {
+            self.find_type_id_by_identifier(struct_identifier.id)
+                .expect("type exists")
+        }
     }
 
     fn resolve_array_instantiation(&mut self, nst: &Nst, values: &[ExprId]) -> TypeId {
@@ -1619,7 +1700,17 @@ impl Resolver {
             self.parent.insert(stmt_id, parent);
         }
 
-        let (identifier, annotations, fields) = nst.statements[stmt_id].as_struct();
+        let (identifier, annotations, type_parameters, fields) =
+            nst.statements[stmt_id].as_struct();
+
+        for (index, type_parameter) in type_parameters.iter().enumerate() {
+            self.insert_symbol(
+                type_parameter.id,
+                SymbolKind::TypeParameter(identifier.id, stmt_id, index),
+                self.find_type_id_by_type(&Type::Type),
+            );
+            self.insert_type(Type::Parameter(stmt_id, index));
+        }
 
         for annotation in annotations {
             self.resolve_ident_refs(nst, &annotation.ident_ref_ids, false);
@@ -1839,8 +1930,8 @@ impl Resolver {
 
     /// Resolves a `TypeDefId`. Starts by resolving all potential `IdentRefId`s found and resolves
     /// the `TypeDefId` to that last found type. By default, issues a diagnostic when the type
-    /// found is not assignable (as per `Type::is_assignable()` definition. If `return_type` is set
-    /// to true however, the type validity is checked with `Type::is_valid_return_type()`.
+    /// found is not assignable (as per `Type::is_assignable()` definition). If `return_type` is
+    /// set to `true` however, the type validity is checked with `Type::is_valid_return_type()`.
     fn resolve_type_def(&mut self, nst: &Nst, type_def_id: TypeDefId, return_type: bool) -> TypeId {
         match &nst.type_defs[type_def_id].kind {
             TypeDefKind::Simple(ident_ref_ids) => {
@@ -1856,9 +1947,17 @@ impl Resolver {
                 debug_assert_eq!(symbol_ids.len(), 1);
                 let symbol_id = symbol_ids[0];
 
+                // todo:refactoring why not use the TypeId from the symbol, and lookup the Type from
+                //  there?
                 let ty = match &self.symbols[symbol_id].kind {
-                    SymbolKind::Struct(_, stmt_id) => Type::Struct(*stmt_id),
+                    SymbolKind::Struct(_, stmt_id) => {
+                        // todo:feature add support for type parameters to TypeDef
+                        Type::Struct(*stmt_id, vec![])
+                    }
                     SymbolKind::NativeType(_, ty) => ty.clone(),
+                    SymbolKind::TypeParameter(_, stmt_id, index) => {
+                        Type::Parameter(*stmt_id, *index)
+                    }
                     SymbolKind::NotFound => {
                         // nothing, we reported already
                         return self.find_type_id_by_type(&Type::Invalid);
@@ -2164,9 +2263,9 @@ impl Resolver {
                     ),
                     identifier.span.clone(),
                     (file!(), line!()),
-                )
+                );
             } else {
-                let struct_type_id = self.insert_type(Type::Struct(stmt_id));
+                let struct_type_id = self.insert_type(Type::Struct(stmt_id, vec![]));
                 let symbol_id = self.insert_symbol(ident_id, symbol_kind, struct_type_id);
 
                 if self.fn_stack.last().is_none() {
@@ -2250,9 +2349,10 @@ impl Resolver {
 
                     match &self.symbols[symbol_id].kind {
                         SymbolKind::NativeType(_, ty) => Some(self.find_type_id_by_type(ty)),
-                        SymbolKind::Struct(_, stmt) => {
-                            Some(self.find_type_id_by_type(&Type::Struct(*stmt)))
-                        }
+                        SymbolKind::Struct(_, stmt) => Some(
+                            // todo:feature add support for type parameters to TypeDef
+                            self.find_type_id_by_type(&Type::Struct(*stmt, vec![])),
+                        ),
                         _ => None,
                     }
                 }
@@ -2266,10 +2366,16 @@ impl Resolver {
 
     fn find_type_id_by_identifier(&self, ident_id: IdentId) -> Option<TypeId> {
         self.find_symbol_id_by_ident_and_kind(ident_id, RequiredSymbolKind::Other)
+            // todo:refactoring why not use the TypeId from the symbol directly?
             .and_then(|symbol_id| match &self.symbols[symbol_id].kind {
                 SymbolKind::NativeType(_, ty) => Some(self.find_type_id_by_type(ty)),
+                SymbolKind::TypeParameter(_, stmt_id, index) => {
+                    Some(self.find_type_id_by_type(&Type::Parameter(*stmt_id, *index)))
+                }
                 SymbolKind::Struct(_, stmt) => {
-                    Some(self.find_type_id_by_type(&Type::Struct(*stmt)))
+                    // there are no type parameters on an identifier, we can use an empty types
+                    // list
+                    Some(self.find_type_id_by_type(&Type::Struct(*stmt, vec![])))
                 }
                 _ => None,
             })
@@ -2897,6 +3003,11 @@ mod tests {
         struct_invalid_field_type,
         "struct S { x: number } let s = S { x: 1 == 1 };"
     );
+    test_resolution!(struct_type_parameter, "struct S<T> { f: T }");
+    test_resolution!(
+        struct_type_parameter_several_use,
+        "struct S<T> { f: T, g: T }"
+    );
     test_resolution!(access_non_struct, "1.x;");
     test_resolution!(access_namespace, "namespace a {} a.x;");
     test_resolution!(
@@ -3023,6 +3134,122 @@ mod tests {
         let s = Outer { field: Inner { field: 1 } };
         "#
     );
+    test_resolution!(
+        struct_instantiation_out_of_order,
+        r#"
+        struct S { f1: number, f2: boolean, };
+        let s1 = S { f1: 1, f2: true, };
+        let s2 = S { f2: false, f1: 2, };
+        "#
+    );
+    test_resolution!(
+        struct_instantiation_out_of_order_invlaid_types,
+        r#"
+        struct S { f1: number, f2: boolean, };
+        let s1 = S { f1: 1, f2: true, };
+        let s2 = S { f2: 2, f1: false, };
+        "#
+    );
+    test_resolution!(
+        struct_instantiation_with_type_parameters,
+        r#"
+        struct S<T> { f: T, };
+        let s = S { f: 1, };
+        "#
+    );
+    test_resolution!(
+        struct_instantiation_with_type_parameters_multiple,
+        r#"
+        struct S<T, U> { f: T, g: U };
+        let s1 = S { f: 1, g: true };
+        let s2 = S { f: true, g: 1 };
+        "#
+    );
+    test_resolution!(
+        struct_instantiation_with_type_parameters_explicit,
+        r#"
+        struct S<T> { f: T, };
+        let s = S!<number> { f: 1, };
+        "#
+    );
+    test_resolution!(
+        struct_instantiation_with_type_parameters_explicit_invalid_type,
+        r#"
+        struct S<T> { f: T, };
+        let s = S!<number> { f: true, };
+        "#
+    );
+    test_resolution!(
+        struct_instantiation_with_type_parameters_incompatible,
+        r#"
+        struct S<T> { f1: T, f2: T};
+        let s = S { f1: 1, f2: true };
+        "#
+    );
+    test_resolution!(
+        struct_field_with_type_parameters_as_return_value,
+        r#"
+        struct S<T> { f: T };
+        let f(): number {
+            let s = S { f: 1 };
+            ret s.f;
+        }
+        "#
+    );
+    test_resolution!(
+        struct_field_with_type_parameters,
+        r#"
+        struct S<T> { f: T };
+        let s = S { f: 1 };
+        let n = 1;
+        n = s.f;
+        s.f = 2;
+        "#
+    );
+    test_resolution!(
+        struct_instantiation_with_type_parameters_reassign,
+        r#"
+        struct S<T> { f: T };
+        let s = S { f: 1 };
+        s = S { f: 2 };
+        "#
+    );
+    test_resolution!(
+        struct_instantiation_with_type_parameters_reassign_invalid_type,
+        r#"
+        struct S<T> { f: T };
+        let s = S { f: 1 };
+        s = S { f: true };
+        "#
+    );
+    // fixme (parsing missing)
+    // test_resolution!(
+    //     struct_instantiation_with_type_parameters_nested,
+    //     r#"
+    //     struct Outer<T> { f: Inner!<T>, };
+    //     struct Inner<T> { f: T, };
+    //     let o = Outer { f: Inner!<number> { field: 1}, };
+    //     "#
+    // );
+    // fixme
+    // test_resolution!(
+    //     struct_instantiation_out_of_order_fixme,
+    //     r#"
+    //     struct S1 { field: number };
+    //     struct S2 { field: number };
+    //     struct S3 {
+    //       f1: S1,
+    //       f2: S2,
+    //     };
+    //     let s1 = S3 {
+    //       f1: S1 { field: 1 }, f2: S2 { field: 2 }
+    //     }; };
+    //     let s2 = S3 {
+    //       f2: S2 { field: 2 },
+    //       f1: S1 { field: 1 }
+    //     }; };
+    //     "#
+    // );
 
     test_resolution!(void_function_explicit_void_ret, "let f() { ret; }");
     test_resolution!(void_function_implicit_void_ret, "let f() { }");

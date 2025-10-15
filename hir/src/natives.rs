@@ -280,8 +280,20 @@ pub enum Type {
 
     Function(Vec<TypeId>, TypeId),
 
-    Struct(StmtId),
+    /// Represents a struct type. The `StmtId` determines what statement defined, the `Vec<TypeId>`
+    /// the type parameters
+    Struct(StmtId, Vec<TypeId>),
     Array(TypeId, usize),
+
+    /// Represents an unbound `TypeParameter` type. The `StmtId` determines what statement defined
+    /// it and the `usize` the position of the type parameter in the list.
+    Parameter(StmtId, usize),
+
+    /// The type of types
+    Type,
+
+    /// An alias for another type
+    Alias(TypeId),
 
     /// This value is used when the statement/expression does not have any value. This is the
     /// case for `namespace`, `let` and `let fn`.
@@ -300,7 +312,10 @@ impl Type {
             | Type::None
             | Type::Function(..)
             | Type::Struct(..)
-            | Type::Array(..) => unimplemented!(),
+            | Type::Array(..)
+            | Type::Parameter(..)
+            | Type::Alias(..)
+            | Type::Type => unimplemented!(),
             Type::Boolean => "boolean",
             Type::Number => "number",
             Type::Void => "void",
@@ -317,9 +332,24 @@ impl Type {
             Type::Boolean
                 | Type::Number
                 | Type::Function(_, _)
-                | Type::Struct(_)
+                | Type::Struct(_, _)
                 | Type::Array(_, _)
+                | Type::Parameter(_, _)
         )
+    }
+
+    pub fn as_parameter(&self) -> (StmtId, usize) {
+        match self {
+            Type::Parameter(stmt_id, index) => (*stmt_id, *index),
+            t => panic!("expected a type parameter, got {t:?}"),
+        }
+    }
+
+    pub fn as_struct(&self) -> (StmtId, &[TypeId]) {
+        match self {
+            Type::Struct(stmt_id, type_ids) => (*stmt_id, type_ids),
+            t => panic!("expected a struct, got {t:?}"),
+        }
     }
 }
 
@@ -331,7 +361,10 @@ impl Display for Type {
             Type::Function(..) => write!(f, "function"),
             Type::Struct(..) => write!(f, "struct"),
             Type::Array(_, len) => write!(f, "array[{len}]"),
+            Type::Parameter(..) => write!(f, "type parameter"),
+            Type::Type => write!(f, "type"),
             Type::Void => write!(f, "void"),
+            Type::Alias(type_id) => write!(f, "alias({type_id:?})"),
             Type::None => write!(f, "no type"),
             Type::Invalid => write!(f, "invalid"),
         }

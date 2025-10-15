@@ -54,6 +54,7 @@ pub enum SymbolKind {
     LetFn(IdentId, StmtId, Vec<TypeId>, TypeId),
     // todo:refactoring could StmtId be replaced with SymbolId (the symbol that defines the function)
     Parameter(IdentId, StmtId, usize),
+    TypeParameter(IdentId, StmtId, usize),
     Struct(IdentId, StmtId),
     Annotation(IdentId, StmtId),
     // todo:refactoring could StmtId be replaced with SymbolId (the symbol that defines the struct)

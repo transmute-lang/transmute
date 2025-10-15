@@ -2,13 +2,14 @@
 source: hir/src/hir_print.rs
 expression: s
 ---
+   sym    typ
                +- stmt 0
 =    1:     1     +- Namespace name=<root>
                      +- stmt 1
 =    2:     1        |  +- Namespace name=core
                      |     +- stmts=[]
                      +- stmt 9
-=   34:    17        |  +- Fn name=main
+=   34:    18        |  +- Fn name=main
                      |     +- annotations=[]
                      |     +- params=[]
 @     :     1        |     +- ret=[]
@@ -18,18 +19,18 @@ expression: s
 =   35:     4        |           |  +- Let name=n
 @     :     4        |           |     +- expr 6
 @     :     4        |           |        +- Call
-@     :    15        |           |           +- callee:expr 0
-@   32:    15        |           |           |  +- Ident: number_parse
+@     :    16        |           |           +- callee:expr 0
+@   32:    16        |           |           |  +- Ident: number_parse
                      |           |           +- params
-@     :     6        |           |              +- expr 5
-@     :     6        |           |                 +- Call
-@     :    13        |           |                    +- callee:expr 1
-@   30:    13        |           |                    |  +- Ident: list_get
+@     :     7        |           |              +- expr 5
+@     :     7        |           |                 +- Call
+@     :    14        |           |                    +- callee:expr 1
+@   30:    14        |           |                    |  +- Ident: list_get
                      |           |                    +- params
-@     :     5        |           |                       +- expr 3
-@     :     5        |           |                       |  +- Call
-@     :    12        |           |                       |     +- callee:expr 2
-@   29:    12        |           |                       |     |  +- Ident: args
+@     :     6        |           |                       +- expr 3
+@     :     6        |           |                       |  +- Call
+@     :    13        |           |                       |     +- callee:expr 2
+@   29:    13        |           |                       |     |  +- Ident: args
                      |           |                       |     +- params=[]
 @     :     4        |           |                       +- expr 4
 @     :     4        |           |                          +- Number: 1
@@ -37,12 +38,12 @@ expression: s
 =   36:     4        |           |  +- Let name=n
 @     :     4        |           |     +- expr 121
 @     :     4        |           |        +- ArrayAccess
-@     :    18        |           |           +- expr 119
-@     :    18        |           |           |  +- ArrayAccess
-@     :    19        |           |           |     +- expr 117
-@     :    19        |           |           |     |  +- ArrayInstantiate
-@     :    18        |           |           |     |     +- expr 17
-@     :    18        |           |           |     |     |  +- ArrayInstantiate
+@     :    19        |           |           +- expr 119
+@     :    19        |           |           |  +- ArrayAccess
+@     :    20        |           |           |     +- expr 117
+@     :    20        |           |           |     |  +- ArrayInstantiate
+@     :    19        |           |           |     |     +- expr 17
+@     :    19        |           |           |     |     |  +- ArrayInstantiate
 @     :     4        |           |           |     |     |     +- expr 7
 @     :     4        |           |           |     |     |     |  +- Number: 0
 @     :     4        |           |           |     |     |     +- expr 8
@@ -63,8 +64,8 @@ expression: s
 @     :     4        |           |           |     |     |     |  +- Number: 8
 @     :     4        |           |           |     |     |     +- expr 16
 @     :     4        |           |           |     |     |        +- Number: 9
-@     :    18        |           |           |     |     +- expr 28
-@     :    18        |           |           |     |     |  +- ArrayInstantiate
+@     :    19        |           |           |     |     +- expr 28
+@     :    19        |           |           |     |     |  +- ArrayInstantiate
 @     :     4        |           |           |     |     |     +- expr 18
 @     :     4        |           |           |     |     |     |  +- Number: 10
 @     :     4        |           |           |     |     |     +- expr 19
@@ -85,8 +86,8 @@ expression: s
 @     :     4        |           |           |     |     |     |  +- Number: 18
 @     :     4        |           |           |     |     |     +- expr 27
 @     :     4        |           |           |     |     |        +- Number: 19
-@     :    18        |           |           |     |     +- expr 39
-@     :    18        |           |           |     |     |  +- ArrayInstantiate
+@     :    19        |           |           |     |     +- expr 39
+@     :    19        |           |           |     |     |  +- ArrayInstantiate
 @     :     4        |           |           |     |     |     +- expr 29
 @     :     4        |           |           |     |     |     |  +- Number: 20
 @     :     4        |           |           |     |     |     +- expr 30
@@ -107,8 +108,8 @@ expression: s
 @     :     4        |           |           |     |     |     |  +- Number: 28
 @     :     4        |           |           |     |     |     +- expr 38
 @     :     4        |           |           |     |     |        +- Number: 29
-@     :    18        |           |           |     |     +- expr 50
-@     :    18        |           |           |     |     |  +- ArrayInstantiate
+@     :    19        |           |           |     |     +- expr 50
+@     :    19        |           |           |     |     |  +- ArrayInstantiate
 @     :     4        |           |           |     |     |     +- expr 40
 @     :     4        |           |           |     |     |     |  +- Number: 20
 @     :     4        |           |           |     |     |     +- expr 41
@@ -129,8 +130,8 @@ expression: s
 @     :     4        |           |           |     |     |     |  +- Number: 38
 @     :     4        |           |           |     |     |     +- expr 49
 @     :     4        |           |           |     |     |        +- Number: 39
-@     :    18        |           |           |     |     +- expr 61
-@     :    18        |           |           |     |     |  +- ArrayInstantiate
+@     :    19        |           |           |     |     +- expr 61
+@     :    19        |           |           |     |     |  +- ArrayInstantiate
 @     :     4        |           |           |     |     |     +- expr 51
 @     :     4        |           |           |     |     |     |  +- Number: 40
 @     :     4        |           |           |     |     |     +- expr 52
@@ -151,8 +152,8 @@ expression: s
 @     :     4        |           |           |     |     |     |  +- Number: 48
 @     :     4        |           |           |     |     |     +- expr 60
 @     :     4        |           |           |     |     |        +- Number: 49
-@     :    18        |           |           |     |     +- expr 72
-@     :    18        |           |           |     |     |  +- ArrayInstantiate
+@     :    19        |           |           |     |     +- expr 72
+@     :    19        |           |           |     |     |  +- ArrayInstantiate
 @     :     4        |           |           |     |     |     +- expr 62
 @     :     4        |           |           |     |     |     |  +- Number: 50
 @     :     4        |           |           |     |     |     +- expr 63
@@ -173,8 +174,8 @@ expression: s
 @     :     4        |           |           |     |     |     |  +- Number: 58
 @     :     4        |           |           |     |     |     +- expr 71
 @     :     4        |           |           |     |     |        +- Number: 59
-@     :    18        |           |           |     |     +- expr 83
-@     :    18        |           |           |     |     |  +- ArrayInstantiate
+@     :    19        |           |           |     |     +- expr 83
+@     :    19        |           |           |     |     |  +- ArrayInstantiate
 @     :     4        |           |           |     |     |     +- expr 73
 @     :     4        |           |           |     |     |     |  +- Number: 60
 @     :     4        |           |           |     |     |     +- expr 74
@@ -195,8 +196,8 @@ expression: s
 @     :     4        |           |           |     |     |     |  +- Number: 68
 @     :     4        |           |           |     |     |     +- expr 82
 @     :     4        |           |           |     |     |        +- Number: 69
-@     :    18        |           |           |     |     +- expr 94
-@     :    18        |           |           |     |     |  +- ArrayInstantiate
+@     :    19        |           |           |     |     +- expr 94
+@     :    19        |           |           |     |     |  +- ArrayInstantiate
 @     :     4        |           |           |     |     |     +- expr 84
 @     :     4        |           |           |     |     |     |  +- Number: 70
 @     :     4        |           |           |     |     |     +- expr 85
@@ -217,8 +218,8 @@ expression: s
 @     :     4        |           |           |     |     |     |  +- Number: 78
 @     :     4        |           |           |     |     |     +- expr 93
 @     :     4        |           |           |     |     |        +- Number: 79
-@     :    18        |           |           |     |     +- expr 105
-@     :    18        |           |           |     |     |  +- ArrayInstantiate
+@     :    19        |           |           |     |     +- expr 105
+@     :    19        |           |           |     |     |  +- ArrayInstantiate
 @     :     4        |           |           |     |     |     +- expr 95
 @     :     4        |           |           |     |     |     |  +- Number: 80
 @     :     4        |           |           |     |     |     +- expr 96
@@ -239,8 +240,8 @@ expression: s
 @     :     4        |           |           |     |     |     |  +- Number: 88
 @     :     4        |           |           |     |     |     +- expr 104
 @     :     4        |           |           |     |     |        +- Number: 89
-@     :    18        |           |           |     |     +- expr 116
-@     :    18        |           |           |     |        +- ArrayInstantiate
+@     :    19        |           |           |     |     +- expr 116
+@     :    19        |           |           |     |        +- ArrayInstantiate
 @     :     4        |           |           |     |           +- expr 106
 @     :     4        |           |           |     |           |  +- Number: 90
 @     :     4        |           |           |     |           +- expr 107
@@ -269,8 +270,8 @@ expression: s
 @     :     1        |              +- Ret
 @     :     1        |                 +- expr 124
 @     :     1        |                    +- Call
-@     :    14        |                       +- callee:expr 122
-@   31:    14        |                       |  +- Ident: print
+@     :    15        |                       +- callee:expr 122
+@   31:    15        |                       |  +- Ident: print
                      |                       +- params
 @     :     4        |                          +- expr 123
 @   36:     4        |                             +- Ident: n
@@ -281,7 +282,7 @@ expression: s
                            +- stmt 11
 =    4:     1              |  +- Namespace name=booleans
                            |     +- stmt 24
-=   28:    11              |        +- Fn name=print (native)
+=   28:    12              |        +- Fn name=print (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
@@ -290,49 +291,49 @@ expression: s
                            +- stmt 12
 =    5:     1              |  +- Namespace name=env
                            |     +- stmt 23
-=   29:    12              |        +- Fn name=args (native)
+=   29:    13              |        +- Fn name=args (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params=[]
-@     :     5              |           +- ret=std.list.List
+@     :     6              |           +- ret=std.list.List
                            +- stmt 13
 =    6:     1              |  +- Namespace name=list
                            |     +- stmt 21
-=    7:     5              |     |  +- Struct name=List (native)
+=    7:     6              |     |  +- Struct name=List (native)
                            |     +- stmt 22
-=   30:    13              |        +- Fn name=list_get (native)
+=   30:    14              |        +- Fn name=list_get (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
-=   38:     5              |           |  +- list: List
+=   38:     6              |           |  +- list: List
 =   39:     4              |           |  +- index: number
-@     :     6              |           +- ret=std.str.string
+@     :     7              |           +- ret=std.str.string
                            +- stmt 14
 =    8:     1              |  +- Namespace name=numbers
                            |     +- stmt 19
-=   31:    14              |     |  +- Fn name=print (native)
+=   31:    15              |     |  +- Fn name=print (native)
                            |     |     +- annotations
 @   11:     1              |     |     |  +- std.native
                            |     |     +- params
 =   40:     4              |     |     |  +- n: core.number
 @     :     1              |     |     +- ret=[]
                            |     +- stmt 20
-=   32:    15              |        +- Fn name=number_parse (native)
+=   32:    16              |        +- Fn name=number_parse (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
-=   41:     6              |           |  +- s: std.str.string
+=   41:     7              |           |  +- s: std.str.string
 @     :     2              |           +- ret=core.number
                            +- stmt 15
 =    9:     1                 +- Namespace name=str
                                  +- stmt 17
-=   10:     6                    |  +- Struct name=string (native)
+=   10:     7                    |  +- Struct name=string (native)
                                  +- stmt 18
-=   33:    16                       +- Fn name=print (native)
+=   33:    17                       +- Fn name=print (native)
                                        +- annotations
 @   11:     1                          |  +- std.native
                                        +- params
-=   42:     6                          |  +- s: string
+=   42:     7                          |  +- s: string
 @     :     1                          +- ret=[]
 
 --- types ---
@@ -341,18 +342,19 @@ expression: s
 2: none
 3: boolean
 4: number
-5: struct 7
-6: struct 10
-7: f(4, 4) : 4
-8: f(4, 4) : 3
-9: f(3, 3) : 3
-10: f(4) : 4
-11: f(3) : 1
-12: f() : 5
-13: f(5, 4) : 6
-14: f(4) : 1
-15: f(6) : 4
-16: f(6) : 1
-17: f() : 1
-18: [4; 10]
-19: [18; 10]
+5: type
+6: struct 7<0>
+7: struct 10<0>
+8: f(4, 4) : 4
+9: f(4, 4) : 3
+10: f(3, 3) : 3
+11: f(4) : 4
+12: f(3) : 1
+13: f() : 6
+14: f(6, 4) : 7
+15: f(4) : 1
+16: f(7) : 4
+17: f(7) : 1
+18: f() : 1
+19: [4; 10]
+20: [19; 10]
