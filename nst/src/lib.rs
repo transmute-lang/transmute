@@ -2,12 +2,12 @@ use crate::exit_points_resolver::ExitPointsResolver;
 use crate::exit_points_resolver::Output as ExitPointsResolverOutput;
 use crate::implicit_ret_converter::ImplicitRetResolver;
 use crate::implicit_ret_converter::Output as ImplicitRetResolverOutput;
-use crate::nodes::{ExitPoints, Expression, Nst, Statement, TypeDef};
+use crate::nodes::{ExitPoints, Expression, Nst, TypeDef};
 use crate::operators_converter::OperatorsConverter;
 use transmute_ast::statement::StatementKind as AstStatementKind;
 use transmute_ast::Ast as AstAst;
 use transmute_core::id_map::IdMap;
-use transmute_core::ids::{ExprId, StmtId, TypeDefId};
+use transmute_core::ids::{ExprId, TypeDefId};
 use transmute_core::vec_map::VecMap;
 
 mod exit_points_resolver;
@@ -67,10 +67,7 @@ impl From<AstAst> for Nst {
                 .into_iter()
                 .map(|e| (e.0, Expression::from(e.1)))
                 .collect::<VecMap<ExprId, Expression>>(),
-            statements: statements
-                .into_iter()
-                .map(|s| (s.0, Statement::from(s.1)))
-                .collect::<VecMap<StmtId, Statement>>(),
+            statements,
             type_defs: ast
                 .type_defs
                 .into_iter()
