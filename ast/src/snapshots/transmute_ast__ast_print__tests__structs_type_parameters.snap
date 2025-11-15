@@ -12,12 +12,12 @@ expression: s
       |  +- Use std.numbers.number_parse
       +- stmt 4
       |  +- Use std.numbers.print
-      +- stmt 9
+      +- stmt 15
       |  +- Fn name=main
       |     +- annotations=[]
       |     +- params=[]
       |     +- ret=[]
-      |     +- body:expr 22
+      |     +- body:expr 43
       |        +- Block
       |           +- stmt 5
       |           |  +- Let name=n
@@ -70,18 +70,81 @@ expression: s
       |           |                 +- rhs:expr 15
       |           |                    +- Number: 1
       |           +- stmt 8
+      |           |  +- Expression
+      |           |     +- expr 21
+      |           |        +- Call
+      |           |           +- expr 18
+      |           |           |  +- Ident: print
+      |           |           +- params
+      |           |              +- expr 20
+      |           |                 +- Access
+      |           |                    +- expr 19
+      |           |                    |  +- Ident: s
+      |           |                    +- ident=field
+      |           +- stmt 9
+      |           |  +- Expression
+      |           |     +- expr 24
+      |           |        +- Assignment target=s
+      |           |           +- expr 23
+      |           |              +- StructInstantiate name=Struct
+      |           |                 +- types=[]
+      |           |                 +- field name=field
+      |           |                    +- expr 22
+      |           |                       +- Number: 0
+      |           +- stmt 10
+      |           |  +- Expression
+      |           |     +- expr 28
+      |           |        +- Call
+      |           |           +- expr 25
+      |           |           |  +- Ident: print
+      |           |           +- params
+      |           |              +- expr 27
+      |           |                 +- Access
+      |           |                    +- expr 26
+      |           |                    |  +- Ident: s
+      |           |                    +- ident=field
+      |           +- stmt 11
+      |           |  +- Expression
+      |           |     +- expr 32
+      |           |        +- Assignment
+      |           |           +- target:expr 30
+      |           |           |  +- Access
+      |           |           |     +- expr 29
+      |           |           |     |  +- Ident: s
+      |           |           |     +- ident=field
+      |           |           +- value:expr 31
+      |           |              +- Number: 1
+      |           +- stmt 12
+      |           |  +- Expression
+      |           |     +- expr 36
+      |           |        +- Call
+      |           |           +- expr 33
+      |           |           |  +- Ident: print
+      |           |           +- params
+      |           |              +- expr 35
+      |           |                 +- Access
+      |           |                    +- expr 34
+      |           |                    |  +- Ident: s
+      |           |                    +- ident=field
+      |           +- stmt 13
+      |           |  +- Expression
+      |           |     +- expr 39
+      |           |        +- Assignment target=n
+      |           |           +- expr 38
+      |           |              +- Access
+      |           |                 +- expr 37
+      |           |                 |  +- Ident: s
+      |           |                 +- ident=field
+      |           +- stmt 14
       |              +- Expression
-      |                 +- expr 21
+      |                 +- expr 42
       |                    +- Call
-      |                       +- expr 18
+      |                       +- expr 40
       |                       |  +- Ident: print
       |                       +- params
-      |                          +- expr 20
-      |                             +- Access
-      |                                +- expr 19
-      |                                |  +- Ident: s
-      |                                +- ident=field
-      +- stmt 10
+      |                          +- expr 41
+      |                             +- Ident: n
+      +- stmt 16
          +- Struct name=Struct
             +- types
             |  +- T

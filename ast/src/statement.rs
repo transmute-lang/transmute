@@ -37,7 +37,7 @@ pub enum StatementKind {
         /// Type parameters
         Vec<Identifier>,
         /// Fields
-        Vec<Field>
+        Vec<Field>,
     ),
     Annotation(Identifier),
     Use(Vec<IdentRefId>),
@@ -68,6 +68,7 @@ impl RetMode {
     }
 }
 
+// todo:refactoring this would be netter named as `TypeRefId`  (same in NST and everywhere else)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeDef {
     pub kind: TypeDefKind,
