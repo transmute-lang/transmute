@@ -614,9 +614,8 @@ Ok(
                 [],
                 TypeId(4),
             ),
-            TypeId(12) => Parameter(
-                StmtId(1),
-                0,
+            TypeId(12) => Alias(
+                TypeId(4),
             ),
             TypeId(13) => Struct(
                 StmtId(1),
