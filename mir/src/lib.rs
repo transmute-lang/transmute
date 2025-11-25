@@ -20,6 +20,7 @@ use transmute_hir::nodes::RetMode;
 use transmute_hir::nodes::Return as HirReturn;
 use transmute_hir::nodes::StatementKind as HirStatementKind;
 use transmute_hir::nodes::Target as HirTarget;
+use transmute_hir::symbol::Symbol as HirSymbol;
 use transmute_hir::symbol::SymbolKind as HirSymbolKind;
 use transmute_hir::Hir;
 // todo:refactor:style get rid of the `#[allow(clippy::too_many_arguments)]`
@@ -65,106 +66,138 @@ impl Transformer {
         debug_assert!(hir.statements.is_empty(), "{:?}", hir.statements);
 
         Ok(Mir {
-            functions: self.functions,
-            structs: self.structs,
+            types: self.map_types(hir.types),
+            symbols: Self::map_symbols(hir.symbols),
             identifiers: hir.identifiers,
+            functions: self.functions,
             expressions: self.expressions,
             statements: self.statements,
             namespaces: self.namespaces,
-            symbols: hir
-                .symbols
-                .into_iter()
-                .filter_map(|(symbol_id, symbol)| {
-                    if matches!(&symbol.kind, &HirSymbolKind::NotFound)
-                        || matches!(&symbol.kind, &HirSymbolKind::Annotation(_, _))
-                        || matches!(&symbol.kind, &HirSymbolKind::Namespace(..))
-                    {
-                        return None;
+            structs: self.structs,
+        })
+    }
+
+    fn map_types(&self, types: VecMap<TypeId, HirType>) -> VecMap<TypeId, Type> {
+        types
+            .into_iter()
+            .filter_map(|(type_id, ty)| match ty {
+                HirType::Invalid | HirType::Type => None,
+                HirType::Boolean => Some((type_id, Type::Boolean)),
+                HirType::Function(params, ret_type) => {
+                    Some((type_id, Type::Function(params, ret_type)))
+                }
+                HirType::Struct(stmt_id, type_parameters) => {
+                    let (symbol_id, struct_id) = self.structs_map[stmt_id];
+                    if self.structs[struct_id].type_parameters == type_parameters.len() {
+                        Some((type_id, Type::Struct(symbol_id, struct_id, type_parameters)))
+                    } else {
+                        None
                     }
+                }
+                HirType::Array(value_type_id, len) => {
+                    Some((type_id, Type::Array(value_type_id, len)))
+                }
+                HirType::Parameter(..) => None,
+                HirType::Number => Some((type_id, Type::Number)),
+                HirType::Void => Some((type_id, Type::Void)),
+                HirType::None => Some((type_id, Type::None)),
+            })
+            .collect::<VecMap<TypeId, Type>>()
+    }
 
-                    let ident_id = &match symbol.kind {
-                        HirSymbolKind::NotFound => unreachable!(),
-                        HirSymbolKind::Let(ident_id, _) => ident_id,
-                        HirSymbolKind::LetFn(ident_id, _, _, _) => ident_id,
-                        HirSymbolKind::Parameter(ident_id, _, _) => ident_id,
-                        HirSymbolKind::Struct(ident_id, _) => ident_id,
-                        HirSymbolKind::Field(ident_id, _, _) => ident_id,
-                        HirSymbolKind::NativeType(ident_id, _) => ident_id,
-                        HirSymbolKind::Native(ident_id, _, _, _) => ident_id,
-                        HirSymbolKind::Annotation(ident_id, _) => ident_id,
-                        HirSymbolKind::Namespace(ident_id, ..) => ident_id,
-                    };
-
-                    Some((
+    fn map_symbols(symbols: VecMap<SymbolId, HirSymbol>) -> VecMap<SymbolId, Symbol> {
+        symbols
+            .into_iter()
+            .filter_map(|(symbol_id, symbol)| {
+                let id = symbol.id;
+                let type_id = symbol.type_id;
+                match symbol.kind {
+                    HirSymbolKind::NotFound => None,
+                    HirSymbolKind::Let(ident_id, _) => Some((
                         symbol_id,
                         Symbol {
-                            id: symbol.id,
-                            type_id: symbol.type_id,
-                            ident_id: *ident_id,
-                            kind: match symbol.kind {
-                                HirSymbolKind::NotFound
-                                | HirSymbolKind::Annotation(_, _)
-                                | HirSymbolKind::Namespace(..) => {
-                                    unreachable!()
-                                }
-                                HirSymbolKind::Let(_, _) => SymbolKind::Let,
-                                HirSymbolKind::LetFn(_, _, params, ret_type_id) => {
-                                    SymbolKind::LetFn(params, ret_type_id)
-                                }
-                                HirSymbolKind::Parameter(_, _, index) => {
-                                    SymbolKind::Parameter(index)
-                                }
-                                HirSymbolKind::Struct(_, _) => SymbolKind::Struct,
-                                HirSymbolKind::Field(ident_id, _, index) => {
-                                    SymbolKind::Field(ident_id, index)
-                                }
-                                HirSymbolKind::NativeType(ident_id, t) => SymbolKind::NativeType(
-                                    ident_id,
-                                    match t {
-                                        // todo:refactoring there is something to do about types
-                                        //   (same code as for the types field)
-                                        HirType::Invalid => unreachable!(),
-                                        HirType::Boolean => Type::Boolean,
-                                        HirType::Function(params, ret_type) => {
-                                            Type::Function(params, ret_type)
-                                        }
-                                        HirType::Struct(_) => todo!(),
-                                        HirType::Array(_, _) => todo!(),
-                                        HirType::Number => Type::Number,
-                                        HirType::Void => Type::Void,
-                                        HirType::None => Type::None,
-                                    },
-                                ),
-                                HirSymbolKind::Native(ident_id, params, ret_type_id, kind) => {
-                                    SymbolKind::Native(ident_id, params, ret_type_id, kind)
-                                }
-                            },
+                            id,
+                            type_id,
+                            ident_id,
+                            kind: SymbolKind::Let,
                         },
-                    ))
-                })
-                .collect::<VecMap<SymbolId, Symbol>>(),
-            types: hir
-                .types
-                .into_iter()
-                .filter_map(|(type_id, ty)| match ty {
-                    HirType::Invalid => None,
-                    HirType::Boolean => Some((type_id, Type::Boolean)),
-                    HirType::Function(params, ret_type) => {
-                        Some((type_id, Type::Function(params, ret_type)))
-                    }
-                    HirType::Struct(stmt_id) => {
-                        let (symbol_id, struct_id) = self.structs_map[stmt_id];
-                        Some((type_id, Type::Struct(symbol_id, struct_id)))
-                    }
-                    HirType::Array(value_type_id, len) => {
-                        Some((type_id, Type::Array(value_type_id, len)))
-                    }
-                    HirType::Number => Some((type_id, Type::Number)),
-                    HirType::Void => Some((type_id, Type::Void)),
-                    HirType::None => Some((type_id, Type::None)),
-                })
-                .collect::<VecMap<TypeId, Type>>(),
-        })
+                    )),
+                    HirSymbolKind::LetFn(ident_id, _, params, ret_type_id) => Some((
+                        symbol_id,
+                        Symbol {
+                            id,
+                            type_id,
+                            ident_id,
+                            kind: SymbolKind::LetFn(params, ret_type_id),
+                        },
+                    )),
+                    HirSymbolKind::Parameter(ident_id, _, index) => Some((
+                        symbol_id,
+                        Symbol {
+                            id,
+                            type_id,
+                            ident_id,
+                            kind: SymbolKind::Parameter(index),
+                        },
+                    )),
+                    HirSymbolKind::TypeParameter(..) => None,
+                    HirSymbolKind::Struct(ident_id, _) => Some((
+                        symbol_id,
+                        Symbol {
+                            id,
+                            type_id,
+                            ident_id,
+                            kind: SymbolKind::Struct,
+                        },
+                    )),
+                    HirSymbolKind::Annotation(_, _) => None,
+                    HirSymbolKind::Field(ident_id, _, index) => Some((
+                        symbol_id,
+                        Symbol {
+                            id,
+                            type_id,
+                            ident_id,
+                            kind: SymbolKind::Field(ident_id, index),
+                        },
+                    )),
+                    HirSymbolKind::NativeType(ident_id, t) => Some((
+                        symbol_id,
+                        Symbol {
+                            id,
+                            type_id,
+                            ident_id,
+                            kind: SymbolKind::NativeType(
+                                ident_id,
+                                match t {
+                                    HirType::Invalid => unreachable!(),
+                                    HirType::Boolean => Type::Boolean,
+                                    HirType::Function(params, ret_type) => {
+                                        Type::Function(params, ret_type)
+                                    }
+                                    HirType::Struct(..) => todo!(),
+                                    HirType::Array(_, _) => todo!(),
+                                    HirType::Type => todo!(),
+                                    HirType::Parameter(..) => todo!(),
+                                    HirType::Number => Type::Number,
+                                    HirType::Void => Type::Void,
+                                    HirType::None => Type::None,
+                                },
+                            ),
+                        },
+                    )),
+                    HirSymbolKind::Native(ident_id, params, ret_type_id, kind) => Some((
+                        symbol_id,
+                        Symbol {
+                            id,
+                            type_id,
+                            ident_id,
+                            kind: SymbolKind::Native(ident_id, params, ret_type_id, kind),
+                        },
+                    )),
+                    HirSymbolKind::Namespace(_, _) => None,
+                }
+            })
+            .collect::<VecMap<SymbolId, Symbol>>()
     }
 
     fn transform_namespace(
@@ -200,8 +233,14 @@ impl Transformer {
                         ret_type,
                         implementation,
                     ),
-                    HirStatementKind::Struct(identifier, _, implementation, _) => {
-                        self.transform_struct(current, stmt_id, identifier, implementation)
+                    HirStatementKind::Struct(identifier, _, implementation, type_parameters, _) => {
+                        self.transform_struct(
+                            current,
+                            stmt_id,
+                            identifier,
+                            implementation,
+                            type_parameters,
+                        )
                     }
                     HirStatementKind::Annotation(_) => {
                         self.statements.remove(stmt_id);
@@ -293,6 +332,7 @@ impl Transformer {
         stmt_id: StmtId,
         identifier: HirIdentifier,
         implementation: Implementation<Vec<HirField>>,
+        type_parameters: usize,
     ) {
         let struct_id = self.structs.create();
         let symbol_id = identifier.resolved_symbol_id();
@@ -316,6 +356,7 @@ impl Transformer {
                     ),
                     _ => None,
                 },
+                type_parameters,
                 parent,
             },
         );
@@ -397,7 +438,7 @@ impl Transformer {
                 stmt_ids,
                 remove_implicit_rets,
             ),
-            HirExpressionKind::StructInstantiation(ident_ref_id, fields) => self
+            HirExpressionKind::StructInstantiation(ident_ref_id, _, fields) => self
                 .transform_struct_instantiation(
                     hir,
                     parent,
@@ -784,8 +825,8 @@ impl Transformer {
                         hir, parent, stmt_id, identifier, parameters, ret_type, expr_id,
                     );
                 }
-                HirStatementKind::Struct(identifier, _, fields, _) => {
-                    self.transform_struct(parent, stmt_id, identifier, fields)
+                HirStatementKind::Struct(identifier, _, fields, type_parameters, _) => {
+                    self.transform_struct(parent, stmt_id, identifier, fields, type_parameters)
                 }
                 HirStatementKind::Annotation(_) | HirStatementKind::Use(_) => {
                     // nothing
@@ -853,7 +894,13 @@ impl Transformer {
 
         if let Some(struct_stmt) = hir.statements.remove(stmt_id) {
             match struct_stmt.kind {
-                HirStatementKind::Struct(identifier, _, implementation, fn_stmt_id) => {
+                HirStatementKind::Struct(
+                    identifier,
+                    _,
+                    implementation,
+                    type_parameters,
+                    fn_stmt_id,
+                ) => {
                     if let Some(fn_stmt_id) = fn_stmt_id {
                         self.transform_function_rec(hir, parent, fn_stmt_id);
                     }
@@ -866,6 +913,7 @@ impl Transformer {
                         struct_stmt.id,
                         identifier,
                         implementation,
+                        type_parameters,
                     )
                 }
                 _ => panic!("expected struct statement"),
@@ -1242,6 +1290,7 @@ pub struct Struct {
     pub symbol_id: SymbolId,
     // todo why not just a Vec<Field> that can be empty?
     pub fields: Option<Vec<Field>>,
+    pub type_parameters: usize,
     pub parent: ParentKind,
 }
 
@@ -1333,9 +1382,13 @@ pub enum Type {
 
     Function(Vec<TypeId>, TypeId),
 
+    /// Represents a struct type. The `StmtId` determines what statement defined, the `Vec<TypeId>`
+    /// the type parameters
     // todo:refactoring keep only one?
-    Struct(SymbolId, StructId),
+    Struct(SymbolId, StructId, Vec<TypeId>),
     Array(TypeId, usize),
+
+    Alias(TypeId),
 
     /// This value is used when the statement/expression does not have any value. This is the
     /// case for `let` and `let fn`.
@@ -1422,6 +1475,13 @@ mod tests {
         struct Struct { field: number }
         let f() {
             let s = Struct { field: 1 };
+        }
+    "#);
+    t!(test_struct_instantiation_with_generics => r#"
+        struct Struct<T> { field: T }
+        let f() {
+            let s1 = Struct { field: 1 };
+            let s2 = Struct { field: true };
         }
     "#);
     t!(test_struct_instantiation_nested => r#"

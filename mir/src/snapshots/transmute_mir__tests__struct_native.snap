@@ -1,6 +1,6 @@
 ---
 source: mir/src/lib.rs
-expression: make_mir(hir)
+expression: mir
 ---
 Ok(
     Mir {
@@ -13,6 +13,7 @@ Ok(
                 },
                 symbol_id: SymbolId(5),
                 fields: None,
+                type_parameters: 0,
                 parent: Namespace(
                     NamespaceId(0),
                 ),
@@ -64,7 +65,7 @@ Ok(
             SymbolId(5) => Symbol {
                 id: SymbolId(5),
                 kind: Struct,
-                type_id: TypeId(5),
+                type_id: TypeId(6),
                 ident_id: IdentId(3),
             },
             SymbolId(6) => Symbol {
@@ -105,7 +106,7 @@ Ok(
                     TypeId(4),
                     SubNumberNumber,
                 ),
-                type_id: TypeId(6),
+                type_id: TypeId(7),
                 ident_id: IdentId(17),
             },
             SymbolId(10) => Symbol {
@@ -119,7 +120,7 @@ Ok(
                     TypeId(3),
                     NeqNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(8),
                 ident_id: IdentId(15),
             },
             SymbolId(11) => Symbol {
@@ -133,7 +134,7 @@ Ok(
                     TypeId(3),
                     NeqBooleanBoolean,
                 ),
-                type_id: TypeId(8),
+                type_id: TypeId(9),
                 ident_id: IdentId(15),
             },
             SymbolId(12) => Symbol {
@@ -146,7 +147,7 @@ Ok(
                     TypeId(4),
                     NegNumber,
                 ),
-                type_id: TypeId(9),
+                type_id: TypeId(10),
                 ident_id: IdentId(14),
             },
             SymbolId(13) => Symbol {
@@ -160,7 +161,7 @@ Ok(
                     TypeId(4),
                     MulNumberNumber,
                 ),
-                type_id: TypeId(6),
+                type_id: TypeId(7),
                 ident_id: IdentId(13),
             },
             SymbolId(14) => Symbol {
@@ -174,7 +175,7 @@ Ok(
                     TypeId(3),
                     LtNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(8),
                 ident_id: IdentId(12),
             },
             SymbolId(15) => Symbol {
@@ -188,7 +189,7 @@ Ok(
                     TypeId(3),
                     LeNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(8),
                 ident_id: IdentId(11),
             },
             SymbolId(16) => Symbol {
@@ -202,7 +203,7 @@ Ok(
                     TypeId(3),
                     GtNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(8),
                 ident_id: IdentId(10),
             },
             SymbolId(17) => Symbol {
@@ -216,7 +217,7 @@ Ok(
                     TypeId(3),
                     GeNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(8),
                 ident_id: IdentId(9),
             },
             SymbolId(18) => Symbol {
@@ -230,7 +231,7 @@ Ok(
                     TypeId(3),
                     EqNumberNumber,
                 ),
-                type_id: TypeId(7),
+                type_id: TypeId(8),
                 ident_id: IdentId(8),
             },
             SymbolId(19) => Symbol {
@@ -244,7 +245,7 @@ Ok(
                     TypeId(3),
                     EqBooleanBoolean,
                 ),
-                type_id: TypeId(8),
+                type_id: TypeId(9),
                 ident_id: IdentId(8),
             },
             SymbolId(20) => Symbol {
@@ -258,7 +259,7 @@ Ok(
                     TypeId(4),
                     DivNumberNumber,
                 ),
-                type_id: TypeId(6),
+                type_id: TypeId(7),
                 ident_id: IdentId(7),
             },
             SymbolId(21) => Symbol {
@@ -272,7 +273,7 @@ Ok(
                     TypeId(4),
                     AddNumberNumber,
                 ),
-                type_id: TypeId(6),
+                type_id: TypeId(7),
                 ident_id: IdentId(5),
             },
         ],
@@ -281,32 +282,33 @@ Ok(
             TypeId(2) => None,
             TypeId(3) => Boolean,
             TypeId(4) => Number,
-            TypeId(5) => Struct(
+            TypeId(6) => Struct(
                 SymbolId(5),
                 StructId(0),
-            ),
-            TypeId(6) => Function(
-                [
-                    TypeId(4),
-                    TypeId(4),
-                ],
-                TypeId(4),
+                [],
             ),
             TypeId(7) => Function(
                 [
                     TypeId(4),
                     TypeId(4),
                 ],
-                TypeId(3),
+                TypeId(4),
             ),
             TypeId(8) => Function(
+                [
+                    TypeId(4),
+                    TypeId(4),
+                ],
+                TypeId(3),
+            ),
+            TypeId(9) => Function(
                 [
                     TypeId(3),
                     TypeId(3),
                 ],
                 TypeId(3),
             ),
-            TypeId(9) => Function(
+            TypeId(10) => Function(
                 [
                     TypeId(4),
                 ],
