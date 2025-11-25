@@ -94,6 +94,7 @@ Ok(
                     Provided(
                         [],
                     ),
+                    0,
                     None,
                 ),
                 span: 1:1; [0, 11],

@@ -249,6 +249,7 @@ Ok(
                             },
                         ],
                     ),
+                    1,
                     None,
                 ),
                 span: 2:9; [9, 29],
@@ -663,8 +664,9 @@ Ok(
                 ],
                 TypeId(4),
             ),
-            TypeId(11) => Alias(
-                TypeId(4),
+            TypeId(11) => Parameter(
+                StmtId(1),
+                0,
             ),
             TypeId(12) => Struct(
                 StmtId(1),

@@ -424,7 +424,7 @@ impl Resolver {
                                 span: stmt.span,
                             }
                         }
-                        NstStatementKind::Struct(ident, annotations, _, fields) => {
+                        NstStatementKind::Struct(ident, annotations, type_parameters, fields) => {
                             let symbol_id = self
                                 .struct_bindings
                                 .remove(&stmt_id)
@@ -461,6 +461,7 @@ impl Resolver {
                                     ident.into_bound(symbol_id),
                                     annotations,
                                     implementation,
+                                    type_parameters.len(),
                                     self.parent.remove(&stmt_id),
                                 ),
                                 span: stmt.span,
@@ -2673,7 +2674,7 @@ mod tests {
                         }
                         None
                     }
-                    StatementKind::Struct(_, _, Implementation::Provided(fields), _) => {
+                    StatementKind::Struct(_, _, Implementation::Provided(fields), _, _) => {
                         if fields
                             .iter()
                             .any(|f| f.resolved_type_id() == crate::TypeId::from(0))

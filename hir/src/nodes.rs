@@ -109,6 +109,8 @@ pub enum StatementKind {
         Identifier,
         Vec<Annotation>,
         Implementation<Vec<Field>>,
+        /// Type parameters count
+        usize,
         /// The `LetFn`'s `StmtId` in which the struct is defined, if a nested struct
         Option<StmtId>,
     ),

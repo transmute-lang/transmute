@@ -283,6 +283,8 @@ pub enum Type {
     /// Represents a struct type. The `StmtId` determines what statement defined, the `Vec<TypeId>`
     /// the type parameters
     Struct(StmtId, Vec<TypeId>),
+
+    // todo really used?
     Array(TypeId, usize),
 
     /// Represents an unbound `TypeParameter` type. The `StmtId` determines what statement defined
@@ -291,9 +293,6 @@ pub enum Type {
 
     /// The type of types
     Type,
-
-    /// An alias for another type
-    Alias(TypeId),
 
     /// This value is used when the statement/expression does not have any value. This is the
     /// case for `namespace`, `let` and `let fn`.
@@ -314,7 +313,6 @@ impl Type {
             | Type::Struct(..)
             | Type::Array(..)
             | Type::Parameter(..)
-            | Type::Alias(..)
             | Type::Type => unimplemented!(),
             Type::Boolean => "boolean",
             Type::Number => "number",
@@ -364,7 +362,6 @@ impl Display for Type {
             Type::Parameter(..) => write!(f, "type parameter"),
             Type::Type => write!(f, "type"),
             Type::Void => write!(f, "void"),
-            Type::Alias(type_id) => write!(f, "alias({type_id:?})"),
             Type::None => write!(f, "no type"),
             Type::Invalid => write!(f, "invalid"),
         }

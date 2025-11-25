@@ -466,7 +466,7 @@ impl HirPrint for Statement {
 
                 ctx.prev_level();
             }
-            StatementKind::Struct(ident, _annotations, fields, fn_stmt_id) => {
+            StatementKind::Struct(ident, _annotations, fields, _, fn_stmt_id) => {
                 // todo use annotations
                 writeln!(
                     f,
@@ -595,7 +595,7 @@ impl Hir {
             }
             Type::Struct(stmt_id, type_parameters) => {
                 let symbol_id = match &self.statements[*stmt_id].kind {
-                    StatementKind::Struct(ident, _, _, _) => ident.resolved_symbol_id(),
+                    StatementKind::Struct(ident, _,_, _, _) => ident.resolved_symbol_id(),
                     _ => panic!("struct expected"),
                 };
                 write!(f, "struct {}<{}>", id!(symbol_id), type_parameters.len())
@@ -605,13 +605,12 @@ impl Hir {
             }
             Type::Parameter(stmt_id, index) => {
                 let symbol_id = match &self.statements[*stmt_id].kind {
-                    StatementKind::Struct(ident, _, _, _) => ident.resolved_symbol_id(),
+                    StatementKind::Struct(ident, _,_, _, _) => ident.resolved_symbol_id(),
                     _ => panic!("struct expected"),
                 };
                 write!(f, "type parameter {symbol_id}<{stmt_id}.{index}>")
             }
             Type::Type => write!(f, "type"),
-            Type::Alias(type_id) => write!(f, "alias {type_id}"),
             Type::Void => write!(f, "void"),
             Type::None => write!(f, "none"),
         }
