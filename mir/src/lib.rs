@@ -28,8 +28,10 @@ use transmute_hir::Hir;
 // todo:refactoring should not be `VecMap`s, they are sparse
 struct Transformer {
     functions: VecMap<FunctionId, Function>,
-    structs: VecMap<StructId, Struct>,
-    // todo:refactoring only keep one of SymbolId or StructId?
+    // usize is the type parameters count
+    structs: VecMap<StructId, (Struct, usize)>,
+    // todo:refactoring only keep one of SymbolId or StructId (StructId is used)?
+    // todo:refactoring can we merge with `structs`?
     structs_map: VecMap<StmtId, (SymbolId, StructId)>,
     fn_map: VecMap<StmtId, FunctionId>,
     expressions: VecMap<ExprId, Expression>,
@@ -55,54 +57,32 @@ impl Transformer {
         self.expressions.resize(hir.expressions.len());
         self.statements.resize(hir.statements.len());
 
-        let stmt = hir.statements.remove(hir.root).unwrap();
-        let (ident, _, stmts) = stmt.into_namespace();
+        let root_stmt = hir.statements.remove(hir.root).unwrap();
+        let (ident, _, stmts) = root_stmt.into_namespace();
 
-        // let namespace_id = self.namespaces.push(ident.id);
-        // println!("{} -> {}", hir.identifiers.get(ident.id).unwrap(), namespace_id);
         self.transform_namespace(&mut hir, None, ident.id, stmts);
 
         debug_assert!(hir.expressions.is_empty(), "{:?}", hir.expressions);
         debug_assert!(hir.statements.is_empty(), "{:?}", hir.statements);
 
+        let mut symbols = Self::map_symbols(hir.symbols);
+        let types = self.monomorphize_types(&hir.types, &mut symbols);
+
         Ok(Mir {
-            types: self.map_types(hir.types),
-            symbols: Self::map_symbols(hir.symbols),
             identifiers: hir.identifiers,
+            types,
+            symbols,
             functions: self.functions,
             expressions: self.expressions,
             statements: self.statements,
             namespaces: self.namespaces,
-            structs: self.structs,
+            structs: self
+                .structs
+                .into_iter()
+                .filter(|(_, (_, type_parameters))| *type_parameters == 0)
+                .map(|(struct_id, (s, _))| (struct_id, s))
+                .collect(),
         })
-    }
-
-    fn map_types(&self, types: VecMap<TypeId, HirType>) -> VecMap<TypeId, Type> {
-        types
-            .into_iter()
-            .filter_map(|(type_id, ty)| match ty {
-                HirType::Invalid | HirType::Type => None,
-                HirType::Boolean => Some((type_id, Type::Boolean)),
-                HirType::Function(params, ret_type) => {
-                    Some((type_id, Type::Function(params, ret_type)))
-                }
-                HirType::Struct(stmt_id, type_parameters) => {
-                    let (symbol_id, struct_id) = self.structs_map[stmt_id];
-                    if self.structs[struct_id].type_parameters == type_parameters.len() {
-                        Some((type_id, Type::Struct(symbol_id, struct_id, type_parameters)))
-                    } else {
-                        None
-                    }
-                }
-                HirType::Array(value_type_id, len) => {
-                    Some((type_id, Type::Array(value_type_id, len)))
-                }
-                HirType::Parameter(..) => None,
-                HirType::Number => Some((type_id, Type::Number)),
-                HirType::Void => Some((type_id, Type::Void)),
-                HirType::None => Some((type_id, Type::None)),
-            })
-            .collect::<VecMap<TypeId, Type>>()
     }
 
     fn map_symbols(symbols: VecMap<SymbolId, HirSymbol>) -> VecMap<SymbolId, Symbol> {
@@ -200,6 +180,140 @@ impl Transformer {
             .collect::<VecMap<SymbolId, Symbol>>()
     }
 
+    fn monomorphize_types(
+        &mut self,
+        hir_types: &VecMap<TypeId, HirType>,
+        symbols: &mut VecMap<SymbolId, Symbol>,
+    ) -> VecMap<TypeId, Type> {
+        let mut types = VecMap::with_capacity(hir_types.len());
+        for (type_id, hir_type) in hir_types {
+            match hir_type {
+                HirType::Invalid | HirType::Type => continue,
+                HirType::Boolean => {
+                    types.insert(type_id, Type::Boolean);
+                }
+                HirType::Function(params, ret_type) => {
+                    types.insert(type_id, Type::Function(params.clone(), *ret_type));
+                }
+                HirType::Struct(stmt_id, type_params) => {
+                    let (symbol_id, struct_id) = self.structs_map[*stmt_id];
+                    let (generic_struct, type_parameters) = &self.structs[struct_id];
+
+                    if type_params.len() != *type_parameters {
+                        // We are visiting a generic struct that does not have its type parameters
+                        // bound. First we remove all its fields from the symbol table (they are
+                        // not useful), then we continue the types loop, effectively removing it
+                        // from the symbol
+                        if let Some(fields) = generic_struct.fields.as_ref() {
+                            for field in fields {
+                                symbols.remove(field.symbol_id);
+                            }
+                        }
+                        continue;
+                    }
+
+                    if *type_parameters == 0 {
+                        // the struct does not have any type parameters, we can simply insert its
+                        // type and continue the loop
+                        types.insert(type_id, Type::Struct(symbol_id, struct_id));
+                        continue;
+                    }
+
+                    let monomorphized_struct = Struct {
+                        identifier: Identifier {
+                            id: generic_struct.identifier.id,
+                            span: generic_struct.identifier.span.clone(),
+                        },
+                        symbol_id: symbols.create(),
+                        fields: generic_struct.fields.as_ref().map(|fields| {
+                            fields
+                                .iter()
+                                .map(|f| Field {
+                                    identifier: Identifier {
+                                        id: f.identifier.id,
+                                        span: f.identifier.span.clone(),
+                                    },
+                                    index: f.index,
+                                    symbol_id: symbols.create(),
+                                    type_id: match hir_types[f.type_id] {
+                                        HirType::Boolean => f.type_id,
+                                        HirType::Number => f.type_id,
+                                        HirType::Function(_, _) => f.type_id,
+                                        HirType::Struct(_, _) => f.type_id,
+                                        HirType::Array(_, _) => f.type_id,
+                                        HirType::Void => {
+                                            unreachable!("struct field cannot be of type void")
+                                        }
+                                        HirType::None => {
+                                            unreachable!("struct field cannot be of type none")
+                                        }
+                                        HirType::Invalid => {
+                                            unreachable!("struct field cannot be of type invalid")
+                                        }
+                                        HirType::Parameter(src_stmt_id, index) => {
+                                            debug_assert_eq!(src_stmt_id, *stmt_id);
+                                            type_params[index]
+                                        }
+                                        HirType::Type => {
+                                            unreachable!("struct field cannot be of type type")
+                                        }
+                                    },
+                                })
+                                .collect()
+                        }),
+                        parent: generic_struct.parent,
+                    };
+
+                    symbols.insert(
+                        monomorphized_struct.symbol_id,
+                        Symbol {
+                            id: monomorphized_struct.symbol_id,
+                            kind: SymbolKind::Struct,
+                            type_id,
+                            ident_id: generic_struct.identifier.id,
+                        },
+                    );
+
+                    monomorphized_struct.fields.as_ref().map(|fields| {
+                        for (index, field) in fields.iter().enumerate() {
+                            symbols.insert(
+                                field.symbol_id,
+                                Symbol {
+                                    id: field.symbol_id,
+                                    kind: SymbolKind::Field(field.identifier.id, index),
+                                    type_id: field.type_id,
+                                    ident_id: field.identifier.id,
+                                },
+                            );
+                        }
+                    });
+
+                    let struct_id = self.structs.create();
+                    self.structs.insert(struct_id, (monomorphized_struct, 0));
+
+                    types.insert(type_id, Type::Struct(symbols.create(), struct_id));
+                }
+                HirType::Array(value_type_id, len) => {
+                    types.insert(type_id, Type::Array(*value_type_id, *len));
+                }
+                HirType::Parameter(..) => {
+                    continue;
+                }
+                HirType::Number => {
+                    types.insert(type_id, Type::Number);
+                }
+                HirType::Void => {
+                    types.insert(type_id, Type::Void);
+                }
+                HirType::None => {
+                    types.insert(type_id, Type::None);
+                }
+            }
+        }
+        types
+    }
+
+    // todo:refactoring "transform" is not the right verb
     fn transform_namespace(
         &mut self,
         hir: &mut Hir,
@@ -214,7 +328,6 @@ impl Transformer {
             if let Some(stmt) = hir.statements.remove(stmt_id) {
                 match stmt.kind {
                     HirStatementKind::Namespace(ident, _, statements) => {
-                        // let namespace_id = self.namespaces.push(ident.id);
                         self.transform_namespace(hir, Some(namespace_id), ident.id, statements)
                     }
                     HirStatementKind::LetFn(
@@ -338,27 +451,29 @@ impl Transformer {
         let symbol_id = identifier.resolved_symbol_id();
         self.structs.insert(
             struct_id,
-            Struct {
-                identifier: identifier.into(),
-                symbol_id,
-                fields: match implementation {
-                    Implementation::Provided(fields) => Some(
-                        fields
-                            .into_iter()
-                            .enumerate()
-                            .map(|(index, field)| Field {
-                                index,
-                                symbol_id: field.resolved_symbol_id(),
-                                type_id: field.resolved_type_id(),
-                                identifier: field.identifier.into(),
-                            })
-                            .collect::<Vec<Field>>(),
-                    ),
-                    _ => None,
+            (
+                Struct {
+                    identifier: identifier.into(),
+                    symbol_id,
+                    fields: match implementation {
+                        Implementation::Provided(fields) => Some(
+                            fields
+                                .into_iter()
+                                .enumerate()
+                                .map(|(index, field)| Field {
+                                    index,
+                                    symbol_id: field.resolved_symbol_id(),
+                                    type_id: field.resolved_type_id(),
+                                    identifier: field.identifier.into(),
+                                })
+                                .collect::<Vec<Field>>(),
+                        ),
+                        _ => None,
+                    },
+                    parent,
                 },
                 type_parameters,
-                parent,
-            },
+            ),
         );
         self.structs_map.insert(stmt_id, (symbol_id, struct_id));
     }
@@ -1290,7 +1405,6 @@ pub struct Struct {
     pub symbol_id: SymbolId,
     // todo why not just a Vec<Field> that can be empty?
     pub fields: Option<Vec<Field>>,
-    pub type_parameters: usize,
     pub parent: ParentKind,
 }
 
@@ -1383,12 +1497,10 @@ pub enum Type {
     Function(Vec<TypeId>, TypeId),
 
     /// Represents a struct type. The `StmtId` determines what statement defined, the `Vec<TypeId>`
-    /// the type parameters
-    // todo:refactoring keep only one?
-    Struct(SymbolId, StructId, Vec<TypeId>),
+    /// are the type parameters
+    // todo:refactoring keep only one of SymbolId/StructId?
+    Struct(SymbolId, StructId),//, Vec<TypeId>),
     Array(TypeId, usize),
-
-    Alias(TypeId),
 
     /// This value is used when the statement/expression does not have any value. This is the
     /// case for `let` and `let fn`.

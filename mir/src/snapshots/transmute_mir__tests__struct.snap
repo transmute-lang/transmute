@@ -25,7 +25,6 @@ Ok(
                         },
                     ],
                 ),
-                type_parameters: 0,
                 parent: Namespace(
                     NamespaceId(0),
                 ),
@@ -299,7 +298,6 @@ Ok(
             TypeId(6) => Struct(
                 SymbolId(3),
                 StructId(0),
-                [],
             ),
             TypeId(7) => Function(
                 [

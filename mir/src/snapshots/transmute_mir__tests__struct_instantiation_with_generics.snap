@@ -44,12 +44,12 @@ Ok(
             },
         ],
         structs: [
-            StructId(0) => Struct {
+            StructId(1) => Struct {
                 identifier: Identifier {
                     id: IdentId(1),
                     span: 2:16; [16, 22],
                 },
-                symbol_id: SymbolId(3),
+                symbol_id: SymbolId(25),
                 fields: Some(
                     [
                         Field {
@@ -58,12 +58,34 @@ Ok(
                                 span: 2:28; [28, 33],
                             },
                             index: 0,
-                            symbol_id: SymbolId(22),
-                            type_id: TypeId(12),
+                            symbol_id: SymbolId(26),
+                            type_id: TypeId(4),
                         },
                     ],
                 ),
-                type_parameters: 1,
+                parent: Namespace(
+                    NamespaceId(0),
+                ),
+            },
+            StructId(2) => Struct {
+                identifier: Identifier {
+                    id: IdentId(1),
+                    span: 2:16; [16, 22],
+                },
+                symbol_id: SymbolId(28),
+                fields: Some(
+                    [
+                        Field {
+                            identifier: Identifier {
+                                id: IdentId(3),
+                                span: 2:28; [28, 33],
+                            },
+                            index: 0,
+                            symbol_id: SymbolId(29),
+                            type_id: TypeId(3),
+                        },
+                    ],
+                ),
                 parent: Namespace(
                     NamespaceId(0),
                 ),
@@ -444,15 +466,6 @@ Ok(
                 type_id: TypeId(11),
                 ident_id: IdentId(4),
             },
-            SymbolId(22) => Symbol {
-                id: SymbolId(22),
-                kind: Field(
-                    IdentId(3),
-                    0,
-                ),
-                type_id: TypeId(12),
-                ident_id: IdentId(3),
-            },
             SymbolId(23) => Symbol {
                 id: SymbolId(23),
                 kind: Let,
@@ -464,6 +477,36 @@ Ok(
                 kind: Let,
                 type_id: TypeId(14),
                 ident_id: IdentId(6),
+            },
+            SymbolId(25) => Symbol {
+                id: SymbolId(25),
+                kind: Struct,
+                type_id: TypeId(13),
+                ident_id: IdentId(1),
+            },
+            SymbolId(26) => Symbol {
+                id: SymbolId(26),
+                kind: Field(
+                    IdentId(3),
+                    0,
+                ),
+                type_id: TypeId(4),
+                ident_id: IdentId(3),
+            },
+            SymbolId(28) => Symbol {
+                id: SymbolId(28),
+                kind: Struct,
+                type_id: TypeId(14),
+                ident_id: IdentId(1),
+            },
+            SymbolId(29) => Symbol {
+                id: SymbolId(29),
+                kind: Field(
+                    IdentId(3),
+                    0,
+                ),
+                type_id: TypeId(3),
+                ident_id: IdentId(3),
             },
         ],
         types: [
@@ -503,18 +546,12 @@ Ok(
                 TypeId(1),
             ),
             TypeId(13) => Struct(
-                SymbolId(3),
-                StructId(0),
-                [
-                    TypeId(4),
-                ],
+                SymbolId(27),
+                StructId(1),
             ),
             TypeId(14) => Struct(
-                SymbolId(3),
-                StructId(0),
-                [
-                    TypeId(3),
-                ],
+                SymbolId(30),
+                StructId(2),
             ),
         ],
     },
