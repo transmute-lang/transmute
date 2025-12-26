@@ -42,8 +42,7 @@ Ok(
             IdentId(17) => "sub",
             IdentId(18) => "void",
         ],
-        expressions: [
-        ],
+        expressions: [],
         statements: [
         ],
         namespaces: [

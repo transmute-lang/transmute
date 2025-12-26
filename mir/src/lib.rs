@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use transmute_core::error::Diagnostics;
 use transmute_core::ids::{
     ExprId, FunctionId, IdentId, IdentRefId, NamespaceId, StmtId, StructId, SymbolId, TypeId,
@@ -66,22 +66,36 @@ impl Transformer {
         debug_assert!(hir.statements.is_empty(), "{:?}", hir.statements);
 
         let mut symbols = Self::map_symbols(hir.symbols);
-        let types = self.monomorphize_types(&hir.types, &mut symbols);
+        let (types, monomorphized_symbols) = self.monomorphize_structs(&hir.types, &mut symbols);
+
+        let monomorphized_expressions = Self::monomorphize_expressions(
+            self.expressions,
+            &monomorphized_symbols,
+            &types,
+            &symbols,
+            &self.structs,
+        );
+
+        monomorphized_symbols.into_iter().for_each(|s| {
+            symbols.remove(s);
+        });
+
+        let structs = self
+            .structs
+            .into_iter()
+            .filter(|(_, (_, type_parameters))| *type_parameters == 0)
+            .map(|(struct_id, (s, _))| (struct_id, s))
+            .collect();
 
         Ok(Mir {
             identifiers: hir.identifiers,
-            types,
-            symbols,
             functions: self.functions,
-            expressions: self.expressions,
+            expressions: monomorphized_expressions,
             statements: self.statements,
             namespaces: self.namespaces,
-            structs: self
-                .structs
-                .into_iter()
-                .filter(|(_, (_, type_parameters))| *type_parameters == 0)
-                .map(|(struct_id, (s, _))| (struct_id, s))
-                .collect(),
+            structs,
+            symbols,
+            types,
         })
     }
 
@@ -180,12 +194,14 @@ impl Transformer {
             .collect::<VecMap<SymbolId, Symbol>>()
     }
 
-    fn monomorphize_types(
+    fn monomorphize_structs(
         &mut self,
         hir_types: &VecMap<TypeId, HirType>,
         symbols: &mut VecMap<SymbolId, Symbol>,
-    ) -> VecMap<TypeId, Type> {
+    ) -> (VecMap<TypeId, Type>, HashSet<SymbolId>) {
+        let mut monomorphized_symbols = HashSet::<SymbolId>::new();
         let mut types = VecMap::with_capacity(hir_types.len());
+
         for (type_id, hir_type) in hir_types {
             match hir_type {
                 HirType::Invalid | HirType::Type => continue,
@@ -200,21 +216,22 @@ impl Transformer {
                     let (generic_struct, type_parameters) = &self.structs[struct_id];
 
                     if type_params.len() != *type_parameters {
+                        // todo see comment on test_empty_generic_struct_instantiation
                         // We are visiting a generic struct that does not have its type parameters
-                        // bound. First we remove all its fields from the symbol table (they are
-                        // not useful), then we continue the types loop, effectively removing it
-                        // from the symbol
+                        // bound, so we insert in it the set of monomorphized symbols, as well as
+                        // its fields. Then we skip processing it
                         if let Some(fields) = generic_struct.fields.as_ref() {
                             for field in fields {
-                                symbols.remove(field.symbol_id);
+                                monomorphized_symbols.insert(field.symbol_id);
                             }
                         }
+                        monomorphized_symbols.insert(symbol_id);
                         continue;
                     }
 
                     if *type_parameters == 0 {
                         // the struct does not have any type parameters, we can simply insert its
-                        // type and continue the loop
+                        // type, and continue the loop
                         types.insert(type_id, Type::Struct(symbol_id, struct_id));
                         continue;
                     }
@@ -264,6 +281,7 @@ impl Transformer {
                         parent: generic_struct.parent,
                     };
 
+                    let monomorphized_struct_symbol_id = monomorphized_struct.symbol_id;
                     symbols.insert(
                         monomorphized_struct.symbol_id,
                         Symbol {
@@ -288,10 +306,14 @@ impl Transformer {
                         }
                     });
 
-                    let struct_id = self.structs.create();
-                    self.structs.insert(struct_id, (monomorphized_struct, 0));
+                    let monomorphized_struct_id = self.structs.create();
+                    self.structs
+                        .insert(monomorphized_struct_id, (monomorphized_struct, 0));
 
-                    types.insert(type_id, Type::Struct(symbols.create(), struct_id));
+                    types.insert(
+                        type_id,
+                        Type::Struct(monomorphized_struct_symbol_id, monomorphized_struct_id),
+                    );
                 }
                 HirType::Array(value_type_id, len) => {
                     types.insert(type_id, Type::Array(*value_type_id, *len));
@@ -310,7 +332,90 @@ impl Transformer {
                 }
             }
         }
-        types
+        (types, monomorphized_symbols)
+    }
+
+    fn monomorphize_expressions(
+        expressions: VecMap<ExprId, Expression>,
+        monomorphized_symbols: &HashSet<SymbolId>,
+        types: &VecMap<TypeId, Type>,
+        symbols: &VecMap<SymbolId, Symbol>,
+        structs: &VecMap<StructId, (Struct, usize)>,
+    ) -> VecMap<ExprId, Expression> {
+        let expression_types = expressions
+            .iter()
+            .map(|(expr_id, expr)| (expr_id, expr.type_id))
+            .collect::<VecMap<_, _>>();
+
+        expressions
+            .into_iter()
+            .map(|(expr_id, expression)| {
+                match &expression.kind {
+                    ExpressionKind::StructInstantiation(symbol_id, _, fields) => {
+                        if !monomorphized_symbols.contains(&symbol_id) {
+                            // the struct instantiation does not instantiate a monomorphized struct,
+                            // so we just return it as it is and continue
+                            return (expr_id, expression);
+                        }
+
+                        let (monomorphized_struct_symbol_id, monomorphized_struct_id) =
+                            types.get(expression.type_id).unwrap().as_struct();
+
+                        let monomorphized_struct_fields =
+                            structs[monomorphized_struct_id].0.fields.as_ref().unwrap();
+
+                        let monomorphized_fields = fields
+                            .iter()
+                            .enumerate()
+                            .map(|(idx, (_, expr_id))| {
+                                (monomorphized_struct_fields[idx].symbol_id, *expr_id)
+                            })
+                            .collect();
+
+                        (
+                            expr_id,
+                            Expression {
+                                id: expr_id,
+                                kind: ExpressionKind::StructInstantiation(
+                                    monomorphized_struct_symbol_id,
+                                    monomorphized_struct_id,
+                                    monomorphized_fields,
+                                ),
+                                span: expression.span,
+                                type_id: expression.type_id,
+                            },
+                        )
+                    }
+                    ExpressionKind::Access(target_expr_id, symbol_id) => {
+                        if !monomorphized_symbols.contains(symbol_id) {
+                            return (expr_id, expression);
+                        }
+
+                        let target_type_id = expression_types[*target_expr_id];
+                        let (_, target_monomorphized_struct_id) = types[target_type_id].as_struct();
+
+                        let (_, generic_field_index) = &symbols[*symbol_id].as_field();
+
+                        let field = &structs[target_monomorphized_struct_id]
+                            .0
+                            .fields
+                            .as_ref()
+                            .unwrap()[*generic_field_index];
+
+                        (
+                            expr_id,
+                            Expression {
+                                id: expr_id,
+                                kind: ExpressionKind::Access(*target_expr_id, field.symbol_id),
+                                span: expression.span,
+                                type_id: expression.type_id,
+                            },
+                        )
+                    }
+                    _ => (expr_id, expression),
+                }
+            })
+            .collect()
     }
 
     // todo:refactoring "transform" is not the right verb
@@ -1499,7 +1604,7 @@ pub enum Type {
     /// Represents a struct type. The `StmtId` determines what statement defined, the `Vec<TypeId>`
     /// are the type parameters
     // todo:refactoring keep only one of SymbolId/StructId?
-    Struct(SymbolId, StructId),//, Vec<TypeId>),
+    Struct(SymbolId, StructId),
     Array(TypeId, usize),
 
     /// This value is used when the statement/expression does not have any value. This is the
@@ -1511,12 +1616,30 @@ pub enum Type {
     None,
 }
 
+impl Type {
+    fn as_struct(&self) -> (SymbolId, StructId) {
+        match self {
+            Type::Struct(symbol_id, struct_id) => (*symbol_id, *struct_id),
+            _ => panic!("struct expected, got {:?}", self),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Symbol {
     pub id: SymbolId,
     pub kind: SymbolKind,
     pub type_id: TypeId,
     pub ident_id: IdentId,
+}
+
+impl Symbol {
+    fn as_field(&self) -> (IdentId, usize) {
+        match &self.kind {
+            SymbolKind::Field(ident_id, index) => (*ident_id, *index),
+            _ => panic!("field expected, got {:?}", self),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -1589,11 +1712,52 @@ mod tests {
             let s = Struct { field: 1 };
         }
     "#);
+    // todo decide what to do with this:
+    //  1. it's an error as the type T is not used in the struct body and should not pass the type
+    //     checking step
+    //  2. it's fine that T is not used. in that case monomorphize_structs needs to be reviewed
+    //     (there is a comment about this test)
+    // t!(test_empty_generic_struct_instantiation => r#"
+    //     struct Struct<T> {}
+    //     let f() {
+    //         let s = Struct {};
+    //     }
+    // "#);
+    t!(test_struct_instantiate_and_access_with_string_generics => r#"
+        namespace std {
+            annotation native;
+            namespace str {
+                @native
+                struct string {}
+            }
+        }
+        struct Struct<T> { field: T }
+        let f() {
+            let s = Struct {
+                field: "Hello",
+            };
+        }
+    "#);
     t!(test_struct_instantiation_with_generics => r#"
         struct Struct<T> { field: T }
         let f() {
             let s1 = Struct { field: 1 };
             let s2 = Struct { field: true };
+        }
+    "#);
+    t!(test_struct_duplicate_instantiation_with_generics => r#"
+        struct Struct<T> { field: T }
+        let f() {
+            let s1 = Struct { field: 1 };
+            let s2 = Struct { field: true };
+            let s3 = Struct { field: 2 };
+        }
+    "#);
+    t!(test_struct_instantiation_and_access_with_generics => r#"
+        struct Struct<T> { field: T }
+        let f() {
+            let s = Struct { field: 1 };
+            let v = s.field;
         }
     "#);
     t!(test_struct_instantiation_nested => r#"

@@ -16,7 +16,7 @@ Ok(
                     SymbolId(23): Variable {
                         identifier: Identifier {
                             id: IdentId(5),
-                            span: 4:17; [73, 75],
+                            span: 4:17; [73, 74],
                         },
                         symbol_id: SymbolId(23),
                         type_id: TypeId(13),
@@ -26,10 +26,10 @@ Ok(
                     SymbolId(24): Variable {
                         identifier: Identifier {
                             id: IdentId(6),
-                            span: 5:17; [115, 117],
+                            span: 5:17; [114, 115],
                         },
                         symbol_id: SymbolId(24),
-                        type_id: TypeId(14),
+                        type_id: TypeId(4),
                         expression: ExprId(3),
                         mutable: false,
                     },
@@ -67,29 +67,6 @@ Ok(
                     NamespaceId(0),
                 ),
             },
-            StructId(2) => Struct {
-                identifier: Identifier {
-                    id: IdentId(1),
-                    span: 2:16; [16, 22],
-                },
-                symbol_id: SymbolId(27),
-                fields: Some(
-                    [
-                        Field {
-                            identifier: Identifier {
-                                id: IdentId(3),
-                                span: 2:28; [28, 33],
-                            },
-                            index: 0,
-                            symbol_id: SymbolId(28),
-                            type_id: TypeId(3),
-                        },
-                    ],
-                ),
-                parent: Namespace(
-                    NamespaceId(0),
-                ),
-            },
         ],
         identifiers: [
             IdentId(0) => "<root>",
@@ -97,8 +74,8 @@ Ok(
             IdentId(2) => "T",
             IdentId(3) => "field",
             IdentId(4) => "f",
-            IdentId(5) => "s1",
-            IdentId(6) => "s2",
+            IdentId(5) => "s",
+            IdentId(6) => "v",
             IdentId(7) => "core",
             IdentId(8) => "add",
             IdentId(9) => "boolean",
@@ -123,10 +100,10 @@ Ok(
                         kind: Number(
                             1,
                         ),
-                        span: 4:38; [94, 95],
+                        span: 4:37; [93, 94],
                     },
                 ),
-                span: 4:38; [94, 95],
+                span: 4:37; [93, 94],
                 type_id: TypeId(4),
             },
             ExprId(1) => Expression {
@@ -141,36 +118,30 @@ Ok(
                         ),
                     ],
                 ),
-                span: 4:22; [78, 97],
+                span: 4:21; [77, 96],
                 type_id: TypeId(13),
             },
             ExprId(2) => Expression {
                 id: ExprId(2),
                 kind: Literal(
                     Literal {
-                        kind: Boolean(
-                            true,
+                        kind: Identifier(
+                            SymbolId(23),
                         ),
-                        span: 5:38; [136, 140],
+                        span: 5:21; [118, 119],
                     },
                 ),
-                span: 5:38; [136, 140],
-                type_id: TypeId(3),
+                span: 5:21; [118, 119],
+                type_id: TypeId(13),
             },
             ExprId(3) => Expression {
                 id: ExprId(3),
-                kind: StructInstantiation(
-                    SymbolId(27),
-                    StructId(2),
-                    [
-                        (
-                            SymbolId(28),
-                            ExprId(2),
-                        ),
-                    ],
+                kind: Access(
+                    ExprId(2),
+                    SymbolId(26),
                 ),
-                span: 5:22; [120, 142],
-                type_id: TypeId(14),
+                span: 5:21; [118, 125],
+                type_id: TypeId(4),
             },
             ExprId(4) => Expression {
                 id: ExprId(4),
@@ -181,7 +152,7 @@ Ok(
                         StmtId(6),
                     ],
                 ),
-                span: 3:17; [55, 153],
+                span: 3:17; [55, 136],
                 type_id: TypeId(2),
             },
             ExprId(5) => Expression {
@@ -192,7 +163,7 @@ Ok(
                     ),
                     ExprId(1),
                 ),
-                span: 4:22; [78, 97],
+                span: 4:21; [77, 96],
                 type_id: TypeId(13),
             },
             ExprId(6) => Expression {
@@ -203,8 +174,8 @@ Ok(
                     ),
                     ExprId(3),
                 ),
-                span: 5:22; [120, 142],
-                type_id: TypeId(14),
+                span: 5:21; [118, 125],
+                type_id: TypeId(4),
             },
         ],
         statements: [
@@ -213,14 +184,14 @@ Ok(
                 kind: Expression(
                     ExprId(5),
                 ),
-                span: 4:13; [69, 98],
+                span: 4:13; [69, 97],
             },
             StmtId(3) => Statement {
                 id: StmtId(3),
                 kind: Expression(
                     ExprId(6),
                 ),
-                span: 5:13; [111, 143],
+                span: 5:13; [110, 126],
             },
             StmtId(6) => Statement {
                 id: StmtId(6),
@@ -469,7 +440,7 @@ Ok(
             SymbolId(24) => Symbol {
                 id: SymbolId(24),
                 kind: Let,
-                type_id: TypeId(14),
+                type_id: TypeId(4),
                 ident_id: IdentId(6),
             },
             SymbolId(25) => Symbol {
@@ -485,21 +456,6 @@ Ok(
                     0,
                 ),
                 type_id: TypeId(4),
-                ident_id: IdentId(3),
-            },
-            SymbolId(27) => Symbol {
-                id: SymbolId(27),
-                kind: Struct,
-                type_id: TypeId(14),
-                ident_id: IdentId(1),
-            },
-            SymbolId(28) => Symbol {
-                id: SymbolId(28),
-                kind: Field(
-                    IdentId(3),
-                    0,
-                ),
-                type_id: TypeId(3),
                 ident_id: IdentId(3),
             },
         ],
@@ -542,10 +498,6 @@ Ok(
             TypeId(13) => Struct(
                 SymbolId(25),
                 StructId(1),
-            ),
-            TypeId(14) => Struct(
-                SymbolId(27),
-                StructId(2),
             ),
         ],
     },
