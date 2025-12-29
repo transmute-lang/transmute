@@ -224,7 +224,7 @@ impl<'a, C: NativeContext> Interpreter<'a, C> {
             ExpressionKind::Block(_) => {
                 todo!("implement block expression")
             }
-            ExpressionKind::StructInstantiation(_, fields) => {
+            ExpressionKind::StructInstantiation(_, type_parameters, fields) => {
                 let mut values = Vec::with_capacity(fields.len());
                 for (_, expr_id) in fields {
                     let val = self.visit_expression(*expr_id);

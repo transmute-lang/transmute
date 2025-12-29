@@ -1,0 +1,57 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+%"Struct#id2" = type { ptr }
+
+@"gc_callbacks#s6Struct" = global { ptr, ptr } { ptr @"gc_callback#mark#s6Struct", ptr null }
+@str = private unnamed_addr constant [6 x i8] c"Hello\00", align 1
+
+; Function Attrs: nounwind
+declare void @llvm.gcroot(ptr, ptr) #0
+
+declare ptr @gc_malloc(i64, i64, ptr)
+
+declare void @gc_run()
+
+declare void @gc_mark(ptr)
+
+declare void @tmc_check_array_index(i64, i64, i64, i64)
+
+declare ptr @tmc_stdlib_string_new(ptr, i64)
+
+define private void @_glob() {
+entry:
+  unreachable
+}
+
+define void @"gc_callback#mark#s6Struct"(ptr %0) {
+entry:
+  %"local#field0_ptr" = getelementptr inbounds %"Struct#id2", ptr %0, i32 0, i32 0
+  %"local#field0" = load ptr, ptr %"local#field0_ptr", align 8
+  call void @gc_mark(ptr %"local#field0")
+  ret void
+}
+
+define void @_TM0_F1f0() gc "shadow-stack" {
+entry:
+  %"gcroot#new_str" = alloca ptr, align 8
+  store ptr null, ptr %"gcroot#new_str", align 8
+  call void @llvm.gcroot(ptr %"gcroot#new_str", ptr null)
+  %"s#local#sym27#" = alloca ptr, align 8
+  store ptr null, ptr %"s#local#sym27#", align 8
+  call void @llvm.gcroot(ptr %"s#local#sym27#", ptr null)
+  %new_str = call ptr @tmc_stdlib_string_new(ptr @str, i64 5)
+  store ptr %new_str, ptr %"gcroot#new_str", align 8
+  %"heap#struct#Struct#id2#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"Struct#id2", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"Struct#id2" }, ptr null, i64 0, i32 1) to i64), ptr @"gc_callbacks#s6Struct")
+  %"heap#struct#Struct#id2#.field#idx0#sym29" = getelementptr inbounds %"Struct#id2", ptr %"heap#struct#Struct#id2#", i32 0, i32 0
+  store ptr %new_str, ptr %"heap#struct#Struct#id2#.field#idx0#sym29", align 8
+  store ptr %"heap#struct#Struct#id2#", ptr %"s#local#sym27#", align 8
+  call void @gc_run()
+  ret void
+}
+
+attributes #0 = { nounwind }

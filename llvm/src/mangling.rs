@@ -85,7 +85,7 @@ fn mangle_identifier(ident: &str) -> String {
 fn mangle_parameters(mir: &Mir, parameters: &[TypeId]) -> String {
     let parameters_types = parameters
         .iter()
-        .map(|t| mangle_type(mir, &mir.types[*t]))
+        .map(|t| mangle_type(mir, *t))
         .collect::<Vec<Cow<'static, str>>>();
     format!(
         "{parameters_len}{parameters_types}",
@@ -94,7 +94,8 @@ fn mangle_parameters(mir: &Mir, parameters: &[TypeId]) -> String {
     )
 }
 
-fn mangle_type(mir: &Mir, t: &Type) -> Cow<'static, str> {
+fn mangle_type(mir: &Mir, t: TypeId) -> Cow<'static, str> {
+    let t = &mir.types[t];
     match t {
         Type::Boolean => Cow::Borrowed(TYPE_BOOLEAN),
         Type::Number => Cow::Borrowed(TYPE_NUMBER),
@@ -115,8 +116,5 @@ pub fn mangle_struct_name(mir: &Mir, struct_id: StructId, symbol_id: SymbolId) -
 }
 
 pub fn mangle_array_name(mir: &Mir, type_id: TypeId, len: usize) -> String {
-    format!(
-        "{TYPE_ARRAY}{len}{t}",
-        t = mangle_type(mir, &mir.types[type_id])
-    )
+    format!("{TYPE_ARRAY}{len}{t}", t = mangle_type(mir, type_id))
 }
