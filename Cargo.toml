@@ -8,6 +8,8 @@ members = [
     "mir",
     "interpreter",
     "runtime",
+    "codegen",
+    "codegen/c",
     "llvm",
     "compiler",
     "stdlib-macros",

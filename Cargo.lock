@@ -505,6 +505,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "transmute-codegen"
+version = "0.1.0"
+dependencies = [
+ "transmute-core",
+ "transmute-mir",
+]
+
+[[package]]
+name = "transmute-codegen-c"
+version = "0.1.0"
+dependencies = [
+ "insta",
+ "transmute-ast",
+ "transmute-codegen",
+ "transmute-core",
+ "transmute-hir",
+ "transmute-mir",
+ "transmute-nst",
+]
+
+[[package]]
 name = "transmute-core"
 version = "0.1.0"
 

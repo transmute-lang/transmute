@@ -1,0 +1,27 @@
+---
+source: codegen/c/src/lib.rs
+expression: c.unwrap()
+---
+#include <stdbool.h>
+
+double _TM0_F1f1n_0(double n_20);
+
+double _TM0_F1f1n_0(double n_20)
+{
+  double prev_prev_21;
+  double prev_22;
+  double current_23;
+  if (n_20 < 2) {
+      return n_20;
+  }
+  prev_prev_21 = 0;
+  prev_22 = 1;
+  current_23 = 0;
+  while (n_20 > 1) {
+      current_23 = prev_prev_21 + prev_22;
+      prev_prev_21 = prev_22;
+      prev_22 = current_23;
+      n_20 = n_20 - 1;
+  }
+  return current_23;
+}

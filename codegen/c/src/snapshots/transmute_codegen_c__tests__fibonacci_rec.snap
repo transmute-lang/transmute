@@ -1,0 +1,15 @@
+---
+source: codegen/c/src/lib.rs
+expression: c.unwrap()
+---
+#include <stdbool.h>
+
+double _TM0_F1f1n_0(double n_20);
+
+double _TM0_F1f1n_0(double n_20)
+{
+  if (n_20 < 0) {
+      return n_20;
+  }
+  return _TM0_F1f1n_0(n_20 - 2) + _TM0_F1f1n_0(n_20 - 1);
+}

@@ -1,0 +1,12 @@
+---
+source: codegen/c/src/lib.rs
+expression: c.unwrap()
+---
+#include <stdbool.h>
+
+double _TM0_F1f0_0(void);
+
+double _TM0_F1f0_0(void)
+{
+  return 1;
+}

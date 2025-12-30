@@ -1,4 +1,3 @@
-// todo: refactoring use the version in codegen
 use std::borrow::Cow;
 use transmute_core::id;
 use transmute_core::ids::{IdentId, StructId, SymbolId, TypeId};

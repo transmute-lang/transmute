@@ -1,0 +1,9 @@
+---
+source: codegen/c/src/lib.rs
+expression: c.unwrap()
+---
+#include <stdbool.h>
+
+struct s8MyStruct_3;
+
+typedef struct s8MyStruct_3 s8MyStruct_3;
