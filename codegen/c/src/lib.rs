@@ -219,9 +219,8 @@ impl CCodegen {
             }
             write!(&mut decl, ")").unwrap();
 
-            let mut def = decl.clone();
+            let mut def = Context::from(decl.clone());
             writeln!(&mut decl, ";").unwrap();
-
             writeln!(&mut def, "\n{{").unwrap();
 
             for (sid, var) in f.variables.iter() {
@@ -239,55 +238,57 @@ impl CCodegen {
             }
 
             if let Some(body) = f.body {
-                let mut ctx = Context::new(&mut def);
-                self.gen_expression(mir, body, &mut ctx);
+                let (c, _) = self.gen_expression(mir, body, &mut def);
+                def.write_str(c.as_str()).unwrap();
             }
             writeln!(&mut def, "}}").unwrap();
 
             self.functions.push(Element {
                 declaration: decl,
-                definition: def,
+                definition: def.into(),
             });
         }
     }
 
-    fn gen_expression<W: Write + Indent>(&mut self, mir: &Mir, expr_id: ExprId, w: &mut W) -> bool {
+    fn gen_expression(&mut self, mir: &Mir, expr_id: ExprId, w: &mut Context) -> (Context, bool) {
+        let mut c = Context::new_with_indent(w.indent, w.must_indent);
+
         let expr = &mir.expressions[expr_id];
         let need_semicolon = match &expr.kind {
             ExpressionKind::Assignment(Target::Direct(sid), expr) => {
-                // let (value, need_semicolon) = self.gen_expression(mir, *expr, w);
-                write!(w, "{name} = ", name = self.mangled_names[sid]).unwrap();
-                self.gen_expression(mir, *expr, w);
+                let (value, _need_semicolon) = self.gen_expression(mir, *expr, w);
+                write!(w, "{name} = {value}", name = self.mangled_names[sid],).unwrap();
+                // self.gen_expression(mir, *expr, w);
                 true
             }
             ExpressionKind::Assignment(Target::Indirect(_), _) => todo!(),
             ExpressionKind::If(cond, true_expr_id, false_expr_id) => {
-                write!(w, "if (").unwrap();
-                self.gen_expression(mir, *cond, w);
-                writeln!(w, ") {{").unwrap();
-                w.inc();
-                self.gen_expression(mir, *true_expr_id, w);
-                w.dec();
-                writeln!(w, "}}").unwrap();
+                write!(c, "if (").unwrap();
+                self.gen_expression(mir, *cond, &mut c);
+                writeln!(c, ") {{").unwrap();
+                c.inc();
+                self.gen_expression(mir, *true_expr_id, &mut c);
+                c.dec();
+                writeln!(c, "}}").unwrap();
                 if let Some(false_expr_id) = false_expr_id {
-                    writeln!(w, "else {{").unwrap();
-                    w.inc();
-                    self.gen_expression(mir, *false_expr_id, w);
-                    w.dec();
-                    writeln!(w, "}}").unwrap();
+                    writeln!(c, "else {{").unwrap();
+                    c.inc();
+                    self.gen_expression(mir, *false_expr_id, &mut c);
+                    c.dec();
+                    writeln!(c, "}}").unwrap();
                 }
                 false
             }
             ExpressionKind::Literal(lit) => {
                 match &lit.kind {
                     LiteralKind::Boolean(bool) => {
-                        write!(w, "{}", bool).unwrap();
+                        write!(c, "{}", bool).unwrap();
                     }
                     LiteralKind::Identifier(sid) => {
-                        write!(w, "{}", self.mangled_names[sid]).unwrap();
+                        write!(c, "{}", self.mangled_names[sid]).unwrap();
                     }
                     LiteralKind::Number(num) => {
-                        write!(w, "{}", num).unwrap();
+                        write!(c, "{}", num).unwrap();
                     }
                     LiteralKind::String(_) => todo!(),
                 }
@@ -298,89 +299,91 @@ impl CCodegen {
                 let symbol = &mir.symbols[*sid];
                 match &symbol.kind {
                     SymbolKind::LetFn(_, _) => {
-                        write!(w, "{}(", self.mangled_names[sid]).unwrap();
+                        write!(c, "{}(", self.mangled_names[sid]).unwrap();
                         for (index, expr_id) in parameters.iter().enumerate() {
-                            self.gen_expression(mir, *expr_id, w);
+                            self.gen_expression(mir, *expr_id, &mut c);
                             if index < parameters.len() - 1 {
-                                write!(w, ", ").unwrap();
+                                write!(c, ", ").unwrap();
                             }
                         }
-                        write!(w, ")").unwrap();
+                        write!(c, ")").unwrap();
                     }
                     SymbolKind::Native(_, _, _, NativeFnKind::NegNumber) => {
-                        unop!("-", &parameters, self, mir, w);
+                        unop!("-", &parameters, self, mir, &mut c);
                     }
                     SymbolKind::Native(_, _, _, NativeFnKind::AddNumberNumber) => {
-                        binop!("+", &parameters, self, mir, w);
+                        binop!("+", &parameters, self, mir, &mut c);
                     }
                     SymbolKind::Native(_, _, _, NativeFnKind::SubNumberNumber) => {
-                        binop!("-", &parameters, self, mir, w);
+                        binop!("-", &parameters, self, mir, &mut c);
                     }
                     SymbolKind::Native(_, _, _, NativeFnKind::MulNumberNumber) => {
-                        binop!("*", &parameters, self, mir, w);
+                        binop!("*", &parameters, self, mir, &mut c);
                     }
                     SymbolKind::Native(_, _, _, NativeFnKind::DivNumberNumber) => {
-                        binop!("/", &parameters, self, mir, w);
+                        binop!("/", &parameters, self, mir, &mut c);
                     }
                     SymbolKind::Native(_, _, _, NativeFnKind::EqNumberNumber)
                     | SymbolKind::Native(_, _, _, NativeFnKind::EqBooleanBoolean) => {
-                        binop!("==", &parameters, self, mir, w);
+                        binop!("==", &parameters, self, mir, &mut c);
                     }
                     SymbolKind::Native(_, _, _, NativeFnKind::NeqNumberNumber)
                     | SymbolKind::Native(_, _, _, NativeFnKind::NeqBooleanBoolean) => {
-                        binop!("!=", &parameters, self, mir, w);
+                        binop!("!=", &parameters, self, mir, &mut c);
                     }
                     SymbolKind::Native(_, _, _, NativeFnKind::GtNumberNumber) => {
-                        binop!(">", &parameters, self, mir, w);
+                        binop!(">", &parameters, self, mir, &mut c);
                     }
                     SymbolKind::Native(_, _, _, NativeFnKind::LtNumberNumber) => {
-                        binop!("<", &parameters, self, mir, w);
+                        binop!("<", &parameters, self, mir, &mut c);
                     }
                     SymbolKind::Native(_, _, _, NativeFnKind::GeNumberNumber) => {
-                        binop!(">=", &parameters, self, mir, w);
+                        binop!(">=", &parameters, self, mir, &mut c);
                     }
                     SymbolKind::Native(_, _, _, NativeFnKind::LeNumberNumber) => {
-                        binop!("<=", &parameters, self, mir, w);
+                        binop!("<=", &parameters, self, mir, &mut c);
                     }
                     _ => unreachable!("can only call a function or an native"),
                 }
                 true
             }
             ExpressionKind::While(cond, body) => {
-                write!(w, "while (").unwrap();
-                self.gen_expression(mir, *cond, w);
-                writeln!(w, ") {{").unwrap();
-                w.inc();
-                self.gen_expression(mir, *body, w);
-                w.dec();
-                writeln!(w, "}}").unwrap();
+                write!(c, "while (").unwrap();
+                self.gen_expression(mir, *cond, &mut c);
+                writeln!(c, ") {{").unwrap();
+                c.inc();
+                self.gen_expression(mir, *body, &mut c);
+                c.dec();
+                writeln!(c, "}}").unwrap();
                 false
             }
             ExpressionKind::Block(stmt_ids) => {
-                w.inc();
+                c.inc();
                 for stmt_id in stmt_ids {
                     match &mir.statements[*stmt_id].kind {
                         StatementKind::Expression(expr_id) => {
-                            if self.gen_expression(mir, *expr_id, w) {
-                                writeln!(w, ";").unwrap();
+                            let (_, need_semicolon) = self.gen_expression(mir, *expr_id, &mut c);
+                            if need_semicolon {
+                                writeln!(c, ";").unwrap();
                             }
                         }
                         StatementKind::Ret(expr_id) => {
                             if let Some(expr_id) = expr_id {
-                                write!(w, "return ").unwrap();
-                                self.gen_expression(mir, *expr_id, w);
-                                writeln!(w, ";").unwrap();
+                                write!(c, "return ").unwrap();
+                                self.gen_expression(mir, *expr_id, &mut c);
+                                writeln!(c, ";").unwrap();
                             } else {
-                                writeln!(w, "return;").unwrap();
+                                writeln!(c, "return;").unwrap();
                             }
                         }
                     }
                 }
-                w.dec();
+                c.dec();
                 false
             }
             ExpressionKind::StructInstantiation(sid, _struct_id, fields) => {
-                writeln!(w, "malloc(sizeof({}));", self.mangled_names[sid],).unwrap();
+                writeln!(w, "x = malloc(sizeof({}));", self.mangled_names[sid],).unwrap();
+                write!(c, "x").unwrap();
 
                 for (_index, (_sid, _expr_id)) in fields.iter().enumerate() {}
 
@@ -390,32 +393,29 @@ impl CCodegen {
             ExpressionKind::ArrayAccess(_, _) => todo!(),
         };
 
-        need_semicolon
+        (c, need_semicolon)
     }
 }
 
-trait Indent {
-    fn inc(&mut self);
-    fn dec(&mut self);
-}
-
-struct Context<W: Write> {
-    writer: W,
+struct Context {
+    writer: String,
     indent: usize,
     must_indent: bool,
 }
 
-impl<W: Write> Context<W> {
-    fn new(writer: W) -> Self {
+impl Context {
+    fn new() -> Self {
+        Self::new_with_indent(0, false)
+    }
+
+    fn new_with_indent(indent: usize, must_indent: bool) -> Self {
         Self {
-            writer,
-            indent: 0,
-            must_indent: true,
+            writer: String::new(),
+            indent,
+            must_indent,
         }
     }
-}
 
-impl<W: Write> Indent for Context<W> {
     fn inc(&mut self) {
         self.indent += 1;
     }
@@ -423,9 +423,13 @@ impl<W: Write> Indent for Context<W> {
     fn dec(&mut self) {
         self.indent -= 1;
     }
+
+    fn as_str(&self) -> &str {
+        &self.writer
+    }
 }
 
-impl<W: Write> Write for Context<W> {
+impl Write for Context {
     fn write_str(&mut self, s: &str) -> std::fmt::Result {
         if self.must_indent {
             for _ in 0..self.indent {
@@ -434,6 +438,28 @@ impl<W: Write> Write for Context<W> {
         }
         self.must_indent = s.chars().last() == Some('\n');
         self.writer.write_str(s)
+    }
+}
+
+impl Display for Context {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.writer)
+    }
+}
+
+impl From<String> for Context {
+    fn from(value: String) -> Self {
+        Self {
+            writer: value,
+            indent: 0,
+            must_indent: false,
+        }
+    }
+}
+
+impl From<Context> for String {
+    fn from(value: Context) -> Self {
+        value.writer
     }
 }
 
