@@ -1457,7 +1457,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
                         &[
                             index.into(),
                             self.size_type
-                                .const_int(elements_count as u64, false)
+                                .const_int(*elements_count as u64, false)
                                 .into(),
                             self.size_type
                                 .const_int(mir.expressions[index_expr_id].span.line as u64, false)

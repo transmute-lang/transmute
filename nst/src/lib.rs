@@ -69,7 +69,7 @@ impl From<AstAst> for Nst {
                 .collect::<VecMap<ExprId, Expression>>(),
             statements: statements
                 .into_iter()
-                .map(|s| (s.0, Statement::from(s.1)))
+                .map(|s| (s.0, s.1))
                 .collect::<VecMap<StmtId, Statement>>(),
             type_defs: ast
                 .type_defs
