@@ -29,6 +29,12 @@ macro_rules! make_id {
             }
         }
 
+        impl From<&$name> for $name {
+            fn from(id: &$name) -> Self {
+                *id
+            }
+        }
+
         impl std::ops::Add<usize> for $name {
             type Output = $name;
 
