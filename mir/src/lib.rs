@@ -1179,6 +1179,16 @@ pub struct Mir {
     pub types: VecMap<TypeId, Type>,
 }
 
+impl Mir {
+    pub fn expression_type_id<E: Into<ExprId>>(&self, expr_id: E) -> TypeId {
+        self.expressions[expr_id.into()].type_id
+    }
+
+    pub fn expression_type<E: Into<ExprId>>(&self, expr_id: E) -> &Type {
+        &self.types[self.expressions[expr_id.into()].type_id]
+    }
+}
+
 impl TryFrom<Hir> for Mir {
     type Error = Diagnostics<()>;
 

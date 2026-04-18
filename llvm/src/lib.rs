@@ -1444,9 +1444,9 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         match self.gen_expression(mir, &mir.expressions[base_expr_id], must_create_gcroot) {
             Value::Array(array_ptr, array_type) => {
                 let (element_type_id, element_type, elements_count) =
-                    match mir.types[mir.expressions[base_expr_id].type_id] {
+                    match mir.expression_type(base_expr_id) {
                         Type::Array(element_type_id, len) => {
-                            (element_type_id, &mir.types[element_type_id], len)
+                            (*element_type_id, &mir.types[*element_type_id], len)
                         }
                         _ => panic!("type of expression must be array"),
                     };
