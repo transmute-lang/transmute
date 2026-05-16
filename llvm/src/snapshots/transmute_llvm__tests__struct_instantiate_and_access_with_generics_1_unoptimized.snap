@@ -1,0 +1,47 @@
+---
+source: llvm/src/lib.rs
+expression: llvm_ir
+---
+; ModuleID = 'main'
+source_filename = "main"
+
+%"Struct#id1" = type { i64 }
+
+; Function Attrs: nounwind
+declare void @llvm.gcroot(ptr, ptr) #0
+
+declare ptr @gc_malloc(i64, i64, ptr)
+
+declare void @gc_run()
+
+declare void @gc_mark(ptr)
+
+declare void @tmc_check_array_index(i64, i64, i64, i64)
+
+declare ptr @tmc_stdlib_string_new(ptr, i64)
+
+define private void @_glob() {
+entry:
+  unreachable
+}
+
+define void @_TM0_F1f0() gc "shadow-stack" {
+entry:
+  %"val#local#sym24#" = alloca i64, align 8
+  %"s#local#sym23#" = alloca ptr, align 8
+  store ptr null, ptr %"s#local#sym23#", align 8
+  call void @llvm.gcroot(ptr %"s#local#sym23#", ptr null)
+  %"heap#struct#Struct#id1#" = call ptr @gc_malloc(i64 ptrtoint (ptr getelementptr (%"Struct#id1", ptr null, i32 1) to i64), i64 ptrtoint (ptr getelementptr ({ i1, %"Struct#id1" }, ptr null, i64 0, i32 1) to i64), ptr null)
+  %"heap#struct#Struct#id1#.field#idx0#sym26" = getelementptr inbounds %"Struct#id1", ptr %"heap#struct#Struct#id1#", i32 0, i32 0
+  store i64 1, ptr %"heap#struct#Struct#id1#.field#idx0#sym26", align 4
+  store ptr %"heap#struct#Struct#id1#", ptr %"s#local#sym23#", align 8
+  call void @gc_run()
+  %"s#local#sym23#1" = load ptr, ptr %"s#local#sym23#", align 8
+  %"s#local#sym23#1.field#idx0#sym26#" = getelementptr inbounds %"Struct#id1", ptr %"s#local#sym23#1", i32 0, i32 0
+  %"s#local#sym23#1.field#idx0#sym26#2" = load i64, ptr %"s#local#sym23#1.field#idx0#sym26#", align 4
+  store i64 %"s#local#sym23#1.field#idx0#sym26#2", ptr %"val#local#sym24#", align 4
+  call void @gc_run()
+  ret void
+}
+
+attributes #0 = { nounwind }

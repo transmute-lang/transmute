@@ -1,8 +1,6 @@
 mod mangling;
-mod types;
 
 use crate::mangling::{mangle_array_name, mangle_function_name, mangle_struct_name};
-use crate::types::Allocation;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::memory_buffer::MemoryBuffer;
@@ -12,8 +10,8 @@ use inkwell::targets::{
     CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine, TargetTriple,
 };
 use inkwell::types::{
-    ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, IntType, PointerType, StructType,
-    VoidType,
+    ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType, PointerType,
+    StructType, VoidType,
 };
 use inkwell::values::{
     BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue, PointerValue,
@@ -411,7 +409,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         if !fields
             .iter()
             .map(|e| e.type_id)
-            .any(|type_id| mir.types[type_id].is_heap_allocated())
+            .any(|type_id| self.is_heap_allocated(mir, type_id))
         {
             return Some(self.ptr_type.const_null());
         }
@@ -427,7 +425,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             builder.position_at_end(self.context.append_basic_block(callback, "entry"));
 
             for (index, field) in fields.iter().enumerate() {
-                if mir.types[field.type_id].is_heap_allocated() {
+                if self.is_heap_allocated(mir, field.type_id) {
                     let field_ptr = builder
                         .build_struct_gep(
                             self.struct_types[&struct_id],
@@ -477,7 +475,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         element_type_id: TypeId,
         len: usize,
     ) -> PointerValue<'ctx> {
-        if !mir.types[element_type_id].is_heap_allocated() {
+        if !self.is_heap_allocated(mir, element_type_id) {
             return self.ptr_type.const_null();
         }
 
@@ -589,18 +587,19 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             })
             .collect::<Vec<BasicMetadataTypeEnum>>();
 
-        let resolved_ret_type = &mir.types[function.ret];
-        let fn_type = match resolved_ret_type {
-            Type::Boolean => self.bool_type.fn_type(&parameters_types, false),
-            Type::Number => self.i64_type.fn_type(&parameters_types, false),
-            Type::Function(_, _) => todo!(),
-            Type::Struct(_, _) | Type::Array(_, _) => {
-                // are returned by ref
-                self.ptr_type.fn_type(&parameters_types, false)
-            }
-            Type::Void => self.void_type.fn_type(&parameters_types, false),
-            Type::None => todo!(),
-        };
+        // let resolved_ret_type = &mir.types[function.ret];
+        let fn_type = self.function_type(mir, &parameters_types, function.ret);
+        // match resolved_ret_type {
+        //     Type::Boolean => self.bool_type.fn_type(&parameters_types, false),
+        //     Type::Number => self.i64_type.fn_type(&parameters_types, false),
+        //     Type::Function(_, _) => todo!(),
+        //     Type::Struct(_, _) | Type::Array(_, _) => {
+        //         are returned by ref
+        // self.ptr_type.fn_type(&parameters_types, false)
+        // }
+        // Type::Void => self.void_type.fn_type(&parameters_types, false),
+        // Type::None => todo!(),
+        // };
 
         let fn_name = mangle_function_name(
             mir,
@@ -1280,7 +1279,10 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
         fields: &[(SymbolId, ExprId)],
         must_create_gcroot: bool,
     ) -> Value<'ctx> {
-        let struct_type = *self.struct_types.get(&struct_id).unwrap();
+        let struct_type = *self
+            .struct_types
+            .get(&struct_id)
+            .unwrap_or_else(|| panic!("Struct with id {} not found", struct_id));
         let field_values = fields
             .iter()
             .map(
@@ -1586,6 +1588,37 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             }
             Type::Void => unreachable!("void is not a basic type"),
             Type::None => unreachable!("none is not a basic type"),
+        }
+    }
+
+    fn function_type(
+        &self,
+        mir: &Mir,
+        parameters_types: &[BasicMetadataTypeEnum<'ctx>],
+        return_type_id: TypeId,
+    ) -> FunctionType<'ctx> {
+        match &mir.types[return_type_id] {
+            Type::Boolean => self.bool_type.fn_type(&parameters_types, false),
+            Type::Number => self.i64_type.fn_type(&parameters_types, false),
+            Type::Function(_, _) => todo!(),
+            Type::Struct(_, _) | Type::Array(_, _) => {
+                // are returned by ref
+                self.ptr_type.fn_type(&parameters_types, false)
+            }
+            Type::Void => self.void_type.fn_type(&parameters_types, false),
+            Type::None => todo!(),
+        }
+    }
+
+    fn is_heap_allocated(&self, mir: &Mir, type_id: TypeId) -> bool {
+        match &mir.types[type_id] {
+            Type::Boolean => false,
+            Type::Number => false,
+            Type::Function(_, _) => todo!(),
+            Type::Struct(_, _) => true,
+            Type::Array(_, _) => true,
+            Type::Void => unreachable!("void is not allocated"),
+            Type::None => unreachable!("none is not allocated"),
         }
     }
 
@@ -1908,7 +1941,9 @@ mod tests {
                     let ast = compilation_unit.into_ast().unwrap();
                     let nst = Nst::from(ast);
                     let hir = nst.resolve().unwrap();
+                    dbg!(&hir);
                     let mir = Mir::try_from(hir).unwrap();
+                    dbg!(&mir);
 
                     Target::initialize_all(&InitializationConfig::default());
 
@@ -2285,6 +2320,58 @@ mod tests {
                 field2: n + 1,
             };
             1;
+        }
+        "#
+    );
+
+    gen!(
+        struct_instantiate_with_generics_1,
+        r#"
+        struct Struct<T> { field: T }
+        let f() {
+            let s = Struct {
+                field: 1,
+            };
+        }
+        "#
+    );
+    gen!(
+        struct_instantiate_and_access_with_generics_1,
+        r#"
+        struct Struct<T> { field: T }
+        let f() {
+            let s = Struct {
+                field: 1,
+            };
+            let val = s.field;
+        }
+        "#
+    );
+    // todo see mir#test_empty_generic_struct_instantiation
+    // gen!(
+    //     empty_struct_instantiate_and_access_with_generics,
+    //     r#"
+    //     struct Struct<T> {}
+    //     let f() {
+    //         let s = Struct {};
+    //     }
+    //     "#
+    // );
+    gen!(
+        struct_instantiate_and_access_with_string_generics,
+        r#"
+        namespace std {
+            annotation native;
+            namespace str {
+                @native
+                struct string {}
+            }
+        }
+        struct Struct<T> { field: T }
+        let f() {
+            let s = Struct {
+                field: "Hello",
+            };
         }
         "#
     );

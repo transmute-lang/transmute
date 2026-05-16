@@ -965,12 +965,13 @@ impl Resolver {
                                     self.identifier_ref_bindings
                                         .insert(ident_ref.id, vec![*field_symbol_id]);
 
-                                    let field_type_ids = self.find_type_by_type_id(expr_type_id).as_struct().1;
+                                    let field_type_ids =
+                                        self.find_type_by_type_id(expr_type_id).as_struct().1;
                                     // if we have at least 1 type parameter, we have a
                                     // type-parameterized struct, and we need to get the actual
                                     // field type from the list
                                     if field_type_ids.len() > 0 {
-                                        field_type_id =field_type_ids[index];
+                                        field_type_id = field_type_ids[index];
                                     }
 
                                     (field_type_id, Some(*field_symbol_id))

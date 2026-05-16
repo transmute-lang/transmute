@@ -595,7 +595,7 @@ impl Hir {
             }
             Type::Struct(stmt_id, type_parameters) => {
                 let symbol_id = match &self.statements[*stmt_id].kind {
-                    StatementKind::Struct(ident, _,_, _, _) => ident.resolved_symbol_id(),
+                    StatementKind::Struct(ident, _, _, _, _) => ident.resolved_symbol_id(),
                     _ => panic!("struct expected"),
                 };
                 write!(f, "struct {}<{}>", id!(symbol_id), type_parameters.len())
@@ -605,7 +605,7 @@ impl Hir {
             }
             Type::Parameter(stmt_id, index) => {
                 let symbol_id = match &self.statements[*stmt_id].kind {
-                    StatementKind::Struct(ident, _,_, _, _) => ident.resolved_symbol_id(),
+                    StatementKind::Struct(ident, _, _, _, _) => ident.resolved_symbol_id(),
                     _ => panic!("struct expected"),
                 };
                 write!(f, "type parameter {symbol_id}<{stmt_id}.{index}>")
