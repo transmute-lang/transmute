@@ -108,8 +108,8 @@ impl Transformer {
                                     unreachable!()
                                 }
                                 HirSymbolKind::Let(_, _) => SymbolKind::Let,
-                                HirSymbolKind::LetFn(_, _, params, ret_type_id) => {
-                                    SymbolKind::LetFn(params, ret_type_id)
+                                HirSymbolKind::LetFn(_, stmt_id, params, ret_type_id) => {
+                                    SymbolKind::LetFn(self.fn_map[stmt_id], params, ret_type_id)
                                 }
                                 HirSymbolKind::Parameter(_, _, index) => {
                                     SymbolKind::Parameter(index)
@@ -835,6 +835,21 @@ impl Transformer {
             .kind
             {
                 HirSymbolKind::Field(_, _, index) => *index,
+                // todo: report an error instead of panicking!
+                //  reproduce issue with:
+                //    struct Inner {
+                //      field: number
+                //    }
+                //    struct Outer {
+                //      field: Inner
+                //    }
+                //    let f() {
+                //      Outer {
+                //        inexistent_field: Inner {
+                //          field: 1
+                //        }
+                //      };
+                //    }
                 _ => panic!("symbol must be a struct field"),
             };
 
@@ -1187,6 +1202,10 @@ impl Mir {
     pub fn expression_type<E: Into<ExprId>>(&self, expr_id: E) -> &Type {
         &self.types[self.expressions[expr_id.into()].type_id]
     }
+
+    pub fn symbol_type_id<S: Into<SymbolId>>(&self, symbol_id: S) -> TypeId {
+        self.symbols[symbol_id.into()].type_id
+    }
 }
 
 impl TryFrom<Hir> for Mir {
@@ -1286,6 +1305,15 @@ pub struct Expression {
     pub type_id: TypeId,
 }
 
+impl Expression {
+    pub fn as_block(&self) -> &Vec<StmtId> {
+        match &self.kind {
+            ExpressionKind::Block(sids) => sids,
+            _ => panic!("block expected"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum ExpressionKind {
     Assignment(Target, ExprId),
@@ -1316,7 +1344,7 @@ pub enum LiteralKind {
     String(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Target {
     Direct(SymbolId),
     /// The expression id is of kind ExpressionKind::Access
@@ -1356,6 +1384,15 @@ pub enum Type {
     None,
 }
 
+impl Type {
+    pub fn as_array(&self) -> (TypeId, usize) {
+        match &self {
+            Type::Array(type_id, length) => (*type_id, *length),
+            _ => panic!("type array expected, got {:?}", self),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Symbol {
     pub id: SymbolId,
@@ -1368,7 +1405,7 @@ pub struct Symbol {
 pub enum SymbolKind {
     Let,
     // todo:refactoring should we keep TypeId?
-    LetFn(Vec<TypeId>, TypeId),
+    LetFn(FunctionId, Vec<TypeId>, TypeId),
     Parameter(usize),
     Struct,
     // todo:refactoring do IdentId and usize make sense?

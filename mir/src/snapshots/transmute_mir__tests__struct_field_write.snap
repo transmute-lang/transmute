@@ -1,6 +1,6 @@
 ---
 source: mir/src/lib.rs
-expression: make_mir(hir)
+expression: mir
 ---
 Ok(
     Mir {
@@ -447,6 +447,7 @@ Ok(
             SymbolId(20) => Symbol {
                 id: SymbolId(20),
                 kind: LetFn(
+                    FunctionId(0),
                     [],
                     TypeId(4),
                 ),

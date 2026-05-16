@@ -1,3 +1,4 @@
+#10
 use std.numbers.print;
 
 let main() {

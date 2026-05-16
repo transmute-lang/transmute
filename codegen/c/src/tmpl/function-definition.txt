@@ -1,0 +1,9 @@
+{declaration}
+{{
+  // prelude
+  {name}__frame me = ({name}__frame){{0}};
+  me.parent = parent_frame;
+
+{body}
+}}
+

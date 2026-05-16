@@ -1,0 +1,4 @@
+typedef struct {{
+  void *parent;
+}} {fn_name}__frame;
+

@@ -1,3 +1,4 @@
+#1
 use std.str.print;
 
 let main() {

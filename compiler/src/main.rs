@@ -15,7 +15,9 @@ fn main() {
     );
 
     let mut options = Options::default();
-    if args.output_llvm_ir() {
+    if args.output_c() {
+        options.set_output_format(OutputFormat::C);
+    } else if args.output_llvm_ir() {
         options.set_output_format(OutputFormat::LlvmIr);
     } else if args.output_assembly() {
         options.set_output_format(OutputFormat::Assembly);

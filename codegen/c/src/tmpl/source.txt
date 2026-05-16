@@ -1,0 +1,24 @@
+
+// Begin program code
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+// Generated struct declarations
+{struct_declarations}
+
+// Generated struct definitions
+{struct_definitions}
+
+// Generated function declarations
+{function_declarations}
+
+// Generated function frames
+{function_frames}
+
+// Generated function declarations
+{function_definitions}
+
+// End program code
+

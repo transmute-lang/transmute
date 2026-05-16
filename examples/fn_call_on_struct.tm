@@ -1,3 +1,4 @@
+#0
 use std.numbers.print;
 
 struct Rect {

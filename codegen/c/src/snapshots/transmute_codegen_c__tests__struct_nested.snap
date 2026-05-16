@@ -1,0 +1,33 @@
+---
+source: codegen/c/src/lib.rs
+expression: c.unwrap()
+---
+// Begin program code
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+// Generated struct declarations
+typedef struct s5Inner s5Inner;
+typedef struct s5Outer s5Outer;
+
+// Generated struct definitions
+struct s5Inner {
+  int64_t field;
+};
+
+struct s5Outer {
+  s5Inner *field;
+};
+
+// Generated function declarations
+
+
+// Generated function frames
+
+
+// Generated function declarations
+
+
+// End program code

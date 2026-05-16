@@ -2,15 +2,14 @@
 
 source setenv
 
+cargo clean
 cargo fmt                                                                                                     || exit 1
 
 ## prepare stdlib
-./build-stdlib.sh                                                                                             || exit 1
+just build-stdlib                                                                                             || exit 1
 
 ## test runtime
-pushd runtime                                                                                                 || exit 1
-./test.sh                                                                                                     || exit 1
-popd                                                                                                          || exit 1
+just test-runtime                                                                                             || exit 1
 
 cargo test -p transmute-core                                                                                  || exit 1
 
@@ -25,6 +24,8 @@ cargo test -p transmute-llvm                                                    
 #cargo test -p transmute-llvm -F gc-functions                                                                  || exit 1
 #cargo test -p transmute-llvm -F gc-aggressive                                                                 || exit 1
 #cargo test -p transmute-llvm -F gc-functions -F gc-aggressive                                                 || exit 1
+
+cargo test -p transmute-codegen-c                                                                             || exit 1
 
 cargo test -p tmc                                                                                             || exit 1
 #cargo test -p tmc -F rt-c --no-default-features                                                               || exit 1
@@ -45,4 +46,6 @@ cargo build --bin tmc --release                                                 
 echo "Executing GC test"
 ./test-gc.sh                                                                                                  || exit 1
 
-echo "OK."
+just test-exec
+
+echo "Finished."

@@ -1,5 +1,4 @@
-#!transmute
-
+#10
 use std.env.args;
 use std.list.list_get;
 use std.numbers.number_parse;

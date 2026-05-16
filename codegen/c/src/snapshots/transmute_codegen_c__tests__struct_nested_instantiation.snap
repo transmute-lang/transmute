@@ -1,0 +1,59 @@
+---
+source: codegen/c/src/lib.rs
+expression: c.unwrap()
+---
+// Begin program code
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+// Generated struct declarations
+typedef struct s5Inner s5Inner;
+typedef struct s5Outer s5Outer;
+
+// Generated struct definitions
+struct s5Inner {
+  int64_t field;
+};
+
+struct s5Outer {
+  s5Inner *field;
+};
+
+// Generated function declarations
+void _TM0_F1f0(void *parent_frame);
+
+// Generated function frames
+typedef struct {
+  void *parent;
+  union {
+    void *pointers[3];
+    struct {
+      s5Inner *e1;
+      s5Outer *e2;
+    };
+  };
+} _TM0_F1f0__frame;
+
+// Generated function declarations
+void _TM0_F1f0(void *parent_frame)
+{
+  // prelude
+  _TM0_F1f0__frame me = (_TM0_F1f0__frame){0};
+  me.parent = parent_frame;
+
+  {
+    me.e1 = malloc(sizeof(s5Inner));
+    me.e1->field = 1;
+    
+    me.e1;
+    me.e2 = malloc(sizeof(s5Outer));
+    me.e2->field = me.e1;
+    
+    me.e2;
+    return;
+  }
+}
+
+// End program code

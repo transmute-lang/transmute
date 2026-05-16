@@ -1,0 +1,29 @@
+---
+source: codegen/c/src/lib.rs
+expression: c.unwrap()
+---
+// Begin program code
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+// Generated struct declarations
+typedef struct s12SimpleStruct s12SimpleStruct;
+
+// Generated struct definitions
+struct s12SimpleStruct {
+  int64_t field1;
+  bool field2;
+};
+
+// Generated function declarations
+
+
+// Generated function frames
+
+
+// Generated function declarations
+
+
+// End program code

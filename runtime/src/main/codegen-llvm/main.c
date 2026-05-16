@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "main.h"
-#include "../gc/gc.h"
+#include "../args.h"
+#include "../../gc/gc.h"
 
 void _TM0_F4main0(void);
 
@@ -27,3 +27,4 @@ int main(int argc, char **argv) {
 Args *get_c_args(void) {
     return &args;
 }
+

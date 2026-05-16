@@ -2,8 +2,8 @@
 #include <stdio.h>
 
 #include "bindings.h"
-#include "../../../runtime/src/gc/gc.h"
-#include "../../../runtime/src/main/main.h"
+#include "gc/gc.h"
+#include "main/args.h"
 
 static List *args = NULL;
 

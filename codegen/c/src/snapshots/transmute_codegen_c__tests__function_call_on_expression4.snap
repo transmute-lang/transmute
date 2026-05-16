@@ -1,0 +1,78 @@
+---
+source: codegen/c/src/lib.rs
+expression: c.unwrap()
+---
+// Begin program code
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+// Generated struct declarations
+typedef struct s1S s1S;
+
+// Generated struct definitions
+struct s1S {
+  int64_t f;
+};
+
+// Generated function declarations
+int64_t _TM0_F1f1s1S(void *parent_frame, s1S *s_24);
+void _TM0_F1g1n(void *parent_frame, int64_t n_25);
+void _TM0_F4main0(void *parent_frame);
+
+// Generated function frames
+typedef struct {
+  void *parent;
+} _TM0_F1f1s1S__frame;
+
+typedef struct {
+  void *parent;
+} _TM0_F1g1n__frame;
+
+typedef struct {
+  void *parent;
+  union {
+    void *pointers[2];
+    struct {
+      s1S *e7;
+    };
+  };
+} _TM0_F4main0__frame;
+
+// Generated function declarations
+int64_t _TM0_F1f1s1S(void *parent_frame, s1S *s_24)
+{
+  // prelude
+  _TM0_F1f1s1S__frame me = (_TM0_F1f1s1S__frame){0};
+  me.parent = parent_frame;
+
+  return s_24->f;
+}
+
+void _TM0_F1g1n(void *parent_frame, int64_t n_25)
+{
+  // prelude
+  _TM0_F1g1n__frame me = (_TM0_F1g1n__frame){0};
+  me.parent = parent_frame;
+
+  return;
+}
+
+void _TM0_F4main0(void *parent_frame)
+{
+  // prelude
+  _TM0_F4main0__frame me = (_TM0_F4main0__frame){0};
+  me.parent = parent_frame;
+
+  {
+    me.e7 = malloc(sizeof(s1S));
+    me.e7->f = 1;
+    
+    me.e7;
+    _TM0_F1g1n((void *)&me, _TM0_F1f1s1S((void *)&me, me.e7));
+    return;
+  }
+}
+
+// End program code

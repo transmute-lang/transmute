@@ -1,3 +1,4 @@
+// gc.h
 #include <stdlib.h>
 
 typedef struct GcCallbacks {
@@ -12,7 +13,6 @@ void gc_run(void);
 void gc_teardown(void);
 void gc_print_statistics(void);
 
-void gc_mark(void *object);
 void gc_take_ownership(void *object);
 void gc_release_ownership(void *object);
 
@@ -22,3 +22,8 @@ void gc_set_callbacks(void *object, GcCallbacks *callbacks);
 void gc_set_object_name(void *object, char *name);
 void gc_pool_dump(void);
 #endif // #ifdef GC_TEST
+
+#ifdef GC_PRIVATE
+void gc_mark(void *object);
+#endif // #ifdef GC_PRIVATE
+

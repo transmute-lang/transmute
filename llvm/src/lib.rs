@@ -1052,7 +1052,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             SymbolKind::Let => {
                 unreachable!("handled in the if variable.contains_key(..) above")
             }
-            SymbolKind::LetFn(_, _) => todo!(),
+            SymbolKind::LetFn(_, _, _) => todo!(),
             SymbolKind::Parameter(index) => {
                 let value = self
                     .current_function()
@@ -1150,7 +1150,7 @@ impl<'ctx, 't> Codegen<'ctx, 't> {
             SymbolKind::Native(_, _, _, kind) if kind.is_instr() => {
                 return kind.gen_instr(mir, self, params);
             }
-            SymbolKind::Native(_, _, return_type, _) | SymbolKind::LetFn(_, return_type) => {
+            SymbolKind::Native(_, _, return_type, _) | SymbolKind::LetFn(_, _, return_type) => {
                 match mir.types[*return_type] {
                     Type::Boolean | Type::Number | Type::Struct(_, _) => {
                         Some(self.llvm_type(mir, *return_type))

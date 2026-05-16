@@ -24,24 +24,28 @@ pub struct Args {
     #[arg(long)]
     run: bool,
 
+    /// Outputs C Code
+    #[arg(long, conflicts_with_all = ["llvm_ir", "assembly", "source", "ast", "hir"])]
+    c: bool,
+
     /// Outputs LLVM IR
-    #[arg(long, conflicts_with_all = ["assembly", "source", "ast", "hir"])]
+    #[arg(long, conflicts_with_all = ["c", "assembly", "source", "ast", "hir"])]
     llvm_ir: bool,
 
     /// Outputs Assembly
-    #[arg(long, conflicts_with_all = ["llvm_ir", "source", "ast", "hir"])]
+    #[arg(long, conflicts_with_all = ["c", "llvm_ir", "source", "ast", "hir"])]
     assembly: bool,
 
     /// Outputs Source
-    #[arg(long, conflicts_with_all = ["llvm_ir", "assembly", "ast", "hir"])]
+    #[arg(long, conflicts_with_all = ["c", "llvm_ir", "assembly", "ast", "hir"])]
     source: bool,
 
     /// Outputs Ast
-    #[arg(long, conflicts_with_all = ["assembly", "llvm_ir", "source", "hir"])]
+    #[arg(long, conflicts_with_all = ["c", "assembly", "llvm_ir", "source", "hir"])]
     ast: bool,
 
     /// Outputs Hir
-    #[arg(long, conflicts_with_all = ["assembly", "llvm_ir", "source", "ast"])]
+    #[arg(long, conflicts_with_all = ["c", "assembly", "llvm_ir", "source", "ast"])]
     hir: bool,
 
     /// Path to the stdlib library. If not provided, use `TRANSMUTE_STDLIB_PATH` env. variable if set.
@@ -69,6 +73,10 @@ impl Args {
 
     pub fn run(&self) -> bool {
         self.run
+    }
+
+    pub fn output_c(&self) -> bool {
+        self.c
     }
 
     pub fn output_llvm_ir(&self) -> bool {

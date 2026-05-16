@@ -1,0 +1,46 @@
+---
+source: codegen/c/src/lib.rs
+expression: c.unwrap()
+---
+// Begin program code
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+// Generated struct declarations
+
+
+// Generated struct definitions
+
+
+// Generated function declarations
+int64_t *_TM0_F1f0(void *parent_frame);
+
+// Generated function frames
+typedef struct {
+  void *parent;
+  union {
+    void *pointers[2];
+    struct {
+      int64_t *e2;
+    };
+  };
+} _TM0_F1f0__frame;
+
+// Generated function declarations
+int64_t *_TM0_F1f0(void *parent_frame)
+{
+  // prelude
+  _TM0_F1f0__frame me = (_TM0_F1f0__frame){0};
+  me.parent = parent_frame;
+
+  me.e2 = malloc(2 * sizeof(int64_t));
+  me.e2[0] = 1;
+  me.e2[1] = 2;
+  
+  me.e2;
+  return me.e2;
+}
+
+// End program code

@@ -1,0 +1,26 @@
+---
+source: codegen/c/src/lib.rs
+expression: c.unwrap()
+---
+// Begin program code
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+// Generated struct declarations
+
+
+// Generated struct definitions
+
+
+// Generated function declarations
+void _TM0_F1f1n(int64_t n_22);
+
+// Generated function frames
+
+
+// Generated function declarations
+
+
+// End program code

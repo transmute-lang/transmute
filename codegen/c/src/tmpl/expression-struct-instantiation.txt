@@ -1,0 +1,1 @@
+me.e{eid} = malloc(sizeof({struct_name}));

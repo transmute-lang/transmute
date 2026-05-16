@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#define GC_PRIVATE
 #include "../src/gc/gc.h"
 
 #define __LLVM_DEFINE_ROOT

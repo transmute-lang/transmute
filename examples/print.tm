@@ -1,3 +1,4 @@
+#10
 use std.booleans.print;
 use std.numbers.print;
 

@@ -9,6 +9,8 @@ fn main() {
         let src_dir = current_dir().unwrap().join("src").join("stdlib");
 
         let mut cc = cc::Build::new();
+        cc.flag("-I");
+        cc.flag("../runtime/src/");
 
         for dir_entry in fs::read_dir(&src_dir).unwrap() {
             let c_file_name = dir_entry
@@ -30,6 +32,7 @@ fn main() {
         }
 
         cc.debug(true);
+        // compiles and links with the rust part
         cc.compile("stdc");
     }
 }

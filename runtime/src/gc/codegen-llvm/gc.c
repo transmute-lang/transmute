@@ -27,11 +27,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../llvm/llvm.h"
-#include "gc.h"
+#include "../../llvm/llvm.h"
+#define GC_PRIVATE
+#include "../gc.h"
 
 extern LlvmStackFrame *llvm_gc_root_chain;
 
+// fixme GC breaks several example programs (see `just exec-all`)
 // todo:feature:gc trigger actual GC only if some conditions hold
 // todo:feature:gc keep track of freed blocks to return them instead of a full cycle of free/malloc syscalls
 

@@ -1,3 +1,4 @@
+#10
 use std.str.print;
 
 let inc(a: number): number {

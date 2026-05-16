@@ -1,7 +1,10 @@
+#10
 use std.env.args;
 use std.list.list_get;
 use std.numbers.number_parse;
 use std.numbers.print;
+
+# fixme segfaults when compiled with `cargo run --bin tmc -- examples/arrays_simple.tm`
 
 let main() {
     let n = number_parse(list_get(args(), 1));

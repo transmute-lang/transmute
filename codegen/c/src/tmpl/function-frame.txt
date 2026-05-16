@@ -1,0 +1,10 @@
+typedef struct {{
+  void *parent;
+  union {{
+    void *pointers[{ptr_count}];
+    struct {{
+{fields}
+    }};
+  }};
+}} {fn_name}__frame;
+

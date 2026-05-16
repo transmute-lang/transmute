@@ -1,0 +1,1 @@
+{type}{name}(void *parent_frame{parameters});

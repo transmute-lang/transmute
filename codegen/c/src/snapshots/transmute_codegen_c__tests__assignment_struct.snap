@@ -1,0 +1,51 @@
+---
+source: codegen/c/src/lib.rs
+expression: c.unwrap()
+---
+// Begin program code
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+// Generated struct declarations
+typedef struct s5Point s5Point;
+
+// Generated struct definitions
+struct s5Point {
+  int64_t x;
+  int64_t y;
+};
+
+// Generated function declarations
+void _TM0_F1f0(void *parent_frame);
+
+// Generated function frames
+typedef struct {
+  void *parent;
+  union {
+    void *pointers[3];
+    struct {
+      s5Point *a_23;
+      s5Point *e2;
+    };
+  };
+} _TM0_F1f0__frame;
+
+// Generated function declarations
+void _TM0_F1f0(void *parent_frame)
+{
+  // prelude
+  _TM0_F1f0__frame me = (_TM0_F1f0__frame){0};
+  me.parent = parent_frame;
+
+  me.e2 = malloc(sizeof(s5Point));
+  me.e2->x = 0;
+  me.e2->y = 0;
+  
+  me.e2;
+  me.a_23 = me.e2;
+  return;
+}
+
+// End program code

@@ -1,6 +1,9 @@
+use std::fs::File;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use transmute_ast::ast_print::Options as AstPrintOptions;
 use transmute_ast::parse;
+use transmute_codegen_c::CCode;
 use transmute_core::error::Diagnostics;
 use transmute_core::input::Input;
 use transmute_hir::hir_print::Options as HirPrintOptions;
@@ -20,6 +23,7 @@ pub struct Options {
 pub enum OutputFormat {
     #[default]
     Object,
+    C,
     LlvmIr,
     Assembly,
     Source,
@@ -114,22 +118,34 @@ pub fn compile_inputs<D: AsRef<Path>>(
     dst: D,
     options: &Options,
 ) -> Result<(), String> {
-    let mut ir_gen = LlvmIrGen::default();
-    ir_gen.set_optimize(options.optimize);
-
     let (inputs, ast) = parse(src);
-    ast.map(Nst::from)
+    let mir = ast
+        .map(Nst::from)
         .and_then(Nst::resolve)
-        .and_then(Mir::try_from)
-        .and_then(|mir| ir_gen.gen(&mir))
-        .and_then(|ir| produce_output(ir, dst.as_ref(), options))
-        .map_err(|d| d.with_inputs(inputs).to_string())
+        .and_then(Mir::try_from);
+
+    if matches!(options.output_format, OutputFormat::C) {
+        let dst = dst.as_ref().with_extension("c");
+        mir.and_then(|mir| CCode::try_from(&mir)).map(|c| {
+            let mut f = File::create(dst).unwrap();
+            f.write_all(transmute_runtime::get_c_pre()).unwrap();
+            f.write_all(c.as_str().as_bytes()).unwrap();
+            f.write_all(transmute_runtime::get_c_post()).unwrap();
+        })
+    } else {
+        let mut ir_gen = LlvmIrGen::default();
+        ir_gen.set_optimize(options.optimize);
+
+        mir.and_then(|mir| ir_gen.gen(&mir))
+            .and_then(|ir| produce_output(ir, dst.as_ref(), options))
+    }
+    .map_err(|d| d.with_inputs(inputs).to_string())
 }
 
 fn produce_output(llvm_ir: LlvmIr, dst: &Path, options: &Options) -> Result<(), Diagnostics<()>> {
     match options.output_format {
         OutputFormat::Object => llvm_ir.build_bin(
-            transmute_runtime::get_runtime(),
+            transmute_runtime::get_llvm_runtime(),
             dst,
             options.stdlib_path.as_deref(),
         ),
@@ -145,5 +161,6 @@ fn produce_output(llvm_ir: LlvmIr, dst: &Path, options: &Options) -> Result<(), 
             // already done
             Ok(())
         }
+        OutputFormat::C => unreachable!("already handled before producing LlvmIr"),
     }
 }

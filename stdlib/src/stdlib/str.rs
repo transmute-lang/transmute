@@ -66,6 +66,7 @@ impl From<&Str> for &str {
     }
 }
 
+// todo sould probably be named according to mangling
 #[no_mangle]
 pub extern "C" fn tmc_stdlib_string_new(ptr: *const u8, len: usize) -> *mut Str {
     ObjectPtr::leak(Box::new(Str::from(

@@ -10,6 +10,7 @@ transmute-nst = { path = "../nst" }
 transmute-hir = { path = "../hir" }
 transmute-mir = { path = "../mir" }
 transmute-runtime = { path = "../runtime" }
+transmute-codegen-c = { path = "../codegen/c" }
 transmute-llvm = { path = "../llvm" }
 clap = { version = "4.5.8", features = ["derive"] }
 

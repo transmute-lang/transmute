@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = ["gc-cc-dbg", "gc-pthread"]
+default = ["gc-cc-dbg", "gc-pthread", "stdlib"]
 gc-test = []
 gc-logs = []
 gc-logs-stable = ["gc-logs"]
@@ -12,3 +12,5 @@ gc-logs-colors = ["gc-logs"]
 gc-functions = []
 gc-cc-dbg = []
 gc-pthread = []
+
+stdlib = []

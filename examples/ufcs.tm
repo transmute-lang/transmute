@@ -1,3 +1,4 @@
+#0
 
 use std.str.string;
 use std.env.args;

@@ -112,4 +112,5 @@ mod tests {
     exec!(structs_nested);
     exec!(structs_of_arrays);
     exec!(structs_simple);
+    exec!(if_expr);
 }

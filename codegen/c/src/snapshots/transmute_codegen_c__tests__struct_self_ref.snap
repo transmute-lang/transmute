@@ -1,0 +1,28 @@
+---
+source: codegen/c/src/lib.rs
+expression: c.unwrap()
+---
+// Begin program code
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+// Generated struct declarations
+typedef struct s7SelfRef s7SelfRef;
+
+// Generated struct definitions
+struct s7SelfRef {
+  s7SelfRef *field;
+};
+
+// Generated function declarations
+
+
+// Generated function frames
+
+
+// Generated function declarations
+
+
+// End program code
