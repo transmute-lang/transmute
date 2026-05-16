@@ -1,0 +1,227 @@
+[[tests]]
+source = "examples/arrays_bounds.tm"
+args = ["10"]
+status = 1
+stdout = ""
+stderr = """
+error at line 6, column 13
+index out of bounds: the length is 1 but the index is 1
+"""
+
+[[tests]]
+source = "examples/arrays_if.tm"
+args = ["5"]
+status = 0
+stdout = """10
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/arrays_nested.tm"
+args = ["5"]
+status = 0
+stdout = """55
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/arrays_of_structs.tm"
+args = ["10"]
+status = 0
+stdout = """81
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/arrays_simple.tm"
+args = ["10"]
+status = 0
+stdout = """33
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/fibo_iter.tm"
+args = ["10"]
+status = 0
+stdout = """55
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/fibo_rec.tm"
+args = ["10"]
+status = 0
+stdout = """55
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/fn_call_on_struct.tm"
+args = ["0"]
+status = 0
+stdout = """42
+42
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/fn_call_on_val.tm"
+args = ["10"]
+status = 0
+stdout = """2
+1
+hello, world
+"""
+stderr = ""
+
+#todo enable
+#[[tests]]
+#source = "examples/gc.tm"
+#args = ["10"]
+#status = 0
+#stdout = """400
+#"""
+#stderr = ""
+
+[[tests]]
+source = "examples/if_expr.tm"
+args = ["5"]
+status = 0
+stdout = """42
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/inner_function.tm"
+args = ["10"]
+status = 0
+stdout = """55
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/perimeter.tm"
+args = ["10"]
+status = 0
+stdout = """40
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/perimeter_lit_struct.tm"
+args = ["10"]
+status = 0
+stdout = """40
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/perimeter_var_struct.tm"
+args = ["10"]
+status = 0
+stdout = """40
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/print.tm"
+args = ["10"]
+status = 0
+stdout = """10
+false
+hello, world
+"""
+stderr = ""
+
+#[[tests]]
+#source = "examples/reassign.tm.skip"
+#args = []
+#status = 0
+#stdout = ""
+#stderr = ""
+
+[[tests]]
+source = "examples/sibling_function.tm"
+args = ["10"]
+status = 0
+stdout = """
+55
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/string.tm"
+args = ["1"]
+status = 0
+stdout = """hello,\x20
+world
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/structs_anon.tm"
+args = ["10"]
+status = 0
+stdout = """20
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/structs_fn.tm"
+args = ["10"]
+status = 0
+stdout = """100
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/structs_inner.tm"
+args = ["10"]
+status = 0
+stdout = """272
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/structs_nested.tm"
+args = ["10"]
+status = 0
+stdout = """40
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/structs_of_arrays.tm"
+args = ["10"]
+status = 0
+stdout = """81
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/structs_simple.tm"
+args = ["10"]
+status = 0
+stdout = """21
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/ufcs.tm"
+args = ["0"]
+status = 0
+stdout = """1
+1
+hello, world
+amazing1
+amazing2
+"""
+stderr = ""
+
+[[tests]]
+source = "examples/void_fn.tm"
+args = ["10"]
+status = 0
+stdout = ""
+stderr = ""

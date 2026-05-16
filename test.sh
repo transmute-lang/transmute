@@ -48,4 +48,6 @@ echo "Executing GC test"
 
 just test-exec
 
+cargo run -p e2e-tests -- --no-gc
+
 echo "Finished."

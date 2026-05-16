@@ -446,8 +446,7 @@ impl Expression {
 
     fn is_binary_op(&self, codegen: &CCodegen) -> bool {
         if let Expression::Call(_, f, ..) = self
-            && let SymbolKind::Native(_, _, _, k) = &codegen.mir.symbols[*f].kind
-        {
+            && let SymbolKind::Native(_, _, _, k) = &codegen.mir.symbols[*f].kind {
             return k.is_binary_op();
         }
         false
@@ -581,6 +580,7 @@ impl Expression {
         target: &Target,
         value: &Value,
     ) -> CCode {
+        #[cfg(debug_assertions)]
         debug_assert!(!value.has_prelude());
 
         let mut prelude = codegen.gen_c(prelude).0;
@@ -609,6 +609,7 @@ impl Expression {
         value: &Value,
         sid: SymbolId,
     ) -> CCode {
+        #[cfg(debug_assertions)]
         debug_assert!(!value.has_prelude());
 
         let mut prelude = codegen.gen_c(prelude).0;
@@ -638,6 +639,7 @@ impl Expression {
                     let parameters = values
                         .iter()
                         .map(|value| {
+                            #[cfg(debug_assertions)]
                             debug_assert!(!value.has_prelude());
                             value.gen_c(codegen)
                         })
@@ -706,6 +708,7 @@ impl Expression {
         );
 
         for (sid, value) in fields.iter() {
+            #[cfg(debug_assertions)]
             debug_assert!(!value.has_prelude());
 
             prelude.push_str(
@@ -741,6 +744,7 @@ impl Expression {
         );
 
         for (idx, value) in values.iter().enumerate() {
+            #[cfg(debug_assertions)]
             debug_assert!(!value.has_prelude());
 
             prelude.push_str(
@@ -787,6 +791,7 @@ impl Expression {
         true_block: &Block,
         false_block: &Option<Block>,
     ) -> CCode {
+        #[cfg(debug_assertions)]
         debug_assert!(!cond.has_prelude());
 
         let mut prelude = codegen.gen_c(prelude).0;
@@ -811,6 +816,7 @@ impl Expression {
     }
 
     fn gen_while(codegen: &CCodegen, prelude: &[Statement], cond: &Value, body: &Block) -> CCode {
+        #[cfg(debug_assertions)]
         debug_assert!(!cond.has_prelude());
 
         let mut prelude = codegen.gen_c(prelude).0;
