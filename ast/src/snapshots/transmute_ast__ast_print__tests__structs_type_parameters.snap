@@ -16,12 +16,12 @@ expression: s
       |  +- Use std.booleans.print
       +- stmt 6
       |  +- Use std.str.print
-      +- stmt 26
+      +- stmt 27
       |  +- Fn name=main
       |     +- annotations=[]
       |     +- params=[]
       |     +- ret=[]
-      |     +- body:expr 98
+      |     +- body:expr 105
       |        +- Block
       |           +- stmt 7
       |           |  +- Let name=n
@@ -296,37 +296,65 @@ expression: s
       |           |                    |     +- ident=field
       |           |                    +- ident=field
       |           +- stmt 25
+      |           |  +- Expression
+      |           |     +- expr 97
+      |           |        +- Call
+      |           |           +- expr 89
+      |           |           |  +- Ident: print
+      |           |           +- params
+      |           |              +- expr 96
+      |           |                 +- Access
+      |           |                    +- expr 95
+      |           |                    |  +- Access
+      |           |                    |     +- expr 94
+      |           |                    |     |  +- Access
+      |           |                    |     |     +- expr 93
+      |           |                    |     |     |  +- StructInstantiate name=Struct
+      |           |                    |     |     |     +- types=[]
+      |           |                    |     |     |     +- field name=field
+      |           |                    |     |     |        +- expr 92
+      |           |                    |     |     |           +- StructInstantiate name=Struct
+      |           |                    |     |     |              +- types=[]
+      |           |                    |     |     |              +- field name=field
+      |           |                    |     |     |                 +- expr 91
+      |           |                    |     |     |                    +- StructInstantiate name=Struct
+      |           |                    |     |     |                       +- types=[]
+      |           |                    |     |     |                       +- field name=field
+      |           |                    |     |     |                          +- expr 90
+      |           |                    |     |     |                             +- String: Hello, world
+      |           |                    |     |     +- ident=field
+      |           |                    |     +- ident=field
+      |           |                    +- ident=field
+      |           +- stmt 26
       |              +- Expression
-      |                 +- expr 97
+      |                 +- expr 104
       |                    +- Call
-      |                       +- expr 89
+      |                       +- expr 98
       |                       |  +- Ident: print
       |                       +- params
-      |                          +- expr 96
+      |                          +- expr 103
       |                             +- Access
-      |                                +- expr 95
+      |                                +- expr 102
       |                                |  +- Access
-      |                                |     +- expr 94
-      |                                |     |  +- Access
-      |                                |     |     +- expr 93
-      |                                |     |     |  +- StructInstantiate name=Struct
-      |                                |     |     |     +- types=[]
-      |                                |     |     |     +- field name=field
-      |                                |     |     |        +- expr 92
-      |                                |     |     |           +- StructInstantiate name=Struct
-      |                                |     |     |              +- types=[]
-      |                                |     |     |              +- field name=field
-      |                                |     |     |                 +- expr 91
-      |                                |     |     |                    +- StructInstantiate name=Struct
-      |                                |     |     |                       +- types=[]
-      |                                |     |     |                       +- field name=field
-      |                                |     |     |                          +- expr 90
-      |                                |     |     |                             +- String: Hello, world
-      |                                |     |     +- ident=field
+      |                                |     +- expr 101
+      |                                |     |  +- StructInstantiate name=OtherStruct
+      |                                |     |     +- types=[]
+      |                                |     |     +- field name=field
+      |                                |     |        +- expr 100
+      |                                |     |           +- StructInstantiate name=Struct
+      |                                |     |              +- types=[]
+      |                                |     |              +- field name=field
+      |                                |     |                 +- expr 99
+      |                                |     |                    +- String: OK
       |                                |     +- ident=field
       |                                +- ident=field
-      +- stmt 27
-         +- Struct name=Struct
+      +- stmt 28
+      |  +- Struct name=Struct
+      |     +- types
+      |     |  +- T
+      |     +- field: T
+      +- stmt 29
+         +- Struct name=OtherStruct
             +- types
             |  +- T
             +- field: T

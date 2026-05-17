@@ -10,6 +10,13 @@ pub struct Symbol {
 }
 
 impl Symbol {
+    pub fn as_struct(&self) -> &IdentId {
+        match &self.kind {
+            SymbolKind::Struct(ident, _) => ident,
+            _ => panic!("{:?} is not an struct", self),
+        }
+    }
+
     pub fn as_function(&self) -> (&Vec<TypeId>, TypeId) {
         match &self.kind {
             SymbolKind::LetFn(_, _, params, ret_type_id) => (params, *ret_type_id),

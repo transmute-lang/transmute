@@ -2,174 +2,177 @@
 source: hir/src/hir_print.rs
 expression: s
 ---
-   sym    typ
-               +- stmt 0
-=    1:     1     +- Namespace name=<root>
-                     +- stmt 1
-=    2:     1        |  +- Namespace name=core
-                     |     +- stmts=[]
-                     +- stmt 8
-=   34:    18        |  +- Fn name=main
-                     |     +- annotations=[]
-                     |     +- params=[]
-@     :     1        |     +- ret=[]
-@     :     2        |     +- body:expr 26
-@     :     2        |        +- Block
-                     |           +- stmt 4
-=   35:     4        |           |  +- Let name=n
-@     :     4        |           |     +- expr 12
-@     :     4        |           |        +- Call
-@     :     1        |           |           +- callee:expr 2
-@   32:    16        |           |           |  +- Access
-@     :     1        |           |           |     +- lhs:expr 1
-@    8:     1        |           |           |     |  +- Access
-@     :     1        |           |           |     |     +- lhs:expr 0
-@    3:     1        |           |           |     |     |  +- Ident: std
-@    8:     1        |           |           |     |     +- ident=numbers
-@   32:    16        |           |           |     +- ident=number_parse
-                     |           |           +- params
-@     :     7        |           |              +- expr 11
-@     :     7        |           |                 +- Call
-@     :     1        |           |                    +- callee:expr 5
-@   30:    14        |           |                    |  +- Access
-@     :     1        |           |                    |     +- lhs:expr 4
-@    6:     1        |           |                    |     |  +- Access
-@     :     1        |           |                    |     |     +- lhs:expr 3
-@    3:     1        |           |                    |     |     |  +- Ident: std
-@    6:     1        |           |                    |     |     +- ident=list
-@   30:    14        |           |                    |     +- ident=list_get
-                     |           |                    +- params
-@     :     6        |           |                       +- expr 9
-@     :     6        |           |                       |  +- Call
-@     :     1        |           |                       |     +- callee:expr 8
-@   29:    13        |           |                       |     |  +- Access
-@     :     1        |           |                       |     |     +- lhs:expr 7
-@    5:     1        |           |                       |     |     |  +- Access
-@     :     1        |           |                       |     |     |     +- lhs:expr 6
-@    3:     1        |           |                       |     |     |     |  +- Ident: std
-@    5:     1        |           |                       |     |     |     +- ident=env
-@   29:    13        |           |                       |     |     +- ident=args
-                     |           |                       |     +- params=[]
-@     :     4        |           |                       +- expr 10
-@     :     4        |           |                          +- Number: 1
-                     |           +- stmt 5
-@     :     1        |           |  +- Expression
-@     :     1        |           |     +- expr 15
-@     :     1        |           |        +- Call
-@     :    15        |           |           +- callee:expr 13
-@   31:    15        |           |           |  +- Ident: print
-                     |           |           +- params
-@     :     4        |           |              +- expr 14
-@   35:     4        |           |                 +- Ident: n
-                     |           +- stmt 6
-@     :     1        |           |  +- Expression
-@     :     1        |           |     +- expr 20
-@     :     1        |           |        +- Call
-@     :    12        |           |           +- callee:expr 16
-@   28:    12        |           |           |  +- Ident: print
-                     |           |           +- params
-@     :     3        |           |              +- expr 19
-@     :     3        |           |                 +- Call
-@     :     9        |           |                    +- callee:expr 33
-@   24:     9        |           |                    |  +- Ident: eq
-                     |           |                    +- params
-@     :     4        |           |                       +- expr 17
-@   35:     4        |           |                       |  +- Ident: n
-@     :     4        |           |                       +- expr 18
-@     :     4        |           |                          +- Number: 0
-                     |           +- stmt 7
-@     :     1        |              +- Ret
-@     :     1        |                 +- expr 25
-@     :     1        |                    +- Call
-@     :     1        |                       +- callee:expr 23
-@   33:    17        |                       |  +- Access
-@     :     1        |                       |     +- lhs:expr 22
-@    9:     1        |                       |     |  +- Access
-@     :     1        |                       |     |     +- lhs:expr 21
-@    3:     1        |                       |     |     |  +- Ident: std
-@    9:     1        |                       |     |     +- ident=str
-@   33:    17        |                       |     +- ident=print
-                     |                       +- params
-@     :     7        |                          +- expr 24
-                     |                             +- String: hello, world
-                     +- stmt 15
-=    3:     1           +- Namespace name=std
-                           +- stmt 9
-=   11:     1              |  +- Annotation name=native
-                           +- stmt 10
-=    4:     1              |  +- Namespace name=booleans
-                           |     +- stmt 23
-=   28:    12              |        +- Fn name=print (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params
-=   36:     3              |           |  +- b: core.boolean
-@     :     1              |           +- ret=[]
-                           +- stmt 11
-=    5:     1              |  +- Namespace name=env
-                           |     +- stmt 22
-=   29:    13              |        +- Fn name=args (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params=[]
-@     :     6              |           +- ret=std.list.List
-                           +- stmt 12
-=    6:     1              |  +- Namespace name=list
-                           |     +- stmt 20
-=    7:     6              |     |  +- Struct name=List (native)
-                           |     +- stmt 21
-=   30:    14              |        +- Fn name=list_get (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params
-=   37:     6              |           |  +- list: List
-=   38:     4              |           |  +- index: number
-@     :     7              |           +- ret=std.str.string
-                           +- stmt 13
-=    8:     1              |  +- Namespace name=numbers
-                           |     +- stmt 18
-=   31:    15              |     |  +- Fn name=print (native)
-                           |     |     +- annotations
-@   11:     1              |     |     |  +- std.native
-                           |     |     +- params
-=   39:     4              |     |     |  +- n: core.number
-@     :     1              |     |     +- ret=[]
-                           |     +- stmt 19
-=   32:    16              |        +- Fn name=number_parse (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params
-=   40:     7              |           |  +- s: std.str.string
-@     :     2              |           +- ret=core.number
-                           +- stmt 14
-=    9:     1                 +- Namespace name=str
-                                 +- stmt 16
-=   10:     7                    |  +- Struct name=string (native)
-                                 +- stmt 17
-=   33:    17                       +- Fn name=print (native)
-                                       +- annotations
-@   11:     1                          |  +- std.native
-                                       +- params
-=   41:     7                          |  +- s: string
-@     :     1                          +- ret=[]
+                      +- stmt:0
+=    sid:1     tid:1     +- Namespace name=<root>
+                            +- stmt:1
+=    sid:2     tid:1        |  +- Namespace name=core
+                            |     +- stmts=[]
+                            +- stmt:8
+=   sid:34    tid:18        |  +- Fn name=main
+                            |     +- annotations=[]
+                            |     +- params=[]
+@              tid:1        |     +- ret=[]
+@              tid:2        |     +- body:expr:26
+@              tid:2        |        +- Block
+                            |           +- stmt:4
+=   sid:35     tid:4        |           |  +- Let name=n
+@              tid:4        |           |     +- expr:12
+@              tid:4        |           |        +- Call
+@              tid:1        |           |           +- callee:expr:2
+@   sid:32    tid:16        |           |           |  +- Access
+@              tid:1        |           |           |     +- lhs:expr:1
+@    sid:8     tid:1        |           |           |     |  +- Access
+@              tid:1        |           |           |     |     +- lhs:expr:0
+@    sid:3     tid:1        |           |           |     |     |  +- Ident: std
+@    sid:8     tid:1        |           |           |     |     +- ident=numbers
+@   sid:32    tid:16        |           |           |     +- ident=number_parse
+                            |           |           +- params
+@              tid:7        |           |              +- expr:11
+@              tid:7        |           |                 +- Call
+@              tid:1        |           |                    +- callee:expr:5
+@   sid:30    tid:14        |           |                    |  +- Access
+@              tid:1        |           |                    |     +- lhs:expr:4
+@    sid:6     tid:1        |           |                    |     |  +- Access
+@              tid:1        |           |                    |     |     +- lhs:expr:3
+@    sid:3     tid:1        |           |                    |     |     |  +- Ident: std
+@    sid:6     tid:1        |           |                    |     |     +- ident=list
+@   sid:30    tid:14        |           |                    |     +- ident=list_get
+                            |           |                    +- params
+@              tid:6        |           |                       +- expr:9
+@              tid:6        |           |                       |  +- Call
+@              tid:1        |           |                       |     +- callee:expr:8
+@   sid:29    tid:13        |           |                       |     |  +- Access
+@              tid:1        |           |                       |     |     +- lhs:expr:7
+@    sid:5     tid:1        |           |                       |     |     |  +- Access
+@              tid:1        |           |                       |     |     |     +- lhs:expr:6
+@    sid:3     tid:1        |           |                       |     |     |     |  +- Ident: std
+@    sid:5     tid:1        |           |                       |     |     |     +- ident=env
+@   sid:29    tid:13        |           |                       |     |     +- ident=args
+                            |           |                       |     +- params=[]
+@              tid:4        |           |                       +- expr:10
+@              tid:4        |           |                          +- Number: 1
+                            |           +- stmt:5
+@              tid:1        |           |  +- Expression
+@              tid:1        |           |     +- expr:15
+@              tid:1        |           |        +- Call
+@             tid:15        |           |           +- callee:expr:13
+@   sid:31    tid:15        |           |           |  +- Ident: print
+                            |           |           +- params
+@              tid:4        |           |              +- expr:14
+@   sid:35     tid:4        |           |                 +- Ident: n
+                            |           +- stmt:6
+@              tid:1        |           |  +- Expression
+@              tid:1        |           |     +- expr:20
+@              tid:1        |           |        +- Call
+@             tid:12        |           |           +- callee:expr:16
+@   sid:28    tid:12        |           |           |  +- Ident: print
+                            |           |           +- params
+@              tid:3        |           |              +- expr:19
+@              tid:3        |           |                 +- Call
+@              tid:9        |           |                    +- callee:expr:33
+@   sid:24     tid:9        |           |                    |  +- Ident: eq
+                            |           |                    +- params
+@              tid:4        |           |                       +- expr:17
+@   sid:35     tid:4        |           |                       |  +- Ident: n
+@              tid:4        |           |                       +- expr:18
+@              tid:4        |           |                          +- Number: 0
+                            |           +- stmt:7
+@              tid:1        |              +- Ret
+@              tid:1        |                 +- expr:25
+@              tid:1        |                    +- Call
+@              tid:1        |                       +- callee:expr:23
+@   sid:33    tid:17        |                       |  +- Access
+@              tid:1        |                       |     +- lhs:expr:22
+@    sid:9     tid:1        |                       |     |  +- Access
+@              tid:1        |                       |     |     +- lhs:expr:21
+@    sid:3     tid:1        |                       |     |     |  +- Ident: std
+@    sid:9     tid:1        |                       |     |     +- ident=str
+@   sid:33    tid:17        |                       |     +- ident=print
+                            |                       +- params
+@              tid:7        |                          +- expr:24
+                            |                             +- String: hello, world
+                            +- stmt:15
+=    sid:3     tid:1           +- Namespace name=std
+                                  +- stmt:9
+=   sid:11     tid:1              |  +- Annotation name=native
+                                  +- stmt:10
+=    sid:4     tid:1              |  +- Namespace name=booleans
+                                  |     +- stmt:23
+=   sid:28    tid:12              |        +- Fn name=print (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params
+=   sid:36     tid:3              |           |  +- b: core.boolean
+@              tid:1              |           +- ret=[]
+                                  +- stmt:11
+=    sid:5     tid:1              |  +- Namespace name=env
+                                  |     +- stmt:22
+=   sid:29    tid:13              |        +- Fn name=args (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params=[]
+@              tid:6              |           +- ret=std.list.List
+                                  +- stmt:12
+=    sid:6     tid:1              |  +- Namespace name=list
+                                  |     +- stmt:20
+=    sid:7     tid:6              |     |  +- Struct name=List (native)
+                                  |     +- stmt:21
+=   sid:30    tid:14              |        +- Fn name=list_get (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params
+=   sid:37     tid:6              |           |  +- list: List
+=   sid:38     tid:4              |           |  +- index: number
+@              tid:7              |           +- ret=std.str.string
+                                  +- stmt:13
+=    sid:8     tid:1              |  +- Namespace name=numbers
+                                  |     +- stmt:18
+=   sid:31    tid:15              |     |  +- Fn name=print (native)
+                                  |     |     +- annotations
+@   sid:11     tid:1              |     |     |  +- std.native
+                                  |     |     +- params
+=   sid:39     tid:4              |     |     |  +- n: core.number
+@              tid:1              |     |     +- ret=[]
+                                  |     +- stmt:19
+=   sid:32    tid:16              |        +- Fn name=number_parse (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params
+=   sid:40     tid:7              |           |  +- s: std.str.string
+@              tid:2              |           +- ret=core.number
+                                  +- stmt:14
+=    sid:9     tid:1                 +- Namespace name=str
+                                        +- stmt:16
+=   sid:10     tid:7                    |  +- Struct name=string (native)
+                                        +- stmt:17
+=   sid:33    tid:17                       +- Fn name=print (native)
+                                              +- annotations
+@   sid:11     tid:1                          |  +- std.native
+                                              +- params
+=   sid:41     tid:7                          |  +- s: string
+@              tid:1                          +- ret=[]
 
 --- types ---
-0: invalid
-1: void
-2: none
-3: boolean
-4: number
-5: type
-6: struct 7<0>
-7: struct 10<0>
-8: f(4, 4) : 4
-9: f(4, 4) : 3
-10: f(3, 3) : 3
-11: f(4) : 4
-12: f(3) : 1
-13: f() : 6
-14: f(6, 4) : 7
-15: f(4) : 1
-16: f(7) : 4
-17: f(7) : 1
-18: f() : 1
+tid:0     invalid
+tid:1     void
+tid:2     none
+tid:3     boolean
+tid:4     number
+tid:5     type
+tid:6     struct sid:7
+tid:7     struct sid:10
+tid:8     f(4, 4): 4
+tid:9     f(4, 4): 3
+tid:10    f(3, 3): 3
+tid:11    f(4): 4
+tid:12    f(3): 1
+tid:13    f(): 6
+tid:14    f(6, 4): 7
+tid:15    f(4): 1
+tid:16    f(7): 4
+tid:17    f(7): 1
+tid:18    f(): 1
+
+--- structs ---
+sid:7     List
+sid:10    string

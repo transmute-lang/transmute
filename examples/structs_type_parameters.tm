@@ -68,8 +68,18 @@ let main() = {
         }
       },
     }.field.field.field);
+
+    print(OtherStruct {
+      field: Struct {
+        field: "OK"
+      }
+    }.field.field);
 }
 
 struct Struct<T> {
+    field: T,
+}
+
+struct OtherStruct<T> {
     field: T,
 }

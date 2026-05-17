@@ -2,117 +2,120 @@
 source: hir/src/hir_print.rs
 expression: s
 ---
-   sym    typ
-               +- stmt 0
-=    1:     1     +- Namespace name=<root>
-                     +- stmt 1
-=    2:     1        |  +- Namespace name=core
-                     |     +- stmts=[]
-                     +- stmt 5
-=   34:    18        |  +- Fn name=main
-                     |     +- annotations=[]
-                     |     +- params=[]
-@     :     1        |     +- ret=[]
-@     :     2        |     +- body:expr 7
-@     :     2        |        +- Block
-                     |           +- stmt 3
-=   35:    19        |           |  +- Let name=a
-@     :    19        |           |     +- expr 1
-@     :    19        |           |        +- ArrayInstantiate
-@     :     4        |           |           +- expr 0
-@     :     4        |           |              +- Number: 0
-                     |           +- stmt 4
-@     :     1        |              +- Ret
-@     :     1        |                 +- expr 6
-@     :     1        |                    +- Call
-@     :    15        |                       +- callee:expr 2
-@   31:    15        |                       |  +- Ident: print
-                     |                       +- params
-@     :     4        |                          +- expr 5
-@     :     4        |                             +- ArrayAccess
-@     :    19        |                                +- expr 3
-@   35:    19        |                                |  +- Ident: a
-@     :     4        |                                +- expr 4
-@     :     4        |                                   +- Number: 1
-                     +- stmt 12
-=    3:     1           +- Namespace name=std
-                           +- stmt 6
-=   11:     1              |  +- Annotation name=native
-                           +- stmt 7
-=    4:     1              |  +- Namespace name=booleans
-                           |     +- stmt 20
-=   28:    12              |        +- Fn name=print (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params
-=   36:     3              |           |  +- b: core.boolean
-@     :     1              |           +- ret=[]
-                           +- stmt 8
-=    5:     1              |  +- Namespace name=env
-                           |     +- stmt 19
-=   29:    13              |        +- Fn name=args (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params=[]
-@     :     6              |           +- ret=std.list.List
-                           +- stmt 9
-=    6:     1              |  +- Namespace name=list
-                           |     +- stmt 17
-=    7:     6              |     |  +- Struct name=List (native)
-                           |     +- stmt 18
-=   30:    14              |        +- Fn name=list_get (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params
-=   37:     6              |           |  +- list: List
-=   38:     4              |           |  +- index: number
-@     :     7              |           +- ret=std.str.string
-                           +- stmt 10
-=    8:     1              |  +- Namespace name=numbers
-                           |     +- stmt 15
-=   31:    15              |     |  +- Fn name=print (native)
-                           |     |     +- annotations
-@   11:     1              |     |     |  +- std.native
-                           |     |     +- params
-=   39:     4              |     |     |  +- n: core.number
-@     :     1              |     |     +- ret=[]
-                           |     +- stmt 16
-=   32:    16              |        +- Fn name=number_parse (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params
-=   40:     7              |           |  +- s: std.str.string
-@     :     2              |           +- ret=core.number
-                           +- stmt 11
-=    9:     1                 +- Namespace name=str
-                                 +- stmt 13
-=   10:     7                    |  +- Struct name=string (native)
-                                 +- stmt 14
-=   33:    17                       +- Fn name=print (native)
-                                       +- annotations
-@   11:     1                          |  +- std.native
-                                       +- params
-=   41:     7                          |  +- s: string
-@     :     1                          +- ret=[]
+                      +- stmt:0
+=    sid:1     tid:1     +- Namespace name=<root>
+                            +- stmt:1
+=    sid:2     tid:1        |  +- Namespace name=core
+                            |     +- stmts=[]
+                            +- stmt:5
+=   sid:34    tid:18        |  +- Fn name=main
+                            |     +- annotations=[]
+                            |     +- params=[]
+@              tid:1        |     +- ret=[]
+@              tid:2        |     +- body:expr:7
+@              tid:2        |        +- Block
+                            |           +- stmt:3
+=   sid:35    tid:19        |           |  +- Let name=a
+@             tid:19        |           |     +- expr:1
+@             tid:19        |           |        +- ArrayInstantiate
+@              tid:4        |           |           +- expr:0
+@              tid:4        |           |              +- Number: 0
+                            |           +- stmt:4
+@              tid:1        |              +- Ret
+@              tid:1        |                 +- expr:6
+@              tid:1        |                    +- Call
+@             tid:15        |                       +- callee:expr:2
+@   sid:31    tid:15        |                       |  +- Ident: print
+                            |                       +- params
+@              tid:4        |                          +- expr:5
+@              tid:4        |                             +- ArrayAccess
+@             tid:19        |                                +- expr:3
+@   sid:35    tid:19        |                                |  +- Ident: a
+@              tid:4        |                                +- expr:4
+@              tid:4        |                                   +- Number: 1
+                            +- stmt:12
+=    sid:3     tid:1           +- Namespace name=std
+                                  +- stmt:6
+=   sid:11     tid:1              |  +- Annotation name=native
+                                  +- stmt:7
+=    sid:4     tid:1              |  +- Namespace name=booleans
+                                  |     +- stmt:20
+=   sid:28    tid:12              |        +- Fn name=print (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params
+=   sid:36     tid:3              |           |  +- b: core.boolean
+@              tid:1              |           +- ret=[]
+                                  +- stmt:8
+=    sid:5     tid:1              |  +- Namespace name=env
+                                  |     +- stmt:19
+=   sid:29    tid:13              |        +- Fn name=args (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params=[]
+@              tid:6              |           +- ret=std.list.List
+                                  +- stmt:9
+=    sid:6     tid:1              |  +- Namespace name=list
+                                  |     +- stmt:17
+=    sid:7     tid:6              |     |  +- Struct name=List (native)
+                                  |     +- stmt:18
+=   sid:30    tid:14              |        +- Fn name=list_get (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params
+=   sid:37     tid:6              |           |  +- list: List
+=   sid:38     tid:4              |           |  +- index: number
+@              tid:7              |           +- ret=std.str.string
+                                  +- stmt:10
+=    sid:8     tid:1              |  +- Namespace name=numbers
+                                  |     +- stmt:15
+=   sid:31    tid:15              |     |  +- Fn name=print (native)
+                                  |     |     +- annotations
+@   sid:11     tid:1              |     |     |  +- std.native
+                                  |     |     +- params
+=   sid:39     tid:4              |     |     |  +- n: core.number
+@              tid:1              |     |     +- ret=[]
+                                  |     +- stmt:16
+=   sid:32    tid:16              |        +- Fn name=number_parse (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params
+=   sid:40     tid:7              |           |  +- s: std.str.string
+@              tid:2              |           +- ret=core.number
+                                  +- stmt:11
+=    sid:9     tid:1                 +- Namespace name=str
+                                        +- stmt:13
+=   sid:10     tid:7                    |  +- Struct name=string (native)
+                                        +- stmt:14
+=   sid:33    tid:17                       +- Fn name=print (native)
+                                              +- annotations
+@   sid:11     tid:1                          |  +- std.native
+                                              +- params
+=   sid:41     tid:7                          |  +- s: string
+@              tid:1                          +- ret=[]
 
 --- types ---
-0: invalid
-1: void
-2: none
-3: boolean
-4: number
-5: type
-6: struct 7<0>
-7: struct 10<0>
-8: f(4, 4) : 4
-9: f(4, 4) : 3
-10: f(3, 3) : 3
-11: f(4) : 4
-12: f(3) : 1
-13: f() : 6
-14: f(6, 4) : 7
-15: f(4) : 1
-16: f(7) : 4
-17: f(7) : 1
-18: f() : 1
-19: [4; 1]
+tid:0     invalid
+tid:1     void
+tid:2     none
+tid:3     boolean
+tid:4     number
+tid:5     type
+tid:6     struct sid:7
+tid:7     struct sid:10
+tid:8     f(4, 4): 4
+tid:9     f(4, 4): 3
+tid:10    f(3, 3): 3
+tid:11    f(4): 4
+tid:12    f(3): 1
+tid:13    f(): 6
+tid:14    f(6, 4): 7
+tid:15    f(4): 1
+tid:16    f(7): 4
+tid:17    f(7): 1
+tid:18    f(): 1
+tid:19    [tid:4; len:1]
+
+--- structs ---
+sid:7     List
+sid:10    string

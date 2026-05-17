@@ -2,242 +2,245 @@
 source: hir/src/hir_print.rs
 expression: s
 ---
-   sym    typ
-               +- stmt 0
-=    1:     1     +- Namespace name=<root>
-                     +- stmt 1
-=    2:     1        |  +- Namespace name=core
-                     |     +- stmts=[]
-                     +- stmt 22
-=   34:    18        |  +- Fn name=main
-                     |     +- annotations=[]
-                     |     +- params=[]
-@     :     1        |     +- ret=[]
-@     :     2        |     +- body:expr 46
-@     :     2        |        +- Block
-                     |           +- stmt 6
-=   35:     4        |           |  +- Let name=n
-@     :     4        |           |     +- expr 6
-@     :     4        |           |        +- Call
-@     :    16        |           |           +- callee:expr 0
-@   32:    16        |           |           |  +- Ident: number_parse
-                     |           |           +- params
-@     :     7        |           |              +- expr 5
-@     :     7        |           |                 +- Call
-@     :    14        |           |                    +- callee:expr 1
-@   30:    14        |           |                    |  +- Ident: list_get
-                     |           |                    +- params
-@     :     6        |           |                       +- expr 3
-@     :     6        |           |                       |  +- Call
-@     :    13        |           |                       |     +- callee:expr 2
-@   29:    13        |           |                       |     |  +- Ident: args
-                     |           |                       |     +- params=[]
-@     :     4        |           |                       +- expr 4
-@     :     4        |           |                          +- Number: 1
-                     |           +- stmt 9
-@     :     1        |           |  +- Expression
-@     :     1        |           |     +- expr 14
-@     :     1        |           |        +- If
-@     :     3        |           |           +- cond:expr 9
-@     :     3        |           |           |  +- Call
-@     :     9        |           |           |     +- callee:expr 53
-@   24:     9        |           |           |     |  +- Ident: eq
-                     |           |           |     +- params
-@     :     4        |           |           |        +- expr 7
-@   35:     4        |           |           |        |  +- Ident: n
-@     :     4        |           |           |        +- expr 8
-@     :     4        |           |           |           +- Number: 0
-@     :     2        |           |           +- true:expr 13
-@     :     2        |           |              +- Block
-                     |           |                 +- stmt 7
-@     :     1        |           |                 |  +- Expression
-@     :     1        |           |                 |     +- expr 12
-@     :     1        |           |                 |        +- Call
-@     :    15        |           |                 |           +- callee:expr 10
-@   31:    15        |           |                 |           |  +- Ident: print
-                     |           |                 |           +- params
-@     :     4        |           |                 |              +- expr 11
-@     :     4        |           |                 |                 +- Number: 0
-                     |           |                 +- stmt 8
-@     :     1        |           |                    +- Ret (explicit)
-                     |           +- stmt 12
-@     :     1        |           |  +- Expression
-@     :     1        |           |     +- expr 22
-@     :     1        |           |        +- If
-@     :     3        |           |           +- cond:expr 17
-@     :     3        |           |           |  +- Call
-@     :     9        |           |           |     +- callee:expr 54
-@   24:     9        |           |           |     |  +- Ident: eq
-                     |           |           |     +- params
-@     :     4        |           |           |        +- expr 15
-@   35:     4        |           |           |        |  +- Ident: n
-@     :     4        |           |           |        +- expr 16
-@     :     4        |           |           |           +- Number: 1
-@     :     2        |           |           +- true:expr 21
-@     :     2        |           |              +- Block
-                     |           |                 +- stmt 10
-@     :     1        |           |                 |  +- Expression
-@     :     1        |           |                 |     +- expr 20
-@     :     1        |           |                 |        +- Call
-@     :    15        |           |                 |           +- callee:expr 18
-@   31:    15        |           |                 |           |  +- Ident: print
-                     |           |                 |           +- params
-@     :     4        |           |                 |              +- expr 19
-@     :     4        |           |                 |                 +- Number: 1
-                     |           |                 +- stmt 11
-@     :     1        |           |                    +- Ret (explicit)
-                     |           +- stmt 13
-=   36:     4        |           |  +- Let name=prev_prev
-@     :     4        |           |     +- expr 23
-@     :     4        |           |        +- Number: 0
-                     |           +- stmt 14
-=   37:     4        |           |  +- Let name=prev
-@     :     4        |           |     +- expr 24
-@     :     4        |           |        +- Number: 1
-                     |           +- stmt 15
-=   38:     4        |           |  +- Let name=current
-@     :     4        |           |     +- expr 25
-@     :     4        |           |        +- Number: 0
-                     |           +- stmt 20
-@     :     4        |           |  +- Expression
-@     :     4        |           |     +- expr 42
-@     :     4        |           |        +- While
-@     :     3        |           |           +- cond:expr 28
-@     :     3        |           |           |  +- Call
-@     :     9        |           |           |     +- callee:expr 55
-@   22:     9        |           |           |     |  +- Ident: gt
-                     |           |           |     +- params
-@     :     4        |           |           |        +- expr 26
-@   35:     4        |           |           |        |  +- Ident: n
-@     :     4        |           |           |        +- expr 27
-@     :     4        |           |           |           +- Number: 1
-@     :     4        |           |           +- body:expr 41
-@     :     4        |           |              +- Block
-                     |           |                 +- stmt 16
-@     :     4        |           |                 |  +- Expression
-@     :     4        |           |                 |     +- expr 32
-@   38:     4        |           |                 |        +- Assignment target=current
-@     :     4        |           |                 |           +- expr 31
-@     :     4        |           |                 |              +- Call
-@     :     8        |           |                 |                 +- callee:expr 56
-@   27:     8        |           |                 |                 |  +- Ident: add
-                     |           |                 |                 +- params
-@     :     4        |           |                 |                    +- expr 29
-@   36:     4        |           |                 |                    |  +- Ident: prev_prev
-@     :     4        |           |                 |                    +- expr 30
-@   37:     4        |           |                 |                       +- Ident: prev
-                     |           |                 +- stmt 17
-@     :     4        |           |                 |  +- Expression
-@     :     4        |           |                 |     +- expr 34
-@   36:     4        |           |                 |        +- Assignment target=prev_prev
-@     :     4        |           |                 |           +- expr 33
-@   37:     4        |           |                 |              +- Ident: prev
-                     |           |                 +- stmt 18
-@     :     4        |           |                 |  +- Expression
-@     :     4        |           |                 |     +- expr 36
-@   37:     4        |           |                 |        +- Assignment target=prev
-@     :     4        |           |                 |           +- expr 35
-@   38:     4        |           |                 |              +- Ident: current
-                     |           |                 +- stmt 19
-@     :     4        |           |                    +- Expression
-@     :     4        |           |                       +- expr 40
-@   35:     4        |           |                          +- Assignment target=n
-@     :     4        |           |                             +- expr 39
-@     :     4        |           |                                +- Call
-@     :     8        |           |                                   +- callee:expr 57
-@   15:     8        |           |                                   |  +- Ident: sub
-                     |           |                                   +- params
-@     :     4        |           |                                      +- expr 37
-@   35:     4        |           |                                      |  +- Ident: n
-@     :     4        |           |                                      +- expr 38
-@     :     4        |           |                                         +- Number: 1
-                     |           +- stmt 21
-@     :     1        |              +- Ret
-@     :     1        |                 +- expr 45
-@     :     1        |                    +- Call
-@     :    15        |                       +- callee:expr 43
-@   31:    15        |                       |  +- Ident: print
-                     |                       +- params
-@     :     4        |                          +- expr 44
-@   38:     4        |                             +- Ident: current
-                     +- stmt 29
-=    3:     1           +- Namespace name=std
-                           +- stmt 23
-=   11:     1              |  +- Annotation name=native
-                           +- stmt 24
-=    4:     1              |  +- Namespace name=booleans
-                           |     +- stmt 37
-=   28:    12              |        +- Fn name=print (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params
-=   39:     3              |           |  +- b: core.boolean
-@     :     1              |           +- ret=[]
-                           +- stmt 25
-=    5:     1              |  +- Namespace name=env
-                           |     +- stmt 36
-=   29:    13              |        +- Fn name=args (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params=[]
-@     :     6              |           +- ret=std.list.List
-                           +- stmt 26
-=    6:     1              |  +- Namespace name=list
-                           |     +- stmt 34
-=    7:     6              |     |  +- Struct name=List (native)
-                           |     +- stmt 35
-=   30:    14              |        +- Fn name=list_get (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params
-=   40:     6              |           |  +- list: List
-=   41:     4              |           |  +- index: number
-@     :     7              |           +- ret=std.str.string
-                           +- stmt 27
-=    8:     1              |  +- Namespace name=numbers
-                           |     +- stmt 32
-=   31:    15              |     |  +- Fn name=print (native)
-                           |     |     +- annotations
-@   11:     1              |     |     |  +- std.native
-                           |     |     +- params
-=   42:     4              |     |     |  +- n: core.number
-@     :     1              |     |     +- ret=[]
-                           |     +- stmt 33
-=   32:    16              |        +- Fn name=number_parse (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params
-=   43:     7              |           |  +- s: std.str.string
-@     :     2              |           +- ret=core.number
-                           +- stmt 28
-=    9:     1                 +- Namespace name=str
-                                 +- stmt 30
-=   10:     7                    |  +- Struct name=string (native)
-                                 +- stmt 31
-=   33:    17                       +- Fn name=print (native)
-                                       +- annotations
-@   11:     1                          |  +- std.native
-                                       +- params
-=   44:     7                          |  +- s: string
-@     :     1                          +- ret=[]
+                      +- stmt:0
+=    sid:1     tid:1     +- Namespace name=<root>
+                            +- stmt:1
+=    sid:2     tid:1        |  +- Namespace name=core
+                            |     +- stmts=[]
+                            +- stmt:22
+=   sid:34    tid:18        |  +- Fn name=main
+                            |     +- annotations=[]
+                            |     +- params=[]
+@              tid:1        |     +- ret=[]
+@              tid:2        |     +- body:expr:46
+@              tid:2        |        +- Block
+                            |           +- stmt:6
+=   sid:35     tid:4        |           |  +- Let name=n
+@              tid:4        |           |     +- expr:6
+@              tid:4        |           |        +- Call
+@             tid:16        |           |           +- callee:expr:0
+@   sid:32    tid:16        |           |           |  +- Ident: number_parse
+                            |           |           +- params
+@              tid:7        |           |              +- expr:5
+@              tid:7        |           |                 +- Call
+@             tid:14        |           |                    +- callee:expr:1
+@   sid:30    tid:14        |           |                    |  +- Ident: list_get
+                            |           |                    +- params
+@              tid:6        |           |                       +- expr:3
+@              tid:6        |           |                       |  +- Call
+@             tid:13        |           |                       |     +- callee:expr:2
+@   sid:29    tid:13        |           |                       |     |  +- Ident: args
+                            |           |                       |     +- params=[]
+@              tid:4        |           |                       +- expr:4
+@              tid:4        |           |                          +- Number: 1
+                            |           +- stmt:9
+@              tid:1        |           |  +- Expression
+@              tid:1        |           |     +- expr:14
+@              tid:1        |           |        +- If
+@              tid:3        |           |           +- cond:expr:9
+@              tid:3        |           |           |  +- Call
+@              tid:9        |           |           |     +- callee:expr:53
+@   sid:24     tid:9        |           |           |     |  +- Ident: eq
+                            |           |           |     +- params
+@              tid:4        |           |           |        +- expr:7
+@   sid:35     tid:4        |           |           |        |  +- Ident: n
+@              tid:4        |           |           |        +- expr:8
+@              tid:4        |           |           |           +- Number: 0
+@              tid:2        |           |           +- true:expr:13
+@              tid:2        |           |              +- Block
+                            |           |                 +- stmt:7
+@              tid:1        |           |                 |  +- Expression
+@              tid:1        |           |                 |     +- expr:12
+@              tid:1        |           |                 |        +- Call
+@             tid:15        |           |                 |           +- callee:expr:10
+@   sid:31    tid:15        |           |                 |           |  +- Ident: print
+                            |           |                 |           +- params
+@              tid:4        |           |                 |              +- expr:11
+@              tid:4        |           |                 |                 +- Number: 0
+                            |           |                 +- stmt:8
+@              tid:1        |           |                    +- Ret (explicit)
+                            |           +- stmt:12
+@              tid:1        |           |  +- Expression
+@              tid:1        |           |     +- expr:22
+@              tid:1        |           |        +- If
+@              tid:3        |           |           +- cond:expr:17
+@              tid:3        |           |           |  +- Call
+@              tid:9        |           |           |     +- callee:expr:54
+@   sid:24     tid:9        |           |           |     |  +- Ident: eq
+                            |           |           |     +- params
+@              tid:4        |           |           |        +- expr:15
+@   sid:35     tid:4        |           |           |        |  +- Ident: n
+@              tid:4        |           |           |        +- expr:16
+@              tid:4        |           |           |           +- Number: 1
+@              tid:2        |           |           +- true:expr:21
+@              tid:2        |           |              +- Block
+                            |           |                 +- stmt:10
+@              tid:1        |           |                 |  +- Expression
+@              tid:1        |           |                 |     +- expr:20
+@              tid:1        |           |                 |        +- Call
+@             tid:15        |           |                 |           +- callee:expr:18
+@   sid:31    tid:15        |           |                 |           |  +- Ident: print
+                            |           |                 |           +- params
+@              tid:4        |           |                 |              +- expr:19
+@              tid:4        |           |                 |                 +- Number: 1
+                            |           |                 +- stmt:11
+@              tid:1        |           |                    +- Ret (explicit)
+                            |           +- stmt:13
+=   sid:36     tid:4        |           |  +- Let name=prev_prev
+@              tid:4        |           |     +- expr:23
+@              tid:4        |           |        +- Number: 0
+                            |           +- stmt:14
+=   sid:37     tid:4        |           |  +- Let name=prev
+@              tid:4        |           |     +- expr:24
+@              tid:4        |           |        +- Number: 1
+                            |           +- stmt:15
+=   sid:38     tid:4        |           |  +- Let name=current
+@              tid:4        |           |     +- expr:25
+@              tid:4        |           |        +- Number: 0
+                            |           +- stmt:20
+@              tid:4        |           |  +- Expression
+@              tid:4        |           |     +- expr:42
+@              tid:4        |           |        +- While
+@              tid:3        |           |           +- cond:expr:28
+@              tid:3        |           |           |  +- Call
+@              tid:9        |           |           |     +- callee:expr:55
+@   sid:22     tid:9        |           |           |     |  +- Ident: gt
+                            |           |           |     +- params
+@              tid:4        |           |           |        +- expr:26
+@   sid:35     tid:4        |           |           |        |  +- Ident: n
+@              tid:4        |           |           |        +- expr:27
+@              tid:4        |           |           |           +- Number: 1
+@              tid:4        |           |           +- body:expr:41
+@              tid:4        |           |              +- Block
+                            |           |                 +- stmt:16
+@              tid:4        |           |                 |  +- Expression
+@              tid:4        |           |                 |     +- expr:32
+@   sid:38     tid:4        |           |                 |        +- Assignment target=current
+@              tid:4        |           |                 |           +- expr:31
+@              tid:4        |           |                 |              +- Call
+@              tid:8        |           |                 |                 +- callee:expr:56
+@   sid:27     tid:8        |           |                 |                 |  +- Ident: add
+                            |           |                 |                 +- params
+@              tid:4        |           |                 |                    +- expr:29
+@   sid:36     tid:4        |           |                 |                    |  +- Ident: prev_prev
+@              tid:4        |           |                 |                    +- expr:30
+@   sid:37     tid:4        |           |                 |                       +- Ident: prev
+                            |           |                 +- stmt:17
+@              tid:4        |           |                 |  +- Expression
+@              tid:4        |           |                 |     +- expr:34
+@   sid:36     tid:4        |           |                 |        +- Assignment target=prev_prev
+@              tid:4        |           |                 |           +- expr:33
+@   sid:37     tid:4        |           |                 |              +- Ident: prev
+                            |           |                 +- stmt:18
+@              tid:4        |           |                 |  +- Expression
+@              tid:4        |           |                 |     +- expr:36
+@   sid:37     tid:4        |           |                 |        +- Assignment target=prev
+@              tid:4        |           |                 |           +- expr:35
+@   sid:38     tid:4        |           |                 |              +- Ident: current
+                            |           |                 +- stmt:19
+@              tid:4        |           |                    +- Expression
+@              tid:4        |           |                       +- expr:40
+@   sid:35     tid:4        |           |                          +- Assignment target=n
+@              tid:4        |           |                             +- expr:39
+@              tid:4        |           |                                +- Call
+@              tid:8        |           |                                   +- callee:expr:57
+@   sid:15     tid:8        |           |                                   |  +- Ident: sub
+                            |           |                                   +- params
+@              tid:4        |           |                                      +- expr:37
+@   sid:35     tid:4        |           |                                      |  +- Ident: n
+@              tid:4        |           |                                      +- expr:38
+@              tid:4        |           |                                         +- Number: 1
+                            |           +- stmt:21
+@              tid:1        |              +- Ret
+@              tid:1        |                 +- expr:45
+@              tid:1        |                    +- Call
+@             tid:15        |                       +- callee:expr:43
+@   sid:31    tid:15        |                       |  +- Ident: print
+                            |                       +- params
+@              tid:4        |                          +- expr:44
+@   sid:38     tid:4        |                             +- Ident: current
+                            +- stmt:29
+=    sid:3     tid:1           +- Namespace name=std
+                                  +- stmt:23
+=   sid:11     tid:1              |  +- Annotation name=native
+                                  +- stmt:24
+=    sid:4     tid:1              |  +- Namespace name=booleans
+                                  |     +- stmt:37
+=   sid:28    tid:12              |        +- Fn name=print (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params
+=   sid:39     tid:3              |           |  +- b: core.boolean
+@              tid:1              |           +- ret=[]
+                                  +- stmt:25
+=    sid:5     tid:1              |  +- Namespace name=env
+                                  |     +- stmt:36
+=   sid:29    tid:13              |        +- Fn name=args (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params=[]
+@              tid:6              |           +- ret=std.list.List
+                                  +- stmt:26
+=    sid:6     tid:1              |  +- Namespace name=list
+                                  |     +- stmt:34
+=    sid:7     tid:6              |     |  +- Struct name=List (native)
+                                  |     +- stmt:35
+=   sid:30    tid:14              |        +- Fn name=list_get (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params
+=   sid:40     tid:6              |           |  +- list: List
+=   sid:41     tid:4              |           |  +- index: number
+@              tid:7              |           +- ret=std.str.string
+                                  +- stmt:27
+=    sid:8     tid:1              |  +- Namespace name=numbers
+                                  |     +- stmt:32
+=   sid:31    tid:15              |     |  +- Fn name=print (native)
+                                  |     |     +- annotations
+@   sid:11     tid:1              |     |     |  +- std.native
+                                  |     |     +- params
+=   sid:42     tid:4              |     |     |  +- n: core.number
+@              tid:1              |     |     +- ret=[]
+                                  |     +- stmt:33
+=   sid:32    tid:16              |        +- Fn name=number_parse (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params
+=   sid:43     tid:7              |           |  +- s: std.str.string
+@              tid:2              |           +- ret=core.number
+                                  +- stmt:28
+=    sid:9     tid:1                 +- Namespace name=str
+                                        +- stmt:30
+=   sid:10     tid:7                    |  +- Struct name=string (native)
+                                        +- stmt:31
+=   sid:33    tid:17                       +- Fn name=print (native)
+                                              +- annotations
+@   sid:11     tid:1                          |  +- std.native
+                                              +- params
+=   sid:44     tid:7                          |  +- s: string
+@              tid:1                          +- ret=[]
 
 --- types ---
-0: invalid
-1: void
-2: none
-3: boolean
-4: number
-5: type
-6: struct 7<0>
-7: struct 10<0>
-8: f(4, 4) : 4
-9: f(4, 4) : 3
-10: f(3, 3) : 3
-11: f(4) : 4
-12: f(3) : 1
-13: f() : 6
-14: f(6, 4) : 7
-15: f(4) : 1
-16: f(7) : 4
-17: f(7) : 1
-18: f() : 1
+tid:0     invalid
+tid:1     void
+tid:2     none
+tid:3     boolean
+tid:4     number
+tid:5     type
+tid:6     struct sid:7
+tid:7     struct sid:10
+tid:8     f(4, 4): 4
+tid:9     f(4, 4): 3
+tid:10    f(3, 3): 3
+tid:11    f(4): 4
+tid:12    f(3): 1
+tid:13    f(): 6
+tid:14    f(6, 4): 7
+tid:15    f(4): 1
+tid:16    f(7): 4
+tid:17    f(7): 1
+tid:18    f(): 1
+
+--- structs ---
+sid:7     List
+sid:10    string

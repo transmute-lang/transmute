@@ -2,233 +2,237 @@
 source: hir/src/hir_print.rs
 expression: s
 ---
-   sym    typ
-               +- stmt 0
-=    1:     1     +- Namespace name=<root>
-                     +- stmt 1
-=    2:     1        |  +- Namespace name=core
-                     |     +- stmts=[]
-                     +- stmt 6
-=   12:     8        |  +- Struct name=Point
-=   36:    20        |     +- xy: [number; 2]
-                     +- stmt 15
-=   35:    19        |  +- Fn name=main
-                     |     +- annotations=[]
-                     |     +- params=[]
-@     :     1        |     +- ret=[]
-@     :     2        |     +- body:expr 48
-@     :     2        |        +- Block
-                     |           +- stmt 7
-=   37:     4        |           |  +- Let name=n
-@     :     4        |           |     +- expr 6
-@     :     4        |           |        +- Call
-@     :    17        |           |           +- callee:expr 0
-@   33:    17        |           |           |  +- Ident: number_parse
-                     |           |           +- params
-@     :     7        |           |              +- expr 5
-@     :     7        |           |                 +- Call
-@     :    15        |           |                    +- callee:expr 1
-@   31:    15        |           |                    |  +- Ident: list_get
-                     |           |                    +- params
-@     :     6        |           |                       +- expr 3
-@     :     6        |           |                       |  +- Call
-@     :    14        |           |                       |     +- callee:expr 2
-@   30:    14        |           |                       |     |  +- Ident: args
-                     |           |                       |     +- params=[]
-@     :     4        |           |                       +- expr 4
-@     :     4        |           |                          +- Number: 1
-                     |           +- stmt 8
-=   38:     8        |           |  +- Let name=p1
-@     :     8        |           |     +- expr 10
-@   12:     8        |           |        +- StructInstantiate name=Point
-@   36:    20        |           |           +- field name=xy
-@     :    20        |           |              +- expr 9
-@     :    20        |           |                 +- ArrayInstantiate
-@     :     4        |           |                    +- expr 7
-@     :     4        |           |                    |  +- Number: 0
-@     :     4        |           |                    +- expr 8
-@     :     4        |           |                       +- Number: 0
-                     |           +- stmt 9
-=   39:     8        |           |  +- Let name=p2
-@     :     8        |           |     +- expr 14
-@   12:     8        |           |        +- StructInstantiate name=Point
-@   36:    20        |           |           +- field name=xy
-@     :    20        |           |              +- expr 13
-@     :    20        |           |                 +- ArrayInstantiate
-@     :     4        |           |                    +- expr 11
-@   37:     4        |           |                    |  +- Ident: n
-@     :     4        |           |                    +- expr 12
-@   37:     4        |           |                       +- Ident: n
-                     |           +- stmt 10
-@     :     4        |           |  +- Expression
-@     :     4        |           |     +- expr 20
-@     :     4        |           |        +- Assignment
-@     :     4        |           |           +- target:expr 18
-@     :     4        |           |           |  +- ArrayAccess
-@     :    20        |           |           |     +- expr 16
-@   36:    20        |           |           |     |  +- Access
-@     :     8        |           |           |     |     +- lhs:expr 15
-@   38:     8        |           |           |     |     |  +- Ident: p1
-@   36:    20        |           |           |     |     +- ident=xy
-@     :     4        |           |           |     +- expr 17
-@     :     4        |           |           |        +- Number: 0
-@     :     4        |           |           +- value:expr 19
-@     :     4        |           |              +- Number: 1
-                     |           +- stmt 11
-=   40:    20        |           |  +- Let name=p1xy
-@     :    20        |           |     +- expr 22
-@   36:    20        |           |        +- Access
-@     :     8        |           |           +- lhs:expr 21
-@   38:     8        |           |           |  +- Ident: p1
-@   36:    20        |           |           +- ident=xy
-                     |           +- stmt 12
-@     :     4        |           |  +- Expression
-@     :     4        |           |     +- expr 27
-@     :     4        |           |        +- Assignment
-@     :     4        |           |           +- target:expr 25
-@     :     4        |           |           |  +- ArrayAccess
-@     :    20        |           |           |     +- expr 23
-@   40:    20        |           |           |     |  +- Ident: p1xy
-@     :     4        |           |           |     +- expr 24
-@     :     4        |           |           |        +- Number: 1
-@     :     4        |           |           +- value:expr 26
-@     :     4        |           |              +- Number: 1
-                     |           +- stmt 13
-=   41:     4        |           |  +- Let name=area
-@     :     4        |           |     +- expr 44
-@     :     4        |           |        +- Call
-@     :     9        |           |           +- callee:expr 57
-@   20:     9        |           |           |  +- Ident: mul
-                     |           |           +- params
-@     :     4        |           |              +- expr 35
-@     :     4        |           |              |  +- Call
-@     :     9        |           |              |     +- callee:expr 55
-@   16:     9        |           |              |     |  +- Ident: sub
-                     |           |              |     +- params
-@     :     4        |           |              |        +- expr 31
-@     :     4        |           |              |        |  +- ArrayAccess
-@     :    20        |           |              |        |     +- expr 29
-@   36:    20        |           |              |        |     |  +- Access
-@     :     8        |           |              |        |     |     +- lhs:expr 28
-@   39:     8        |           |              |        |     |     |  +- Ident: p2
-@   36:    20        |           |              |        |     |     +- ident=xy
-@     :     4        |           |              |        |     +- expr 30
-@     :     4        |           |              |        |        +- Number: 0
-@     :     4        |           |              |        +- expr 34
-@     :     4        |           |              |           +- ArrayAccess
-@     :    20        |           |              |              +- expr 32
-@   40:    20        |           |              |              |  +- Ident: p1xy
-@     :     4        |           |              |              +- expr 33
-@     :     4        |           |              |                 +- Number: 0
-@     :     4        |           |              +- expr 43
-@     :     4        |           |                 +- Call
-@     :     9        |           |                    +- callee:expr 56
-@   16:     9        |           |                    |  +- Ident: sub
-                     |           |                    +- params
-@     :     4        |           |                       +- expr 39
-@     :     4        |           |                       |  +- ArrayAccess
-@     :    20        |           |                       |     +- expr 37
-@   36:    20        |           |                       |     |  +- Access
-@     :     8        |           |                       |     |     +- lhs:expr 36
-@   39:     8        |           |                       |     |     |  +- Ident: p2
-@   36:    20        |           |                       |     |     +- ident=xy
-@     :     4        |           |                       |     +- expr 38
-@     :     4        |           |                       |        +- Number: 1
-@     :     4        |           |                       +- expr 42
-@     :     4        |           |                          +- ArrayAccess
-@     :    20        |           |                             +- expr 40
-@   40:    20        |           |                             |  +- Ident: p1xy
-@     :     4        |           |                             +- expr 41
-@     :     4        |           |                                +- Number: 1
-                     |           +- stmt 14
-@     :     1        |              +- Ret
-@     :     1        |                 +- expr 47
-@     :     1        |                    +- Call
-@     :    16        |                       +- callee:expr 45
-@   32:    16        |                       |  +- Ident: print
-                     |                       +- params
-@     :     4        |                          +- expr 46
-@   41:     4        |                             +- Ident: area
-                     +- stmt 22
-=    3:     1           +- Namespace name=std
-                           +- stmt 16
-=   11:     1              |  +- Annotation name=native
-                           +- stmt 17
-=    4:     1              |  +- Namespace name=booleans
-                           |     +- stmt 30
-=   29:    13              |        +- Fn name=print (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params
-=   42:     3              |           |  +- b: core.boolean
-@     :     1              |           +- ret=[]
-                           +- stmt 18
-=    5:     1              |  +- Namespace name=env
-                           |     +- stmt 29
-=   30:    14              |        +- Fn name=args (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params=[]
-@     :     6              |           +- ret=std.list.List
-                           +- stmt 19
-=    6:     1              |  +- Namespace name=list
-                           |     +- stmt 27
-=    7:     6              |     |  +- Struct name=List (native)
-                           |     +- stmt 28
-=   31:    15              |        +- Fn name=list_get (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params
-=   43:     6              |           |  +- list: List
-=   44:     4              |           |  +- index: number
-@     :     7              |           +- ret=std.str.string
-                           +- stmt 20
-=    8:     1              |  +- Namespace name=numbers
-                           |     +- stmt 25
-=   32:    16              |     |  +- Fn name=print (native)
-                           |     |     +- annotations
-@   11:     1              |     |     |  +- std.native
-                           |     |     +- params
-=   45:     4              |     |     |  +- n: core.number
-@     :     1              |     |     +- ret=[]
-                           |     +- stmt 26
-=   33:    17              |        +- Fn name=number_parse (native)
-                           |           +- annotations
-@   11:     1              |           |  +- std.native
-                           |           +- params
-=   46:     7              |           |  +- s: std.str.string
-@     :     2              |           +- ret=core.number
-                           +- stmt 21
-=    9:     1                 +- Namespace name=str
-                                 +- stmt 23
-=   10:     7                    |  +- Struct name=string (native)
-                                 +- stmt 24
-=   34:    18                       +- Fn name=print (native)
-                                       +- annotations
-@   11:     1                          |  +- std.native
-                                       +- params
-=   47:     7                          |  +- s: string
-@     :     1                          +- ret=[]
+                      +- stmt:0
+=    sid:1     tid:1     +- Namespace name=<root>
+                            +- stmt:1
+=    sid:2     tid:1        |  +- Namespace name=core
+                            |     +- stmts=[]
+                            +- stmt:6
+=   sid:12     tid:8        |  +- Struct name=Point
+=   sid:36    tid:20        |     +- xy: [number; 2]
+                            +- stmt:15
+=   sid:35    tid:19        |  +- Fn name=main
+                            |     +- annotations=[]
+                            |     +- params=[]
+@              tid:1        |     +- ret=[]
+@              tid:2        |     +- body:expr:48
+@              tid:2        |        +- Block
+                            |           +- stmt:7
+=   sid:37     tid:4        |           |  +- Let name=n
+@              tid:4        |           |     +- expr:6
+@              tid:4        |           |        +- Call
+@             tid:17        |           |           +- callee:expr:0
+@   sid:33    tid:17        |           |           |  +- Ident: number_parse
+                            |           |           +- params
+@              tid:7        |           |              +- expr:5
+@              tid:7        |           |                 +- Call
+@             tid:15        |           |                    +- callee:expr:1
+@   sid:31    tid:15        |           |                    |  +- Ident: list_get
+                            |           |                    +- params
+@              tid:6        |           |                       +- expr:3
+@              tid:6        |           |                       |  +- Call
+@             tid:14        |           |                       |     +- callee:expr:2
+@   sid:30    tid:14        |           |                       |     |  +- Ident: args
+                            |           |                       |     +- params=[]
+@              tid:4        |           |                       +- expr:4
+@              tid:4        |           |                          +- Number: 1
+                            |           +- stmt:8
+=   sid:38     tid:8        |           |  +- Let name=p1
+@              tid:8        |           |     +- expr:10
+@   sid:12     tid:8        |           |        +- StructInstantiate name=Point
+@   sid:36    tid:20        |           |           +- field name=xy
+@             tid:20        |           |              +- expr:9
+@             tid:20        |           |                 +- ArrayInstantiate
+@              tid:4        |           |                    +- expr:7
+@              tid:4        |           |                    |  +- Number: 0
+@              tid:4        |           |                    +- expr:8
+@              tid:4        |           |                       +- Number: 0
+                            |           +- stmt:9
+=   sid:39     tid:8        |           |  +- Let name=p2
+@              tid:8        |           |     +- expr:14
+@   sid:12     tid:8        |           |        +- StructInstantiate name=Point
+@   sid:36    tid:20        |           |           +- field name=xy
+@             tid:20        |           |              +- expr:13
+@             tid:20        |           |                 +- ArrayInstantiate
+@              tid:4        |           |                    +- expr:11
+@   sid:37     tid:4        |           |                    |  +- Ident: n
+@              tid:4        |           |                    +- expr:12
+@   sid:37     tid:4        |           |                       +- Ident: n
+                            |           +- stmt:10
+@              tid:4        |           |  +- Expression
+@              tid:4        |           |     +- expr:20
+@              tid:4        |           |        +- Assignment
+@              tid:4        |           |           +- target:expr:18
+@              tid:4        |           |           |  +- ArrayAccess
+@             tid:20        |           |           |     +- expr:16
+@   sid:36    tid:20        |           |           |     |  +- Access
+@              tid:8        |           |           |     |     +- lhs:expr:15
+@   sid:38     tid:8        |           |           |     |     |  +- Ident: p1
+@   sid:36    tid:20        |           |           |     |     +- ident=xy
+@              tid:4        |           |           |     +- expr:17
+@              tid:4        |           |           |        +- Number: 0
+@              tid:4        |           |           +- value:expr:19
+@              tid:4        |           |              +- Number: 1
+                            |           +- stmt:11
+=   sid:40    tid:20        |           |  +- Let name=p1xy
+@             tid:20        |           |     +- expr:22
+@   sid:36    tid:20        |           |        +- Access
+@              tid:8        |           |           +- lhs:expr:21
+@   sid:38     tid:8        |           |           |  +- Ident: p1
+@   sid:36    tid:20        |           |           +- ident=xy
+                            |           +- stmt:12
+@              tid:4        |           |  +- Expression
+@              tid:4        |           |     +- expr:27
+@              tid:4        |           |        +- Assignment
+@              tid:4        |           |           +- target:expr:25
+@              tid:4        |           |           |  +- ArrayAccess
+@             tid:20        |           |           |     +- expr:23
+@   sid:40    tid:20        |           |           |     |  +- Ident: p1xy
+@              tid:4        |           |           |     +- expr:24
+@              tid:4        |           |           |        +- Number: 1
+@              tid:4        |           |           +- value:expr:26
+@              tid:4        |           |              +- Number: 1
+                            |           +- stmt:13
+=   sid:41     tid:4        |           |  +- Let name=area
+@              tid:4        |           |     +- expr:44
+@              tid:4        |           |        +- Call
+@              tid:9        |           |           +- callee:expr:57
+@   sid:20     tid:9        |           |           |  +- Ident: mul
+                            |           |           +- params
+@              tid:4        |           |              +- expr:35
+@              tid:4        |           |              |  +- Call
+@              tid:9        |           |              |     +- callee:expr:55
+@   sid:16     tid:9        |           |              |     |  +- Ident: sub
+                            |           |              |     +- params
+@              tid:4        |           |              |        +- expr:31
+@              tid:4        |           |              |        |  +- ArrayAccess
+@             tid:20        |           |              |        |     +- expr:29
+@   sid:36    tid:20        |           |              |        |     |  +- Access
+@              tid:8        |           |              |        |     |     +- lhs:expr:28
+@   sid:39     tid:8        |           |              |        |     |     |  +- Ident: p2
+@   sid:36    tid:20        |           |              |        |     |     +- ident=xy
+@              tid:4        |           |              |        |     +- expr:30
+@              tid:4        |           |              |        |        +- Number: 0
+@              tid:4        |           |              |        +- expr:34
+@              tid:4        |           |              |           +- ArrayAccess
+@             tid:20        |           |              |              +- expr:32
+@   sid:40    tid:20        |           |              |              |  +- Ident: p1xy
+@              tid:4        |           |              |              +- expr:33
+@              tid:4        |           |              |                 +- Number: 0
+@              tid:4        |           |              +- expr:43
+@              tid:4        |           |                 +- Call
+@              tid:9        |           |                    +- callee:expr:56
+@   sid:16     tid:9        |           |                    |  +- Ident: sub
+                            |           |                    +- params
+@              tid:4        |           |                       +- expr:39
+@              tid:4        |           |                       |  +- ArrayAccess
+@             tid:20        |           |                       |     +- expr:37
+@   sid:36    tid:20        |           |                       |     |  +- Access
+@              tid:8        |           |                       |     |     +- lhs:expr:36
+@   sid:39     tid:8        |           |                       |     |     |  +- Ident: p2
+@   sid:36    tid:20        |           |                       |     |     +- ident=xy
+@              tid:4        |           |                       |     +- expr:38
+@              tid:4        |           |                       |        +- Number: 1
+@              tid:4        |           |                       +- expr:42
+@              tid:4        |           |                          +- ArrayAccess
+@             tid:20        |           |                             +- expr:40
+@   sid:40    tid:20        |           |                             |  +- Ident: p1xy
+@              tid:4        |           |                             +- expr:41
+@              tid:4        |           |                                +- Number: 1
+                            |           +- stmt:14
+@              tid:1        |              +- Ret
+@              tid:1        |                 +- expr:47
+@              tid:1        |                    +- Call
+@             tid:16        |                       +- callee:expr:45
+@   sid:32    tid:16        |                       |  +- Ident: print
+                            |                       +- params
+@              tid:4        |                          +- expr:46
+@   sid:41     tid:4        |                             +- Ident: area
+                            +- stmt:22
+=    sid:3     tid:1           +- Namespace name=std
+                                  +- stmt:16
+=   sid:11     tid:1              |  +- Annotation name=native
+                                  +- stmt:17
+=    sid:4     tid:1              |  +- Namespace name=booleans
+                                  |     +- stmt:30
+=   sid:29    tid:13              |        +- Fn name=print (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params
+=   sid:42     tid:3              |           |  +- b: core.boolean
+@              tid:1              |           +- ret=[]
+                                  +- stmt:18
+=    sid:5     tid:1              |  +- Namespace name=env
+                                  |     +- stmt:29
+=   sid:30    tid:14              |        +- Fn name=args (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params=[]
+@              tid:6              |           +- ret=std.list.List
+                                  +- stmt:19
+=    sid:6     tid:1              |  +- Namespace name=list
+                                  |     +- stmt:27
+=    sid:7     tid:6              |     |  +- Struct name=List (native)
+                                  |     +- stmt:28
+=   sid:31    tid:15              |        +- Fn name=list_get (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params
+=   sid:43     tid:6              |           |  +- list: List
+=   sid:44     tid:4              |           |  +- index: number
+@              tid:7              |           +- ret=std.str.string
+                                  +- stmt:20
+=    sid:8     tid:1              |  +- Namespace name=numbers
+                                  |     +- stmt:25
+=   sid:32    tid:16              |     |  +- Fn name=print (native)
+                                  |     |     +- annotations
+@   sid:11     tid:1              |     |     |  +- std.native
+                                  |     |     +- params
+=   sid:45     tid:4              |     |     |  +- n: core.number
+@              tid:1              |     |     +- ret=[]
+                                  |     +- stmt:26
+=   sid:33    tid:17              |        +- Fn name=number_parse (native)
+                                  |           +- annotations
+@   sid:11     tid:1              |           |  +- std.native
+                                  |           +- params
+=   sid:46     tid:7              |           |  +- s: std.str.string
+@              tid:2              |           +- ret=core.number
+                                  +- stmt:21
+=    sid:9     tid:1                 +- Namespace name=str
+                                        +- stmt:23
+=   sid:10     tid:7                    |  +- Struct name=string (native)
+                                        +- stmt:24
+=   sid:34    tid:18                       +- Fn name=print (native)
+                                              +- annotations
+@   sid:11     tid:1                          |  +- std.native
+                                              +- params
+=   sid:47     tid:7                          |  +- s: string
+@              tid:1                          +- ret=[]
 
 --- types ---
-0: invalid
-1: void
-2: none
-3: boolean
-4: number
-5: type
-6: struct 7<0>
-7: struct 10<0>
-8: struct 12<0>
-9: f(4, 4) : 4
-10: f(4, 4) : 3
-11: f(3, 3) : 3
-12: f(4) : 4
-13: f(3) : 1
-14: f() : 6
-15: f(6, 4) : 7
-16: f(4) : 1
-17: f(7) : 4
-18: f(7) : 1
-19: f() : 1
-20: [4; 2]
+tid:0     invalid
+tid:1     void
+tid:2     none
+tid:3     boolean
+tid:4     number
+tid:5     type
+tid:6     struct sid:7
+tid:7     struct sid:10
+tid:8     struct sid:12
+tid:9     f(4, 4): 4
+tid:10    f(4, 4): 3
+tid:11    f(3, 3): 3
+tid:12    f(4): 4
+tid:13    f(3): 1
+tid:14    f(): 6
+tid:15    f(6, 4): 7
+tid:16    f(4): 1
+tid:17    f(7): 4
+tid:18    f(7): 1
+tid:19    f(): 1
+tid:20    [tid:4; len:2]
+
+--- structs ---
+sid:7     List
+sid:10    string
+sid:12    Point

@@ -69,6 +69,21 @@ impl Statement {
         }
     }
 
+    pub fn as_struct(&self) -> (&Identifier, &[Annotation], &Implementation<Vec<Field>>, usize, Option<StmtId>) {
+        match &self.kind {
+            StatementKind::Struct(
+                ident,
+                annotations,
+                implementation,
+                type_parameters_count,
+                parent,
+            ) => {
+                (ident, annotations, implementation, *type_parameters_count, parent.clone())
+            }
+            _ => panic!("struct expected, got {:?}", self),
+        }
+    }
+
     pub fn as_annotation(&self) -> &Identifier {
         match &self.kind {
             StatementKind::Annotation(ident) => ident,

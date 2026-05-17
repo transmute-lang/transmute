@@ -232,6 +232,7 @@ impl<'s> Lexer<'s> {
     }
 
     fn advance_consumed(&mut self, len: usize) {
+        // fixme: we have an error when no new line after a comment
         self.remaining = &self.remaining[len..];
         self.pos += len;
     }

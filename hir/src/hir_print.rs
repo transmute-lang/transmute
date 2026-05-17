@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::natives::Type;
 use crate::nodes::{
     Expression, ExpressionKind, Implementation, Literal, LiteralKind, Statement, StatementKind,
@@ -77,14 +78,14 @@ impl HirPrint for Expression {
         if let Some(tag) = ctx.tag.take() {
             writeln!(
                 f,
-                "{indent}{tag}:expr {id}",
+                "{indent}{tag}:expr:{id}",
                 indent = ctx.indent_type_id(self.resolved_type_id()),
                 id = id!(self.id)
             )?;
         } else {
             writeln!(
                 f,
-                "{indent}expr {id}",
+                "{indent}expr:{id}",
                 indent = ctx.indent_type_id(self.resolved_type_id()),
                 id = id!(self.id)
             )?;
@@ -304,14 +305,14 @@ impl HirPrint for Statement {
         if let Some(tag) = ctx.tag.take() {
             writeln!(
                 f,
-                "{indent}{tag}:stmt {id}",
+                "{indent}{tag}:stmt:{id}",
                 indent = ctx.indent(),
                 id = id!(self.id)
             )?;
         } else {
             writeln!(
                 f,
-                "{indent}stmt {id}",
+                "{indent}stmt:{id}",
                 indent = ctx.indent(),
                 id = id!(self.id)
             )?;
@@ -394,7 +395,7 @@ impl HirPrint for Statement {
                         _ => " (native)",
                     },
                     fn_stmt_id = fn_stmt_id
-                        .map(|id| format!(", fn_stmt_id={id}"))
+                        .map(|id| format!(", fn=stmt:{id}"))
                         .unwrap_or_default()
                 )?;
                 ctx.last = true;
@@ -478,7 +479,7 @@ impl HirPrint for Statement {
                         _ => " (native)",
                     },
                     fn_stmt_id = fn_stmt_id
-                        .map(|id| format!(", fn_stmt_id={id}"))
+                        .map(|id| format!(", fn=stmt:{id}"))
                         .unwrap_or_default()
                 )?;
                 ctx.last = true;
@@ -555,7 +556,6 @@ impl Hir {
     where
         W: Write,
     {
-        writeln!(f, "   sym    typ")?;
         let types = self.types.iter().collect::<BiHashMap<_, _>>();
 
         let mut ctx = HirPrintContext {
@@ -566,11 +566,30 @@ impl Hir {
             last: true,
         };
         ctx.hir_print_statement(self.root, opts, f)?;
+
         writeln!(f, "\n--- types ---")?;
         for (id, ty) in &ctx.hir.types {
-            write!(f, "{id:-5}: ")?;
+            write!(f, "{:<9} ", format!("tid:{}", id!(id)))?;
             self.print_type(f, ty)?;
             writeln!(f,)?;
+        }
+
+        writeln!(f, "\n--- structs ---")?;
+        let mut symbols = ctx.hir.types.iter()
+            .filter_map(|(tid, ty)| match ty {
+                Type::Struct(stmt_id, _) => {
+                    let identifier= self.statements[*stmt_id].as_struct().0;
+                    let symbol_id = identifier.resolved_symbol_id();
+                    let ident_id = identifier.id;
+                    Some((symbol_id, ident_id))
+                }
+                _ => None
+            } )
+            .collect::<Vec<_>>();
+        symbols.sort_by(|a,b| a.0.cmp(&b.0));
+        symbols.dedup();
+        for (sid, iid) in symbols {
+            writeln!(f, "{:<9} {}", format!("sid:{}", id!(sid)), self.identifiers[iid])?;
         }
         Ok(())
     }
@@ -591,24 +610,33 @@ impl Hir {
                     }
                     write!(f, "{}", id!(*param))?;
                 }
-                write!(f, ") : {}", id!(*ret))
+                write!(f, "): {}", id!(*ret))
             }
             Type::Struct(stmt_id, type_parameters) => {
-                let symbol_id = match &self.statements[*stmt_id].kind {
-                    StatementKind::Struct(ident, _, _, _, _) => ident.resolved_symbol_id(),
-                    _ => panic!("struct expected"),
-                };
-                write!(f, "struct {}<{}>", id!(symbol_id), type_parameters.len())
+                let symbol_id = self.statements[*stmt_id].as_struct().0.resolved_symbol_id();
+                if type_parameters.is_empty() {
+                    write!(f, "struct sid:{symbol_id}",)
+                } else {
+                    write!(
+                        f,
+                        "struct sid:{symbol_id}<{}>",
+                        type_parameters
+                            .iter()
+                            .map(|t| format!("tid:{t}"))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                }
             }
             Type::Array(type_id, size) => {
-                write!(f, "[{type_id}; {size}]", type_id = id!(*type_id))
+                write!(f, "[tid:{type_id}; len:{size}]", type_id = id!(*type_id))
             }
             Type::Parameter(stmt_id, index) => {
                 let symbol_id = match &self.statements[*stmt_id].kind {
                     StatementKind::Struct(ident, _, _, _, _) => ident.resolved_symbol_id(),
                     _ => panic!("struct expected"),
                 };
-                write!(f, "type parameter {symbol_id}<{stmt_id}.{index}>")
+                write!(f, "type parameter sid:{symbol_id}(stmt:{stmt_id}[{index}])")
             }
             Type::Type => write!(f, "type"),
             Type::Void => write!(f, "void"),
@@ -633,24 +661,24 @@ const INDENT: &str = "|  ";
 
 impl HirPrintContext<'_> {
     fn indent(&self) -> String {
-        format!("               {}{NODE}", self.indent)
+        format!("                      {}{NODE}", self.indent)
     }
 
     fn indent_symbol_def(&self, symbol_id: SymbolId) -> String {
         format!(
-            "={symbol_id:-5}: {type_id:-5}  {}{NODE}",
+            "={symbol_id:>9} {type_id:>9}  {}{NODE}",
             self.indent,
-            symbol_id = id!(symbol_id),
-            type_id = id!(self.hir.symbols[symbol_id].type_id),
+            symbol_id = format!("sid:{}", id!(symbol_id)),
+            type_id = format!("tid:{}", id!(self.hir.symbols[symbol_id].type_id)),
         )
     }
 
     fn indent_symbol_ref(&self, symbol_id: SymbolId) -> String {
         format!(
-            "@{symbol_id:-5}: {type_id:-5}  {}{NODE}",
+            "@{symbol_id:>9} {type_id:>9}  {}{NODE}",
             self.indent,
-            symbol_id = id!(symbol_id),
-            type_id = id!(self.hir.symbols[symbol_id].type_id),
+            symbol_id = format!("sid:{}", id!(symbol_id)),
+            type_id = format!("tid:{}", id!(self.hir.symbols[symbol_id].type_id)),
         )
     }
 
@@ -675,9 +703,9 @@ impl HirPrintContext<'_> {
 
     fn indent_type_id(&self, type_id: TypeId) -> String {
         format!(
-            "@     : {type_id:-5}  {}{NODE}",
+            "@          {type_id:>9}  {}{NODE}",
             self.indent,
-            type_id = id!(type_id),
+            type_id = format!("tid:{}", id!(type_id)),
         )
     }
 
