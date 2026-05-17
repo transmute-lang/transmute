@@ -273,7 +273,14 @@ impl PrettyPrint for Statement {
                 }
                 writeln!(f, ";")
             }
-            StatementKind::LetFn(ident, annotations, parameters, ret_type, expr_id) => {
+            StatementKind::LetFn(
+                ident,
+                annotations,
+                type_parameters,
+                parameters,
+                ret_type,
+                expr_id,
+            ) => {
                 let indent = ctx.indent();
                 for annotation in annotations {
                     writeln!(

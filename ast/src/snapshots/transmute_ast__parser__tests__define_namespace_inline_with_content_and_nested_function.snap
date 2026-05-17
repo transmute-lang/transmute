@@ -71,6 +71,7 @@ Ok(
                     },
                     [],
                     [],
+                    [],
                     Return {
                         type_def_id: None,
                     },
@@ -85,6 +86,7 @@ Ok(
                         id: IdentId(5),
                         span: 6:25; [133, 134],
                     },
+                    [],
                     [],
                     [],
                     Return {
@@ -117,6 +119,7 @@ Ok(
                     },
                     [],
                     [],
+                    [],
                     Return {
                         type_def_id: None,
                     },
@@ -131,6 +134,7 @@ Ok(
                         id: IdentId(6),
                         span: 8:21; [178, 179],
                     },
+                    [],
                     [],
                     [],
                     Return {

@@ -541,6 +541,7 @@ impl<'s> PeekableLexer<'s> {
             .unwrap_or_else(|| self.lexer.next_token())
     }
 
+    // todo:refactoring could we replace push_next with peek?
     pub fn push_next(&mut self, token: Token) {
         self.peeked.push_front(token);
     }

@@ -826,5 +826,6 @@ mod tests {
     t!(structs_of_arrays);
     t!(structs_simple);
     t!(structs_type_parameters);
+    t!(functions_type_parameters);
     t!(void_fn);
 }

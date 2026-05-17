@@ -67,6 +67,7 @@ Ok(
                     },
                     [],
                     [],
+                    [],
                     Return {
                         type_def_id: Some(
                             TypeDefId(0),

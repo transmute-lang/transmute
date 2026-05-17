@@ -1,5 +1,5 @@
 use crate::annotation::Annotation;
-use crate::expression::{ExpressionKind, Target};
+use crate::expression::{Expression, ExpressionKind, Target};
 use crate::identifier::Identifier;
 use crate::identifier_ref::IdentifierRef;
 use crate::lexer::{Lexer, PeekableLexer, TokenKind};
@@ -7,10 +7,13 @@ use crate::literal::{Literal, LiteralKind};
 use crate::operators::{
     BinaryOperator, BinaryOperatorKind, Precedence, UnaryOperator, UnaryOperatorKind,
 };
-use crate::statement::{Field, Parameter, RetMode, Return, StatementKind, TypeDef, TypeDefKind};
+use crate::statement::{
+    Field, Parameter, RetMode, Return, Statement, StatementKind, TypeDef, TypeDefKind,
+};
 use crate::CompilationUnit;
 use std::borrow::Cow;
 use std::collections::HashSet;
+use std::ops::Not;
 #[cfg(all(not(test), not(feature = "allow-any-root-kind")))]
 use transmute_core::error::{Diagnostic, Level};
 use transmute_core::ids::{id, ExprId, IdentId, IdentRefId, StmtId, TypeDefId};
@@ -22,9 +25,6 @@ use transmute_core::span::Span;
 //     etc., or `]` which closes the `]`.
 //   - the last expression cal "tell" what token can come after. eg.: for `a` we can accept `(`,
 //     `+`, etc. but for `1` we cannot accept `(`.
-
-type Expression = crate::expression::Expression;
-type Statement = crate::statement::Statement;
 
 pub struct Parser<'s, 'c> {
     lexer: PeekableLexer<'s>,
@@ -320,11 +320,118 @@ impl<'s, 'c> Parser<'s, 'c> {
                     }
                 };
 
-                let token = self.lexer.peek();
+                let mut type_parameters = Vec::new();
+                if matches!(self.lexer.peek().kind, TokenKind::Smaller) {
+                    self.lexer.next_token();
 
-                if token.kind == TokenKind::OpenParenthesis {
+                    // let ident < 'type, ... > ( expr , ... ) = expr ;
+
+                    let mut comma_seen = true;
+                    loop {
+                        let token = self.lexer.next_token();
+                        match &token.kind {
+                            TokenKind::Greater => {
+                                if type_parameters.is_empty() {
+                                    report_unexpected_token!(
+                                        self,
+                                        token,
+                                        [
+                                            expected_token!(TokenKind::Identifier),
+                                            expected_token!(TokenKind::OpenBracket),
+                                        ]
+                                    );
+                                }
+                                self.potential_tokens.clear();
+                                break ;
+                            }
+                            TokenKind::Comma => {
+                                if comma_seen {
+                                    report_unexpected_token!(
+                                        self,
+                                        token,
+                                        [
+                                            expected_token!(TokenKind::Greater),
+                                            expected_token!(TokenKind::Identifier),
+                                            expected_token!(TokenKind::OpenBracket),
+                                        ]
+                                    );
+                                }
+                                comma_seen = true;
+                            }
+                            TokenKind::OpenCurlyBracket | TokenKind::Semicolon | TokenKind::Eof => {
+                                let span = token.span.clone();
+                                if comma_seen {
+                                    report_unexpected_token!(
+                                        self,
+                                        token,
+                                        [
+                                            expected_token!(TokenKind::Greater),
+                                            expected_token!(TokenKind::Identifier),
+                                            expected_token!(TokenKind::OpenBracket),
+                                        ]
+                                    );
+                                } else {
+                                    report_unexpected_token!(
+                                        self,
+                                        token,
+                                        [
+                                            expected_token!(TokenKind::Comma),
+                                            expected_token!(TokenKind::Greater),
+                                        ]
+                                    );
+                                }
+                                self.lexer.push_next(token);
+                                break ;
+                            }
+                            TokenKind::Identifier => {
+                                comma_seen = false;
+                                let ident = Identifier::new(
+                                    self.push_identifier(&token.span),
+                                    token.span.clone(),
+                                );
+
+                                type_parameters.push(ident);
+                            }
+                            _ => {
+                                if comma_seen {
+                                    report_unexpected_token!(
+                                        self,
+                                        token,
+                                        [
+                                            expected_token!(TokenKind::Greater),
+                                            expected_token!(TokenKind::Identifier),
+                                            expected_token!(TokenKind::OpenBracket),
+                                        ]
+                                    );
+                                } else {
+                                    report_unexpected_token!(
+                                        self,
+                                        token,
+                                        [
+                                            expected_token!(TokenKind::Comma),
+                                            expected_token!(TokenKind::Greater),
+                                        ]
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if !type_parameters.is_empty() && !matches!(self.lexer.peek().kind, TokenKind::OpenParenthesis) {
+                    // todo: test this path
+                    let token = self.lexer.next_token();
+                    report_unexpected_token!(
+                        self,
+                        token,
+                        [expected_token!(TokenKind::OpenParenthesis),]
+                    );
+                    self.lexer.push_next(token);
+                }
+
+                if matches!(self.lexer.peek().kind, TokenKind::OpenParenthesis) {
                     // let ident '( expr , ... ) = expr ;
-                    return self.parse_function(&let_token.span, annotations, identifier);
+                    return self.parse_function(&let_token.span, annotations, type_parameters, identifier);
                 }
 
                 if !annotations.is_empty() {
@@ -677,6 +784,7 @@ impl<'s, 'c> Parser<'s, 'c> {
         &mut self,
         span: &Span,
         annotations: Vec<Annotation>,
+        type_parameters: Vec<Identifier>,
         identifier: Identifier,
     ) -> Option<&Statement> {
         // let name '( param , ... ): type = expr ;
@@ -812,7 +920,7 @@ impl<'s, 'c> Parser<'s, 'c> {
         };
 
         let stmt_id = self.push_statement(
-            StatementKind::LetFn(identifier, annotations, parameters, ty, expr_id),
+            StatementKind::LetFn(identifier, annotations, type_parameters, parameters, ty, expr_id),
             span.extend_to(&end_span),
         );
 
@@ -2486,6 +2594,8 @@ mod tests {
     test_syntax!(struct_instantiation_generic3 => "S!<String, > { s: \"string\" };");
     test_syntax!(err_struct_instantiation_generic_missing_closing => "S!<String { s: \"string\" };");
     test_syntax!(err_struct_instantiation_generic_missing_commma => "S!<String Integer> { s: \"string\" };");
+    test_syntax!(function_with_generic_parameter => "let f<T>() {}");
+    test_syntax!(function_with_generic_parameter_and_parameter => "let f<T>(t: S) {}");
     test_syntax!(array_instantiation_one_element => "[0];");
     test_syntax!(array_instantiation_two_elements => "[0, 2];");
     test_syntax!(array_instantiation_trailing_comma => "[0, 2, ];");

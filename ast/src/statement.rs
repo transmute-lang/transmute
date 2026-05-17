@@ -28,7 +28,20 @@ pub enum StatementKind {
     Expression(ExprId),
     Let(Identifier, ExprId),
     Ret(Option<ExprId>, RetMode),
-    LetFn(Identifier, Vec<Annotation>, Vec<Parameter>, Return, ExprId),
+    LetFn(
+        /// Function name
+        Identifier,
+        /// Annotations
+        Vec<Annotation>,
+        /// Type parameters
+        Vec<Identifier>,
+        /// Parameters
+        Vec<Parameter>,
+        /// Return type
+        Return,
+        /// Function body
+        ExprId,
+    ),
     Struct(
         /// Struct name
         Identifier,

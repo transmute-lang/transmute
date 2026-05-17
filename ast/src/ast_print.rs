@@ -370,7 +370,14 @@ impl AstPrint for Statement {
                     mode = mode.as_str()
                 )?;
             }
-            StatementKind::LetFn(ident, annotations, parameters, ret_type, expr_id) => {
+            StatementKind::LetFn(
+                ident,
+                annotations,
+                type_parameters,
+                parameters,
+                ret_type,
+                expr_id,
+            ) => {
                 writeln!(
                     f,
                     "{indent}Fn name={ident}",
@@ -666,5 +673,6 @@ mod tests {
     t!(structs_of_arrays);
     t!(structs_simple);
     t!(structs_type_parameters);
+    t!(functions_type_parameters);
     t!(void_fn);
 }
