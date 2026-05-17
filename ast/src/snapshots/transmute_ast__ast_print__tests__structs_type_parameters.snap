@@ -12,14 +12,18 @@ expression: s
       |  +- Use std.numbers.number_parse
       +- stmt 4
       |  +- Use std.numbers.print
-      +- stmt 15
+      +- stmt 5
+      |  +- Use std.booleans.print
+      +- stmt 6
+      |  +- Use std.str.print
+      +- stmt 26
       |  +- Fn name=main
       |     +- annotations=[]
       |     +- params=[]
       |     +- ret=[]
-      |     +- body:expr 43
+      |     +- body:expr 98
       |        +- Block
-      |           +- stmt 5
+      |           +- stmt 7
       |           |  +- Let name=n
       |           |     +- expr 6
       |           |        +- Call
@@ -38,8 +42,8 @@ expression: s
       |           |                       |     +- params=[]
       |           |                       +- expr 4
       |           |                          +- Number: 1
-      |           +- stmt 6
-      |           |  +- Let name=s
+      |           +- stmt 8
+      |           |  +- Let name=s_number
       |           |     +- expr 10
       |           |        +- StructInstantiate name=Struct
       |           |           +- types
@@ -51,25 +55,25 @@ expression: s
       |           |                    |  +- Ident: n
       |           |                    +- rhs:expr 8
       |           |                       +- Number: 2
-      |           +- stmt 7
+      |           +- stmt 9
       |           |  +- Expression
       |           |     +- expr 17
       |           |        +- Assignment
       |           |           +- target:expr 12
       |           |           |  +- Access
       |           |           |     +- expr 11
-      |           |           |     |  +- Ident: s
+      |           |           |     |  +- Ident: s_number
       |           |           |     +- ident=field
       |           |           +- value:expr 16
       |           |              +- Binary +
       |           |                 +- lhs:expr 14
       |           |                 |  +- Access
       |           |                 |     +- expr 13
-      |           |                 |     |  +- Ident: s
+      |           |                 |     |  +- Ident: s_number
       |           |                 |     +- ident=field
       |           |                 +- rhs:expr 15
       |           |                    +- Number: 1
-      |           +- stmt 8
+      |           +- stmt 10
       |           |  +- Expression
       |           |     +- expr 21
       |           |        +- Call
@@ -79,72 +83,249 @@ expression: s
       |           |              +- expr 20
       |           |                 +- Access
       |           |                    +- expr 19
-      |           |                    |  +- Ident: s
-      |           |                    +- ident=field
-      |           +- stmt 9
-      |           |  +- Expression
-      |           |     +- expr 24
-      |           |        +- Assignment target=s
-      |           |           +- expr 23
-      |           |              +- StructInstantiate name=Struct
-      |           |                 +- types=[]
-      |           |                 +- field name=field
-      |           |                    +- expr 22
-      |           |                       +- Number: 0
-      |           +- stmt 10
-      |           |  +- Expression
-      |           |     +- expr 28
-      |           |        +- Call
-      |           |           +- expr 25
-      |           |           |  +- Ident: print
-      |           |           +- params
-      |           |              +- expr 27
-      |           |                 +- Access
-      |           |                    +- expr 26
-      |           |                    |  +- Ident: s
+      |           |                    |  +- Ident: s_number
       |           |                    +- ident=field
       |           +- stmt 11
       |           |  +- Expression
-      |           |     +- expr 32
-      |           |        +- Assignment
-      |           |           +- target:expr 30
-      |           |           |  +- Access
-      |           |           |     +- expr 29
-      |           |           |     |  +- Ident: s
-      |           |           |     +- ident=field
-      |           |           +- value:expr 31
-      |           |              +- Number: 1
+      |           |     +- expr 26
+      |           |        +- Assignment target=s_number
+      |           |           +- expr 25
+      |           |              +- StructInstantiate name=Struct
+      |           |                 +- types=[]
+      |           |                 +- field name=field
+      |           |                    +- expr 24
+      |           |                       +- Binary *
+      |           |                          +- lhs:expr 22
+      |           |                          |  +- Ident: n
+      |           |                          +- rhs:expr 23
+      |           |                             +- Number: 2
       |           +- stmt 12
       |           |  +- Expression
-      |           |     +- expr 36
-      |           |        +- Call
-      |           |           +- expr 33
-      |           |           |  +- Ident: print
-      |           |           +- params
-      |           |              +- expr 35
-      |           |                 +- Access
-      |           |                    +- expr 34
-      |           |                    |  +- Ident: s
-      |           |                    +- ident=field
+      |           |     +- expr 33
+      |           |        +- Assignment
+      |           |           +- target:expr 28
+      |           |           |  +- Access
+      |           |           |     +- expr 27
+      |           |           |     |  +- Ident: s_number
+      |           |           |     +- ident=field
+      |           |           +- value:expr 32
+      |           |              +- Binary +
+      |           |                 +- lhs:expr 30
+      |           |                 |  +- Access
+      |           |                 |     +- expr 29
+      |           |                 |     |  +- Ident: s_number
+      |           |                 |     +- ident=field
+      |           |                 +- rhs:expr 31
+      |           |                    +- Number: 1
       |           +- stmt 13
       |           |  +- Expression
-      |           |     +- expr 39
-      |           |        +- Assignment target=n
-      |           |           +- expr 38
-      |           |              +- Access
-      |           |                 +- expr 37
-      |           |                 |  +- Ident: s
-      |           |                 +- ident=field
+      |           |     +- expr 37
+      |           |        +- Call
+      |           |           +- expr 34
+      |           |           |  +- Ident: print
+      |           |           +- params
+      |           |              +- expr 36
+      |           |                 +- Access
+      |           |                    +- expr 35
+      |           |                    |  +- Ident: s_number
+      |           |                    +- ident=field
       |           +- stmt 14
+      |           |  +- Expression
+      |           |     +- expr 40
+      |           |        +- Assignment target=n
+      |           |           +- expr 39
+      |           |              +- Access
+      |           |                 +- expr 38
+      |           |                 |  +- Ident: s_number
+      |           |                 +- ident=field
+      |           +- stmt 15
+      |           |  +- Expression
+      |           |     +- expr 43
+      |           |        +- Call
+      |           |           +- expr 41
+      |           |           |  +- Ident: print
+      |           |           +- params
+      |           |              +- expr 42
+      |           |                 +- Ident: n
+      |           +- stmt 16
+      |           |  +- Let name=s_boolean
+      |           |     +- expr 45
+      |           |        +- StructInstantiate name=Struct
+      |           |           +- types=[]
+      |           |           +- field name=field
+      |           |              +- expr 44
+      |           |                 +- Bool: true
+      |           +- stmt 17
+      |           |  +- Expression
+      |           |     +- expr 49
+      |           |        +- Call
+      |           |           +- expr 46
+      |           |           |  +- Ident: print
+      |           |           +- params
+      |           |              +- expr 48
+      |           |                 +- Access
+      |           |                    +- expr 47
+      |           |                    |  +- Ident: s_boolean
+      |           |                    +- ident=field
+      |           +- stmt 18
+      |           |  +- Let name=s_string
+      |           |     +- expr 51
+      |           |        +- StructInstantiate name=Struct
+      |           |           +- types=[]
+      |           |           +- field name=field
+      |           |              +- expr 50
+      |           |                 +- String: Hello
+      |           +- stmt 19
+      |           |  +- Expression
+      |           |     +- expr 55
+      |           |        +- Call
+      |           |           +- expr 52
+      |           |           |  +- Ident: print
+      |           |           +- params
+      |           |              +- expr 54
+      |           |                 +- Access
+      |           |                    +- expr 53
+      |           |                    |  +- Ident: s_string
+      |           |                    +- ident=field
+      |           +- stmt 20
+      |           |  +- Expression
+      |           |     +- expr 60
+      |           |        +- Call
+      |           |           +- expr 56
+      |           |           |  +- Ident: print
+      |           |           +- params
+      |           |              +- expr 59
+      |           |                 +- Access
+      |           |                    +- expr 58
+      |           |                    |  +- StructInstantiate name=Struct
+      |           |                    |     +- types=[]
+      |           |                    |     +- field name=field
+      |           |                    |        +- expr 57
+      |           |                    |           +- Number: 1
+      |           |                    +- ident=field
+      |           +- stmt 21
+      |           |  +- Expression
+      |           |     +- expr 65
+      |           |        +- Call
+      |           |           +- expr 61
+      |           |           |  +- Ident: print
+      |           |           +- params
+      |           |              +- expr 64
+      |           |                 +- Access
+      |           |                    +- expr 63
+      |           |                    |  +- StructInstantiate name=Struct
+      |           |                    |     +- types=[]
+      |           |                    |     +- field name=field
+      |           |                    |        +- expr 62
+      |           |                    |           +- Bool: true
+      |           |                    +- ident=field
+      |           +- stmt 22
+      |           |  +- Expression
+      |           |     +- expr 70
+      |           |        +- Call
+      |           |           +- expr 66
+      |           |           |  +- Ident: print
+      |           |           +- params
+      |           |              +- expr 69
+      |           |                 +- Access
+      |           |                    +- expr 68
+      |           |                    |  +- StructInstantiate name=Struct
+      |           |                    |     +- types=[]
+      |           |                    |     +- field name=field
+      |           |                    |        +- expr 67
+      |           |                    |           +- String: World
+      |           |                    +- ident=field
+      |           +- stmt 23
+      |           |  +- Expression
+      |           |     +- expr 79
+      |           |        +- Call
+      |           |           +- expr 71
+      |           |           |  +- Ident: print
+      |           |           +- params
+      |           |              +- expr 78
+      |           |                 +- Access
+      |           |                    +- expr 77
+      |           |                    |  +- Access
+      |           |                    |     +- expr 76
+      |           |                    |     |  +- Access
+      |           |                    |     |     +- expr 75
+      |           |                    |     |     |  +- StructInstantiate name=Struct
+      |           |                    |     |     |     +- types=[]
+      |           |                    |     |     |     +- field name=field
+      |           |                    |     |     |        +- expr 74
+      |           |                    |     |     |           +- StructInstantiate name=Struct
+      |           |                    |     |     |              +- types=[]
+      |           |                    |     |     |              +- field name=field
+      |           |                    |     |     |                 +- expr 73
+      |           |                    |     |     |                    +- StructInstantiate name=Struct
+      |           |                    |     |     |                       +- types=[]
+      |           |                    |     |     |                       +- field name=field
+      |           |                    |     |     |                          +- expr 72
+      |           |                    |     |     |                             +- Number: 1
+      |           |                    |     |     +- ident=field
+      |           |                    |     +- ident=field
+      |           |                    +- ident=field
+      |           +- stmt 24
+      |           |  +- Expression
+      |           |     +- expr 88
+      |           |        +- Call
+      |           |           +- expr 80
+      |           |           |  +- Ident: print
+      |           |           +- params
+      |           |              +- expr 87
+      |           |                 +- Access
+      |           |                    +- expr 86
+      |           |                    |  +- Access
+      |           |                    |     +- expr 85
+      |           |                    |     |  +- Access
+      |           |                    |     |     +- expr 84
+      |           |                    |     |     |  +- StructInstantiate name=Struct
+      |           |                    |     |     |     +- types=[]
+      |           |                    |     |     |     +- field name=field
+      |           |                    |     |     |        +- expr 83
+      |           |                    |     |     |           +- StructInstantiate name=Struct
+      |           |                    |     |     |              +- types=[]
+      |           |                    |     |     |              +- field name=field
+      |           |                    |     |     |                 +- expr 82
+      |           |                    |     |     |                    +- StructInstantiate name=Struct
+      |           |                    |     |     |                       +- types=[]
+      |           |                    |     |     |                       +- field name=field
+      |           |                    |     |     |                          +- expr 81
+      |           |                    |     |     |                             +- Bool: true
+      |           |                    |     |     +- ident=field
+      |           |                    |     +- ident=field
+      |           |                    +- ident=field
+      |           +- stmt 25
       |              +- Expression
-      |                 +- expr 42
+      |                 +- expr 97
       |                    +- Call
-      |                       +- expr 40
+      |                       +- expr 89
       |                       |  +- Ident: print
       |                       +- params
-      |                          +- expr 41
-      |                             +- Ident: n
-      +- stmt 16
+      |                          +- expr 96
+      |                             +- Access
+      |                                +- expr 95
+      |                                |  +- Access
+      |                                |     +- expr 94
+      |                                |     |  +- Access
+      |                                |     |     +- expr 93
+      |                                |     |     |  +- StructInstantiate name=Struct
+      |                                |     |     |     +- types=[]
+      |                                |     |     |     +- field name=field
+      |                                |     |     |        +- expr 92
+      |                                |     |     |           +- StructInstantiate name=Struct
+      |                                |     |     |              +- types=[]
+      |                                |     |     |              +- field name=field
+      |                                |     |     |                 +- expr 91
+      |                                |     |     |                    +- StructInstantiate name=Struct
+      |                                |     |     |                       +- types=[]
+      |                                |     |     |                       +- field name=field
+      |                                |     |     |                          +- expr 90
+      |                                |     |     |                             +- String: Hello, world
+      |                                |     |     +- ident=field
+      |                                |     +- ident=field
+      |                                +- ident=field
+      +- stmt 27
          +- Struct name=Struct
             +- types
             |  +- T

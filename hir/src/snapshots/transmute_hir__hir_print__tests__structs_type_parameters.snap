@@ -8,14 +8,14 @@ expression: s
                      +- stmt 1
 =    2:     1        |  +- Namespace name=core
                      |     +- stmts=[]
-                     +- stmt 16
+                     +- stmt 27
 =   35:    19        |  +- Fn name=main
                      |     +- annotations=[]
                      |     +- params=[]
 @     :     1        |     +- ret=[]
-@     :     2        |     +- body:expr 43
+@     :     2        |     +- body:expr 98
 @     :     2        |        +- Block
-                     |           +- stmt 6
+                     |           +- stmt 8
 =   36:     4        |           |  +- Let name=n
 @     :     4        |           |     +- expr 6
 @     :     4        |           |        +- Call
@@ -34,42 +34,42 @@ expression: s
                      |           |                       |     +- params=[]
 @     :     4        |           |                       +- expr 4
 @     :     4        |           |                          +- Number: 1
-                     |           +- stmt 7
-=   39:    21        |           |  +- Let name=s
+                     |           +- stmt 9
+=   39:    21        |           |  +- Let name=s_number
 @     :    21        |           |     +- expr 10
 @   12:     8        |           |        +- StructInstantiate name=Struct
 @   38:    20        |           |           +- field name=field
 @     :     4        |           |              +- expr 9
 @     :     4        |           |                 +- Call
-@     :     9        |           |                    +- callee:expr 50
+@     :     9        |           |                    +- callee:expr 105
 @   20:     9        |           |                    |  +- Ident: mul
                      |           |                    +- params
 @     :     4        |           |                       +- expr 7
 @   36:     4        |           |                       |  +- Ident: n
 @     :     4        |           |                       +- expr 8
 @     :     4        |           |                          +- Number: 2
-                     |           +- stmt 8
+                     |           +- stmt 10
 @     :     4        |           |  +- Expression
 @     :     4        |           |     +- expr 17
 @     :     4        |           |        +- Assignment
 @     :     4        |           |           +- target:expr 12
 @   38:    20        |           |           |  +- Access
 @     :    21        |           |           |     +- lhs:expr 11
-@   39:    21        |           |           |     |  +- Ident: s
+@   39:    21        |           |           |     |  +- Ident: s_number
 @   38:    20        |           |           |     +- ident=field
 @     :     4        |           |           +- value:expr 16
 @     :     4        |           |              +- Call
-@     :     9        |           |                 +- callee:expr 51
+@     :     9        |           |                 +- callee:expr 106
 @   28:     9        |           |                 |  +- Ident: add
                      |           |                 +- params
 @     :     4        |           |                    +- expr 14
 @   38:    20        |           |                    |  +- Access
 @     :    21        |           |                    |     +- lhs:expr 13
-@   39:    21        |           |                    |     |  +- Ident: s
+@   39:    21        |           |                    |     |  +- Ident: s_number
 @   38:    20        |           |                    |     +- ident=field
 @     :     4        |           |                    +- expr 15
 @     :     4        |           |                       +- Number: 1
-                     |           +- stmt 9
+                     |           +- stmt 11
 @     :     1        |           |  +- Expression
 @     :     1        |           |     +- expr 21
 @     :     1        |           |        +- Call
@@ -79,132 +79,301 @@ expression: s
 @     :     4        |           |              +- expr 20
 @   38:    20        |           |                 +- Access
 @     :    21        |           |                    +- lhs:expr 19
-@   39:    21        |           |                    |  +- Ident: s
-@   38:    20        |           |                    +- ident=field
-                     |           +- stmt 10
-@     :    21        |           |  +- Expression
-@     :    21        |           |     +- expr 24
-@   39:    21        |           |        +- Assignment target=s
-@     :    21        |           |           +- expr 23
-@   12:     8        |           |              +- StructInstantiate name=Struct
-@   38:    20        |           |                 +- field name=field
-@     :     4        |           |                    +- expr 22
-@     :     4        |           |                       +- Number: 0
-                     |           +- stmt 11
-@     :     1        |           |  +- Expression
-@     :     1        |           |     +- expr 28
-@     :     1        |           |        +- Call
-@     :    16        |           |           +- callee:expr 25
-@   32:    16        |           |           |  +- Ident: print
-                     |           |           +- params
-@     :     4        |           |              +- expr 27
-@   38:    20        |           |                 +- Access
-@     :    21        |           |                    +- lhs:expr 26
-@   39:    21        |           |                    |  +- Ident: s
+@   39:    21        |           |                    |  +- Ident: s_number
 @   38:    20        |           |                    +- ident=field
                      |           +- stmt 12
-@     :     4        |           |  +- Expression
-@     :     4        |           |     +- expr 32
-@     :     4        |           |        +- Assignment
-@     :     4        |           |           +- target:expr 30
-@   38:    20        |           |           |  +- Access
-@     :    21        |           |           |     +- lhs:expr 29
-@   39:    21        |           |           |     |  +- Ident: s
-@   38:    20        |           |           |     +- ident=field
-@     :     4        |           |           +- value:expr 31
-@     :     4        |           |              +- Number: 1
+@     :    21        |           |  +- Expression
+@     :    21        |           |     +- expr 26
+@   39:    21        |           |        +- Assignment target=s_number
+@     :    21        |           |           +- expr 25
+@   12:     8        |           |              +- StructInstantiate name=Struct
+@   38:    20        |           |                 +- field name=field
+@     :     4        |           |                    +- expr 24
+@     :     4        |           |                       +- Call
+@     :     9        |           |                          +- callee:expr 107
+@   20:     9        |           |                          |  +- Ident: mul
+                     |           |                          +- params
+@     :     4        |           |                             +- expr 22
+@   36:     4        |           |                             |  +- Ident: n
+@     :     4        |           |                             +- expr 23
+@     :     4        |           |                                +- Number: 2
                      |           +- stmt 13
+@     :     4        |           |  +- Expression
+@     :     4        |           |     +- expr 33
+@     :     4        |           |        +- Assignment
+@     :     4        |           |           +- target:expr 28
+@   38:    20        |           |           |  +- Access
+@     :    21        |           |           |     +- lhs:expr 27
+@   39:    21        |           |           |     |  +- Ident: s_number
+@   38:    20        |           |           |     +- ident=field
+@     :     4        |           |           +- value:expr 32
+@     :     4        |           |              +- Call
+@     :     9        |           |                 +- callee:expr 108
+@   28:     9        |           |                 |  +- Ident: add
+                     |           |                 +- params
+@     :     4        |           |                    +- expr 30
+@   38:    20        |           |                    |  +- Access
+@     :    21        |           |                    |     +- lhs:expr 29
+@   39:    21        |           |                    |     |  +- Ident: s_number
+@   38:    20        |           |                    |     +- ident=field
+@     :     4        |           |                    +- expr 31
+@     :     4        |           |                       +- Number: 1
+                     |           +- stmt 14
 @     :     1        |           |  +- Expression
-@     :     1        |           |     +- expr 36
+@     :     1        |           |     +- expr 37
 @     :     1        |           |        +- Call
-@     :    16        |           |           +- callee:expr 33
+@     :    16        |           |           +- callee:expr 34
 @   32:    16        |           |           |  +- Ident: print
                      |           |           +- params
-@     :     4        |           |              +- expr 35
+@     :     4        |           |              +- expr 36
 @   38:    20        |           |                 +- Access
-@     :    21        |           |                    +- lhs:expr 34
-@   39:    21        |           |                    |  +- Ident: s
+@     :    21        |           |                    +- lhs:expr 35
+@   39:    21        |           |                    |  +- Ident: s_number
 @   38:    20        |           |                    +- ident=field
-                     |           +- stmt 14
-@     :     4        |           |  +- Expression
-@     :     4        |           |     +- expr 39
-@   36:     4        |           |        +- Assignment target=n
-@     :     4        |           |           +- expr 38
-@   38:    20        |           |              +- Access
-@     :    21        |           |                 +- lhs:expr 37
-@   39:    21        |           |                 |  +- Ident: s
-@   38:    20        |           |                 +- ident=field
                      |           +- stmt 15
+@     :     4        |           |  +- Expression
+@     :     4        |           |     +- expr 40
+@   36:     4        |           |        +- Assignment target=n
+@     :     4        |           |           +- expr 39
+@   38:    20        |           |              +- Access
+@     :    21        |           |                 +- lhs:expr 38
+@   39:    21        |           |                 |  +- Ident: s_number
+@   38:    20        |           |                 +- ident=field
+                     |           +- stmt 16
+@     :     1        |           |  +- Expression
+@     :     1        |           |     +- expr 43
+@     :     1        |           |        +- Call
+@     :    16        |           |           +- callee:expr 41
+@   32:    16        |           |           |  +- Ident: print
+                     |           |           +- params
+@     :     4        |           |              +- expr 42
+@   36:     4        |           |                 +- Ident: n
+                     |           +- stmt 17
+=   40:    22        |           |  +- Let name=s_boolean
+@     :    22        |           |     +- expr 45
+@   12:     8        |           |        +- StructInstantiate name=Struct
+@   38:    20        |           |           +- field name=field
+@     :     3        |           |              +- expr 44
+@     :     3        |           |                 +- Bool: true
+                     |           +- stmt 18
+@     :     1        |           |  +- Expression
+@     :     1        |           |     +- expr 49
+@     :     1        |           |        +- Call
+@     :    13        |           |           +- callee:expr 46
+@   29:    13        |           |           |  +- Ident: print
+                     |           |           +- params
+@     :     3        |           |              +- expr 48
+@   38:    20        |           |                 +- Access
+@     :    22        |           |                    +- lhs:expr 47
+@   40:    22        |           |                    |  +- Ident: s_boolean
+@   38:    20        |           |                    +- ident=field
+                     |           +- stmt 19
+=   41:    23        |           |  +- Let name=s_string
+@     :    23        |           |     +- expr 51
+@   12:     8        |           |        +- StructInstantiate name=Struct
+@   38:    20        |           |           +- field name=field
+@     :     7        |           |              +- expr 50
+                     |           |                 +- String: Hello
+                     |           +- stmt 20
+@     :     1        |           |  +- Expression
+@     :     1        |           |     +- expr 55
+@     :     1        |           |        +- Call
+@     :    18        |           |           +- callee:expr 52
+@   34:    18        |           |           |  +- Ident: print
+                     |           |           +- params
+@     :     7        |           |              +- expr 54
+@   38:    20        |           |                 +- Access
+@     :    23        |           |                    +- lhs:expr 53
+@   41:    23        |           |                    |  +- Ident: s_string
+@   38:    20        |           |                    +- ident=field
+                     |           +- stmt 21
+@     :     1        |           |  +- Expression
+@     :     1        |           |     +- expr 60
+@     :     1        |           |        +- Call
+@     :    16        |           |           +- callee:expr 56
+@   32:    16        |           |           |  +- Ident: print
+                     |           |           +- params
+@     :     4        |           |              +- expr 59
+@   38:    20        |           |                 +- Access
+@     :    21        |           |                    +- lhs:expr 58
+@   12:     8        |           |                    |  +- StructInstantiate name=Struct
+@   38:    20        |           |                    |     +- field name=field
+@     :     4        |           |                    |        +- expr 57
+@     :     4        |           |                    |           +- Number: 1
+@   38:    20        |           |                    +- ident=field
+                     |           +- stmt 22
+@     :     1        |           |  +- Expression
+@     :     1        |           |     +- expr 65
+@     :     1        |           |        +- Call
+@     :    13        |           |           +- callee:expr 61
+@   29:    13        |           |           |  +- Ident: print
+                     |           |           +- params
+@     :     3        |           |              +- expr 64
+@   38:    20        |           |                 +- Access
+@     :    22        |           |                    +- lhs:expr 63
+@   12:     8        |           |                    |  +- StructInstantiate name=Struct
+@   38:    20        |           |                    |     +- field name=field
+@     :     3        |           |                    |        +- expr 62
+@     :     3        |           |                    |           +- Bool: true
+@   38:    20        |           |                    +- ident=field
+                     |           +- stmt 23
+@     :     1        |           |  +- Expression
+@     :     1        |           |     +- expr 70
+@     :     1        |           |        +- Call
+@     :    18        |           |           +- callee:expr 66
+@   34:    18        |           |           |  +- Ident: print
+                     |           |           +- params
+@     :     7        |           |              +- expr 69
+@   38:    20        |           |                 +- Access
+@     :    23        |           |                    +- lhs:expr 68
+@   12:     8        |           |                    |  +- StructInstantiate name=Struct
+@   38:    20        |           |                    |     +- field name=field
+@     :     7        |           |                    |        +- expr 67
+                     |           |                    |           +- String: World
+@   38:    20        |           |                    +- ident=field
+                     |           +- stmt 24
+@     :     1        |           |  +- Expression
+@     :     1        |           |     +- expr 79
+@     :     1        |           |        +- Call
+@     :    16        |           |           +- callee:expr 71
+@   32:    16        |           |           |  +- Ident: print
+                     |           |           +- params
+@     :     4        |           |              +- expr 78
+@   38:    20        |           |                 +- Access
+@     :    21        |           |                    +- lhs:expr 77
+@   38:    20        |           |                    |  +- Access
+@     :    24        |           |                    |     +- lhs:expr 76
+@   38:    20        |           |                    |     |  +- Access
+@     :    25        |           |                    |     |     +- lhs:expr 75
+@   12:     8        |           |                    |     |     |  +- StructInstantiate name=Struct
+@   38:    20        |           |                    |     |     |     +- field name=field
+@     :    24        |           |                    |     |     |        +- expr 74
+@   12:     8        |           |                    |     |     |           +- StructInstantiate name=Struct
+@   38:    20        |           |                    |     |     |              +- field name=field
+@     :    21        |           |                    |     |     |                 +- expr 73
+@   12:     8        |           |                    |     |     |                    +- StructInstantiate name=Struct
+@   38:    20        |           |                    |     |     |                       +- field name=field
+@     :     4        |           |                    |     |     |                          +- expr 72
+@     :     4        |           |                    |     |     |                             +- Number: 1
+@   38:    20        |           |                    |     |     +- ident=field
+@   38:    20        |           |                    |     +- ident=field
+@   38:    20        |           |                    +- ident=field
+                     |           +- stmt 25
+@     :     1        |           |  +- Expression
+@     :     1        |           |     +- expr 88
+@     :     1        |           |        +- Call
+@     :    13        |           |           +- callee:expr 80
+@   29:    13        |           |           |  +- Ident: print
+                     |           |           +- params
+@     :     3        |           |              +- expr 87
+@   38:    20        |           |                 +- Access
+@     :    22        |           |                    +- lhs:expr 86
+@   38:    20        |           |                    |  +- Access
+@     :    26        |           |                    |     +- lhs:expr 85
+@   38:    20        |           |                    |     |  +- Access
+@     :    27        |           |                    |     |     +- lhs:expr 84
+@   12:     8        |           |                    |     |     |  +- StructInstantiate name=Struct
+@   38:    20        |           |                    |     |     |     +- field name=field
+@     :    26        |           |                    |     |     |        +- expr 83
+@   12:     8        |           |                    |     |     |           +- StructInstantiate name=Struct
+@   38:    20        |           |                    |     |     |              +- field name=field
+@     :    22        |           |                    |     |     |                 +- expr 82
+@   12:     8        |           |                    |     |     |                    +- StructInstantiate name=Struct
+@   38:    20        |           |                    |     |     |                       +- field name=field
+@     :     3        |           |                    |     |     |                          +- expr 81
+@     :     3        |           |                    |     |     |                             +- Bool: true
+@   38:    20        |           |                    |     |     +- ident=field
+@   38:    20        |           |                    |     +- ident=field
+@   38:    20        |           |                    +- ident=field
+                     |           +- stmt 26
 @     :     1        |              +- Ret
-@     :     1        |                 +- expr 42
+@     :     1        |                 +- expr 97
 @     :     1        |                    +- Call
-@     :    16        |                       +- callee:expr 40
-@   32:    16        |                       |  +- Ident: print
+@     :    18        |                       +- callee:expr 89
+@   34:    18        |                       |  +- Ident: print
                      |                       +- params
-@     :     4        |                          +- expr 41
-@   36:     4        |                             +- Ident: n
-                     +- stmt 17
-=   12:     8        |  +- Struct name=Struct, fn_stmt_id=16
+@     :     7        |                          +- expr 96
+@   38:    20        |                             +- Access
+@     :    23        |                                +- lhs:expr 95
+@   38:    20        |                                |  +- Access
+@     :    28        |                                |     +- lhs:expr 94
+@   38:    20        |                                |     |  +- Access
+@     :    29        |                                |     |     +- lhs:expr 93
+@   12:     8        |                                |     |     |  +- StructInstantiate name=Struct
+@   38:    20        |                                |     |     |     +- field name=field
+@     :    28        |                                |     |     |        +- expr 92
+@   12:     8        |                                |     |     |           +- StructInstantiate name=Struct
+@   38:    20        |                                |     |     |              +- field name=field
+@     :    23        |                                |     |     |                 +- expr 91
+@   12:     8        |                                |     |     |                    +- StructInstantiate name=Struct
+@   38:    20        |                                |     |     |                       +- field name=field
+@     :     7        |                                |     |     |                          +- expr 90
+                     |                                |     |     |                             +- String: Hello, world
+@   38:    20        |                                |     |     +- ident=field
+@   38:    20        |                                |     +- ident=field
+@   38:    20        |                                +- ident=field
+                     +- stmt 28
+=   12:     8        |  +- Struct name=Struct, fn_stmt_id=27
 =   38:    20        |     +- field: T
-                     +- stmt 24
+                     +- stmt 35
 =    3:     1           +- Namespace name=std
-                           +- stmt 18
+                           +- stmt 29
 =   11:     1              |  +- Annotation name=native
-                           +- stmt 19
+                           +- stmt 30
 =    4:     1              |  +- Namespace name=booleans
-                           |     +- stmt 32
+                           |     +- stmt 43
 =   29:    13              |        +- Fn name=print (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
-=   40:     3              |           |  +- b: core.boolean
+=   42:     3              |           |  +- b: core.boolean
 @     :     1              |           +- ret=[]
-                           +- stmt 20
+                           +- stmt 31
 =    5:     1              |  +- Namespace name=env
-                           |     +- stmt 31
+                           |     +- stmt 42
 =   30:    14              |        +- Fn name=args (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params=[]
 @     :     6              |           +- ret=std.list.List
-                           +- stmt 21
+                           +- stmt 32
 =    6:     1              |  +- Namespace name=list
-                           |     +- stmt 29
+                           |     +- stmt 40
 =    7:     6              |     |  +- Struct name=List (native)
-                           |     +- stmt 30
+                           |     +- stmt 41
 =   31:    15              |        +- Fn name=list_get (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
-=   41:     6              |           |  +- list: List
-=   42:     4              |           |  +- index: number
+=   43:     6              |           |  +- list: List
+=   44:     4              |           |  +- index: number
 @     :     7              |           +- ret=std.str.string
-                           +- stmt 22
+                           +- stmt 33
 =    8:     1              |  +- Namespace name=numbers
-                           |     +- stmt 27
+                           |     +- stmt 38
 =   32:    16              |     |  +- Fn name=print (native)
                            |     |     +- annotations
 @   11:     1              |     |     |  +- std.native
                            |     |     +- params
-=   43:     4              |     |     |  +- n: core.number
+=   45:     4              |     |     |  +- n: core.number
 @     :     1              |     |     +- ret=[]
-                           |     +- stmt 28
+                           |     +- stmt 39
 =   33:    17              |        +- Fn name=number_parse (native)
                            |           +- annotations
 @   11:     1              |           |  +- std.native
                            |           +- params
-=   44:     7              |           |  +- s: std.str.string
+=   46:     7              |           |  +- s: std.str.string
 @     :     2              |           +- ret=core.number
-                           +- stmt 23
+                           +- stmt 34
 =    9:     1                 +- Namespace name=str
-                                 +- stmt 25
+                                 +- stmt 36
 =   10:     7                    |  +- Struct name=string (native)
-                                 +- stmt 26
+                                 +- stmt 37
 =   34:    18                       +- Fn name=print (native)
                                        +- annotations
 @   11:     1                          |  +- std.native
                                        +- params
-=   45:     7                          |  +- s: string
+=   47:     7                          |  +- s: string
 @     :     1                          +- ret=[]
 
 --- types ---
@@ -228,5 +397,13 @@ expression: s
 17: f(7) : 4
 18: f(7) : 1
 19: f() : 1
-20: type parameter 12<17.0>
+20: type parameter 12<28.0>
 21: struct 12<1>
+22: struct 12<1>
+23: struct 12<1>
+24: struct 12<1>
+25: struct 12<1>
+26: struct 12<1>
+27: struct 12<1>
+28: struct 12<1>
+29: struct 12<1>
